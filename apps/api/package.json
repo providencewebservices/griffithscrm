@@ -1,0 +1,20 @@
+{
+  "name": "@griffiths-crm/api",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun run --hot src/index.ts",
+    "build": "bun build src/index.ts --outdir dist --target bun",
+    "start": "bun run dist/index.js"
+  },
+  "dependencies": {
+    "@griffiths-crm/shared": "workspace:*",
+    "hono": "^4.10.7",
+    "better-auth": "^1.4.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}
