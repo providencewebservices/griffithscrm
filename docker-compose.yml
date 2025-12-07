@@ -3,8 +3,8 @@ services:
     image: postgres:16
     container_name: griffiths-crm-db
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: griffiths_crm_app
+      POSTGRES_PASSWORD: supersecretpassword
       POSTGRES_DB: griffiths_crm
     ports:
       - "5432:5432"
