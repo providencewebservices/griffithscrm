@@ -1,7 +1,18 @@
 import { createAuthClient } from 'better-auth/react';
+import { adminClient } from 'better-auth/client/plugins';
 
 export const authClient = createAuthClient({
-  baseURL: '/api/auth',
+	baseURL: 'http://localhost:3000',
+	plugins: [adminClient()],
 });
 
 export const { signIn, signUp, signOut, useSession } = authClient;
+
+// Type for user with custom fields
+export type AuthUser = {
+	id: string;
+	name: string;
+	email: string;
+	role: 'app_admin' | 'customer';
+	tenantId: string | null;
+};

@@ -11,13 +11,17 @@
     "build:web": "bun run --cwd apps/web build",
     "db:generate": "bun run --cwd packages/shared db:generate",
     "db:migrate": "bun run --cwd packages/shared db:migrate",
+    "db:push": "bun run --cwd packages/shared db:push",
     "db:studio": "bun run --cwd packages/shared db:studio",
+    "db:bootstrap": "bun run --cwd apps/api scripts/bootstrap-admin.ts",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "format": "biome format --write ."
   },
   "devDependencies": {
     "@biomejs/biome": "latest",
+    "dotenv": "^16.4.7",
+    "shadcn": "^3.5.1",
     "typescript": "^5.7.2"
   }
 }
