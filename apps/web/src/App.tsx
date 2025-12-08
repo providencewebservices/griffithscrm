@@ -9,6 +9,7 @@ import { UsersPage } from './pages/admin/users';
 import { CustomerDashboard } from './pages/customer';
 import { TeamPage } from './pages/customer/team';
 import { CustomersPage } from './pages/customer/customers';
+import { SettingsPage } from './pages/customer/settings';
 import { ProtectedRoute } from './components/protected-route';
 import { RoleBasedRedirect } from './components/role-based-redirect';
 
@@ -48,6 +49,7 @@ function App() {
 					<Route index element={<CustomerDashboard />} />
 					<Route path="team" element={<TeamPage />} />
 					<Route path="customers" element={<CustomersPage />} />
+					<Route path="settings" element={<SettingsPage />} />
 				</Route>
 			</Routes>
 		</BrowserRouter>

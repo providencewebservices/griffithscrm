@@ -30,6 +30,7 @@ import {
 	type CustomerWithRelations,
 	type CreateCustomerInput,
 } from '@/hooks/use-customers';
+import { useTenantSettingsQuery } from '@/hooks/use-tenant-settings';
 import { Search } from 'lucide-react';
 
 export function CustomersPage() {
@@ -61,6 +62,9 @@ export function CustomersPage() {
 	const updateMutation = useUpdateCustomerMutation();
 	const archiveMutation = useArchiveCustomerMutation();
 	const unarchiveMutation = useUnarchiveCustomerMutation();
+
+	const { data: tenantSettings } = useTenantSettingsQuery();
+	const defaultCountry = tenantSettings?.address?.country || 'US';
 
 	const handleAddCustomer = () => {
 		setSelectedCustomerId(null);
@@ -282,6 +286,7 @@ export function CustomersPage() {
 				customer={customerDetails as CustomerWithRelations | null}
 				isLoading={createMutation.isPending || updateMutation.isPending}
 				error={mutationError}
+				defaultCountry={defaultCountry}
 			/>
 
 			<DeleteConfirmDialog

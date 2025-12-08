@@ -5,6 +5,7 @@ import { auth } from './lib/auth';
 import { adminRoutes } from './routes/admin';
 import { teamRoutes } from './routes/team';
 import { customerRoutes } from './routes/customers';
+import { tenantSettingsRoutes } from './routes/tenant-settings';
 
 const app = new Hono();
 
@@ -53,6 +54,9 @@ app.route('/api/team', teamRoutes);
 
 // Customer routes (for tenant users)
 app.route('/api/customers', customerRoutes);
+
+// Tenant settings routes (for tenant users)
+app.route('/api/tenant/settings', tenantSettingsRoutes);
 
 // Export type for RPC client
 export type AppType = typeof api;

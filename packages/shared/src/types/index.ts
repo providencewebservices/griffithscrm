@@ -27,6 +27,11 @@ export type UserWithTenant = User & {
 	tenant: Tenant | null;
 };
 
+// Helper type for tenant with business address
+export type TenantWithAddress = Tenant & {
+	address: Address | null;
+};
+
 // Helper type for customer with relations
 export type CustomerWithRelations = Customer & {
 	contactInfo: ContactInfo[];

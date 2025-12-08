@@ -1,5 +1,5 @@
 import * as React from "react"
-import { LayoutDashboard, UsersRound, Users } from "lucide-react"
+import { LayoutDashboard, UsersRound, Users, Settings } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
 import { NavUser } from "@/components/nav-user"
@@ -18,6 +18,7 @@ const navItems = [
 	{ title: "Dashboard", url: "/app", icon: LayoutDashboard },
 	{ title: "Customers", url: "/app/customers", icon: Users },
 	{ title: "Team", url: "/app/team", icon: UsersRound },
+	{ title: "Settings", url: "/app/settings", icon: Settings },
 ]
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {

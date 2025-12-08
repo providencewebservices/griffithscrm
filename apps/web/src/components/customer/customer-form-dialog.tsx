@@ -38,6 +38,7 @@ interface CustomerFormDialogProps {
 	customer?: CustomerWithRelations | null;
 	isLoading?: boolean;
 	error?: string | null;
+	defaultCountry?: string;
 }
 
 const CONTACT_TYPES = [
@@ -47,6 +48,19 @@ const CONTACT_TYPES = [
 	{ value: 'fax', label: 'Fax' },
 	{ value: 'other', label: 'Other' },
 ] as const;
+
+const COUNTRIES = [
+	{ value: 'US', label: 'United States', flag: '🇺🇸' },
+	{ value: 'GB', label: 'United Kingdom', flag: '🇬🇧' },
+] as const;
+
+const ADDRESS_LABELS: Record<
+	string,
+	{ streetNumber: string; locality: string; region: string; postal: string }
+> = {
+	US: { streetNumber: 'Street #', locality: 'City', region: 'State', postal: 'ZIP' },
+	GB: { streetNumber: 'House #/Name', locality: 'City/Town', region: 'County', postal: 'Postcode' },
+};
 
 const emptyContact: ContactInfoInput = {
 	type: 'email',
@@ -74,6 +88,7 @@ export function CustomerFormDialog({
 	customer,
 	isLoading,
 	error,
+	defaultCountry = 'US',
 }: CustomerFormDialogProps) {
 	const [firstName, setFirstName] = useState('');
 	const [lastName, setLastName] = useState('');
@@ -145,7 +160,7 @@ export function CustomerFormDialog({
 	};
 
 	const addAddress = () => {
-		setAddresses([...addresses, { ...emptyAddress }]);
+		setAddresses([...addresses, { ...emptyAddress, country: defaultCountry }]);
 	};
 
 	const removeAddress = (index: number) => {
@@ -248,9 +263,9 @@ export function CustomerFormDialog({
 									{contacts.map((contact, index) => (
 										<div
 											key={index}
-											className="flex gap-2 items-start p-3 border rounded-lg"
+											className="p-3 border rounded-lg space-y-2"
 										>
-											<div className="flex-1 grid grid-cols-4 gap-2">
+											<div className="flex gap-2">
 												<Select
 													value={contact.type}
 													onValueChange={(value) =>
@@ -259,7 +274,7 @@ export function CustomerFormDialog({
 														})
 													}
 												>
-													<SelectTrigger>
+													<SelectTrigger className="w-28">
 														<SelectValue />
 													</SelectTrigger>
 													<SelectContent>
@@ -280,18 +295,19 @@ export function CustomerFormDialog({
 													onChange={(e) =>
 														updateContact(index, { value: e.target.value })
 													}
-													className="col-span-2"
+													className="flex-1"
 												/>
+											</div>
+											<div className="flex gap-2 items-center">
 												<Input
-													placeholder="Label (e.g., Work)"
+													placeholder="Label (optional)"
 													value={contact.label || ''}
 													onChange={(e) =>
 														updateContact(index, { label: e.target.value })
 													}
+													className="flex-1"
 												/>
-											</div>
-											<div className="flex items-center gap-2">
-												<label className="flex items-center gap-1 text-xs whitespace-nowrap">
+												<label className="flex items-center gap-1.5 text-sm whitespace-nowrap">
 													<Checkbox
 														checked={contact.isPrimary}
 														onCheckedChange={(checked) =>
@@ -305,8 +321,9 @@ export function CustomerFormDialog({
 												<Button
 													type="button"
 													variant="ghost"
-													size="sm"
+													size="icon"
 													onClick={() => removeContact(index)}
+													className="h-8 w-8 shrink-0"
 												>
 													<Trash2 className="h-4 w-4 text-destructive" />
 												</Button>
@@ -336,16 +353,40 @@ export function CustomerFormDialog({
 									No addresses added.
 								</p>
 							) : (
-								<div className="space-y-4">
-									{addresses.map((address, index) => (
-										<div
-											key={index}
-											className="p-3 border rounded-lg space-y-3"
-										>
-											<div className="flex justify-between items-start">
-												<div className="flex-1 grid grid-cols-4 gap-2">
+								<div className="space-y-3">
+									{addresses.map((address, index) => {
+										const labels = ADDRESS_LABELS[address.country] || ADDRESS_LABELS.US;
+										const countryData = COUNTRIES.find((c) => c.value === address.country);
+										return (
+											<div
+												key={index}
+												className="p-3 border rounded-lg space-y-2"
+											>
+												<Select
+													value={address.country}
+													onValueChange={(value) => {
+														const updated = { ...address, country: value };
+														updated.formattedAddress =
+															generateFormattedAddress(updated);
+														updateAddress(index, updated);
+													}}
+												>
+													<SelectTrigger className="w-full">
+														<SelectValue>
+															{countryData && `${countryData.flag} ${countryData.label}`}
+														</SelectValue>
+													</SelectTrigger>
+													<SelectContent>
+														{COUNTRIES.map((country) => (
+															<SelectItem key={country.value} value={country.value}>
+																{country.flag} {country.label}
+															</SelectItem>
+														))}
+													</SelectContent>
+												</Select>
+												<div className="flex gap-2">
 													<Input
-														placeholder="Street #"
+														placeholder={labels.streetNumber}
 														value={address.streetNumber || ''}
 														onChange={(e) => {
 															const updated = {
@@ -356,6 +397,7 @@ export function CustomerFormDialog({
 																generateFormattedAddress(updated);
 															updateAddress(index, updated);
 														}}
+														className="w-28"
 													/>
 													<Input
 														placeholder="Street Name"
@@ -369,89 +411,91 @@ export function CustomerFormDialog({
 																generateFormattedAddress(updated);
 															updateAddress(index, updated);
 														}}
-														className="col-span-3"
+														className="flex-1"
 													/>
 												</div>
-											</div>
-											<div className="grid grid-cols-4 gap-2">
-												<Input
-													placeholder="City"
-													value={address.locality || ''}
-													onChange={(e) => {
-														const updated = {
-															...address,
-															locality: e.target.value,
-														};
-														updated.formattedAddress =
-															generateFormattedAddress(updated);
-														updateAddress(index, updated);
-													}}
-													className="col-span-2"
-												/>
-												<Input
-													placeholder="State"
-													value={address.administrativeAreaLevel1 || ''}
-													onChange={(e) => {
-														const updated = {
-															...address,
-															administrativeAreaLevel1: e.target.value,
-														};
-														updated.formattedAddress =
-															generateFormattedAddress(updated);
-														updateAddress(index, updated);
-													}}
-												/>
-												<Input
-													placeholder="ZIP"
-													value={address.postalCode || ''}
-													onChange={(e) => {
-														const updated = {
-															...address,
-															postalCode: e.target.value,
-														};
-														updated.formattedAddress =
-															generateFormattedAddress(updated);
-														updateAddress(index, updated);
-													}}
-												/>
-											</div>
-											<div className="flex gap-2 items-center">
-												<Input
-													placeholder="Label (e.g., Billing, Home)"
-													value={address.label || ''}
-													onChange={(e) =>
-														updateAddress(index, { label: e.target.value })
-													}
-													className="w-48"
-												/>
-												<label className="flex items-center gap-1 text-xs">
-													<Checkbox
-														checked={address.isPrimary}
-														onCheckedChange={(checked) =>
-															updateAddress(index, {
-																isPrimary: checked === true,
-															})
-														}
+												<div className="flex gap-2">
+													<Input
+														placeholder={labels.locality}
+														value={address.locality || ''}
+														onChange={(e) => {
+															const updated = {
+																...address,
+																locality: e.target.value,
+															};
+															updated.formattedAddress =
+																generateFormattedAddress(updated);
+															updateAddress(index, updated);
+														}}
+														className="flex-1"
 													/>
-													Primary
-												</label>
-												<div className="flex-1" />
-												<Button
-													type="button"
-													variant="ghost"
-													size="sm"
-													onClick={() => removeAddress(index)}
-												>
-													<Trash2 className="h-4 w-4 text-destructive" />
-												</Button>
+													<Input
+														placeholder={labels.region}
+														value={address.administrativeAreaLevel1 || ''}
+														onChange={(e) => {
+															const updated = {
+																...address,
+																administrativeAreaLevel1: e.target.value,
+															};
+															updated.formattedAddress =
+																generateFormattedAddress(updated);
+															updateAddress(index, updated);
+														}}
+														className="w-24"
+													/>
+													<Input
+														placeholder={labels.postal}
+														value={address.postalCode || ''}
+														onChange={(e) => {
+															const updated = {
+																...address,
+																postalCode: e.target.value,
+															};
+															updated.formattedAddress =
+																generateFormattedAddress(updated);
+															updateAddress(index, updated);
+														}}
+														className="w-28"
+													/>
+												</div>
+												<div className="flex gap-2 items-center">
+													<Input
+														placeholder="Label (optional)"
+														value={address.label || ''}
+														onChange={(e) =>
+															updateAddress(index, { label: e.target.value })
+														}
+														className="flex-1"
+													/>
+													<label className="flex items-center gap-1.5 text-sm whitespace-nowrap">
+														<Checkbox
+															checked={address.isPrimary}
+															onCheckedChange={(checked) =>
+																updateAddress(index, {
+																	isPrimary: checked === true,
+																})
+															}
+														/>
+														Primary
+													</label>
+													<Button
+														type="button"
+														variant="ghost"
+														size="icon"
+														onClick={() => removeAddress(index)}
+														className="h-8 w-8 shrink-0"
+													>
+														<Trash2 className="h-4 w-4 text-destructive" />
+													</Button>
+												</div>
+												{address.formattedAddress && (
+													<p className="text-xs text-muted-foreground pt-1 border-t">
+														{address.formattedAddress}
+													</p>
+												)}
 											</div>
-											{address.formattedAddress && (
-												<p className="text-xs text-muted-foreground">
-													{address.formattedAddress}
-												</p>
-											)}
-										</div>
-									))}
+										);
+									})}
 								</div>
 							)}
 						</div>
