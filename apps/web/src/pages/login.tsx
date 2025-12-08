@@ -27,7 +27,7 @@ export function LoginPage() {
 	const [error, setError] = useState<string | null>(null);
 	const [isLoading, setIsLoading] = useState(false);
 
-	const from = (location.state as { from?: Location })?.from?.pathname || '/dashboard';
+	const from = (location.state as { from?: Location })?.from?.pathname || '/';
 
 	if (session) {
 		navigate(from, { replace: true });

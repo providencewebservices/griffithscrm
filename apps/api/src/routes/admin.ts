@@ -15,12 +15,29 @@ const createTenantSchema = z.object({
 		.regex(/^[a-z0-9-]+$/, 'Slug must be lowercase alphanumeric with hyphens'),
 });
 
+const updateTenantSchema = z.object({
+	name: z.string().min(1, 'Name is required').optional(),
+	slug: z
+		.string()
+		.min(1, 'Slug is required')
+		.regex(/^[a-z0-9-]+$/, 'Slug must be lowercase alphanumeric with hyphens')
+		.optional(),
+});
+
 const createUserSchema = z.object({
 	email: z.string().email('Invalid email'),
 	password: z.string().min(8, 'Password must be at least 8 characters'),
 	name: z.string().min(1, 'Name is required'),
 	role: z.enum(['app_admin', 'customer']),
 	tenantId: z.string().optional(),
+});
+
+const updateUserSchema = z.object({
+	email: z.string().email('Invalid email').optional(),
+	password: z.string().min(8, 'Password must be at least 8 characters').optional(),
+	name: z.string().min(1, 'Name is required').optional(),
+	role: z.enum(['app_admin', 'customer']).optional(),
+	tenantId: z.string().nullable().optional(),
 });
 
 // Create admin routes
@@ -75,6 +92,69 @@ const adminRoutes = new Hono()
 		}
 
 		return c.json({ tenant });
+	})
+
+	// Update a tenant
+	.put('/tenants/:id', zValidator('json', updateTenantSchema), async (c) => {
+		const id = c.req.param('id');
+		const updates = c.req.valid('json');
+
+		// Check if tenant exists
+		const [existing] = await db.select().from(tenants).where(eq(tenants.id, id)).limit(1);
+
+		if (!existing) {
+			return c.json({ error: 'Tenant not found' }, 404);
+		}
+
+		// If updating slug, check it's unique
+		if (updates.slug && updates.slug !== existing.slug) {
+			const [slugExists] = await db
+				.select()
+				.from(tenants)
+				.where(eq(tenants.slug, updates.slug))
+				.limit(1);
+
+			if (slugExists) {
+				return c.json({ error: 'Tenant with this slug already exists' }, 400);
+			}
+		}
+
+		const [updated] = await db
+			.update(tenants)
+			.set({
+				...updates,
+				updatedAt: new Date(),
+			})
+			.where(eq(tenants.id, id))
+			.returning();
+
+		return c.json({ tenant: updated });
+	})
+
+	// Delete a tenant
+	.delete('/tenants/:id', async (c) => {
+		const id = c.req.param('id');
+
+		// Check if tenant exists
+		const [existing] = await db.select().from(tenants).where(eq(tenants.id, id)).limit(1);
+
+		if (!existing) {
+			return c.json({ error: 'Tenant not found' }, 404);
+		}
+
+		// Check if tenant has users
+		const tenantUsers = await db.select().from(users).where(eq(users.tenantId, id)).limit(1);
+
+		if (tenantUsers.length > 0) {
+			return c.json(
+				{ error: 'Cannot delete tenant with assigned users. Reassign or delete users first.' },
+				400
+			);
+		}
+
+		await db.delete(tenants).where(eq(tenants.id, id));
+
+		return c.json({ success: true });
 	})
 
 	// === User Routes ===
@@ -135,6 +215,8 @@ const adminRoutes = new Hono()
 		}
 
 		// Use Better Auth's admin API to create user
+		// No headers passed - server-side calls are trusted by Better Auth
+		// Admin authorization already verified by requireAdmin middleware
 		try {
 			const result = await auth.api.createUser({
 				body: {
@@ -146,7 +228,6 @@ const adminRoutes = new Hono()
 						tenantId: tenantId || null,
 					},
 				},
-				headers: c.req.raw.headers,
 			});
 
 			// Update the user with tenantId since Better Auth might not handle custom fields
@@ -191,6 +272,117 @@ const adminRoutes = new Hono()
 				createdAt: user.createdAt,
 			},
 		});
+	})
+
+	// Update a user
+	.put('/users/:id', zValidator('json', updateUserSchema), async (c) => {
+		const id = c.req.param('id');
+		const updates = c.req.valid('json');
+
+		// Check if user exists
+		const [existing] = await db.select().from(users).where(eq(users.id, id)).limit(1);
+
+		if (!existing) {
+			return c.json({ error: 'User not found' }, 404);
+		}
+
+		// Validate role/tenant combination
+		const newRole = updates.role ?? existing.role;
+		const newTenantId = updates.tenantId !== undefined ? updates.tenantId : existing.tenantId;
+
+		if (newRole === 'customer' && !newTenantId) {
+			return c.json({ error: 'Customer users must have a tenant assigned' }, 400);
+		}
+
+		if (newRole === 'app_admin' && newTenantId) {
+			return c.json({ error: 'App admin users should not have a tenant assigned' }, 400);
+		}
+
+		// Verify tenant exists if provided
+		if (newTenantId) {
+			const [tenant] = await db
+				.select()
+				.from(tenants)
+				.where(eq(tenants.id, newTenantId))
+				.limit(1);
+
+			if (!tenant) {
+				return c.json({ error: 'Tenant not found' }, 400);
+			}
+		}
+
+		// If updating email, check it's unique
+		if (updates.email && updates.email !== existing.email) {
+			const [emailExists] = await db
+				.select()
+				.from(users)
+				.where(eq(users.email, updates.email))
+				.limit(1);
+
+			if (emailExists) {
+				return c.json({ error: 'User with this email already exists' }, 400);
+			}
+		}
+
+		// Handle password update separately using Better Auth
+		// No headers - server-side calls are trusted, admin check done by middleware
+		if (updates.password) {
+			try {
+				await auth.api.setPassword({
+					body: {
+						userId: id,
+						newPassword: updates.password,
+					},
+				});
+			} catch (error) {
+				console.error('Error updating password:', error);
+				return c.json({ error: 'Failed to update password' }, 500);
+			}
+		}
+
+		// Update other fields
+		const { password: _, ...fieldsToUpdate } = updates;
+		const updateData: Record<string, unknown> = { ...fieldsToUpdate, updatedAt: new Date() };
+
+		// Handle nullable tenantId
+		if (updates.tenantId === null) {
+			updateData.tenantId = null;
+		}
+
+		const [updated] = await db.update(users).set(updateData).where(eq(users.id, id)).returning();
+
+		return c.json({
+			user: {
+				id: updated.id,
+				name: updated.name,
+				email: updated.email,
+				role: updated.role,
+				tenantId: updated.tenantId,
+				createdAt: updated.createdAt,
+			},
+		});
+	})
+
+	// Delete a user
+	.delete('/users/:id', async (c) => {
+		const id = c.req.param('id');
+		const currentUser = c.get('user');
+
+		// Prevent self-deletion
+		if (currentUser?.id === id) {
+			return c.json({ error: 'Cannot delete your own account' }, 400);
+		}
+
+		// Check if user exists
+		const [existing] = await db.select().from(users).where(eq(users.id, id)).limit(1);
+
+		if (!existing) {
+			return c.json({ error: 'User not found' }, 404);
+		}
+
+		await db.delete(users).where(eq(users.id, id));
+
+		return c.json({ success: true });
 	});
 
 export { adminRoutes };

@@ -1,0 +1,83 @@
+import { useNavigate } from 'react-router'
+import { ChevronsUpDown, LogOut } from "lucide-react"
+
+import { signOut, useSession } from '@/lib/auth'
+import {
+	Avatar,
+	AvatarFallback,
+} from "@/components/ui/avatar"
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuLabel,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+	SidebarMenu,
+	SidebarMenuButton,
+	SidebarMenuItem,
+	useSidebar,
+} from "@/components/ui/sidebar"
+
+export function NavUser() {
+	const navigate = useNavigate()
+	const { isMobile } = useSidebar()
+	const { data: session } = useSession()
+
+	const user = session?.user
+	const initials = user?.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'
+
+	const handleSignOut = async () => {
+		await signOut()
+		navigate('/login', { replace: true })
+	}
+
+	return (
+		<SidebarMenu>
+			<SidebarMenuItem>
+				<DropdownMenu>
+					<DropdownMenuTrigger asChild>
+						<SidebarMenuButton
+							size="lg"
+							className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground group-data-[collapsible=icon]:justify-center"
+						>
+							<Avatar className="h-8 w-8 shrink-0 rounded-lg">
+								<AvatarFallback className="rounded-lg">{initials}</AvatarFallback>
+							</Avatar>
+							<div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
+								<span className="truncate font-medium">{user?.name}</span>
+								<span className="truncate text-xs">{user?.email}</span>
+							</div>
+							<ChevronsUpDown className="ml-auto size-4 group-data-[collapsible=icon]:hidden" />
+						</SidebarMenuButton>
+					</DropdownMenuTrigger>
+					<DropdownMenuContent
+						className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
+						side={isMobile ? "bottom" : "right"}
+						align="end"
+						sideOffset={4}
+					>
+						<DropdownMenuLabel className="p-0 font-normal">
+							<div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
+								<Avatar className="h-8 w-8 shrink-0 rounded-lg">
+									<AvatarFallback className="rounded-lg">{initials}</AvatarFallback>
+								</Avatar>
+								<div className="grid flex-1 text-left text-sm leading-tight">
+									<span className="truncate font-medium">{user?.name}</span>
+									<span className="truncate text-xs">{user?.email}</span>
+								</div>
+							</div>
+						</DropdownMenuLabel>
+						<DropdownMenuSeparator />
+						<DropdownMenuItem onClick={handleSignOut}>
+							<LogOut />
+							Sign out
+						</DropdownMenuItem>
+					</DropdownMenuContent>
+				</DropdownMenu>
+			</SidebarMenuItem>
+		</SidebarMenu>
+	)
+}

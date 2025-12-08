@@ -34,6 +34,9 @@ export const auth = betterAuth({
 		admin({
 			defaultRole: 'customer',
 			adminRoles: ['app_admin'],
+			isAdmin: async (user) => {
+				return user.role === 'app_admin';
+			},
 		}),
 	],
 });
