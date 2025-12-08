@@ -3,6 +3,8 @@ import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { auth } from './lib/auth';
 import { adminRoutes } from './routes/admin';
+import { teamRoutes } from './routes/team';
+import { customerRoutes } from './routes/customers';
 
 const app = new Hono();
 
@@ -35,7 +37,7 @@ const api = new Hono()
 				id: session.user.id,
 				name: session.user.name,
 				email: session.user.email,
-				role: (session.user as { role?: string }).role || 'customer',
+				role: (session.user as { role?: string }).role || 'tenant_user',
 				tenantId: (session.user as { tenantId?: string }).tenantId || null,
 			},
 		});
@@ -45,6 +47,12 @@ app.route('/api', api);
 
 // Admin routes
 app.route('/api/admin', adminRoutes);
+
+// Team routes (for tenant users)
+app.route('/api/team', teamRoutes);
+
+// Customer routes (for tenant users)
+app.route('/api/customers', customerRoutes);
 
 // Export type for RPC client
 export type AppType = typeof api;

@@ -3,7 +3,7 @@ import { useSession } from '@/lib/auth';
 
 interface ProtectedRouteProps {
 	children: React.ReactNode;
-	requiredRole?: 'app_admin' | 'customer';
+	requiredRole?: 'app_admin' | 'tenant_user';
 }
 
 export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {

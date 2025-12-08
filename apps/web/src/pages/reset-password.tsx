@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router';
-import { signIn, useSession } from '@/lib/auth';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router';
+import { authClient } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -17,42 +17,62 @@ import {
 	FieldError,
 } from '@/components/ui/field';
 
-export function LoginPage() {
+export function ResetPasswordPage() {
 	const navigate = useNavigate();
-	const location = useLocation();
-	const { data: session } = useSession();
+	const [searchParams] = useSearchParams();
 
-	const [email, setEmail] = useState('');
 	const [password, setPassword] = useState('');
+	const [confirmPassword, setConfirmPassword] = useState('');
 	const [error, setError] = useState<string | null>(null);
 	const [isLoading, setIsLoading] = useState(false);
 
-	const from = (location.state as { from?: Location })?.from?.pathname || '/';
+	const token = searchParams.get('token');
+	const urlError = searchParams.get('error');
 
-	if (session) {
-		navigate(from, { replace: true });
-		return null;
-	}
+	useEffect(() => {
+		if (urlError === 'INVALID_TOKEN') {
+			setError('This password reset link is invalid or has expired. Please request a new one.');
+		}
+	}, [urlError]);
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
 		setError(null);
+
+		if (!token) {
+			setError('Missing reset token. Please use the link from your email.');
+			return;
+		}
+
+		if (password !== confirmPassword) {
+			setError('Passwords do not match');
+			return;
+		}
+
+		if (password.length < 8) {
+			setError('Password must be at least 8 characters');
+			return;
+		}
+
 		setIsLoading(true);
 
 		try {
-			const result = await signIn.email({
-				email,
-				password,
+			const { error: resetError } = await authClient.resetPassword({
+				newPassword: password,
+				token,
 			});
 
-			if (result.error) {
-				setError(result.error.message || 'Failed to sign in');
+			if (resetError) {
+				setError(resetError.message || 'Failed to reset password');
 			} else {
-				navigate(from, { replace: true });
+				navigate('/login', {
+					replace: true,
+					state: { message: 'Password set successfully. You can now sign in.' }
+				});
 			}
 		} catch (err) {
 			setError('An unexpected error occurred');
-			console.error('Login error:', err);
+			console.error('Reset password error:', err);
 		} finally {
 			setIsLoading(false);
 		}
@@ -63,8 +83,8 @@ export function LoginPage() {
 			<div className="w-full max-w-sm">
 				<Card>
 					<CardHeader>
-						<CardTitle>Griffiths CRM</CardTitle>
-						<CardDescription>Sign in to your account</CardDescription>
+						<CardTitle>Set Your Password</CardTitle>
+						<CardDescription>Enter your new password below</CardDescription>
 					</CardHeader>
 					<CardContent>
 						<form onSubmit={handleSubmit}>
@@ -73,31 +93,31 @@ export function LoginPage() {
 									<FieldError>{error}</FieldError>
 								)}
 								<Field>
-									<FieldLabel htmlFor="email">Email</FieldLabel>
-									<Input
-										id="email"
-										type="email"
-										value={email}
-										onChange={(e) => setEmail(e.target.value)}
-										required
-										autoComplete="email"
-										placeholder="you@example.com"
-									/>
-								</Field>
-								<Field>
-									<FieldLabel htmlFor="password">Password</FieldLabel>
+									<FieldLabel htmlFor="password">New Password</FieldLabel>
 									<Input
 										id="password"
 										type="password"
 										value={password}
 										onChange={(e) => setPassword(e.target.value)}
 										required
-										autoComplete="current-password"
+										autoComplete="new-password"
+										minLength={8}
 									/>
 								</Field>
 								<Field>
-									<Button type="submit" disabled={isLoading} className="w-full">
-										{isLoading ? 'Signing in...' : 'Sign in'}
+									<FieldLabel htmlFor="confirmPassword">Confirm Password</FieldLabel>
+									<Input
+										id="confirmPassword"
+										type="password"
+										value={confirmPassword}
+										onChange={(e) => setConfirmPassword(e.target.value)}
+										required
+										autoComplete="new-password"
+									/>
+								</Field>
+								<Field>
+									<Button type="submit" disabled={isLoading || !token} className="w-full">
+										{isLoading ? 'Setting password...' : 'Set Password'}
 									</Button>
 								</Field>
 							</FieldGroup>
@@ -138,7 +158,7 @@ export function LoginPage() {
 										fill="#EA4335"
 									/>
 								</svg>
-								Sign in with Google
+								Continue with Google
 							</Button>
 
 							<Button
@@ -152,7 +172,7 @@ export function LoginPage() {
 									<rect x="1" y="12" width="10" height="10" fill="#00A4EF" />
 									<rect x="12" y="12" width="10" height="10" fill="#FFB900" />
 								</svg>
-								Sign in with Microsoft
+								Continue with Microsoft
 							</Button>
 						</div>
 					</CardContent>

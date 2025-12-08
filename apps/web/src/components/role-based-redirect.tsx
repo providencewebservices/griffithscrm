@@ -22,7 +22,7 @@ export function RoleBasedRedirect() {
 		return <Navigate to="/admin" replace />;
 	}
 
-	if (role === 'customer') {
+	if (role === 'tenant_user') {
 		return <Navigate to="/app" replace />;
 	}
 

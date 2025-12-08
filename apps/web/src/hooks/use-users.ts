@@ -6,7 +6,7 @@ export type User = {
 	id: string;
 	name: string;
 	email: string;
-	role: 'app_admin' | 'customer';
+	role: 'app_admin' | 'tenant_user';
 	tenantId: string | null;
 	createdAt: string;
 };
@@ -23,7 +23,7 @@ export type CreateUserInput = {
 	name: string;
 	email: string;
 	password: string;
-	role: 'app_admin' | 'customer';
+	role: 'app_admin' | 'tenant_user';
 	tenantId?: string;
 };
 
@@ -31,7 +31,7 @@ type UpdateUserInput = {
 	name?: string;
 	email?: string;
 	password?: string;
-	role?: 'app_admin' | 'customer';
+	role?: 'app_admin' | 'tenant_user';
 	tenantId?: string | null;
 };
 

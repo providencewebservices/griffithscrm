@@ -11,12 +11,14 @@
   "dependencies": {
     "@griffiths-crm/shared": "workspace:*",
     "@hono/zod-validator": "^0.4.2",
+    "better-auth": "^1.4.0",
     "drizzle-orm": "latest",
     "hono": "^4.10.7",
-    "better-auth": "^1.4.0",
+    "nodemailer": "^7.0.11",
     "zod": "^3.24.1"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "@types/nodemailer": "^7.0.4"
   }
 }

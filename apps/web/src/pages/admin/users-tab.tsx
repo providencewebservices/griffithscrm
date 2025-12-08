@@ -64,7 +64,7 @@ export function UsersTab() {
 		name: string;
 		email: string;
 		password?: string;
-		role: 'app_admin' | 'customer';
+		role: 'app_admin' | 'tenant_user';
 		tenantId?: string | null;
 	}) => {
 		setMutationError(null);
@@ -165,7 +165,7 @@ export function UsersTab() {
 										<Badge
 											variant={user.role === 'app_admin' ? 'default' : 'secondary'}
 										>
-											{user.role === 'app_admin' ? 'Admin' : 'Customer'}
+											{user.role === 'app_admin' ? 'Admin' : 'Tenant User'}
 										</Badge>
 									</TableCell>
 									<TableCell>{getTenantName(user.tenantId)}</TableCell>

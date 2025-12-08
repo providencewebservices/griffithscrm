@@ -31,7 +31,7 @@ interface UserFormDialogProps {
 		name: string;
 		email: string;
 		password?: string;
-		role: 'app_admin' | 'customer';
+		role: 'app_admin' | 'tenant_user';
 		tenantId?: string | null;
 	}) => void;
 	user?: User | null;
@@ -51,7 +51,7 @@ export function UserFormDialog({
 	const [name, setName] = useState('');
 	const [email, setEmail] = useState('');
 	const [password, setPassword] = useState('');
-	const [role, setRole] = useState<'app_admin' | 'customer'>('customer');
+	const [role, setRole] = useState<'app_admin' | 'tenant_user'>('tenant_user');
 	const [tenantId, setTenantId] = useState<string>('');
 	const [error, setError] = useState<string | null>(null);
 
@@ -70,7 +70,7 @@ export function UserFormDialog({
 				setName('');
 				setEmail('');
 				setPassword('');
-				setRole('customer');
+				setRole('tenant_user');
 				setTenantId('');
 			}
 			setError(null);
@@ -101,8 +101,8 @@ export function UserFormDialog({
 			return;
 		}
 
-		if (role === 'customer' && !tenantId) {
-			setError('Customer users must have a tenant assigned');
+		if (role === 'tenant_user' && !tenantId) {
+			setError('Tenant users must have a tenant assigned');
 			return;
 		}
 
@@ -110,7 +110,7 @@ export function UserFormDialog({
 			name: string;
 			email: string;
 			password?: string;
-			role: 'app_admin' | 'customer';
+			role: 'app_admin' | 'tenant_user';
 			tenantId?: string | null;
 		} = {
 			name: name.trim(),
@@ -173,7 +173,7 @@ export function UserFormDialog({
 							<FieldLabel htmlFor="user-role">Role</FieldLabel>
 							<Select
 								value={role}
-								onValueChange={(v) => setRole(v as 'app_admin' | 'customer')}
+								onValueChange={(v) => setRole(v as 'app_admin' | 'tenant_user')}
 								disabled={isLoading || isEditingSelf}
 							>
 								<SelectTrigger id="user-role">
@@ -181,7 +181,7 @@ export function UserFormDialog({
 								</SelectTrigger>
 								<SelectContent>
 									<SelectItem value="app_admin">App Admin</SelectItem>
-									<SelectItem value="customer">Customer</SelectItem>
+									<SelectItem value="tenant_user">Tenant User</SelectItem>
 								</SelectContent>
 							</Select>
 							{isEditingSelf && (
@@ -190,7 +190,7 @@ export function UserFormDialog({
 								</p>
 							)}
 						</Field>
-						{role === 'customer' && (
+						{role === 'tenant_user' && (
 							<Field>
 								<FieldLabel htmlFor="user-tenant">Tenant</FieldLabel>
 								<Select

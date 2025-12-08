@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, boolean } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, boolean, primaryKey } from 'drizzle-orm/pg-core';
 
 // Tenants table (must be defined before users due to foreign key)
 export const tenants = pgTable('tenants', {
@@ -17,7 +17,7 @@ export const users = pgTable('users', {
 	emailVerified: boolean('email_verified').notNull().default(false),
 	image: text('image'),
 	// Custom fields for multi-tenancy
-	role: text('role').notNull().default('customer'), // 'app_admin' | 'customer'
+	role: text('role').notNull().default('tenant_user'), // 'app_admin' | 'tenant_user'
 	tenantId: text('tenant_id').references(() => tenants.id, { onDelete: 'set null' }),
 	// Admin plugin fields
 	banned: boolean('banned'),
@@ -66,3 +66,84 @@ export const verifications = pgTable('verifications', {
 	createdAt: timestamp('created_at').notNull().defaultNow(),
 	updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
+
+// Customers table (tenant-scoped)
+export const customers = pgTable('customers', {
+	id: text('id').primaryKey(),
+	firstName: text('first_name').notNull(),
+	lastName: text('last_name').notNull(),
+	tenantId: text('tenant_id')
+		.notNull()
+		.references(() => tenants.id, { onDelete: 'cascade' }),
+	archivedAt: timestamp('archived_at'),
+	createdAt: timestamp('created_at').notNull().defaultNow(),
+	updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// Contact info table (reusable via join tables)
+export const contactInfo = pgTable('contact_info', {
+	id: text('id').primaryKey(),
+	type: text('type').notNull(), // 'email' | 'phone' | 'mobile' | 'fax' | 'other'
+	value: text('value').notNull(),
+	label: text('label'), // 'Work', 'Home', etc.
+	isPrimary: boolean('is_primary').notNull().default(false),
+	createdAt: timestamp('created_at').notNull().defaultNow(),
+	updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// Addresses table (Google Places compatible, reusable via join tables)
+export const addresses = pgTable('addresses', {
+	id: text('id').primaryKey(),
+	// Google Places API address_components format
+	streetNumber: text('street_number'),
+	route: text('route'), // Street name
+	locality: text('locality'), // City
+	administrativeAreaLevel1: text('administrative_area_level_1'), // State/Province
+	administrativeAreaLevel2: text('administrative_area_level_2'), // County
+	postalCode: text('postal_code'),
+	postalCodeSuffix: text('postal_code_suffix'),
+	country: text('country').notNull().default('US'),
+	// Additional fields
+	formattedAddress: text('formatted_address').notNull(),
+	placeId: text('place_id'), // Google Place ID
+	latitude: text('latitude'),
+	longitude: text('longitude'),
+	label: text('label'), // 'Billing', 'Shipping', etc.
+	isPrimary: boolean('is_primary').notNull().default(false),
+	createdAt: timestamp('created_at').notNull().defaultNow(),
+	updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// Customer <-> Contact Info join table
+export const customerContactInfo = pgTable(
+	'customer_contact_info',
+	{
+		customerId: text('customer_id')
+			.notNull()
+			.references(() => customers.id, { onDelete: 'cascade' }),
+		contactInfoId: text('contact_info_id')
+			.notNull()
+			.references(() => contactInfo.id, { onDelete: 'cascade' }),
+		createdAt: timestamp('created_at').notNull().defaultNow(),
+	},
+	(table) => ({
+		pk: primaryKey({ columns: [table.customerId, table.contactInfoId] }),
+	})
+);
+
+// Customer <-> Addresses join table
+export const customerAddresses = pgTable(
+	'customer_addresses',
+	{
+		customerId: text('customer_id')
+			.notNull()
+			.references(() => customers.id, { onDelete: 'cascade' }),
+		addressId: text('address_id')
+			.notNull()
+			.references(() => addresses.id, { onDelete: 'cascade' }),
+		createdAt: timestamp('created_at').notNull().defaultNow(),
+	},
+	(table) => ({
+		pk: primaryKey({ columns: [table.customerId, table.addressId] }),
+	})
+);

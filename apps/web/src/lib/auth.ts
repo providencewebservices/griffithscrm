@@ -13,6 +13,6 @@ export type AuthUser = {
 	id: string;
 	name: string;
 	email: string;
-	role: 'app_admin' | 'customer';
+	role: 'app_admin' | 'tenant_user';
 	tenantId: string | null;
 };
