@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router';
+import { useNavigate } from 'react-router';
 import { signIn, useSession } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,7 +19,6 @@ import {
 
 export function LoginPage() {
 	const navigate = useNavigate();
-	const location = useLocation();
 	const { data: session } = useSession();
 
 	const [email, setEmail] = useState('');
@@ -27,10 +26,9 @@ export function LoginPage() {
 	const [error, setError] = useState<string | null>(null);
 	const [isLoading, setIsLoading] = useState(false);
 
-	const from = (location.state as { from?: Location })?.from?.pathname || '/';
-
+	// Always redirect to / and let RoleBasedRedirect handle role-appropriate routing
 	if (session) {
-		navigate(from, { replace: true });
+		navigate('/', { replace: true });
 		return null;
 	}
 
@@ -48,7 +46,7 @@ export function LoginPage() {
 			if (result.error) {
 				setError(result.error.message || 'Failed to sign in');
 			} else {
-				navigate(from, { replace: true });
+				navigate('/', { replace: true });
 			}
 		} catch (err) {
 			setError('An unexpected error occurred');
