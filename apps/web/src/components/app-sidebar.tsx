@@ -1,5 +1,5 @@
 import * as React from "react"
-import { LayoutDashboard, UsersRound, Users, Settings } from "lucide-react"
+import { LayoutDashboard, UsersRound, Users, Settings, Package, FileText } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
 import { NavUser } from "@/components/nav-user"
@@ -16,6 +16,8 @@ import {
 
 const navItems = [
 	{ title: "Dashboard", url: "/app", icon: LayoutDashboard },
+	{ title: "Quotes", url: "/app/quotes", icon: FileText },
+	{ title: "Products", url: "/app/products", icon: Package },
 	{ title: "Customers", url: "/app/customers", icon: Users },
 	{ title: "Team", url: "/app/team", icon: UsersRound },
 	{ title: "Settings", url: "/app/settings", icon: Settings },

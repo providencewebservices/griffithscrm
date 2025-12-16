@@ -355,8 +355,9 @@ export function CustomerFormDialog({
 							) : (
 								<div className="space-y-3">
 									{addresses.map((address, index) => {
-										const labels = ADDRESS_LABELS[address.country] || ADDRESS_LABELS.US;
-										const countryData = COUNTRIES.find((c) => c.value === address.country);
+										const countryCode = address.country || 'US';
+										const labels = ADDRESS_LABELS[countryCode] || ADDRESS_LABELS.US;
+										const countryData = COUNTRIES.find((c) => c.value === countryCode);
 										return (
 											<div
 												key={index}

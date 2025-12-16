@@ -9,6 +9,8 @@
     "start": "bun run dist/index.js"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.952.0",
+    "@aws-sdk/s3-request-presigner": "^3.952.0",
     "@griffiths-crm/shared": "workspace:*",
     "@hono/zod-validator": "^0.4.2",
     "better-auth": "^1.4.0",

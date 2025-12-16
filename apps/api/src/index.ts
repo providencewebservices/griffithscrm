@@ -6,6 +6,23 @@ import { adminRoutes } from './routes/admin';
 import { teamRoutes } from './routes/team';
 import { customerRoutes } from './routes/customers';
 import { tenantSettingsRoutes } from './routes/tenant-settings';
+import { uploadRoutes } from './routes/uploads';
+import { letteringTechniquesRoutes } from './routes/lettering-techniques';
+import { letteringCostsRoutes } from './routes/lettering-costs';
+import { letteringColorsRoutes } from './routes/lettering-colors';
+import { sundriesRoutes } from './routes/sundries';
+import { servicesRoutes } from './routes/services';
+import { productCategoriesRoutes } from './routes/product-categories';
+import { productsRoutes } from './routes/products';
+import { productOptionsRoutes } from './routes/product-options';
+import { optionChoicesRoutes } from './routes/option-choices';
+import { productComponentsRoutes } from './routes/product-components';
+import { dimensionCombosRoutes } from './routes/dimension-combos';
+import { materialSectionsRoutes } from './routes/material-sections';
+import { materialsRoutes } from './routes/materials';
+import { finishesRoutes } from './routes/finishes';
+import { tenantPricingSettingsRoutes } from './routes/tenant-pricing-settings';
+import { quotesRoutes } from './routes/quotes';
 
 const app = new Hono();
 
@@ -57,6 +74,33 @@ app.route('/api/customers', customerRoutes);
 
 // Tenant settings routes (for tenant users)
 app.route('/api/tenant/settings', tenantSettingsRoutes);
+
+// Upload routes (for tenant users)
+app.route('/api/uploads', uploadRoutes);
+
+// Tenant configuration routes (for tenant users)
+app.route('/api/tenant/lettering-techniques', letteringTechniquesRoutes);
+app.route('/api/tenant/lettering-costs', letteringCostsRoutes);
+app.route('/api/tenant/lettering-colors', letteringColorsRoutes);
+app.route('/api/tenant/sundries', sundriesRoutes);
+app.route('/api/tenant/services', servicesRoutes);
+
+// Product catalog routes (for tenant users)
+app.route('/api/tenant/product-categories', productCategoriesRoutes);
+app.route('/api/tenant/products', productsRoutes);
+app.route('/api/tenant', productOptionsRoutes);
+app.route('/api/tenant', optionChoicesRoutes);
+app.route('/api/tenant', productComponentsRoutes);
+app.route('/api/tenant', dimensionCombosRoutes);
+
+// Materials & pricing routes (for tenant users)
+app.route('/api/tenant/material-sections', materialSectionsRoutes);
+app.route('/api/tenant/materials', materialsRoutes);
+app.route('/api/tenant/finishes', finishesRoutes);
+app.route('/api/tenant/pricing-settings', tenantPricingSettingsRoutes);
+
+// Quote routes (for tenant users)
+app.route('/api/quotes', quotesRoutes);
 
 // Export type for RPC client
 export type AppType = typeof api;

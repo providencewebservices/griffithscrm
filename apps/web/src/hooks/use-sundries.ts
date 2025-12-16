@@ -1,0 +1,142 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+
+const API_URL = 'http://localhost:3000';
+
+export type Sundry = {
+	id: string;
+	tenantId: string;
+	name: string;
+	description: string | null;
+	price: string;
+	imageUrl: string | null;
+	isActive: boolean;
+	sortOrder: number;
+	createdAt: string;
+	updatedAt: string;
+};
+
+export type CreateSundryInput = {
+	name: string;
+	description?: string;
+	price: number;
+	imageUrl?: string | null;
+};
+
+export type UpdateSundryInput = {
+	name?: string;
+	description?: string | null;
+	price?: number;
+	imageUrl?: string | null;
+	isActive?: boolean;
+};
+
+type ListResponse = {
+	sundries: Sundry[];
+};
+
+type ItemResponse = {
+	sundry: Sundry;
+};
+
+async function fetchSundries(): Promise<Sundry[]> {
+	const response = await fetch(`${API_URL}/api/tenant/sundries`, {
+		credentials: 'include',
+	});
+
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.error || 'Failed to fetch sundries');
+	}
+
+	const data: ListResponse = await response.json();
+	return data.sundries;
+}
+
+async function createSundry(input: CreateSundryInput): Promise<Sundry> {
+	const response = await fetch(`${API_URL}/api/tenant/sundries`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		credentials: 'include',
+		body: JSON.stringify(input),
+	});
+
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.error || 'Failed to create sundry');
+	}
+
+	const data: ItemResponse = await response.json();
+	return data.sundry;
+}
+
+async function updateSundry({
+	id,
+	...input
+}: UpdateSundryInput & { id: string }): Promise<Sundry> {
+	const response = await fetch(`${API_URL}/api/tenant/sundries/${id}`, {
+		method: 'PUT',
+		headers: { 'Content-Type': 'application/json' },
+		credentials: 'include',
+		body: JSON.stringify(input),
+	});
+
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.error || 'Failed to update sundry');
+	}
+
+	const data: ItemResponse = await response.json();
+	return data.sundry;
+}
+
+async function deleteSundry(id: string): Promise<void> {
+	const response = await fetch(`${API_URL}/api/tenant/sundries/${id}`, {
+		method: 'DELETE',
+		credentials: 'include',
+	});
+
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.error || 'Failed to delete sundry');
+	}
+}
+
+export function useSundriesQuery() {
+	return useQuery({
+		queryKey: ['sundries'],
+		queryFn: fetchSundries,
+	});
+}
+
+export function useCreateSundryMutation() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: createSundry,
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ['sundries'] });
+		},
+	});
+}
+
+export function useUpdateSundryMutation() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: updateSundry,
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ['sundries'] });
+		},
+	});
+}
+
+export function useDeleteSundryMutation() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: deleteSundry,
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ['sundries'] });
+		},
+	});
+}

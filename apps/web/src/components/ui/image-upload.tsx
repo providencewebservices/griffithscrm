@@ -1,0 +1,225 @@
+import * as React from 'react';
+import { useState, useRef, useCallback } from 'react';
+import { cn } from '@/lib/utils';
+import { Button } from './button';
+import { Upload, X, Loader2, ImageIcon } from 'lucide-react';
+import { useUploadImageMutation, type UploadCategory } from '@/hooks/use-uploads';
+
+interface ImageUploadProps {
+	value?: string | null;
+	onChange: (url: string | null) => void;
+	category: UploadCategory;
+	entityId: string;
+	className?: string;
+	disabled?: boolean;
+}
+
+const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+
+export function ImageUpload({
+	value,
+	onChange,
+	category,
+	entityId,
+	className,
+	disabled = false,
+}: ImageUploadProps) {
+	const [preview, setPreview] = useState<string | null>(value || null);
+	const [error, setError] = useState<string | null>(null);
+	const [isDragging, setIsDragging] = useState(false);
+	const fileInputRef = useRef<HTMLInputElement>(null);
+
+	const uploadMutation = useUploadImageMutation();
+
+	const handleFile = useCallback(
+		async (file: File) => {
+			setError(null);
+
+			// Validate file type
+			if (!ACCEPTED_TYPES.includes(file.type)) {
+				setError('Please upload a JPEG, PNG, GIF, or WebP image');
+				return;
+			}
+
+			// Validate file size
+			if (file.size > MAX_SIZE) {
+				setError('Image must be less than 5MB');
+				return;
+			}
+
+			// Create local preview
+			const localPreview = URL.createObjectURL(file);
+			setPreview(localPreview);
+
+			try {
+				const publicUrl = await uploadMutation.mutateAsync({
+					category,
+					entityId,
+					file,
+				});
+
+				// Update with the actual URL
+				setPreview(publicUrl);
+				onChange(publicUrl);
+
+				// Cleanup local preview
+				URL.revokeObjectURL(localPreview);
+			} catch (err) {
+				setError(err instanceof Error ? err.message : 'Failed to upload image');
+				setPreview(value || null);
+				URL.revokeObjectURL(localPreview);
+			}
+		},
+		[category, entityId, onChange, uploadMutation, value]
+	);
+
+	const handleDrop = useCallback(
+		(e: React.DragEvent<HTMLDivElement>) => {
+			e.preventDefault();
+			setIsDragging(false);
+
+			if (disabled || uploadMutation.isPending) return;
+
+			const file = e.dataTransfer.files[0];
+			if (file) {
+				handleFile(file);
+			}
+		},
+		[disabled, uploadMutation.isPending, handleFile]
+	);
+
+	const handleDragOver = useCallback(
+		(e: React.DragEvent<HTMLDivElement>) => {
+			e.preventDefault();
+			if (!disabled && !uploadMutation.isPending) {
+				setIsDragging(true);
+			}
+		},
+		[disabled, uploadMutation.isPending]
+	);
+
+	const handleDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+		e.preventDefault();
+		setIsDragging(false);
+	}, []);
+
+	const handleInputChange = useCallback(
+		(e: React.ChangeEvent<HTMLInputElement>) => {
+			const file = e.target.files?.[0];
+			if (file) {
+				handleFile(file);
+			}
+			// Reset input
+			e.target.value = '';
+		},
+		[handleFile]
+	);
+
+	const handleRemove = useCallback(() => {
+		setPreview(null);
+		onChange(null);
+		setError(null);
+	}, [onChange]);
+
+	const handleClick = useCallback(() => {
+		if (!disabled && !uploadMutation.isPending) {
+			fileInputRef.current?.click();
+		}
+	}, [disabled, uploadMutation.isPending]);
+
+	return (
+		<div className={cn('space-y-2', className)}>
+			<input
+				ref={fileInputRef}
+				type="file"
+				accept={ACCEPTED_TYPES.join(',')}
+				onChange={handleInputChange}
+				className="hidden"
+				disabled={disabled || uploadMutation.isPending}
+			/>
+
+			{preview ? (
+				<div className="relative group">
+					<img
+						src={preview}
+						alt="Preview"
+						className="w-full h-48 object-cover rounded-lg border"
+					/>
+					{!disabled && (
+						<div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
+							<Button
+								type="button"
+								variant="secondary"
+								size="sm"
+								onClick={handleClick}
+								disabled={uploadMutation.isPending}
+							>
+								{uploadMutation.isPending ? (
+									<Loader2 className="h-4 w-4 animate-spin" />
+								) : (
+									<Upload className="h-4 w-4" />
+								)}
+								Replace
+							</Button>
+							<Button
+								type="button"
+								variant="destructive"
+								size="sm"
+								onClick={handleRemove}
+								disabled={uploadMutation.isPending}
+							>
+								<X className="h-4 w-4" />
+								Remove
+							</Button>
+						</div>
+					)}
+					{uploadMutation.isPending && (
+						<div className="absolute inset-0 bg-black/30 rounded-lg flex items-center justify-center">
+							<Loader2 className="h-8 w-8 animate-spin text-white" />
+						</div>
+					)}
+				</div>
+			) : (
+				<div
+					onClick={handleClick}
+					onDrop={handleDrop}
+					onDragOver={handleDragOver}
+					onDragLeave={handleDragLeave}
+					className={cn(
+						'w-full h-48 border-2 border-dashed rounded-lg flex flex-col items-center justify-center gap-2 cursor-pointer transition-colors',
+						isDragging
+							? 'border-primary bg-primary/5'
+							: 'border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/50',
+						(disabled || uploadMutation.isPending) &&
+							'cursor-not-allowed opacity-50'
+					)}
+				>
+					{uploadMutation.isPending ? (
+						<>
+							<Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+							<span className="text-sm text-muted-foreground">Uploading...</span>
+						</>
+					) : (
+						<>
+							<ImageIcon className="h-8 w-8 text-muted-foreground" />
+							<div className="text-center">
+								<span className="text-sm font-medium text-muted-foreground">
+									Click to upload
+								</span>
+								<span className="text-sm text-muted-foreground block">
+									or drag and drop
+								</span>
+							</div>
+							<span className="text-xs text-muted-foreground">
+								JPEG, PNG, GIF, WebP (max 5MB)
+							</span>
+						</>
+					)}
+				</div>
+			)}
+
+			{error && <p className="text-sm text-destructive">{error}</p>}
+		</div>
+	);
+}

@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { Link } from 'react-router';
 import {
 	Table,
 	TableBody,
@@ -7,27 +8,14 @@ import {
 	TableHeader,
 	TableRow,
 } from '@/components/ui/table';
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { CustomerFormDialog } from '@/components/customer/customer-form-dialog';
-import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
 import {
 	useCustomersQuery,
-	useCustomerQuery,
 	useCreateCustomerMutation,
-	useUpdateCustomerMutation,
-	useArchiveCustomerMutation,
-	useUnarchiveCustomerMutation,
-	type CustomerListItem,
-	type CustomerWithRelations,
 	type CreateCustomerInput,
 } from '@/hooks/use-customers';
 import { useTenantSettingsQuery } from '@/hooks/use-tenant-settings';
@@ -38,9 +26,6 @@ export function CustomersPage() {
 	const [includeArchived, setIncludeArchived] = useState(false);
 	const [debouncedSearch, setDebouncedSearch] = useState('');
 	const [formDialogOpen, setFormDialogOpen] = useState(false);
-	const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
-	const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
-	const [selectedCustomer, setSelectedCustomer] = useState<CustomerListItem | null>(null);
 	const [mutationError, setMutationError] = useState<string | null>(null);
 
 	// Debounce search
@@ -56,65 +41,21 @@ export function CustomersPage() {
 		includeArchived,
 	});
 
-	const { data: customerDetails } = useCustomerQuery(selectedCustomerId || '');
-
 	const createMutation = useCreateCustomerMutation();
-	const updateMutation = useUpdateCustomerMutation();
-	const archiveMutation = useArchiveCustomerMutation();
-	const unarchiveMutation = useUnarchiveCustomerMutation();
 
 	const { data: tenantSettings } = useTenantSettingsQuery();
 	const defaultCountry = tenantSettings?.address?.country || 'US';
 
 	const handleAddCustomer = () => {
-		setSelectedCustomerId(null);
-		setSelectedCustomer(null);
 		setMutationError(null);
 		setFormDialogOpen(true);
-	};
-
-	const handleEdit = (customer: CustomerListItem) => {
-		setSelectedCustomerId(customer.id);
-		setSelectedCustomer(customer);
-		setMutationError(null);
-		setFormDialogOpen(true);
-	};
-
-	const handleArchive = (customer: CustomerListItem) => {
-		setSelectedCustomer(customer);
-		setMutationError(null);
-		setArchiveDialogOpen(true);
-	};
-
-	const handleUnarchive = async (customer: CustomerListItem) => {
-		setMutationError(null);
-		try {
-			await unarchiveMutation.mutateAsync(customer.id);
-		} catch (err) {
-			setMutationError(err instanceof Error ? err.message : 'Failed to restore customer');
-		}
 	};
 
 	const handleFormSubmit = async (data: CreateCustomerInput) => {
 		setMutationError(null);
 		try {
-			if (selectedCustomerId) {
-				await updateMutation.mutateAsync({ id: selectedCustomerId, ...data });
-			} else {
-				await createMutation.mutateAsync(data);
-			}
+			await createMutation.mutateAsync(data);
 			setFormDialogOpen(false);
-		} catch (err) {
-			setMutationError(err instanceof Error ? err.message : 'An error occurred');
-		}
-	};
-
-	const handleArchiveConfirm = async () => {
-		if (!selectedCustomer) return;
-		setMutationError(null);
-		try {
-			await archiveMutation.mutateAsync(selectedCustomer.id);
-			setArchiveDialogOpen(false);
 		} catch (err) {
 			setMutationError(err instanceof Error ? err.message : 'An error occurred');
 		}
@@ -244,33 +185,11 @@ export function CustomersPage() {
 										)}
 									</TableCell>
 									<TableCell>
-										<DropdownMenu>
-											<DropdownMenuTrigger asChild>
-												<Button variant="ghost" size="sm">
-													...
-												</Button>
-											</DropdownMenuTrigger>
-											<DropdownMenuContent align="end">
-												<DropdownMenuItem onClick={() => handleEdit(customer)}>
-													Edit
-												</DropdownMenuItem>
-												{customer.archivedAt ? (
-													<DropdownMenuItem
-														onClick={() => handleUnarchive(customer)}
-														disabled={unarchiveMutation.isPending}
-													>
-														Restore
-													</DropdownMenuItem>
-												) : (
-													<DropdownMenuItem
-														onClick={() => handleArchive(customer)}
-														className="text-destructive"
-													>
-														Archive
-													</DropdownMenuItem>
-												)}
-											</DropdownMenuContent>
-										</DropdownMenu>
+										<Link to={`/app/customers/${customer.id}`}>
+											<Button variant="ghost" size="sm">
+												View
+											</Button>
+										</Link>
 									</TableCell>
 								</TableRow>
 							))}
@@ -283,19 +202,10 @@ export function CustomersPage() {
 				open={formDialogOpen}
 				onOpenChange={setFormDialogOpen}
 				onSubmit={handleFormSubmit}
-				customer={customerDetails as CustomerWithRelations | null}
-				isLoading={createMutation.isPending || updateMutation.isPending}
+				customer={null}
+				isLoading={createMutation.isPending}
 				error={mutationError}
 				defaultCountry={defaultCountry}
-			/>
-
-			<DeleteConfirmDialog
-				open={archiveDialogOpen}
-				onOpenChange={setArchiveDialogOpen}
-				onConfirm={handleArchiveConfirm}
-				title="Archive Customer"
-				description={`Are you sure you want to archive "${selectedCustomer?.firstName} ${selectedCustomer?.lastName}"? You can restore them later.`}
-				isLoading={archiveMutation.isPending}
 			/>
 		</div>
 	);
