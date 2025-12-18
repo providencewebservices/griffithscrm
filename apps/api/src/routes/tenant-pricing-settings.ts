@@ -8,8 +8,7 @@ import { tenantPricingSettings } from '@griffiths-crm/shared/db/schema';
 
 // Validation schema
 const updateSchema = z.object({
-	priceMultiplier: z.number().min(0).optional(),
-	priceFixedAmount: z.number().min(0).optional(),
+	defaultMarkupPercent: z.number().min(0).optional(), // 100 = 100% markup = 2x multiplier
 	vatRate: z.number().min(0).max(1).optional(), // 0.20 = 20%
 });
 
@@ -36,8 +35,7 @@ const tenantPricingSettingsRoutes = new Hono()
 				.values({
 					id: crypto.randomUUID(),
 					tenantId,
-					priceMultiplier: '1',
-					priceFixedAmount: '0',
+					defaultMarkupPercent: '100', // 100% markup = 2x multiplier
 					vatRate: '0',
 				})
 				.returning();
@@ -66,9 +64,8 @@ const tenantPricingSettingsRoutes = new Hono()
 				.values({
 					id: crypto.randomUUID(),
 					tenantId,
-					priceMultiplier: data.priceMultiplier !== undefined ? String(data.priceMultiplier) : '1',
-					priceFixedAmount:
-						data.priceFixedAmount !== undefined ? String(data.priceFixedAmount) : '0',
+					defaultMarkupPercent:
+						data.defaultMarkupPercent !== undefined ? String(data.defaultMarkupPercent) : '100',
 					vatRate: data.vatRate !== undefined ? String(data.vatRate) : '0',
 				})
 				.returning();
@@ -78,9 +75,8 @@ const tenantPricingSettingsRoutes = new Hono()
 
 		// Update existing
 		const updateData: Record<string, unknown> = { updatedAt: new Date() };
-		if (data.priceMultiplier !== undefined) updateData.priceMultiplier = String(data.priceMultiplier);
-		if (data.priceFixedAmount !== undefined)
-			updateData.priceFixedAmount = String(data.priceFixedAmount);
+		if (data.defaultMarkupPercent !== undefined)
+			updateData.defaultMarkupPercent = String(data.defaultMarkupPercent);
 		if (data.vatRate !== undefined) updateData.vatRate = String(data.vatRate);
 
 		const [updated] = await db

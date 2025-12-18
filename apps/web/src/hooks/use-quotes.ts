@@ -24,7 +24,6 @@ export type QuoteComponent = {
 	quantity: number;
 	supplierCost: string;
 	multiplier: string;
-	fixedAmount: string;
 	unitPrice: string;
 	lineTotal: string;
 	materialName: string | null;
@@ -45,7 +44,6 @@ export type QuoteLettering = {
 	appliesTo: string | null;
 	supplierCost: string;
 	multiplier: string;
-	fixedAmount: string;
 	unitPrice: string;
 	lineTotal: string;
 	techniqueName: string | null;
@@ -63,7 +61,6 @@ export type QuoteSundry = {
 	quantity: number;
 	supplierCost: string;
 	multiplier: string;
-	fixedAmount: string;
 	unitPrice: string;
 	lineTotal: string;
 	sundryName: string | null;
@@ -73,21 +70,21 @@ export type QuoteSundry = {
 	updatedAt: string;
 };
 
-export type QuoteService = {
+export type QuoteLineItem = {
 	id: string;
 	quoteId: string;
-	serviceId: string | null;
-	quantity: number;
-	supplierCost: string;
-	multiplier: string;
-	fixedAmount: string;
-	unitPrice: string;
-	lineTotal: string;
-	serviceName: string | null;
-	notes: string | null;
+	description: string;
+	price: string;
 	sortOrder: number;
 	createdAt: string;
 	updatedAt: string;
+};
+
+export type QuoteServiceInfo = {
+	id: string;
+	name: string;
+	description: string | null;
+	pricingType: string;
 };
 
 export type QuoteCustomer = {
@@ -115,6 +112,7 @@ export type Quote = {
 	tenantId: string;
 	parentQuoteId: string | null;
 	version: number;
+	serviceId: string | null;
 	customerId: string | null;
 	productId: string | null;
 	dimensionComboId: string | null;
@@ -152,10 +150,11 @@ export type QuoteListItem = Quote & {
 export type QuoteWithLineItems = Quote & {
 	customer: QuoteCustomer | null;
 	product: QuoteProduct | null;
+	service: QuoteServiceInfo | null;
 	components: QuoteComponent[];
 	lettering: QuoteLettering[];
 	sundries: QuoteSundry[];
-	services: QuoteService[];
+	lineItems: QuoteLineItem[];
 	versions: QuoteVersion[];
 };
 
@@ -185,13 +184,6 @@ export type SundryInput = {
 	notes?: string;
 };
 
-export type ServiceInput = {
-	serviceId: string;
-	quantity?: number;
-	unitPrice?: number;
-	notes?: string;
-};
-
 export type CustomerDetailsInput = {
 	firstName: string;
 	lastName: string;
@@ -208,6 +200,7 @@ export type CustomerDetailsInput = {
 };
 
 export type CreateQuoteInput = {
+	serviceId: string;
 	customerId?: string;
 	productId?: string;
 	dimensionComboId?: string;
@@ -219,7 +212,6 @@ export type CreateQuoteInput = {
 	components?: ComponentInput[];
 	lettering?: LetteringInput[];
 	sundries?: SundryInput[];
-	services?: ServiceInput[];
 	customerDetails?: CustomerDetailsInput;
 };
 
@@ -463,8 +455,31 @@ type UpdateLineItemPricingInput = {
 	itemId: string;
 	supplierCost?: number;
 	multiplier?: number;
-	fixedAmount?: number;
 	quantity?: number;
+};
+
+// Custom line item types
+export type LineItemInput = {
+	description: string;
+	price: number;
+};
+
+export type AddLineItemInput = {
+	quoteId: string;
+	description: string;
+	price: number;
+};
+
+export type UpdateLineItemInput = {
+	quoteId: string;
+	itemId: string;
+	description?: string;
+	price?: number;
+};
+
+export type DeleteLineItemInput = {
+	quoteId: string;
+	itemId: string;
 };
 
 // Line item update functions
@@ -531,27 +546,6 @@ async function updateSundryPricing({
 	return data.quote;
 }
 
-async function updateServicePricing({
-	quoteId,
-	itemId,
-	...input
-}: UpdateLineItemPricingInput): Promise<QuoteWithLineItems> {
-	const response = await fetch(`${API_URL}/api/quotes/${quoteId}/services/${itemId}`, {
-		method: 'PUT',
-		headers: { 'Content-Type': 'application/json' },
-		credentials: 'include',
-		body: JSON.stringify(input),
-	});
-
-	if (!response.ok) {
-		const error = await response.json();
-		throw new Error(error.error || 'Failed to update service pricing');
-	}
-
-	const data: QuoteResponse = await response.json();
-	return data.quote;
-}
-
 // Line item pricing mutation hooks
 export function useUpdateComponentPricingMutation() {
 	const queryClient = useQueryClient();
@@ -589,11 +583,98 @@ export function useUpdateSundryPricingMutation() {
 	});
 }
 
-export function useUpdateServicePricingMutation() {
+// Custom line item CRUD functions
+async function addLineItem({
+	quoteId,
+	description,
+	price,
+}: AddLineItemInput): Promise<QuoteWithLineItems> {
+	const response = await fetch(`${API_URL}/api/quotes/${quoteId}/line-items`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		credentials: 'include',
+		body: JSON.stringify({ description, price }),
+	});
+
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.error || 'Failed to add line item');
+	}
+
+	const data: QuoteResponse = await response.json();
+	return data.quote;
+}
+
+async function updateLineItem({
+	quoteId,
+	itemId,
+	description,
+	price,
+}: UpdateLineItemInput): Promise<QuoteWithLineItems> {
+	const response = await fetch(`${API_URL}/api/quotes/${quoteId}/line-items/${itemId}`, {
+		method: 'PUT',
+		headers: { 'Content-Type': 'application/json' },
+		credentials: 'include',
+		body: JSON.stringify({ description, price }),
+	});
+
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.error || 'Failed to update line item');
+	}
+
+	const data: QuoteResponse = await response.json();
+	return data.quote;
+}
+
+async function deleteLineItem({
+	quoteId,
+	itemId,
+}: DeleteLineItemInput): Promise<QuoteWithLineItems> {
+	const response = await fetch(`${API_URL}/api/quotes/${quoteId}/line-items/${itemId}`, {
+		method: 'DELETE',
+		credentials: 'include',
+	});
+
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.error || 'Failed to delete line item');
+	}
+
+	const data: QuoteResponse = await response.json();
+	return data.quote;
+}
+
+// Custom line item mutation hooks
+export function useAddLineItemMutation() {
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: updateServicePricing,
+		mutationFn: addLineItem,
+		onSuccess: (data) => {
+			queryClient.setQueryData(['quote', data.id], data);
+			queryClient.invalidateQueries({ queryKey: ['quotes'] });
+		},
+	});
+}
+
+export function useUpdateLineItemMutation() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: updateLineItem,
+		onSuccess: (data) => {
+			queryClient.setQueryData(['quote', data.id], data);
+			queryClient.invalidateQueries({ queryKey: ['quotes'] });
+		},
+	});
+}
+
+export function useDeleteLineItemMutation() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: deleteLineItem,
 		onSuccess: (data) => {
 			queryClient.setQueryData(['quote', data.id], data);
 			queryClient.invalidateQueries({ queryKey: ['quotes'] });

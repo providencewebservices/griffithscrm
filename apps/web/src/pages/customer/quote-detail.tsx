@@ -45,14 +45,16 @@ import {
 	useUpdateComponentPricingMutation,
 	useUpdateLetteringPricingMutation,
 	useUpdateSundryPricingMutation,
-	useUpdateServicePricingMutation,
+	useAddLineItemMutation,
+	useUpdateLineItemMutation,
+	useDeleteLineItemMutation,
 	formatQuoteStatus,
 	getQuoteStatusVariant,
 	formatComponentType,
 	type QuoteStatus,
 } from '@/hooks/use-quotes';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Send, Check, X, Clock, FileEdit, Trash2, Eye, EyeOff, Loader2, Mail, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Send, Check, X, Clock, FileEdit, Trash2, Eye, EyeOff, Loader2, Mail, MessageSquare, Plus } from 'lucide-react';
 
 // Editable number component for inline editing
 function EditableNumber({
@@ -187,7 +189,13 @@ export function QuoteDetailPage() {
 	const updateComponentPricing = useUpdateComponentPricingMutation();
 	const updateLetteringPricing = useUpdateLetteringPricingMutation();
 	const updateSundryPricing = useUpdateSundryPricingMutation();
-	const updateServicePricing = useUpdateServicePricingMutation();
+	const addLineItem = useAddLineItemMutation();
+	const updateLineItem = useUpdateLineItemMutation();
+	const deleteLineItem = useDeleteLineItemMutation();
+
+	// State for new line item input
+	const [newLineItemDesc, setNewLineItemDesc] = useState('');
+	const [newLineItemPrice, setNewLineItemPrice] = useState('');
 
 	// Can only edit pricing on draft quotes
 	const canEditPricing = quote?.status === 'draft';
@@ -471,10 +479,17 @@ export function QuoteDetailPage() {
 
 							<hr />
 
-							{/* Product Details */}
+							{/* Service & Product Details */}
 							<div className="space-y-4">
+								{quote.service && (
+									<div>
+										<p className="text-sm text-muted-foreground">Service</p>
+										<p className="font-semibold text-lg">{quote.service.name}</p>
+									</div>
+								)}
 								{quote.product && (
 									<div>
+										<p className="text-sm text-muted-foreground">Product</p>
 										<p className="font-semibold text-lg">{quote.product.name}</p>
 									</div>
 								)}
@@ -551,17 +566,19 @@ export function QuoteDetailPage() {
 									</div>
 								)}
 
-								{/* Services */}
-								{quote.services.length > 0 && (
+								{/* Custom Line Items */}
+								{quote.lineItems && quote.lineItems.length > 0 && (
 									<div className="space-y-1">
-										<p className="text-sm font-medium">Services:</p>
-										{quote.services.map((s) => (
-											<p key={s.id} className="text-sm text-muted-foreground">
-												{s.serviceName}
-											</p>
+										<p className="text-sm font-medium">Other Charges:</p>
+										{quote.lineItems.map((item) => (
+											<div key={item.id} className="flex justify-between text-sm">
+												<span className="text-muted-foreground">{item.description}</span>
+												<span>{formatCurrency(item.price)}</span>
+											</div>
 										))}
 									</div>
 								)}
+
 							</div>
 
 							<hr />
@@ -608,6 +625,10 @@ export function QuoteDetailPage() {
 							<CardTitle>Quote Information</CardTitle>
 						</CardHeader>
 						<CardContent className="grid grid-cols-2 gap-4">
+							<div>
+								<p className="text-sm font-medium text-muted-foreground">Service</p>
+								<p>{quote.service?.name || 'No service selected'}</p>
+							</div>
 							<div>
 								<p className="text-sm font-medium text-muted-foreground">Customer</p>
 								<p>
@@ -671,7 +692,6 @@ export function QuoteDetailPage() {
 												<TableHead className="text-center">Qty</TableHead>
 												<TableHead className="text-right text-orange-600">Supplier</TableHead>
 												<TableHead className="text-center">×</TableHead>
-												<TableHead className="text-right text-orange-600">+Fixed</TableHead>
 												<TableHead className="text-right">Retail</TableHead>
 												<TableHead className="text-right">Total</TableHead>
 											</TableRow>
@@ -724,20 +744,6 @@ export function QuoteDetailPage() {
 															min={0.01}
 														/>
 													</TableCell>
-													<TableCell className="text-right text-orange-600">
-														<EditableNumber
-															value={parseFloat(comp.fixedAmount)}
-															onSave={async (value) => {
-																await updateComponentPricing.mutateAsync({
-																	quoteId: quote.id,
-																	itemId: comp.id,
-																	fixedAmount: value,
-																});
-															}}
-															disabled={!canEditPricing}
-															isCurrency
-														/>
-													</TableCell>
 													<TableCell className="text-right">
 														{formatCurrency(comp.unitPrice)}
 													</TableCell>
@@ -773,7 +779,6 @@ export function QuoteDetailPage() {
 												<TableHead className="text-center">Letters</TableHead>
 												<TableHead className="text-right text-orange-600">Cost/Letter</TableHead>
 												<TableHead className="text-center">×</TableHead>
-												<TableHead className="text-right text-orange-600">+Fixed</TableHead>
 												<TableHead className="text-right">Retail</TableHead>
 												<TableHead className="text-right">Total</TableHead>
 											</TableRow>
@@ -817,20 +822,6 @@ export function QuoteDetailPage() {
 															min={0.01}
 														/>
 													</TableCell>
-													<TableCell className="text-right text-orange-600">
-														<EditableNumber
-															value={parseFloat(lett.fixedAmount)}
-															onSave={async (value) => {
-																await updateLetteringPricing.mutateAsync({
-																	quoteId: quote.id,
-																	itemId: lett.id,
-																	fixedAmount: value,
-																});
-															}}
-															disabled={!canEditPricing}
-															isCurrency
-														/>
-													</TableCell>
 													<TableCell className="text-right">
 														{formatCurrency(lett.unitPrice)}
 													</TableCell>
@@ -864,7 +855,6 @@ export function QuoteDetailPage() {
 												<TableHead className="text-center">Qty</TableHead>
 												<TableHead className="text-right text-orange-600">Supplier</TableHead>
 												<TableHead className="text-center">×</TableHead>
-												<TableHead className="text-right text-orange-600">+Fixed</TableHead>
 												<TableHead className="text-right">Retail</TableHead>
 												<TableHead className="text-right">Total</TableHead>
 											</TableRow>
@@ -904,20 +894,6 @@ export function QuoteDetailPage() {
 															min={0.01}
 														/>
 													</TableCell>
-													<TableCell className="text-right text-orange-600">
-														<EditableNumber
-															value={parseFloat(sundry.fixedAmount)}
-															onSave={async (value) => {
-																await updateSundryPricing.mutateAsync({
-																	quoteId: quote.id,
-																	itemId: sundry.id,
-																	fixedAmount: value,
-																});
-															}}
-															disabled={!canEditPricing}
-															isCurrency
-														/>
-													</TableCell>
 													<TableCell className="text-right">
 														{formatCurrency(sundry.unitPrice)}
 													</TableCell>
@@ -933,92 +909,138 @@ export function QuoteDetailPage() {
 						</Card>
 					)}
 
-					{/* Services Card */}
-					{quote.services.length > 0 && (
-						<Card>
-							<CardHeader>
-								<CardTitle>Services</CardTitle>
+					{/* Custom Line Items Card */}
+					<Card>
+						<CardHeader className="flex flex-row items-center justify-between">
+							<div>
+								<CardTitle>Custom Line Items</CardTitle>
 								<CardDescription>
-									{quote.services.length} service{quote.services.length !== 1 ? 's' : ''} - Internal pricing details
+									Additional charges (labor, delivery, etc.)
 								</CardDescription>
-							</CardHeader>
-							<CardContent>
+							</div>
+						</CardHeader>
+						<CardContent>
+							{quote.lineItems && quote.lineItems.length > 0 ? (
 								<div className="border rounded-lg overflow-x-auto">
 									<Table>
 										<TableHeader>
 											<TableRow>
-												<TableHead>Service</TableHead>
-												<TableHead className="text-center">Qty</TableHead>
-												<TableHead className="text-right text-orange-600">Cost</TableHead>
-												<TableHead className="text-center">×</TableHead>
-												<TableHead className="text-right text-orange-600">+Fixed</TableHead>
-												<TableHead className="text-right">Retail</TableHead>
-												<TableHead className="text-right">Total</TableHead>
+												<TableHead>Description</TableHead>
+												<TableHead className="text-right w-32">Price</TableHead>
+												{canEditPricing && <TableHead className="w-16"></TableHead>}
 											</TableRow>
 										</TableHeader>
 										<TableBody>
-											{quote.services.map((service) => (
-												<TableRow key={service.id}>
-													<TableCell className="font-medium">
-														{service.serviceName || '-'}
-													</TableCell>
-													<TableCell className="text-center">{service.quantity}</TableCell>
-													<TableCell className="text-right text-orange-600">
-														<EditableNumber
-															value={parseFloat(service.supplierCost)}
-															onSave={async (value) => {
-																await updateServicePricing.mutateAsync({
-																	quoteId: quote.id,
-																	itemId: service.id,
-																	supplierCost: value,
-																});
-															}}
-															disabled={!canEditPricing}
-															isCurrency
-														/>
-													</TableCell>
-													<TableCell className="text-center text-muted-foreground text-sm">
-														<EditableNumber
-															value={parseFloat(service.multiplier)}
-															onSave={async (value) => {
-																await updateServicePricing.mutateAsync({
-																	quoteId: quote.id,
-																	itemId: service.id,
-																	multiplier: value,
-																});
-															}}
-															disabled={!canEditPricing}
-															min={0.01}
-														/>
-													</TableCell>
-													<TableCell className="text-right text-orange-600">
-														<EditableNumber
-															value={parseFloat(service.fixedAmount)}
-															onSave={async (value) => {
-																await updateServicePricing.mutateAsync({
-																	quoteId: quote.id,
-																	itemId: service.id,
-																	fixedAmount: value,
-																});
-															}}
-															disabled={!canEditPricing}
-															isCurrency
-														/>
+											{quote.lineItems.map((item) => (
+												<TableRow key={item.id}>
+													<TableCell>
+														{canEditPricing ? (
+															<Input
+																defaultValue={item.description}
+																onBlur={async (e) => {
+																	if (e.target.value !== item.description) {
+																		await updateLineItem.mutateAsync({
+																			quoteId: quote.id,
+																			itemId: item.id,
+																			description: e.target.value,
+																		});
+																	}
+																}}
+																className="h-8"
+															/>
+														) : (
+															item.description
+														)}
 													</TableCell>
 													<TableCell className="text-right">
-														{formatCurrency(service.unitPrice)}
+														<EditableNumber
+															value={parseFloat(item.price)}
+															onSave={async (value) => {
+																await updateLineItem.mutateAsync({
+																	quoteId: quote.id,
+																	itemId: item.id,
+																	price: value,
+																});
+															}}
+															disabled={!canEditPricing}
+															isCurrency
+														/>
 													</TableCell>
-													<TableCell className="text-right font-medium">
-														{formatCurrency(service.lineTotal)}
-													</TableCell>
+													{canEditPricing && (
+														<TableCell>
+															<Button
+																variant="ghost"
+																size="icon"
+																className="h-8 w-8 text-destructive"
+																onClick={async () => {
+																	await deleteLineItem.mutateAsync({
+																		quoteId: quote.id,
+																		itemId: item.id,
+																	});
+																}}
+															>
+																<Trash2 className="h-4 w-4" />
+															</Button>
+														</TableCell>
+													)}
 												</TableRow>
 											))}
 										</TableBody>
 									</Table>
 								</div>
-							</CardContent>
-						</Card>
-					)}
+							) : (
+								<p className="text-sm text-muted-foreground">No custom line items added.</p>
+							)}
+
+							{/* Add new line item form */}
+							{canEditPricing && (
+								<div className="mt-4 flex items-end gap-2">
+									<div className="flex-1">
+										<Label htmlFor="lineItemDesc" className="text-xs">Description</Label>
+										<Input
+											id="lineItemDesc"
+											placeholder="e.g., Labor, Delivery"
+											value={newLineItemDesc}
+											onChange={(e) => setNewLineItemDesc(e.target.value)}
+											className="h-9"
+										/>
+									</div>
+									<div className="w-28">
+										<Label htmlFor="lineItemPrice" className="text-xs">Price</Label>
+										<Input
+											id="lineItemPrice"
+											type="number"
+											min="0"
+											step="0.01"
+											placeholder="0.00"
+											value={newLineItemPrice}
+											onChange={(e) => setNewLineItemPrice(e.target.value)}
+											className="h-9"
+										/>
+									</div>
+									<Button
+										size="sm"
+										className="h-9"
+										onClick={async () => {
+											if (!newLineItemDesc.trim() || !newLineItemPrice) return;
+											await addLineItem.mutateAsync({
+												quoteId: quote.id,
+												description: newLineItemDesc.trim(),
+												price: parseFloat(newLineItemPrice),
+											});
+											setNewLineItemDesc('');
+											setNewLineItemPrice('');
+										}}
+										disabled={!newLineItemDesc.trim() || !newLineItemPrice || addLineItem.isPending}
+									>
+										<Plus className="h-4 w-4 mr-1" />
+										Add
+									</Button>
+								</div>
+							)}
+						</CardContent>
+					</Card>
+
 				</div>
 
 				{/* Sidebar */}

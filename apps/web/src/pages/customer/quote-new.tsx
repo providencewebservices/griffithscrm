@@ -46,7 +46,6 @@ import {
 	type ComponentInput,
 	type LetteringInput,
 	type SundryInput,
-	type ServiceInput,
 	type ComponentType,
 	type FlowerHoleChoice,
 	type CustomerDetailsInput,
@@ -68,7 +67,6 @@ import { ArrowLeft, Plus, Trash2, User } from 'lucide-react';
 type ComponentFormItem = ComponentInput & { id: string };
 type LetteringFormItem = LetteringInput & { id: string };
 type SundryFormItem = SundryInput & { id: string };
-type ServiceFormItem = ServiceInput & { id: string };
 
 const NONE_VALUE = '_none';
 
@@ -78,6 +76,7 @@ export function QuoteNewPage() {
 	const reviseId = searchParams.get('revise');
 
 	// Form state
+	const [serviceId, setServiceId] = useState<string>('');
 	const [customerId, setCustomerId] = useState<string>('');
 	const [productId, setProductId] = useState<string>('');
 	const [dimensionComboId, setDimensionComboId] = useState<string>('');
@@ -109,7 +108,6 @@ export function QuoteNewPage() {
 	const [components, setComponents] = useState<ComponentFormItem[]>([]);
 	const [lettering, setLettering] = useState<LetteringFormItem[]>([]);
 	const [sundries, setSundries] = useState<SundryFormItem[]>([]);
-	const [services, setServices] = useState<ServiceFormItem[]>([]);
 
 	const [mutationError, setMutationError] = useState<string | null>(null);
 
@@ -163,6 +161,7 @@ export function QuoteNewPage() {
 	// Pre-fill form if revising
 	useEffect(() => {
 		if (originalQuote) {
+			setServiceId(originalQuote.serviceId || '');
 			setCustomerId(originalQuote.customerId || '');
 			setProductId(originalQuote.productId || '');
 			setDimensionComboId(originalQuote.dimensionComboId || '');
@@ -201,16 +200,6 @@ export function QuoteNewPage() {
 					id: crypto.randomUUID(),
 					sundryId: s.sundryId || '',
 					quantity: s.quantity,
-					notes: s.notes || undefined,
-				}))
-			);
-
-			setServices(
-				originalQuote.services.map((s) => ({
-					id: crypto.randomUUID(),
-					serviceId: s.serviceId || '',
-					quantity: s.quantity,
-					unitPrice: parseFloat(s.unitPrice),
 					notes: s.notes || undefined,
 				}))
 			);
@@ -298,17 +287,6 @@ export function QuoteNewPage() {
 		]);
 	};
 
-	const handleAddService = () => {
-		setServices([
-			...services,
-			{
-				id: generateId(),
-				serviceId: '',
-				quantity: 1,
-			},
-		]);
-	};
-
 	// Update handlers
 	const updateComponent = (id: string, updates: Partial<ComponentFormItem>) => {
 		setComponents(components.map((c) => (c.id === id ? { ...c, ...updates } : c)));
@@ -320,10 +298,6 @@ export function QuoteNewPage() {
 
 	const updateSundry = (id: string, updates: Partial<SundryFormItem>) => {
 		setSundries(sundries.map((s) => (s.id === id ? { ...s, ...updates } : s)));
-	};
-
-	const updateService = (id: string, updates: Partial<ServiceFormItem>) => {
-		setServices(services.map((s) => (s.id === id ? { ...s, ...updates } : s)));
 	};
 
 	// Remove handlers
@@ -339,10 +313,6 @@ export function QuoteNewPage() {
 		setSundries(sundries.filter((s) => s.id !== id));
 	};
 
-	const removeService = (id: string) => {
-		setServices(services.filter((s) => s.id !== id));
-	};
-
 	// Get all materials from all sections for display
 	const allSectionMaterials = useMemo(() => {
 		if (!materialSections) return [];
@@ -354,12 +324,14 @@ export function QuoteNewPage() {
 
 	// Validate form
 	const canSubmit = useMemo(() => {
+		// Must have a service selected
+		if (!serviceId) return false;
+
 		// Must have at least one line item
 		const hasLineItems =
 			components.length > 0 ||
 			lettering.length > 0 ||
-			sundries.length > 0 ||
-			services.length > 0;
+			sundries.length > 0;
 
 		// All components must have materialId
 		const componentsValid = components.every((c) => c.materialId);
@@ -370,16 +342,14 @@ export function QuoteNewPage() {
 		// All sundries must have sundryId
 		const sundriesValid = sundries.every((s) => s.sundryId);
 
-		// All services must have serviceId
-		const servicesValid = services.every((s) => s.serviceId);
-
-		return hasLineItems && componentsValid && letteringValid && sundriesValid && servicesValid;
-	}, [components, lettering, sundries, services]);
+		return hasLineItems && componentsValid && letteringValid && sundriesValid;
+	}, [serviceId, components, lettering, sundries]);
 
 	const handleSubmit = async () => {
 		setMutationError(null);
 
 		const quoteData = {
+			serviceId,
 			customerId: customerId || undefined,
 			productId: productId || undefined,
 			dimensionComboId: dimensionComboId || undefined,
@@ -394,10 +364,6 @@ export function QuoteNewPage() {
 			})),
 			lettering: lettering.map(({ id, ...l }) => l),
 			sundries: sundries.map(({ id, ...s }) => ({
-				...s,
-				quantity: s.quantity || 1,
-			})),
-			services: services.map(({ id, ...s }) => ({
 				...s,
 				quantity: s.quantity || 1,
 			})),
@@ -504,6 +470,34 @@ export function QuoteNewPage() {
 					</CardHeader>
 					<CardContent>
 						<FieldGroup>
+							{/* Service Selection (Required) */}
+							<Field>
+								<FieldLabel>Service *</FieldLabel>
+								<Select
+									value={serviceId || NONE_VALUE}
+									onValueChange={(v) => setServiceId(v === NONE_VALUE ? '' : v)}
+								>
+									<SelectTrigger>
+										<SelectValue placeholder="Select the service this quote is for" />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value={NONE_VALUE}>Select service</SelectItem>
+										{serviceItems
+											?.filter((s) => s.isActive)
+											.map((item) => (
+												<SelectItem key={item.id} value={item.id}>
+													{item.name}
+												</SelectItem>
+											))}
+									</SelectContent>
+								</Select>
+								{!serviceId && (
+									<p className="text-sm text-muted-foreground mt-1">
+										Select the type of service this quote is for
+									</p>
+								)}
+							</Field>
+
 							{/* Customer Section */}
 							<div className="space-y-4">
 								<div className="flex items-center justify-between">
@@ -1257,113 +1251,6 @@ export function QuoteNewPage() {
 												</TableCell>
 											</TableRow>
 										))}
-									</TableBody>
-								</Table>
-							</div>
-						)}
-					</CardContent>
-				</Card>
-
-				{/* Services Card */}
-				<Card>
-					<CardHeader>
-						<div className="flex items-center justify-between">
-							<div>
-								<CardTitle>Services</CardTitle>
-								<CardDescription>Add labor and services</CardDescription>
-							</div>
-							<Button onClick={handleAddService}>
-								<Plus className="h-4 w-4 mr-2" />
-								Add Service
-							</Button>
-						</div>
-					</CardHeader>
-					<CardContent>
-						{services.length === 0 ? (
-							<div className="text-center py-8 text-muted-foreground border rounded-lg">
-								No services added yet.
-							</div>
-						) : (
-							<div className="border rounded-lg">
-								<Table>
-									<TableHeader>
-										<TableRow>
-											<TableHead>Service</TableHead>
-											<TableHead className="w-[100px]">Quantity</TableHead>
-											<TableHead className="w-[150px]">Custom Price</TableHead>
-											<TableHead className="w-[80px]"></TableHead>
-										</TableRow>
-									</TableHeader>
-									<TableBody>
-										{services.map((service) => {
-											const selectedService = serviceItems?.find(
-												(s) => s.id === service.serviceId
-											);
-											const isQuoted = selectedService?.pricingType === 'quoted';
-											return (
-												<TableRow key={service.id}>
-													<TableCell>
-														<Select
-															value={service.serviceId || NONE_VALUE}
-															onValueChange={(v) =>
-																updateService(service.id, { serviceId: v === NONE_VALUE ? '' : v })
-															}
-														>
-															<SelectTrigger>
-																<SelectValue placeholder="Select service" />
-															</SelectTrigger>
-															<SelectContent>
-																<SelectItem value={NONE_VALUE}>Select service</SelectItem>
-																{serviceItems
-																	?.filter((s) => s.isActive)
-																	.map((item) => (
-																		<SelectItem key={item.id} value={item.id}>
-																			{item.name}
-																			{item.pricingType === 'quoted' && ' (Quoted)'}
-																		</SelectItem>
-																	))}
-															</SelectContent>
-														</Select>
-													</TableCell>
-													<TableCell>
-														<Input
-															type="number"
-															min="1"
-															value={service.quantity}
-															onChange={(e) =>
-																updateService(service.id, {
-																	quantity: parseInt(e.target.value) || 1,
-																})
-															}
-														/>
-													</TableCell>
-													<TableCell>
-														<Input
-															type="number"
-															step="0.01"
-															placeholder={isQuoted ? 'Required' : 'Optional'}
-															value={service.unitPrice || ''}
-															onChange={(e) =>
-																updateService(service.id, {
-																	unitPrice: e.target.value
-																		? parseFloat(e.target.value)
-																		: undefined,
-																})
-															}
-														/>
-													</TableCell>
-													<TableCell>
-														<Button
-															variant="ghost"
-															size="sm"
-															onClick={() => removeService(service.id)}
-														>
-															<Trash2 className="h-4 w-4" />
-														</Button>
-													</TableCell>
-												</TableRow>
-											);
-										})}
 									</TableBody>
 								</Table>
 							</div>

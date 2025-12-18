@@ -20,6 +20,8 @@ import { SettingsPage } from './pages/customer/settings';
 import { QuotesPage } from './pages/customer/quotes';
 import { QuoteDetailPage } from './pages/customer/quote-detail';
 import { QuoteNewPage } from './pages/customer/quote-new';
+import { JobsPage } from './pages/customer/jobs';
+import { JobDetailPage } from './pages/customer/job-detail';
 import { PublicQuoteViewPage } from './pages/public/quote-view';
 import { ProtectedRoute } from './components/protected-route';
 import { RoleBasedRedirect } from './components/role-based-redirect';
@@ -64,6 +66,8 @@ function App() {
 					<Route path="quotes" element={<QuotesPage />} />
 					<Route path="quotes/new" element={<QuoteNewPage />} />
 					<Route path="quotes/:id" element={<QuoteDetailPage />} />
+					<Route path="jobs" element={<JobsPage />} />
+					<Route path="jobs/:id" element={<JobDetailPage />} />
 					<Route path="team" element={<TeamPage />} />
 					<Route path="products" element={<ProductsPage />} />
 					<Route path="products/:id" element={<ProductDetailPage />} />

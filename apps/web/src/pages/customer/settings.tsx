@@ -1,5 +1,6 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BusinessTab } from '@/components/customer/settings/business-tab';
+import { PricingTab } from '@/components/customer/settings/pricing-tab';
 import { LetteringTechniquesTab } from '@/components/customer/settings/lettering-techniques-tab';
 import { LetteringColorsTab } from '@/components/customer/settings/lettering-colors-tab';
 import { SundriesTab } from '@/components/customer/settings/sundries-tab';
@@ -21,6 +22,7 @@ export function SettingsPage() {
 			<Tabs defaultValue="business" className="space-y-6">
 				<TabsList className="flex-wrap h-auto gap-1">
 					<TabsTrigger value="business">Business</TabsTrigger>
+					<TabsTrigger value="pricing">Pricing</TabsTrigger>
 					<TabsTrigger value="categories">Categories</TabsTrigger>
 					<TabsTrigger value="materials">Materials</TabsTrigger>
 					<TabsTrigger value="finishes">Finishes</TabsTrigger>
@@ -32,6 +34,10 @@ export function SettingsPage() {
 
 				<TabsContent value="business">
 					<BusinessTab />
+				</TabsContent>
+
+				<TabsContent value="pricing">
+					<PricingTab />
 				</TabsContent>
 
 				<TabsContent value="categories">

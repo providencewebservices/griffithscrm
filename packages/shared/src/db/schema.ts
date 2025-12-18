@@ -405,19 +405,16 @@ export const services = pgTable('services', {
 // MATERIALS & PRICING TABLES
 // ============================================
 
-// Tenant pricing settings (retail price = (supplierCost × multiplier) + fixedAmount, then VAT)
+// Tenant pricing settings (retail price = supplierCost × multiplier, then VAT)
 export const tenantPricingSettings = pgTable('tenant_pricing_settings', {
 	id: text('id').primaryKey(),
 	tenantId: text('tenant_id')
 		.notNull()
 		.unique()
 		.references(() => tenants.id, { onDelete: 'cascade' }),
-	priceMultiplier: numeric('price_multiplier', { precision: 10, scale: 4 })
+	defaultMarkupPercent: numeric('default_markup_percent', { precision: 10, scale: 2 })
 		.notNull()
-		.default('1'),
-	priceFixedAmount: numeric('price_fixed_amount', { precision: 10, scale: 2 })
-		.notNull()
-		.default('0'),
+		.default('100'), // 100 = 100% markup = 2x multiplier
 	vatRate: numeric('vat_rate', { precision: 5, scale: 4 }).notNull().default('0'), // e.g., 0.20 for 20%
 	createdAt: timestamp('created_at').notNull().defaultNow(),
 	updatedAt: timestamp('updated_at').notNull().defaultNow(),
@@ -519,6 +516,7 @@ export const quotes = pgTable('quotes', {
 		.references(() => tenants.id, { onDelete: 'cascade' }),
 	parentQuoteId: text('parent_quote_id'), // Self-reference for versioning (no FK constraint to avoid circular)
 	version: integer('version').notNull().default(1),
+	serviceId: text('service_id').references(() => services.id, { onDelete: 'set null' }), // Primary service this quote is for
 	customerId: text('customer_id').references(() => customers.id, { onDelete: 'set null' }),
 	productId: text('product_id').references(() => products.id, { onDelete: 'set null' }),
 	dimensionComboId: text('dimension_combo_id').references(() => dimensionCombos.id, {
@@ -566,8 +564,7 @@ export const quoteComponents = pgTable('quote_components', {
 	// Price snapshots (captured at quote creation)
 	supplierCost: numeric('supplier_cost', { precision: 10, scale: 2 }).notNull().default('0'),
 	multiplier: numeric('multiplier', { precision: 10, scale: 4 }).notNull().default('1'), // Markup multiplier
-	fixedAmount: numeric('fixed_amount', { precision: 10, scale: 2 }).notNull().default('0'), // Fixed charge per item
-	unitPrice: numeric('unit_price', { precision: 10, scale: 2 }).notNull().default('0'), // (supplierCost × multiplier) + fixedAmount
+	unitPrice: numeric('unit_price', { precision: 10, scale: 2 }).notNull().default('0'), // supplierCost × multiplier
 	lineTotal: numeric('line_total', { precision: 10, scale: 2 }).notNull().default('0'), // unitPrice × quantity
 	// Descriptive snapshots for historical accuracy
 	materialName: text('material_name'),
@@ -594,8 +591,7 @@ export const quoteLettering = pgTable('quote_lettering', {
 	// Price snapshots
 	supplierCost: numeric('supplier_cost', { precision: 10, scale: 2 }).notNull().default('0'), // Cost per letter
 	multiplier: numeric('multiplier', { precision: 10, scale: 4 }).notNull().default('1'), // Markup multiplier
-	fixedAmount: numeric('fixed_amount', { precision: 10, scale: 2 }).notNull().default('0'), // Fixed charge per item
-	unitPrice: numeric('unit_price', { precision: 10, scale: 2 }).notNull().default('0'), // (supplierCost × multiplier) + fixedAmount (per letter)
+	unitPrice: numeric('unit_price', { precision: 10, scale: 2 }).notNull().default('0'), // supplierCost × multiplier (per letter)
 	lineTotal: numeric('line_total', { precision: 10, scale: 2 }).notNull().default('0'), // unitPrice × letterCount
 	// Descriptive snapshots
 	techniqueName: text('technique_name'),
@@ -617,8 +613,7 @@ export const quoteSundries = pgTable('quote_sundries', {
 	// Price snapshots
 	supplierCost: numeric('supplier_cost', { precision: 10, scale: 2 }).notNull().default('0'), // Cost per unit
 	multiplier: numeric('multiplier', { precision: 10, scale: 4 }).notNull().default('1'), // Markup multiplier
-	fixedAmount: numeric('fixed_amount', { precision: 10, scale: 2 }).notNull().default('0'), // Fixed charge per item
-	unitPrice: numeric('unit_price', { precision: 10, scale: 2 }).notNull().default('0'), // (supplierCost × multiplier) + fixedAmount
+	unitPrice: numeric('unit_price', { precision: 10, scale: 2 }).notNull().default('0'), // supplierCost × multiplier
 	lineTotal: numeric('line_total', { precision: 10, scale: 2 }).notNull().default('0'), // unitPrice × quantity
 	// Descriptive snapshot
 	sundryName: text('sundry_name'),
@@ -639,13 +634,55 @@ export const quoteServices = pgTable('quote_services', {
 	// Price snapshots
 	supplierCost: numeric('supplier_cost', { precision: 10, scale: 2 }).notNull().default('0'), // Cost per unit (labor cost)
 	multiplier: numeric('multiplier', { precision: 10, scale: 4 }).notNull().default('1'), // Markup multiplier
-	fixedAmount: numeric('fixed_amount', { precision: 10, scale: 2 }).notNull().default('0'), // Fixed charge per item
-	unitPrice: numeric('unit_price', { precision: 10, scale: 2 }).notNull().default('0'), // (supplierCost × multiplier) + fixedAmount
+	unitPrice: numeric('unit_price', { precision: 10, scale: 2 }).notNull().default('0'), // supplierCost × multiplier
 	lineTotal: numeric('line_total', { precision: 10, scale: 2 }).notNull().default('0'), // unitPrice × quantity
 	// Descriptive snapshot
 	serviceName: text('service_name'),
 	notes: text('notes'),
 	sortOrder: integer('sort_order').notNull().default(0),
+	createdAt: timestamp('created_at').notNull().defaultNow(),
+	updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// Quote line items (custom free-form charges like labor, adjustments)
+export const quoteLineItems = pgTable('quote_line_items', {
+	id: text('id').primaryKey(),
+	quoteId: text('quote_id')
+		.notNull()
+		.references(() => quotes.id, { onDelete: 'cascade' }),
+	description: text('description').notNull(), // e.g., "Installation Labor"
+	price: numeric('price', { precision: 10, scale: 2 }).notNull().default('0'), // Flat price (no markup)
+	sortOrder: integer('sort_order').notNull().default(0),
+	createdAt: timestamp('created_at').notNull().defaultNow(),
+	updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// ============================================
+// JOB SYSTEM TABLES
+// ============================================
+
+// Job status options (memorial workflow)
+export const JOB_STATUSES = [
+	'pending', // Job created, awaiting action
+	'materials_ordered', // Materials have been ordered
+	'in_production', // Work is in progress
+	'ready_for_install', // Ready to be installed
+	'installed', // Memorial has been installed
+	'completed', // Job fully completed
+] as const;
+
+// Jobs table (created when quote is accepted)
+export const jobs = pgTable('jobs', {
+	id: text('id').primaryKey(),
+	tenantId: text('tenant_id')
+		.notNull()
+		.references(() => tenants.id, { onDelete: 'cascade' }),
+	quoteId: text('quote_id')
+		.notNull()
+		.references(() => quotes.id, { onDelete: 'restrict' }),
+	jobNumber: text('job_number').notNull(), // Tenant-unique: "J-00001"
+	status: text('status').notNull().default('pending'), // From JOB_STATUSES
+	notes: text('notes'), // Job-specific notes
 	createdAt: timestamp('created_at').notNull().defaultNow(),
 	updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
