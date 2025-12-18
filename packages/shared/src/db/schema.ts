@@ -501,7 +501,15 @@ export const COMPONENT_TYPES = [
 // ============================================
 
 // Quote status options
-export const QUOTE_STATUSES = ['draft', 'sent', 'accepted', 'rejected', 'expired'] as const;
+export const QUOTE_STATUSES = [
+	'draft', // Being prepared
+	'review', // Awaiting internal approval
+	'ready', // Approved, ready to present to customer
+	'presented', // Shown/sent to customer
+	'accepted', // Customer accepted
+	'rejected', // Customer declined
+	'expired', // Validity period passed
+] as const;
 
 // Quotes table (immutable with versioning)
 export const quotes = pgTable('quotes', {
@@ -521,10 +529,22 @@ export const quotes = pgTable('quotes', {
 	subtotal: numeric('subtotal', { precision: 10, scale: 2 }).notNull().default('0'),
 	vatAmount: numeric('vat_amount', { precision: 10, scale: 2 }).notNull().default('0'),
 	total: numeric('total', { precision: 10, scale: 2 }).notNull().default('0'),
+	totalCost: numeric('total_cost', { precision: 10, scale: 2 }).notNull().default('0'), // Sum of supplier costs
 	vatRate: numeric('vat_rate', { precision: 5, scale: 4 }).notNull().default('0'), // Snapshot of tenant VAT rate
-	notes: text('notes'),
+	notes: text('notes'), // Customer-visible notes
+	internalNotes: text('internal_notes'), // Tenant-only notes (hidden from customer)
 	flowerHoles: text('flower_holes'), // From FLOWER_HOLE_CHOICES
+	proposedInscription: text('proposed_inscription'), // Full text of desired inscription
 	validUntil: timestamp('valid_until'),
+	// Customer email notification fields
+	accessToken: text('access_token').unique(), // Secure token for public quote link
+	accessTokenCreatedAt: timestamp('access_token_created_at'),
+	customerFeedback: text('customer_feedback'), // Customer's free-form feedback
+	customerFeedbackAt: timestamp('customer_feedback_at'),
+	customerDecision: text('customer_decision'), // 'accepted' | 'rejected'
+	customerDecisionAt: timestamp('customer_decision_at'),
+	emailSentAt: timestamp('email_sent_at'), // Last email sent timestamp
+	emailSentCount: integer('email_sent_count').notNull().default(0),
 	createdAt: timestamp('created_at').notNull().defaultNow(),
 	updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
@@ -545,8 +565,10 @@ export const quoteComponents = pgTable('quote_components', {
 	quantity: integer('quantity').notNull().default(1),
 	// Price snapshots (captured at quote creation)
 	supplierCost: numeric('supplier_cost', { precision: 10, scale: 2 }).notNull().default('0'),
-	unitPrice: numeric('unit_price', { precision: 10, scale: 2 }).notNull().default('0'),
-	lineTotal: numeric('line_total', { precision: 10, scale: 2 }).notNull().default('0'),
+	multiplier: numeric('multiplier', { precision: 10, scale: 4 }).notNull().default('1'), // Markup multiplier
+	fixedAmount: numeric('fixed_amount', { precision: 10, scale: 2 }).notNull().default('0'), // Fixed charge per item
+	unitPrice: numeric('unit_price', { precision: 10, scale: 2 }).notNull().default('0'), // (supplierCost × multiplier) + fixedAmount
+	lineTotal: numeric('line_total', { precision: 10, scale: 2 }).notNull().default('0'), // unitPrice × quantity
 	// Descriptive snapshots for historical accuracy
 	materialName: text('material_name'),
 	finishName: text('finish_name'),
@@ -568,9 +590,13 @@ export const quoteLettering = pgTable('quote_lettering', {
 	colorId: text('color_id').references(() => letteringColors.id, { onDelete: 'set null' }),
 	text: text('text'), // The actual inscription text
 	letterCount: integer('letter_count').notNull().default(0),
+	appliesTo: text('applies_to'), // 'new_memorial' | 'refurbishment' | 'both'
 	// Price snapshots
-	unitPrice: numeric('unit_price', { precision: 10, scale: 2 }).notNull().default('0'), // Per letter
-	lineTotal: numeric('line_total', { precision: 10, scale: 2 }).notNull().default('0'),
+	supplierCost: numeric('supplier_cost', { precision: 10, scale: 2 }).notNull().default('0'), // Cost per letter
+	multiplier: numeric('multiplier', { precision: 10, scale: 4 }).notNull().default('1'), // Markup multiplier
+	fixedAmount: numeric('fixed_amount', { precision: 10, scale: 2 }).notNull().default('0'), // Fixed charge per item
+	unitPrice: numeric('unit_price', { precision: 10, scale: 2 }).notNull().default('0'), // (supplierCost × multiplier) + fixedAmount (per letter)
+	lineTotal: numeric('line_total', { precision: 10, scale: 2 }).notNull().default('0'), // unitPrice × letterCount
 	// Descriptive snapshots
 	techniqueName: text('technique_name'),
 	colorName: text('color_name'),
@@ -589,8 +615,11 @@ export const quoteSundries = pgTable('quote_sundries', {
 	sundryId: text('sundry_id').references(() => sundries.id, { onDelete: 'set null' }),
 	quantity: integer('quantity').notNull().default(1),
 	// Price snapshots
-	unitPrice: numeric('unit_price', { precision: 10, scale: 2 }).notNull().default('0'),
-	lineTotal: numeric('line_total', { precision: 10, scale: 2 }).notNull().default('0'),
+	supplierCost: numeric('supplier_cost', { precision: 10, scale: 2 }).notNull().default('0'), // Cost per unit
+	multiplier: numeric('multiplier', { precision: 10, scale: 4 }).notNull().default('1'), // Markup multiplier
+	fixedAmount: numeric('fixed_amount', { precision: 10, scale: 2 }).notNull().default('0'), // Fixed charge per item
+	unitPrice: numeric('unit_price', { precision: 10, scale: 2 }).notNull().default('0'), // (supplierCost × multiplier) + fixedAmount
+	lineTotal: numeric('line_total', { precision: 10, scale: 2 }).notNull().default('0'), // unitPrice × quantity
 	// Descriptive snapshot
 	sundryName: text('sundry_name'),
 	notes: text('notes'),
@@ -608,8 +637,11 @@ export const quoteServices = pgTable('quote_services', {
 	serviceId: text('service_id').references(() => services.id, { onDelete: 'set null' }),
 	quantity: integer('quantity').notNull().default(1),
 	// Price snapshots
-	unitPrice: numeric('unit_price', { precision: 10, scale: 2 }).notNull().default('0'),
-	lineTotal: numeric('line_total', { precision: 10, scale: 2 }).notNull().default('0'),
+	supplierCost: numeric('supplier_cost', { precision: 10, scale: 2 }).notNull().default('0'), // Cost per unit (labor cost)
+	multiplier: numeric('multiplier', { precision: 10, scale: 4 }).notNull().default('1'), // Markup multiplier
+	fixedAmount: numeric('fixed_amount', { precision: 10, scale: 2 }).notNull().default('0'), // Fixed charge per item
+	unitPrice: numeric('unit_price', { precision: 10, scale: 2 }).notNull().default('0'), // (supplierCost × multiplier) + fixedAmount
+	lineTotal: numeric('line_total', { precision: 10, scale: 2 }).notNull().default('0'), // unitPrice × quantity
 	// Descriptive snapshot
 	serviceName: text('service_name'),
 	notes: text('notes'),

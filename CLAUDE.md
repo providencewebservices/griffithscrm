@@ -1,5 +1,17 @@
 # Griffiths CRM - Development Guidelines
 
+## Package Manager
+
+This project uses **bun**, not npm or pnpm. Always use `bun` for running scripts:
+
+```bash
+bun run dev          # Start development servers
+bun run build        # Build all packages
+bun run build:web    # Build web app
+bun run build:api    # Build API
+bun run db:push      # Push database schema changes
+```
+
 ## UI Patterns
 
 ### List/Table Views

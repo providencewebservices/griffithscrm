@@ -20,6 +20,7 @@ import { SettingsPage } from './pages/customer/settings';
 import { QuotesPage } from './pages/customer/quotes';
 import { QuoteDetailPage } from './pages/customer/quote-detail';
 import { QuoteNewPage } from './pages/customer/quote-new';
+import { PublicQuoteViewPage } from './pages/public/quote-view';
 import { ProtectedRoute } from './components/protected-route';
 import { RoleBasedRedirect } from './components/role-based-redirect';
 
@@ -29,6 +30,9 @@ function App() {
 			<Routes>
 				<Route path="/login" element={<LoginPage />} />
 				<Route path="/reset-password" element={<ResetPasswordPage />} />
+
+				{/* Public quote view (no auth required) */}
+				<Route path="/quote/:token" element={<PublicQuoteViewPage />} />
 
 				{/* Role-based redirect from root */}
 				<Route path="/" element={<RoleBasedRedirect />} />

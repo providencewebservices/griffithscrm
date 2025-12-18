@@ -23,6 +23,8 @@ export type QuoteComponent = {
 	depth: string | null;
 	quantity: number;
 	supplierCost: string;
+	multiplier: string;
+	fixedAmount: string;
 	unitPrice: string;
 	lineTotal: string;
 	materialName: string | null;
@@ -40,6 +42,10 @@ export type QuoteLettering = {
 	colorId: string | null;
 	text: string | null;
 	letterCount: number;
+	appliesTo: string | null;
+	supplierCost: string;
+	multiplier: string;
+	fixedAmount: string;
 	unitPrice: string;
 	lineTotal: string;
 	techniqueName: string | null;
@@ -55,6 +61,9 @@ export type QuoteSundry = {
 	quoteId: string;
 	sundryId: string | null;
 	quantity: number;
+	supplierCost: string;
+	multiplier: string;
+	fixedAmount: string;
 	unitPrice: string;
 	lineTotal: string;
 	sundryName: string | null;
@@ -69,6 +78,9 @@ export type QuoteService = {
 	quoteId: string;
 	serviceId: string | null;
 	quantity: number;
+	supplierCost: string;
+	multiplier: string;
+	fixedAmount: string;
 	unitPrice: string;
 	lineTotal: string;
 	serviceName: string | null;
@@ -111,12 +123,24 @@ export type Quote = {
 	subtotal: string;
 	vatAmount: string;
 	total: string;
+	totalCost: string;
 	vatRate: string;
 	notes: string | null;
+	internalNotes: string | null;
 	flowerHoles: FlowerHoleChoice | null;
+	proposedInscription: string | null;
 	validUntil: string | null;
 	createdAt: string;
 	updatedAt: string;
+	// Customer email notification fields
+	accessToken: string | null;
+	accessTokenCreatedAt: string | null;
+	customerFeedback: string | null;
+	customerFeedbackAt: string | null;
+	customerDecision: 'accepted' | 'rejected' | null;
+	customerDecisionAt: string | null;
+	emailSentAt: string | null;
+	emailSentCount: number;
 };
 
 export type QuoteListItem = Quote & {
@@ -188,7 +212,9 @@ export type CreateQuoteInput = {
 	productId?: string;
 	dimensionComboId?: string;
 	flowerHoles?: FlowerHoleChoice;
+	proposedInscription?: string;
 	notes?: string;
+	internalNotes?: string;
 	validUntil?: string;
 	components?: ComponentInput[];
 	lettering?: LetteringInput[];
@@ -324,6 +350,39 @@ async function deleteQuote(id: string): Promise<void> {
 	}
 }
 
+export type SendQuoteEmailInput = {
+	id: string;
+	recipientEmail?: string;
+	customMessage?: string;
+};
+
+export type SendQuoteEmailResponse = {
+	success: boolean;
+	message: string;
+	recipientEmail: string;
+	emailSentCount: number;
+};
+
+async function sendQuoteEmail({
+	id,
+	recipientEmail,
+	customMessage,
+}: SendQuoteEmailInput): Promise<SendQuoteEmailResponse> {
+	const response = await fetch(`${API_URL}/api/quotes/${id}/send-email`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		credentials: 'include',
+		body: JSON.stringify({ recipientEmail, customMessage }),
+	});
+
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.error || 'Failed to send quote email');
+	}
+
+	return response.json();
+}
+
 // React Query hooks
 export function useQuotesQuery(params?: QuoteSearchParams) {
 	return useQuery({
@@ -386,6 +445,162 @@ export function useDeleteQuoteMutation() {
 	});
 }
 
+export function useSendQuoteEmailMutation() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: sendQuoteEmail,
+		onSuccess: (_data, variables) => {
+			queryClient.invalidateQueries({ queryKey: ['quote', variables.id] });
+			queryClient.invalidateQueries({ queryKey: ['quotes'] });
+		},
+	});
+}
+
+// Line item pricing update types
+type UpdateLineItemPricingInput = {
+	quoteId: string;
+	itemId: string;
+	supplierCost?: number;
+	multiplier?: number;
+	fixedAmount?: number;
+	quantity?: number;
+};
+
+// Line item update functions
+async function updateComponentPricing({
+	quoteId,
+	itemId,
+	...input
+}: UpdateLineItemPricingInput): Promise<QuoteWithLineItems> {
+	const response = await fetch(`${API_URL}/api/quotes/${quoteId}/components/${itemId}`, {
+		method: 'PUT',
+		headers: { 'Content-Type': 'application/json' },
+		credentials: 'include',
+		body: JSON.stringify(input),
+	});
+
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.error || 'Failed to update component pricing');
+	}
+
+	const data: QuoteResponse = await response.json();
+	return data.quote;
+}
+
+async function updateLetteringPricing({
+	quoteId,
+	itemId,
+	...input
+}: UpdateLineItemPricingInput): Promise<QuoteWithLineItems> {
+	const response = await fetch(`${API_URL}/api/quotes/${quoteId}/lettering/${itemId}`, {
+		method: 'PUT',
+		headers: { 'Content-Type': 'application/json' },
+		credentials: 'include',
+		body: JSON.stringify(input),
+	});
+
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.error || 'Failed to update lettering pricing');
+	}
+
+	const data: QuoteResponse = await response.json();
+	return data.quote;
+}
+
+async function updateSundryPricing({
+	quoteId,
+	itemId,
+	...input
+}: UpdateLineItemPricingInput): Promise<QuoteWithLineItems> {
+	const response = await fetch(`${API_URL}/api/quotes/${quoteId}/sundries/${itemId}`, {
+		method: 'PUT',
+		headers: { 'Content-Type': 'application/json' },
+		credentials: 'include',
+		body: JSON.stringify(input),
+	});
+
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.error || 'Failed to update sundry pricing');
+	}
+
+	const data: QuoteResponse = await response.json();
+	return data.quote;
+}
+
+async function updateServicePricing({
+	quoteId,
+	itemId,
+	...input
+}: UpdateLineItemPricingInput): Promise<QuoteWithLineItems> {
+	const response = await fetch(`${API_URL}/api/quotes/${quoteId}/services/${itemId}`, {
+		method: 'PUT',
+		headers: { 'Content-Type': 'application/json' },
+		credentials: 'include',
+		body: JSON.stringify(input),
+	});
+
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.error || 'Failed to update service pricing');
+	}
+
+	const data: QuoteResponse = await response.json();
+	return data.quote;
+}
+
+// Line item pricing mutation hooks
+export function useUpdateComponentPricingMutation() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: updateComponentPricing,
+		onSuccess: (data) => {
+			queryClient.setQueryData(['quote', data.id], data);
+			queryClient.invalidateQueries({ queryKey: ['quotes'] });
+		},
+	});
+}
+
+export function useUpdateLetteringPricingMutation() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: updateLetteringPricing,
+		onSuccess: (data) => {
+			queryClient.setQueryData(['quote', data.id], data);
+			queryClient.invalidateQueries({ queryKey: ['quotes'] });
+		},
+	});
+}
+
+export function useUpdateSundryPricingMutation() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: updateSundryPricing,
+		onSuccess: (data) => {
+			queryClient.setQueryData(['quote', data.id], data);
+			queryClient.invalidateQueries({ queryKey: ['quotes'] });
+		},
+	});
+}
+
+export function useUpdateServicePricingMutation() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: updateServicePricing,
+		onSuccess: (data) => {
+			queryClient.setQueryData(['quote', data.id], data);
+			queryClient.invalidateQueries({ queryKey: ['quotes'] });
+		},
+	});
+}
+
 // Helper: Component type groupings for UI
 export const COMPONENT_TYPE_GROUPS = {
 	Monuments: ['headstone', 'base', 'die', 'desk', 'tablet', 'flat_tablet', 'desk_headstone'],
@@ -415,8 +630,12 @@ export function getQuoteStatusVariant(
 	switch (status) {
 		case 'draft':
 			return 'secondary';
-		case 'sent':
+		case 'review':
 			return 'outline';
+		case 'ready':
+			return 'outline';
+		case 'presented':
+			return 'default';
 		case 'accepted':
 			return 'default';
 		case 'rejected':

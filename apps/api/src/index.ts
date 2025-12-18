@@ -23,6 +23,7 @@ import { materialsRoutes } from './routes/materials';
 import { finishesRoutes } from './routes/finishes';
 import { tenantPricingSettingsRoutes } from './routes/tenant-pricing-settings';
 import { quotesRoutes } from './routes/quotes';
+import { publicQuotesRoutes } from './routes/public-quotes';
 
 const app = new Hono();
 
@@ -41,6 +42,9 @@ app.get('/health', (c) => c.json({ status: 'ok' }));
 
 // Better Auth routes
 app.on(['POST', 'GET'], '/api/auth/**', (c) => auth.handler(c.req.raw));
+
+// Public routes (no auth required)
+app.route('/api/public/quotes', publicQuotesRoutes);
 
 // API routes
 const api = new Hono()

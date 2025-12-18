@@ -34,6 +34,20 @@ type ItemResponse = {
 	material: Material;
 };
 
+async function fetchMaterials(): Promise<Material[]> {
+	const response = await fetch(`${API_URL}/api/tenant/materials`, {
+		credentials: 'include',
+	});
+
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.error || 'Failed to fetch materials');
+	}
+
+	const data: { materials: Material[] } = await response.json();
+	return data.materials;
+}
+
 async function fetchMaterial(id: string): Promise<Material> {
 	const response = await fetch(`${API_URL}/api/tenant/materials/${id}`, {
 		credentials: 'include',
@@ -95,6 +109,13 @@ async function deleteMaterial(id: string): Promise<void> {
 		const error = await response.json();
 		throw new Error(error.error || 'Failed to delete material');
 	}
+}
+
+export function useMaterialsQuery() {
+	return useQuery({
+		queryKey: ['materials'],
+		queryFn: fetchMaterials,
+	});
 }
 
 export function useMaterialQuery(id: string | undefined) {

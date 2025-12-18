@@ -2,8 +2,10 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { eq, and, desc, asc, sql, notExists, like } from 'drizzle-orm';
+import crypto from 'crypto';
 import { requireAuth, requireTenant } from '../middleware/auth';
 import { db } from '../lib/auth';
+import { sendEmail } from '../lib/email';
 import {
 	quotes,
 	quoteComponents,
@@ -27,6 +29,7 @@ import {
 	addresses,
 	customerContactInfo,
 	customerAddresses,
+	tenants,
 	QUOTE_STATUSES,
 	COMPONENT_TYPES,
 	LETTERING_COST_APPLIES_TO,
@@ -35,11 +38,13 @@ import {
 
 // Status transition rules
 const STATUS_TRANSITIONS: Record<string, string[]> = {
-	draft: ['sent'],
-	sent: ['accepted', 'rejected', 'expired'],
-	accepted: [],
-	rejected: [],
-	expired: [],
+	draft: ['review', 'ready', 'presented'], // Can skip review/ready if needed
+	review: ['draft', 'ready'], // Back to draft or forward to ready
+	ready: ['draft', 'presented'], // Back to draft or present to customer
+	presented: ['draft', 'accepted', 'rejected', 'expired'], // Customer decision or back to draft
+	accepted: [], // Terminal state
+	rejected: [], // Terminal state
+	expired: [], // Terminal state
 };
 
 // ============================================
@@ -86,12 +91,8 @@ async function getTenantPricingSettings(tenantId: string) {
 	};
 }
 
-function calculateRetailPrice(
-	supplierCost: number,
-	multiplier: number,
-	fixedAmount: number
-): number {
-	return supplierCost * multiplier + fixedAmount;
+function calculateRetailPrice(supplierCost: number, multiplier: number, fixedAmount: number = 0): number {
+	return (supplierCost * multiplier) + fixedAmount;
 }
 
 async function getQuoteWithLineItems(quoteId: string, tenantId: string) {
@@ -161,6 +162,56 @@ async function getQuoteWithLineItems(quoteId: string, tenantId: string) {
 		services: serviceItems,
 		versions,
 	};
+}
+
+async function recalculateQuoteTotals(quoteId: string): Promise<void> {
+	// Get all line items
+	const [components, letteringItems, sundryItems, serviceItems] = await Promise.all([
+		db.select().from(quoteComponents).where(eq(quoteComponents.quoteId, quoteId)),
+		db.select().from(quoteLettering).where(eq(quoteLettering.quoteId, quoteId)),
+		db.select().from(quoteSundries).where(eq(quoteSundries.quoteId, quoteId)),
+		db.select().from(quoteServices).where(eq(quoteServices.quoteId, quoteId)),
+	]);
+
+	// Get current quote for VAT rate
+	const [quote] = await db
+		.select({ vatRate: quotes.vatRate })
+		.from(quotes)
+		.where(eq(quotes.id, quoteId))
+		.limit(1);
+
+	if (!quote) return;
+
+	// Calculate subtotal (sum of all line totals)
+	const componentTotal = components.reduce((sum, c) => sum + parseFloat(c.lineTotal), 0);
+	const letteringTotal = letteringItems.reduce((sum, l) => sum + parseFloat(l.lineTotal), 0);
+	const sundryTotal = sundryItems.reduce((sum, s) => sum + parseFloat(s.lineTotal), 0);
+	const serviceTotal = serviceItems.reduce((sum, s) => sum + parseFloat(s.lineTotal), 0);
+	const subtotal = componentTotal + letteringTotal + sundryTotal + serviceTotal;
+
+	// Calculate total cost (sum of all supplier costs)
+	const componentCost = components.reduce((sum, c) => sum + parseFloat(c.supplierCost) * c.quantity, 0);
+	const letteringCost = letteringItems.reduce((sum, l) => sum + parseFloat(l.supplierCost) * l.letterCount, 0);
+	const sundryCost = sundryItems.reduce((sum, s) => sum + parseFloat(s.supplierCost) * s.quantity, 0);
+	const serviceCost = serviceItems.reduce((sum, s) => sum + parseFloat(s.supplierCost) * s.quantity, 0);
+	const totalCost = componentCost + letteringCost + sundryCost + serviceCost;
+
+	// Calculate VAT and total (no fixed charge at quote level - it's per line item now)
+	const vatRate = parseFloat(quote.vatRate);
+	const vatAmount = subtotal * vatRate;
+	const total = subtotal + vatAmount;
+
+	// Update quote totals
+	await db
+		.update(quotes)
+		.set({
+			subtotal: String(subtotal),
+			vatAmount: String(vatAmount),
+			total: String(total),
+			totalCost: String(totalCost),
+			updatedAt: new Date(),
+		})
+		.where(eq(quotes.id, quoteId));
 }
 
 async function getVersionHistory(quoteId: string, tenantId: string) {
@@ -263,7 +314,9 @@ const createQuoteSchema = z.object({
 	productId: z.string().optional(),
 	dimensionComboId: z.string().optional(),
 	flowerHoles: z.enum(FLOWER_HOLE_CHOICES).optional(),
-	notes: z.string().optional(),
+	proposedInscription: z.string().optional(), // Full text of desired inscription
+	notes: z.string().optional(), // Customer-visible notes
+	internalNotes: z.string().optional(), // Tenant-only notes
 	validUntil: z.string().datetime().optional(),
 	components: z.array(componentInputSchema).optional().default([]),
 	lettering: z.array(letteringInputSchema).optional().default([]),
@@ -275,6 +328,13 @@ const createQuoteSchema = z.object({
 
 const updateStatusSchema = z.object({
 	status: z.enum(QUOTE_STATUSES),
+});
+
+const updateLineItemPricingSchema = z.object({
+	supplierCost: z.number().min(0).optional(),
+	multiplier: z.number().min(0.01).optional(),
+	fixedAmount: z.number().min(0).optional(),
+	quantity: z.number().int().min(1).optional(),
 });
 
 const listQuerySchema = z.object({
@@ -539,11 +599,9 @@ const quotesRoutes = new Hono()
 				}
 
 				const supplierCost = parseFloat(material.supplierCost);
-				const unitPrice = calculateRetailPrice(
-					supplierCost,
-					pricingSettings.priceMultiplier,
-					pricingSettings.priceFixedAmount
-				);
+				const multiplier = pricingSettings.priceMultiplier;
+				const fixedAmount = pricingSettings.priceFixedAmount;
+				const unitPrice = calculateRetailPrice(supplierCost, multiplier, fixedAmount);
 				const lineTotal = unitPrice * comp.quantity;
 
 				return {
@@ -556,6 +614,8 @@ const quotesRoutes = new Hono()
 					depth: comp.depth ? String(comp.depth) : null,
 					quantity: comp.quantity,
 					supplierCost: String(supplierCost),
+					multiplier: String(multiplier),
+					fixedAmount: String(fixedAmount),
 					unitPrice: String(unitPrice),
 					lineTotal: String(lineTotal),
 					materialName: material.name,
@@ -616,10 +676,12 @@ const quotesRoutes = new Hono()
 
 				const letterCount = lett.text.replace(/\s/g, '').length; // Count non-space characters
 				const freeLetters = activeCostRule?.freeLetters || 0;
-				const pricePerLetter = parseFloat(activeCostRule?.pricePerLetter || '0');
+				const supplierCostPerLetter = parseFloat(activeCostRule?.pricePerLetter || '0');
 				const billableLetters = Math.max(0, letterCount - freeLetters);
-				const unitPrice = pricePerLetter;
-				const lineTotal = billableLetters * pricePerLetter;
+				const multiplier = pricingSettings.priceMultiplier;
+				const fixedAmount = pricingSettings.priceFixedAmount;
+				const unitPrice = calculateRetailPrice(supplierCostPerLetter, multiplier, fixedAmount);
+				const lineTotal = billableLetters * unitPrice;
 
 				return {
 					id: crypto.randomUUID(),
@@ -627,6 +689,10 @@ const quotesRoutes = new Hono()
 					colorId: lett.colorId || null,
 					text: lett.text,
 					letterCount,
+					appliesTo: lett.appliesTo,
+					supplierCost: String(supplierCostPerLetter),
+					multiplier: String(multiplier),
+					fixedAmount: String(fixedAmount),
 					unitPrice: String(unitPrice),
 					lineTotal: String(lineTotal),
 					techniqueName: technique.name,
@@ -650,13 +716,20 @@ const quotesRoutes = new Hono()
 					throw new Error(`Sundry not found: ${sund.sundryId}`);
 				}
 
-				const unitPrice = parseFloat(sundry.price);
+				// Sundry.price is treated as supplier cost
+				const supplierCost = parseFloat(sundry.price);
+				const multiplier = pricingSettings.priceMultiplier;
+				const fixedAmount = pricingSettings.priceFixedAmount;
+				const unitPrice = calculateRetailPrice(supplierCost, multiplier, fixedAmount);
 				const lineTotal = unitPrice * sund.quantity;
 
 				return {
 					id: crypto.randomUUID(),
 					sundryId: sund.sundryId,
 					quantity: sund.quantity,
+					supplierCost: String(supplierCost),
+					multiplier: String(multiplier),
+					fixedAmount: String(fixedAmount),
 					unitPrice: String(unitPrice),
 					lineTotal: String(lineTotal),
 					sundryName: sundry.name,
@@ -679,14 +752,20 @@ const quotesRoutes = new Hono()
 					throw new Error(`Service not found: ${serv.serviceId}`);
 				}
 
-				// Use provided price (for quoted services) or service's base price
-				const unitPrice = serv.unitPrice ?? parseFloat(service.basePrice || '0');
+				// Use provided price (for quoted services) or service's base price as supplier cost
+				const supplierCost = serv.unitPrice ?? parseFloat(service.basePrice || '0');
+				const multiplier = pricingSettings.priceMultiplier;
+				const fixedAmount = pricingSettings.priceFixedAmount;
+				const unitPrice = calculateRetailPrice(supplierCost, multiplier, fixedAmount);
 				const lineTotal = unitPrice * serv.quantity;
 
 				return {
 					id: crypto.randomUUID(),
 					serviceId: serv.serviceId,
 					quantity: serv.quantity,
+					supplierCost: String(supplierCost),
+					multiplier: String(multiplier),
+					fixedAmount: String(fixedAmount),
 					unitPrice: String(unitPrice),
 					lineTotal: String(lineTotal),
 					serviceName: service.name,
@@ -708,8 +787,29 @@ const quotesRoutes = new Hono()
 		const sundryTotal = processedSundries.reduce((sum, s) => sum + parseFloat(s.lineTotal), 0);
 		const serviceTotal = processedServices.reduce((sum, s) => sum + parseFloat(s.lineTotal), 0);
 		const subtotal = componentTotal + letteringTotal + sundryTotal + serviceTotal;
+
+		// Calculate VAT and total (fixed amount is now per line item, not quote level)
 		const vatAmount = subtotal * pricingSettings.vatRate;
 		const total = subtotal + vatAmount;
+
+		// Calculate total cost (sum of all supplier costs)
+		const componentCost = processedComponents.reduce(
+			(sum, c) => sum + parseFloat(c.supplierCost) * c.quantity,
+			0
+		);
+		const letteringCost = processedLettering.reduce(
+			(sum, l) => sum + parseFloat(l.supplierCost) * l.letterCount,
+			0
+		);
+		const sundryCost = processedSundries.reduce(
+			(sum, s) => sum + parseFloat(s.supplierCost) * s.quantity,
+			0
+		);
+		const serviceCost = processedServices.reduce(
+			(sum, s) => sum + parseFloat(s.supplierCost) * s.quantity,
+			0
+		);
+		const totalCost = componentCost + letteringCost + sundryCost + serviceCost;
 
 		// Create quote and line items in a transaction-like manner
 		const quoteId = crypto.randomUUID();
@@ -729,9 +829,12 @@ const quotesRoutes = new Hono()
 				subtotal: String(subtotal),
 				vatAmount: String(vatAmount),
 				total: String(total),
+				totalCost: String(totalCost),
 				vatRate: String(pricingSettings.vatRate),
 				notes: data.notes || null,
+				internalNotes: data.internalNotes || null,
 				flowerHoles: data.flowerHoles || null,
+				proposedInscription: data.proposedInscription || null,
 				validUntil: data.validUntil ? new Date(data.validUntil) : null,
 			})
 			.returning();
@@ -869,11 +972,9 @@ const quotesRoutes = new Hono()
 				}
 
 				const supplierCost = parseFloat(material.supplierCost);
-				const unitPrice = calculateRetailPrice(
-					supplierCost,
-					pricingSettings.priceMultiplier,
-					pricingSettings.priceFixedAmount
-				);
+				const multiplier = pricingSettings.priceMultiplier;
+				const fixedAmount = pricingSettings.priceFixedAmount;
+				const unitPrice = calculateRetailPrice(supplierCost, multiplier, fixedAmount);
 				const lineTotal = unitPrice * comp.quantity;
 
 				return {
@@ -886,6 +987,8 @@ const quotesRoutes = new Hono()
 					depth: comp.depth ? String(comp.depth) : null,
 					quantity: comp.quantity,
 					supplierCost: String(supplierCost),
+					multiplier: String(multiplier),
+					fixedAmount: String(fixedAmount),
 					unitPrice: String(unitPrice),
 					lineTotal: String(lineTotal),
 					materialName: material.name,
@@ -943,10 +1046,12 @@ const quotesRoutes = new Hono()
 
 				const letterCount = lett.text.replace(/\s/g, '').length;
 				const freeLetters = activeCostRule?.freeLetters || 0;
-				const pricePerLetter = parseFloat(activeCostRule?.pricePerLetter || '0');
+				const supplierCostPerLetter = parseFloat(activeCostRule?.pricePerLetter || '0');
 				const billableLetters = Math.max(0, letterCount - freeLetters);
-				const unitPrice = pricePerLetter;
-				const lineTotal = billableLetters * pricePerLetter;
+				const multiplier = pricingSettings.priceMultiplier;
+				const fixedAmount = pricingSettings.priceFixedAmount;
+				const unitPrice = calculateRetailPrice(supplierCostPerLetter, multiplier, fixedAmount);
+				const lineTotal = billableLetters * unitPrice;
 
 				return {
 					id: crypto.randomUUID(),
@@ -954,6 +1059,10 @@ const quotesRoutes = new Hono()
 					colorId: lett.colorId || null,
 					text: lett.text,
 					letterCount,
+					appliesTo: lett.appliesTo,
+					fixedAmount: String(fixedAmount),
+					supplierCost: String(supplierCostPerLetter),
+					multiplier: String(multiplier),
 					unitPrice: String(unitPrice),
 					lineTotal: String(lineTotal),
 					techniqueName: technique.name,
@@ -976,13 +1085,19 @@ const quotesRoutes = new Hono()
 					throw new Error(`Sundry not found: ${sund.sundryId}`);
 				}
 
-				const unitPrice = parseFloat(sundry.price);
+				const supplierCost = parseFloat(sundry.price);
+				const multiplier = pricingSettings.priceMultiplier;
+				const fixedAmount = pricingSettings.priceFixedAmount;
+				const unitPrice = calculateRetailPrice(supplierCost, multiplier, fixedAmount);
 				const lineTotal = unitPrice * sund.quantity;
 
 				return {
 					id: crypto.randomUUID(),
 					sundryId: sund.sundryId,
 					quantity: sund.quantity,
+					supplierCost: String(supplierCost),
+					multiplier: String(multiplier),
+					fixedAmount: String(fixedAmount),
 					unitPrice: String(unitPrice),
 					lineTotal: String(lineTotal),
 					sundryName: sundry.name,
@@ -1004,13 +1119,19 @@ const quotesRoutes = new Hono()
 					throw new Error(`Service not found: ${serv.serviceId}`);
 				}
 
-				const unitPrice = serv.unitPrice ?? parseFloat(service.basePrice || '0');
+				const supplierCost = serv.unitPrice ?? parseFloat(service.basePrice || '0');
+				const multiplier = pricingSettings.priceMultiplier;
+				const fixedAmount = pricingSettings.priceFixedAmount;
+				const unitPrice = calculateRetailPrice(supplierCost, multiplier, fixedAmount);
 				const lineTotal = unitPrice * serv.quantity;
 
 				return {
 					id: crypto.randomUUID(),
 					serviceId: serv.serviceId,
 					quantity: serv.quantity,
+					supplierCost: String(supplierCost),
+					multiplier: String(multiplier),
+					fixedAmount: String(fixedAmount),
 					unitPrice: String(unitPrice),
 					lineTotal: String(lineTotal),
 					serviceName: service.name,
@@ -1032,8 +1153,29 @@ const quotesRoutes = new Hono()
 		const sundryTotal = processedSundries.reduce((sum, s) => sum + parseFloat(s.lineTotal), 0);
 		const serviceTotal = processedServices.reduce((sum, s) => sum + parseFloat(s.lineTotal), 0);
 		const subtotal = componentTotal + letteringTotal + sundryTotal + serviceTotal;
+
+		// Calculate VAT and total (fixed amount is now per line item, not quote level)
 		const vatAmount = subtotal * pricingSettings.vatRate;
 		const total = subtotal + vatAmount;
+
+		// Calculate total cost
+		const componentCost = processedComponents.reduce(
+			(sum, c) => sum + parseFloat(c.supplierCost) * c.quantity,
+			0
+		);
+		const letteringCost = processedLettering.reduce(
+			(sum, l) => sum + parseFloat(l.supplierCost) * l.letterCount,
+			0
+		);
+		const sundryCost = processedSundries.reduce(
+			(sum, s) => sum + parseFloat(s.supplierCost) * s.quantity,
+			0
+		);
+		const serviceCost = processedServices.reduce(
+			(sum, s) => sum + parseFloat(s.supplierCost) * s.quantity,
+			0
+		);
+		const totalCost = componentCost + letteringCost + sundryCost + serviceCost;
 
 		// Create new quote version
 		const quoteId = crypto.randomUUID();
@@ -1051,9 +1193,12 @@ const quotesRoutes = new Hono()
 			subtotal: String(subtotal),
 			vatAmount: String(vatAmount),
 			total: String(total),
+			totalCost: String(totalCost),
 			vatRate: String(pricingSettings.vatRate),
 			notes: mergedData.notes || null,
+			internalNotes: data.internalNotes ?? original.internalNotes ?? null,
 			flowerHoles: data.flowerHoles ?? original.flowerHoles ?? null,
+			proposedInscription: data.proposedInscription ?? original.proposedInscription ?? null,
 			validUntil: mergedData.validUntil ? new Date(mergedData.validUntil) : null,
 		});
 
@@ -1163,6 +1308,475 @@ const quotesRoutes = new Hono()
 		await db.delete(quotes).where(eq(quotes.id, id));
 
 		return c.json({ success: true });
-	});
+	})
+
+	// Update component pricing
+	.put(
+		'/:quoteId/components/:itemId',
+		zValidator('json', updateLineItemPricingSchema),
+		async (c) => {
+			const currentUser = c.get('user');
+			const tenantId = currentUser.tenantId!;
+			const quoteId = c.req.param('quoteId');
+			const itemId = c.req.param('itemId');
+			const data = c.req.valid('json');
+
+			// Get quote and validate
+			const [quote] = await db
+				.select()
+				.from(quotes)
+				.where(and(eq(quotes.id, quoteId), eq(quotes.tenantId, tenantId)))
+				.limit(1);
+
+			if (!quote) {
+				return c.json({ error: 'Quote not found' }, 404);
+			}
+
+			if (quote.status !== 'draft') {
+				return c.json({ error: 'Can only edit draft quotes' }, 400);
+			}
+
+			// Get component
+			const [component] = await db
+				.select()
+				.from(quoteComponents)
+				.where(and(eq(quoteComponents.id, itemId), eq(quoteComponents.quoteId, quoteId)))
+				.limit(1);
+
+			if (!component) {
+				return c.json({ error: 'Component not found' }, 404);
+			}
+
+			// Calculate new values
+			const supplierCost = data.supplierCost ?? parseFloat(component.supplierCost);
+			const multiplier = data.multiplier ?? parseFloat(component.multiplier);
+			const fixedAmount = data.fixedAmount ?? parseFloat(component.fixedAmount);
+			const quantity = data.quantity ?? component.quantity;
+			const unitPrice = calculateRetailPrice(supplierCost, multiplier, fixedAmount);
+			const lineTotal = unitPrice * quantity;
+
+			// Update component
+			await db
+				.update(quoteComponents)
+				.set({
+					supplierCost: String(supplierCost),
+					multiplier: String(multiplier),
+					fixedAmount: String(fixedAmount),
+					quantity,
+					unitPrice: String(unitPrice),
+					lineTotal: String(lineTotal),
+					updatedAt: new Date(),
+				})
+				.where(eq(quoteComponents.id, itemId));
+
+			// Recalculate quote totals
+			await recalculateQuoteTotals(quoteId);
+
+			// Return updated quote
+			const fullQuote = await getQuoteWithLineItems(quoteId, tenantId);
+			return c.json({ quote: fullQuote });
+		}
+	)
+
+	// Update lettering pricing
+	.put(
+		'/:quoteId/lettering/:itemId',
+		zValidator('json', updateLineItemPricingSchema),
+		async (c) => {
+			const currentUser = c.get('user');
+			const tenantId = currentUser.tenantId!;
+			const quoteId = c.req.param('quoteId');
+			const itemId = c.req.param('itemId');
+			const data = c.req.valid('json');
+
+			// Get quote and validate
+			const [quote] = await db
+				.select()
+				.from(quotes)
+				.where(and(eq(quotes.id, quoteId), eq(quotes.tenantId, tenantId)))
+				.limit(1);
+
+			if (!quote) {
+				return c.json({ error: 'Quote not found' }, 404);
+			}
+
+			if (quote.status !== 'draft') {
+				return c.json({ error: 'Can only edit draft quotes' }, 400);
+			}
+
+			// Get lettering item
+			const [lettering] = await db
+				.select()
+				.from(quoteLettering)
+				.where(and(eq(quoteLettering.id, itemId), eq(quoteLettering.quoteId, quoteId)))
+				.limit(1);
+
+			if (!lettering) {
+				return c.json({ error: 'Lettering item not found' }, 404);
+			}
+
+			// Calculate new values (lettering uses letterCount for quantity)
+			const supplierCost = data.supplierCost ?? parseFloat(lettering.supplierCost);
+			const multiplier = data.multiplier ?? parseFloat(lettering.multiplier);
+			const fixedAmount = data.fixedAmount ?? parseFloat(lettering.fixedAmount);
+			const unitPrice = calculateRetailPrice(supplierCost, multiplier, fixedAmount);
+			const lineTotal = unitPrice * lettering.letterCount;
+
+			// Update lettering
+			await db
+				.update(quoteLettering)
+				.set({
+					supplierCost: String(supplierCost),
+					multiplier: String(multiplier),
+					fixedAmount: String(fixedAmount),
+					unitPrice: String(unitPrice),
+					lineTotal: String(lineTotal),
+					updatedAt: new Date(),
+				})
+				.where(eq(quoteLettering.id, itemId));
+
+			// Recalculate quote totals
+			await recalculateQuoteTotals(quoteId);
+
+			// Return updated quote
+			const fullQuote = await getQuoteWithLineItems(quoteId, tenantId);
+			return c.json({ quote: fullQuote });
+		}
+	)
+
+	// Update sundry pricing
+	.put(
+		'/:quoteId/sundries/:itemId',
+		zValidator('json', updateLineItemPricingSchema),
+		async (c) => {
+			const currentUser = c.get('user');
+			const tenantId = currentUser.tenantId!;
+			const quoteId = c.req.param('quoteId');
+			const itemId = c.req.param('itemId');
+			const data = c.req.valid('json');
+
+			// Get quote and validate
+			const [quote] = await db
+				.select()
+				.from(quotes)
+				.where(and(eq(quotes.id, quoteId), eq(quotes.tenantId, tenantId)))
+				.limit(1);
+
+			if (!quote) {
+				return c.json({ error: 'Quote not found' }, 404);
+			}
+
+			if (quote.status !== 'draft') {
+				return c.json({ error: 'Can only edit draft quotes' }, 400);
+			}
+
+			// Get sundry item
+			const [sundry] = await db
+				.select()
+				.from(quoteSundries)
+				.where(and(eq(quoteSundries.id, itemId), eq(quoteSundries.quoteId, quoteId)))
+				.limit(1);
+
+			if (!sundry) {
+				return c.json({ error: 'Sundry item not found' }, 404);
+			}
+
+			// Calculate new values
+			const supplierCost = data.supplierCost ?? parseFloat(sundry.supplierCost);
+			const multiplier = data.multiplier ?? parseFloat(sundry.multiplier);
+			const fixedAmount = data.fixedAmount ?? parseFloat(sundry.fixedAmount);
+			const quantity = data.quantity ?? sundry.quantity;
+			const unitPrice = calculateRetailPrice(supplierCost, multiplier, fixedAmount);
+			const lineTotal = unitPrice * quantity;
+
+			// Update sundry
+			await db
+				.update(quoteSundries)
+				.set({
+					supplierCost: String(supplierCost),
+					multiplier: String(multiplier),
+					fixedAmount: String(fixedAmount),
+					quantity,
+					unitPrice: String(unitPrice),
+					lineTotal: String(lineTotal),
+					updatedAt: new Date(),
+				})
+				.where(eq(quoteSundries.id, itemId));
+
+			// Recalculate quote totals
+			await recalculateQuoteTotals(quoteId);
+
+			// Return updated quote
+			const fullQuote = await getQuoteWithLineItems(quoteId, tenantId);
+			return c.json({ quote: fullQuote });
+		}
+	)
+
+	// Update service pricing
+	.put(
+		'/:quoteId/services/:itemId',
+		zValidator('json', updateLineItemPricingSchema),
+		async (c) => {
+			const currentUser = c.get('user');
+			const tenantId = currentUser.tenantId!;
+			const quoteId = c.req.param('quoteId');
+			const itemId = c.req.param('itemId');
+			const data = c.req.valid('json');
+
+			// Get quote and validate
+			const [quote] = await db
+				.select()
+				.from(quotes)
+				.where(and(eq(quotes.id, quoteId), eq(quotes.tenantId, tenantId)))
+				.limit(1);
+
+			if (!quote) {
+				return c.json({ error: 'Quote not found' }, 404);
+			}
+
+			if (quote.status !== 'draft') {
+				return c.json({ error: 'Can only edit draft quotes' }, 400);
+			}
+
+			// Get service item
+			const [service] = await db
+				.select()
+				.from(quoteServices)
+				.where(and(eq(quoteServices.id, itemId), eq(quoteServices.quoteId, quoteId)))
+				.limit(1);
+
+			if (!service) {
+				return c.json({ error: 'Service item not found' }, 404);
+			}
+
+			// Calculate new values
+			const supplierCost = data.supplierCost ?? parseFloat(service.supplierCost);
+			const multiplier = data.multiplier ?? parseFloat(service.multiplier);
+			const fixedAmount = data.fixedAmount ?? parseFloat(service.fixedAmount);
+			const quantity = data.quantity ?? service.quantity;
+			const unitPrice = calculateRetailPrice(supplierCost, multiplier, fixedAmount);
+			const lineTotal = unitPrice * quantity;
+
+			// Update service
+			await db
+				.update(quoteServices)
+				.set({
+					supplierCost: String(supplierCost),
+					multiplier: String(multiplier),
+					fixedAmount: String(fixedAmount),
+					quantity,
+					unitPrice: String(unitPrice),
+					lineTotal: String(lineTotal),
+					updatedAt: new Date(),
+				})
+				.where(eq(quoteServices.id, itemId));
+
+			// Recalculate quote totals
+			await recalculateQuoteTotals(quoteId);
+
+			// Return updated quote
+			const fullQuote = await getQuoteWithLineItems(quoteId, tenantId);
+			return c.json({ quote: fullQuote });
+		}
+	)
+
+	// Send quote email to customer
+	.post(
+		'/:id/send-email',
+		requireAuth,
+		requireTenant,
+		zValidator(
+			'json',
+			z.object({
+				recipientEmail: z.string().email().optional(),
+				customMessage: z.string().optional(),
+			})
+		),
+		async (c) => {
+			const currentUser = c.get('user');
+			const tenantId = currentUser.tenantId!;
+			const quoteId = c.req.param('id');
+			const { recipientEmail, customMessage } = c.req.valid('json');
+
+			// Get quote
+			const [quote] = await db
+				.select()
+				.from(quotes)
+				.where(and(eq(quotes.id, quoteId), eq(quotes.tenantId, tenantId)))
+				.limit(1);
+
+			if (!quote) {
+				return c.json({ error: 'Quote not found' }, 404);
+			}
+
+			// Validate status - should be in a presentable state
+			if (!['ready', 'presented'].includes(quote.status)) {
+				return c.json({ error: 'Quote must be in Ready or Presented status to send email' }, 400);
+			}
+
+			// Determine recipient email
+			let toEmail = recipientEmail;
+
+			if (!toEmail && quote.customerId) {
+				// Get customer's primary email from contactInfo
+				const primaryEmail = await db
+					.select({ value: contactInfo.value })
+					.from(customerContactInfo)
+					.innerJoin(contactInfo, eq(contactInfo.id, customerContactInfo.contactInfoId))
+					.where(
+						and(
+							eq(customerContactInfo.customerId, quote.customerId),
+							eq(contactInfo.type, 'email'),
+							eq(contactInfo.isPrimary, true)
+						)
+					)
+					.limit(1);
+
+				toEmail = primaryEmail[0]?.value;
+			}
+
+			if (!toEmail) {
+				return c.json({ error: 'No email address available for this customer' }, 400);
+			}
+
+			// Generate secure access token
+			const accessToken = crypto.randomBytes(32).toString('hex');
+
+			// Get tenant info for email
+			const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId)).limit(1);
+
+			// Get customer name
+			let customerName = 'Valued Customer';
+			if (quote.customerId) {
+				const [customer] = await db
+					.select()
+					.from(customers)
+					.where(eq(customers.id, quote.customerId))
+					.limit(1);
+				if (customer) {
+					customerName = `${customer.firstName} ${customer.lastName}`;
+				}
+			}
+
+			// Build quote URL
+			const baseUrl = process.env.APP_URL || 'http://localhost:5173';
+			const quoteUrl = `${baseUrl}/quote/${accessToken}`;
+
+			// Format validity date
+			const validUntilFormatted = quote.validUntil
+				? new Date(quote.validUntil).toLocaleDateString('en-GB', {
+						day: 'numeric',
+						month: 'long',
+						year: 'numeric',
+					})
+				: null;
+
+			// Format total
+			const formattedTotal = new Intl.NumberFormat('en-GB', {
+				style: 'currency',
+				currency: 'GBP',
+			}).format(parseFloat(quote.total));
+
+			const tenantName = tenant?.name || 'Our Company';
+
+			// Build email HTML
+			const emailHtml = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Quote from ${tenantName}</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+    <h1 style="color: #1a1a1a; margin: 0 0 10px 0; font-size: 24px;">${tenantName}</h1>
+    <p style="color: #666; margin: 0;">Quote Reference: <strong>${quote.quoteNumber}</strong></p>
+  </div>
+
+  <p>Dear ${customerName},</p>
+
+  ${customMessage ? `<p>${customMessage}</p>` : ''}
+
+  <p>We are pleased to provide you with a quote for your consideration.</p>
+
+  <div style="background-color: #f0f7ff; border-left: 4px solid #0066cc; padding: 15px; margin: 20px 0;">
+    <p style="margin: 0 0 10px 0;"><strong>Quote Total: ${formattedTotal}</strong></p>
+    ${validUntilFormatted ? `<p style="margin: 0; color: #666;">Valid until: ${validUntilFormatted}</p>` : ''}
+  </div>
+
+  <p>To view the full details of your quote and respond, please click the button below:</p>
+
+  <div style="text-align: center; margin: 30px 0;">
+    <a href="${quoteUrl}" style="background-color: #0066cc; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">View Your Quote</a>
+  </div>
+
+  <p style="color: #666; font-size: 14px;">If the button doesn't work, copy and paste this link into your browser:</p>
+  <p style="color: #0066cc; font-size: 14px; word-break: break-all;">${quoteUrl}</p>
+
+  <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+
+  <p>If you have any questions, please don't hesitate to contact us.</p>
+
+  <p>Kind regards,<br><strong>${tenantName}</strong></p>
+</body>
+</html>
+      `.trim();
+
+			// Build plain text email
+			const emailText = `
+${tenantName}
+Quote Reference: ${quote.quoteNumber}
+
+Dear ${customerName},
+
+${customMessage ? `${customMessage}\n\n` : ''}We are pleased to provide you with a quote for your consideration.
+
+Quote Total: ${formattedTotal}
+${validUntilFormatted ? `Valid until: ${validUntilFormatted}` : ''}
+
+To view the full details of your quote and respond, please visit:
+${quoteUrl}
+
+If you have any questions, please don't hesitate to contact us.
+
+Kind regards,
+${tenantName}
+      `.trim();
+
+			// Send email
+			try {
+				await sendEmail({
+					to: toEmail,
+					subject: `Your Quote ${quote.quoteNumber} from ${tenantName}`,
+					text: emailText,
+					html: emailHtml,
+				});
+
+				// Update quote with token and email sent timestamp
+				const now = new Date();
+				await db
+					.update(quotes)
+					.set({
+						accessToken,
+						accessTokenCreatedAt: now,
+						emailSentAt: now,
+						emailSentCount: (quote.emailSentCount || 0) + 1,
+						status: quote.status === 'ready' ? 'presented' : quote.status, // Auto-advance to presented if ready
+						updatedAt: now,
+					})
+					.where(eq(quotes.id, quoteId));
+
+				return c.json({
+					success: true,
+					message: 'Quote email sent successfully',
+					sentTo: toEmail,
+				});
+			} catch (error) {
+				console.error('Failed to send quote email:', error);
+				return c.json({ error: 'Failed to send email' }, 500);
+			}
+		}
+	);
 
 export { quotesRoutes };

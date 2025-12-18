@@ -53,8 +53,9 @@ import {
 } from '@/hooks/use-quotes';
 import { useCustomersQuery } from '@/hooks/use-customers';
 import { useProductsQuery } from '@/hooks/use-products';
-import { useDimensionCombosQuery, type DimensionCombo } from '@/hooks/use-dimension-combos';
+import { useDimensionCombosQuery, useDimensionComboQuery, type DimensionCombo } from '@/hooks/use-dimension-combos';
 import { useMaterialSectionsQuery, useMaterialSectionQuery } from '@/hooks/use-material-sections';
+import { useMaterialsQuery } from '@/hooks/use-materials';
 import { useFinishesQuery } from '@/hooks/use-finishes';
 import { useLetteringTechniquesQuery } from '@/hooks/use-lettering-techniques';
 import { useLetteringColorsQuery } from '@/hooks/use-lettering-colors';
@@ -80,8 +81,11 @@ export function QuoteNewPage() {
 	const [customerId, setCustomerId] = useState<string>('');
 	const [productId, setProductId] = useState<string>('');
 	const [dimensionComboId, setDimensionComboId] = useState<string>('');
+	const [stoneColourMaterialId, setStoneColourMaterialId] = useState<string>('');
 	const [flowerHoles, setFlowerHoles] = useState<FlowerHoleChoice | ''>('');
+	const [proposedInscription, setProposedInscription] = useState('');
 	const [notes, setNotes] = useState('');
+	const [internalNotes, setInternalNotes] = useState('');
 	const [validUntil, setValidUntil] = useState('');
 
 	// Customer creation state (for new customers)
@@ -116,7 +120,9 @@ export function QuoteNewPage() {
 	const { data: customers } = useCustomersQuery();
 	const { data: productsData } = useProductsQuery({ isActive: 'true' });
 	const { data: dimensionCombos } = useDimensionCombosQuery(productId || undefined);
+	const { data: selectedCombo } = useDimensionComboQuery(dimensionComboId || undefined);
 	const { data: materialSections } = useMaterialSectionsQuery();
+	const { data: allMaterials } = useMaterialsQuery();
 	const { data: selectedSection } = useMaterialSectionQuery(selectedSectionId || undefined);
 	const { data: finishes } = useFinishesQuery();
 	const { data: techniques } = useLetteringTechniquesQuery();
@@ -143,6 +149,17 @@ export function QuoteNewPage() {
 			.join(', ');
 	};
 
+	// Group materials by section for Stone Colour selector
+	const materialsGroupedBySection = useMemo(() => {
+		if (!materialSections || !allMaterials) return [];
+		return materialSections
+			.map((section) => ({
+				...section,
+				materials: allMaterials.filter((m) => m.sectionId === section.id && m.isActive),
+			}))
+			.filter((section) => section.materials.length > 0);
+	}, [materialSections, allMaterials]);
+
 	// Pre-fill form if revising
 	useEffect(() => {
 		if (originalQuote) {
@@ -150,7 +167,9 @@ export function QuoteNewPage() {
 			setProductId(originalQuote.productId || '');
 			setDimensionComboId(originalQuote.dimensionComboId || '');
 			setFlowerHoles(originalQuote.flowerHoles || '');
+			setProposedInscription(originalQuote.proposedInscription || '');
 			setNotes(originalQuote.notes || '');
+			setInternalNotes(originalQuote.internalNotes || '');
 			setValidUntil(originalQuote.validUntil ? originalQuote.validUntil.split('T')[0] : '');
 
 			setComponents(
@@ -173,7 +192,6 @@ export function QuoteNewPage() {
 					techniqueId: l.techniqueId || '',
 					colorId: l.colorId || undefined,
 					text: l.text || '',
-					appliesTo: 'new_memorial' as const,
 					notes: l.notes || undefined,
 				}))
 			);
@@ -199,6 +217,49 @@ export function QuoteNewPage() {
 		}
 	}, [originalQuote]);
 
+	// Auto-populate components when dimension combo is selected
+	useEffect(() => {
+		if (selectedCombo?.values && selectedCombo.values.length > 0) {
+			const autoComponents = selectedCombo.values.map((v) => ({
+				id: crypto.randomUUID(),
+				componentType: v.componentType as ComponentType,
+				materialId: stoneColourMaterialId || '',
+				height: v.dimension1 ? parseFloat(v.dimension1) : undefined,
+				width: v.dimension2 ? parseFloat(v.dimension2) : undefined,
+				depth: v.dimension3 ? parseFloat(v.dimension3) : undefined,
+				quantity: v.componentQuantity || 1,
+			}));
+			setComponents(autoComponents);
+		}
+	}, [selectedCombo]);
+
+	// Update material on all components when Stone Colour changes
+	useEffect(() => {
+		if (stoneColourMaterialId && dimensionComboId && components.length > 0) {
+			setComponents((prevComponents) =>
+				prevComponents.map((c) => ({
+					...c,
+					materialId: stoneColourMaterialId,
+				}))
+			);
+		}
+	}, [stoneColourMaterialId, dimensionComboId]);
+
+	// Clear components when switching away from product-based mode
+	useEffect(() => {
+		if (!dimensionComboId) {
+			// Only clear if we had auto-populated components (product-based mode)
+			// Check if all components have the same material (sign of auto-population)
+			const allSameMaterial = components.every((c) => c.materialId === components[0]?.materialId);
+			if (allSameMaterial && components.length > 1) {
+				setComponents([]);
+			}
+		}
+	}, [dimensionComboId]);
+
+	// Helper to check if in product-based mode
+	const isProductBasedMode = !!dimensionComboId && !!selectedCombo;
+
 	// Helper to generate unique IDs
 	const generateId = () => crypto.randomUUID();
 
@@ -222,7 +283,6 @@ export function QuoteNewPage() {
 				id: generateId(),
 				techniqueId: '',
 				text: '',
-				appliesTo: 'new_memorial',
 			},
 		]);
 	};
@@ -324,7 +384,9 @@ export function QuoteNewPage() {
 			productId: productId || undefined,
 			dimensionComboId: dimensionComboId || undefined,
 			flowerHoles: flowerHoles || undefined,
+			proposedInscription: proposedInscription || undefined,
 			notes: notes || undefined,
+			internalNotes: internalNotes || undefined,
 			validUntil: validUntil ? new Date(validUntil).toISOString() : undefined,
 			components: components.map(({ id, ...c }) => ({
 				...c,
@@ -690,6 +752,36 @@ export function QuoteNewPage() {
 								)}
 							</div>
 
+							{/* Stone Colour - shown when dimension combo is selected */}
+							{isProductBasedMode && (
+								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+									<Field>
+										<FieldLabel>Stone Colour *</FieldLabel>
+										<Select
+											value={stoneColourMaterialId || NONE_VALUE}
+											onValueChange={(v) => setStoneColourMaterialId(v === NONE_VALUE ? '' : v)}
+										>
+											<SelectTrigger>
+												<SelectValue placeholder="Select stone colour" />
+											</SelectTrigger>
+											<SelectContent>
+												<SelectItem value={NONE_VALUE}>Select a colour</SelectItem>
+												{materialsGroupedBySection.map((section) => (
+													<SelectGroup key={section.id}>
+														<SelectLabel>{section.name}</SelectLabel>
+														{section.materials.map((material) => (
+															<SelectItem key={material.id} value={material.id}>
+																{material.name}
+															</SelectItem>
+														))}
+													</SelectGroup>
+												))}
+											</SelectContent>
+										</Select>
+									</Field>
+								</div>
+							)}
+
 							{/* Flower Holes */}
 							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 								<Field>
@@ -722,11 +814,36 @@ export function QuoteNewPage() {
 							</div>
 
 							<Field>
+								<FieldLabel>Proposed Inscription (optional)</FieldLabel>
+								<Textarea
+									value={proposedInscription}
+									onChange={(e) => setProposedInscription(e.target.value)}
+									placeholder="Enter the full text of the desired inscription..."
+									rows={4}
+								/>
+								{proposedInscription && (
+									<p className="text-sm text-muted-foreground mt-1">
+										{proposedInscription.length} characters
+									</p>
+								)}
+							</Field>
+
+							<Field>
 								<FieldLabel>Notes (optional)</FieldLabel>
 								<Textarea
 									value={notes}
 									onChange={(e) => setNotes(e.target.value)}
-									placeholder="Any special instructions or notes..."
+									placeholder="Any special instructions or notes for the customer..."
+									rows={3}
+								/>
+							</Field>
+
+							<Field>
+								<FieldLabel>Internal Notes (optional)</FieldLabel>
+								<Textarea
+									value={internalNotes}
+									onChange={(e) => setInternalNotes(e.target.value)}
+									placeholder="Internal notes - not shown to customer..."
 									rows={3}
 								/>
 							</Field>
@@ -740,177 +857,226 @@ export function QuoteNewPage() {
 						<div className="flex items-center justify-between">
 							<div>
 								<CardTitle>Stone Components</CardTitle>
-								<CardDescription>Add stone pieces to this quote</CardDescription>
+								<CardDescription>
+									{isProductBasedMode
+										? 'Components from selected product and dimensions'
+										: 'Add stone pieces to this quote'}
+								</CardDescription>
 							</div>
-							<Button onClick={handleAddComponent}>
-								<Plus className="h-4 w-4 mr-2" />
-								Add Component
-							</Button>
+							{!isProductBasedMode && (
+								<Button onClick={handleAddComponent}>
+									<Plus className="h-4 w-4 mr-2" />
+									Add Component
+								</Button>
+							)}
 						</div>
 					</CardHeader>
 					<CardContent>
-						{components.length === 0 ? (
-							<div className="text-center py-8 text-muted-foreground border rounded-lg">
-								No components added yet. Click "Add Component" to start.
-							</div>
-						) : (
-							<div className="space-y-4">
-								{components.map((comp, index) => (
-									<div key={comp.id} className="border rounded-lg p-4">
-										<div className="flex items-center justify-between mb-4">
-											<span className="font-medium">Component {index + 1}</span>
-											<Button
-												variant="ghost"
-												size="sm"
-												onClick={() => removeComponent(comp.id)}
-											>
-												<Trash2 className="h-4 w-4" />
-											</Button>
+						{isProductBasedMode ? (
+							// Read-only summary for product-based mode
+							components.length === 0 ? (
+								<div className="text-center py-8 text-muted-foreground border rounded-lg">
+									Select a dimension combo above to populate components.
+								</div>
+							) : (
+								<div className="border rounded-lg">
+									<Table>
+										<TableHeader>
+											<TableRow>
+												<TableHead>Component</TableHead>
+												<TableHead>Dimensions (H × W × D)</TableHead>
+												<TableHead className="w-[80px]">Qty</TableHead>
+											</TableRow>
+										</TableHeader>
+										<TableBody>
+											{components.map((comp) => (
+												<TableRow key={comp.id}>
+													<TableCell className="font-medium">
+														{formatComponentType(comp.componentType)}
+													</TableCell>
+													<TableCell>
+														{comp.height || '—'} × {comp.width || '—'} × {comp.depth || '—'}
+													</TableCell>
+													<TableCell>{comp.quantity}</TableCell>
+												</TableRow>
+											))}
+										</TableBody>
+									</Table>
+									{!stoneColourMaterialId && (
+										<div className="p-3 bg-yellow-50 text-yellow-800 text-sm border-t">
+											Please select a Stone Colour above to complete the components.
 										</div>
-										<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-											<Field>
-												<FieldLabel>Type</FieldLabel>
-												<Select
-													value={comp.componentType}
-													onValueChange={(v) =>
-														updateComponent(comp.id, { componentType: v as ComponentType })
-													}
-												>
-													<SelectTrigger>
-														<SelectValue />
-													</SelectTrigger>
-													<SelectContent>
-														{Object.entries(COMPONENT_TYPE_GROUPS).map(([group, types]) => (
-															<SelectGroup key={group}>
-																<SelectLabel>{group}</SelectLabel>
-																{types.map((type) => (
-																	<SelectItem key={type} value={type}>
-																		{formatComponentType(type as ComponentType)}
+									)}
+								</div>
+							)
+						) : (
+							// Manual entry mode
+							<>
+								{components.length === 0 ? (
+									<div className="text-center py-8 text-muted-foreground border rounded-lg">
+										No components added yet. Click "Add Component" to start.
+									</div>
+								) : (
+									<div className="space-y-4">
+										{components.map((comp, index) => (
+											<div key={comp.id} className="border rounded-lg p-4">
+												<div className="flex items-center justify-between mb-4">
+													<span className="font-medium">Component {index + 1}</span>
+													<Button
+														variant="ghost"
+														size="sm"
+														onClick={() => removeComponent(comp.id)}
+													>
+														<Trash2 className="h-4 w-4" />
+													</Button>
+												</div>
+												<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+													<Field>
+														<FieldLabel>Type</FieldLabel>
+														<Select
+															value={comp.componentType}
+															onValueChange={(v) =>
+																updateComponent(comp.id, { componentType: v as ComponentType })
+															}
+														>
+															<SelectTrigger>
+																<SelectValue />
+															</SelectTrigger>
+															<SelectContent>
+																{Object.entries(COMPONENT_TYPE_GROUPS).map(([group, types]) => (
+																	<SelectGroup key={group}>
+																		<SelectLabel>{group}</SelectLabel>
+																		{types.map((type) => (
+																			<SelectItem key={type} value={type}>
+																				{formatComponentType(type as ComponentType)}
+																			</SelectItem>
+																		))}
+																	</SelectGroup>
+																))}
+															</SelectContent>
+														</Select>
+													</Field>
+
+													<Field>
+														<FieldLabel>Material Section</FieldLabel>
+														<Select
+															value={selectedSectionId}
+															onValueChange={setSelectedSectionId}
+														>
+															<SelectTrigger>
+																<SelectValue placeholder="Select section" />
+															</SelectTrigger>
+															<SelectContent>
+																{materialSections?.map((section) => (
+																	<SelectItem key={section.id} value={section.id}>
+																		{section.name}
 																	</SelectItem>
 																))}
-															</SelectGroup>
-														))}
-													</SelectContent>
-												</Select>
-											</Field>
+															</SelectContent>
+														</Select>
+													</Field>
 
-											<Field>
-												<FieldLabel>Material Section</FieldLabel>
-												<Select
-													value={selectedSectionId}
-													onValueChange={setSelectedSectionId}
-												>
-													<SelectTrigger>
-														<SelectValue placeholder="Select section" />
-													</SelectTrigger>
-													<SelectContent>
-														{materialSections?.map((section) => (
-															<SelectItem key={section.id} value={section.id}>
-																{section.name}
-															</SelectItem>
-														))}
-													</SelectContent>
-												</Select>
-											</Field>
+													<Field>
+														<FieldLabel>Material *</FieldLabel>
+														<Select
+															value={comp.materialId || NONE_VALUE}
+															onValueChange={(v) => updateComponent(comp.id, { materialId: v === NONE_VALUE ? '' : v })}
+														>
+															<SelectTrigger>
+																<SelectValue placeholder="Select material" />
+															</SelectTrigger>
+															<SelectContent>
+																<SelectItem value={NONE_VALUE}>Select material</SelectItem>
+																{selectedSection?.materials
+																	?.filter((m) => m.isActive)
+																	.map((material) => (
+																		<SelectItem key={material.id} value={material.id}>
+																			{material.name}
+																		</SelectItem>
+																	))}
+															</SelectContent>
+														</Select>
+													</Field>
 
-											<Field>
-												<FieldLabel>Material *</FieldLabel>
-												<Select
-													value={comp.materialId}
-													onValueChange={(v) => updateComponent(comp.id, { materialId: v })}
-												>
-													<SelectTrigger>
-														<SelectValue placeholder="Select material" />
-													</SelectTrigger>
-													<SelectContent>
-														{selectedSection?.materials
-															?.filter((m) => m.isActive)
-															.map((material) => (
-																<SelectItem key={material.id} value={material.id}>
-																	{material.name}
-																</SelectItem>
-															))}
-													</SelectContent>
-												</Select>
-											</Field>
+													<Field>
+														<FieldLabel>Finish</FieldLabel>
+														<Select
+															value={comp.finishId || NONE_VALUE}
+															onValueChange={(v) =>
+																updateComponent(comp.id, { finishId: v === NONE_VALUE ? undefined : v })
+															}
+														>
+															<SelectTrigger>
+																<SelectValue placeholder="Select finish" />
+															</SelectTrigger>
+															<SelectContent>
+																<SelectItem value={NONE_VALUE}>No finish</SelectItem>
+																{finishes
+																	?.filter((f) => f.isActive)
+																	.map((finish) => (
+																		<SelectItem key={finish.id} value={finish.id}>
+																			{finish.name}
+																		</SelectItem>
+																	))}
+															</SelectContent>
+														</Select>
+													</Field>
 
-											<Field>
-												<FieldLabel>Finish</FieldLabel>
-												<Select
-													value={comp.finishId || ''}
-													onValueChange={(v) =>
-														updateComponent(comp.id, { finishId: v || undefined })
-													}
-												>
-													<SelectTrigger>
-														<SelectValue placeholder="Select finish" />
-													</SelectTrigger>
-													<SelectContent>
-														<SelectItem value="">No finish</SelectItem>
-														{finishes
-															?.filter((f) => f.isActive)
-															.map((finish) => (
-																<SelectItem key={finish.id} value={finish.id}>
-																	{finish.name}
-																</SelectItem>
-															))}
-													</SelectContent>
-												</Select>
-											</Field>
+													<Field>
+														<FieldLabel>Dimensions (H x W x D inches)</FieldLabel>
+														<div className="flex gap-2">
+															<Input
+																type="number"
+																placeholder="H"
+																value={comp.height || ''}
+																onChange={(e) =>
+																	updateComponent(comp.id, {
+																		height: e.target.value ? parseFloat(e.target.value) : undefined,
+																	})
+																}
+															/>
+															<Input
+																type="number"
+																placeholder="W"
+																value={comp.width || ''}
+																onChange={(e) =>
+																	updateComponent(comp.id, {
+																		width: e.target.value ? parseFloat(e.target.value) : undefined,
+																	})
+																}
+															/>
+															<Input
+																type="number"
+																placeholder="D"
+																value={comp.depth || ''}
+																onChange={(e) =>
+																	updateComponent(comp.id, {
+																		depth: e.target.value ? parseFloat(e.target.value) : undefined,
+																	})
+																}
+															/>
+														</div>
+													</Field>
 
-											<Field>
-												<FieldLabel>Dimensions (H x W x D inches)</FieldLabel>
-												<div className="flex gap-2">
-													<Input
-														type="number"
-														placeholder="H"
-														value={comp.height || ''}
-														onChange={(e) =>
-															updateComponent(comp.id, {
-																height: e.target.value ? parseFloat(e.target.value) : undefined,
-															})
-														}
-													/>
-													<Input
-														type="number"
-														placeholder="W"
-														value={comp.width || ''}
-														onChange={(e) =>
-															updateComponent(comp.id, {
-																width: e.target.value ? parseFloat(e.target.value) : undefined,
-															})
-														}
-													/>
-													<Input
-														type="number"
-														placeholder="D"
-														value={comp.depth || ''}
-														onChange={(e) =>
-															updateComponent(comp.id, {
-																depth: e.target.value ? parseFloat(e.target.value) : undefined,
-															})
-														}
-													/>
+													<Field>
+														<FieldLabel>Quantity</FieldLabel>
+														<Input
+															type="number"
+															min="1"
+															value={comp.quantity}
+															onChange={(e) =>
+																updateComponent(comp.id, {
+																	quantity: parseInt(e.target.value) || 1,
+																})
+															}
+														/>
+													</Field>
 												</div>
-											</Field>
-
-											<Field>
-												<FieldLabel>Quantity</FieldLabel>
-												<Input
-													type="number"
-													min="1"
-													value={comp.quantity}
-													onChange={(e) =>
-														updateComponent(comp.id, {
-															quantity: parseInt(e.target.value) || 1,
-														})
-													}
-												/>
-											</Field>
-										</div>
+											</div>
+										))}
 									</div>
-								))}
-							</div>
+								)}
+							</>
 						)}
 					</CardContent>
 				</Card>
@@ -952,13 +1118,14 @@ export function QuoteNewPage() {
 											<Field>
 												<FieldLabel>Technique *</FieldLabel>
 												<Select
-													value={lett.techniqueId}
-													onValueChange={(v) => updateLettering(lett.id, { techniqueId: v })}
+													value={lett.techniqueId || NONE_VALUE}
+													onValueChange={(v) => updateLettering(lett.id, { techniqueId: v === NONE_VALUE ? '' : v })}
 												>
 													<SelectTrigger>
 														<SelectValue placeholder="Select technique" />
 													</SelectTrigger>
 													<SelectContent>
+														<SelectItem value={NONE_VALUE}>Select technique</SelectItem>
 														{techniques
 															?.filter((t) => t.isActive)
 															.map((technique) => (
@@ -973,16 +1140,16 @@ export function QuoteNewPage() {
 											<Field>
 												<FieldLabel>Color</FieldLabel>
 												<Select
-													value={lett.colorId || ''}
+													value={lett.colorId || NONE_VALUE}
 													onValueChange={(v) =>
-														updateLettering(lett.id, { colorId: v || undefined })
+														updateLettering(lett.id, { colorId: v === NONE_VALUE ? undefined : v })
 													}
 												>
 													<SelectTrigger>
 														<SelectValue placeholder="Select color" />
 													</SelectTrigger>
 													<SelectContent>
-														<SelectItem value="">No color</SelectItem>
+														<SelectItem value={NONE_VALUE}>No color</SelectItem>
 														{colors
 															?.filter((c) => c.isActive)
 															.map((color) => (
@@ -994,28 +1161,7 @@ export function QuoteNewPage() {
 												</Select>
 											</Field>
 
-											<Field>
-												<FieldLabel>Applies To</FieldLabel>
-												<Select
-													value={lett.appliesTo || 'new_memorial'}
-													onValueChange={(v) =>
-														updateLettering(lett.id, {
-															appliesTo: v as 'new_memorial' | 'refurbishment' | 'both',
-														})
-													}
-												>
-													<SelectTrigger>
-														<SelectValue />
-													</SelectTrigger>
-													<SelectContent>
-														<SelectItem value="new_memorial">New Memorial</SelectItem>
-														<SelectItem value="refurbishment">Refurbishment</SelectItem>
-														<SelectItem value="both">Both</SelectItem>
-													</SelectContent>
-												</Select>
-											</Field>
-
-											<Field className="md:col-span-3">
+											<Field className="md:col-span-2">
 												<FieldLabel>
 													Text * ({lett.text?.replace(/\s/g, '').length || 0} letters)
 												</FieldLabel>
@@ -1068,15 +1214,16 @@ export function QuoteNewPage() {
 											<TableRow key={sundry.id}>
 												<TableCell>
 													<Select
-														value={sundry.sundryId}
+														value={sundry.sundryId || NONE_VALUE}
 														onValueChange={(v) =>
-															updateSundry(sundry.id, { sundryId: v })
+															updateSundry(sundry.id, { sundryId: v === NONE_VALUE ? '' : v })
 														}
 													>
 														<SelectTrigger>
 															<SelectValue placeholder="Select item" />
 														</SelectTrigger>
 														<SelectContent>
+															<SelectItem value={NONE_VALUE}>Select item</SelectItem>
 															{sundryItems
 																?.filter((s) => s.isActive)
 																.map((item) => (
@@ -1157,15 +1304,16 @@ export function QuoteNewPage() {
 												<TableRow key={service.id}>
 													<TableCell>
 														<Select
-															value={service.serviceId}
+															value={service.serviceId || NONE_VALUE}
 															onValueChange={(v) =>
-																updateService(service.id, { serviceId: v })
+																updateService(service.id, { serviceId: v === NONE_VALUE ? '' : v })
 															}
 														>
 															<SelectTrigger>
 																<SelectValue placeholder="Select service" />
 															</SelectTrigger>
 															<SelectContent>
+																<SelectItem value={NONE_VALUE}>Select service</SelectItem>
 																{serviceItems
 																	?.filter((s) => s.isActive)
 																	.map((item) => (
