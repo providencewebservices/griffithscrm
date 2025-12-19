@@ -378,7 +378,7 @@ export function MaterialSectionDetailPage() {
 						</Field>
 
 						<Field>
-							<FieldLabel htmlFor="supplierCost">Supplier Cost ($)</FieldLabel>
+							<FieldLabel htmlFor="supplierCost">Supplier Cost (£)</FieldLabel>
 							<Input
 								id="supplierCost"
 								type="number"

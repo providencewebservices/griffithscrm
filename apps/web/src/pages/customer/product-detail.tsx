@@ -45,7 +45,7 @@ import {
 	useCreateProductOptionMutation,
 	type ProductOptionType,
 } from '@/hooks/use-product-options';
-import { useUploadImageMutation } from '@/hooks/use-uploads';
+import { useUploadImageMutation, useSignedUrl } from '@/hooks/use-uploads';
 import { ArrowLeft, MoreHorizontal, Plus, Package, Upload, X, Loader2 } from 'lucide-react';
 
 export function ProductDetailPage() {
@@ -59,6 +59,7 @@ export function ProductDetailPage() {
 	const [mutationError, setMutationError] = useState<string | null>(null);
 
 	const { data: product, isLoading, error } = useProductQuery(id);
+	const { data: signedImageUrl } = useSignedUrl(product?.imageUrl);
 	const updateMutation = useUpdateProductMutation();
 	const archiveMutation = useArchiveProductMutation();
 	const unarchiveMutation = useUnarchiveProductMutation();
@@ -340,7 +341,7 @@ export function ProductDetailPage() {
 							{product.imageUrl ? (
 								<div className="relative flex justify-center bg-muted/30 rounded-lg p-4">
 									<img
-										src={product.imageUrl}
+										src={signedImageUrl || product.imageUrl}
 										alt={product.name}
 										className="max-h-80 max-w-full object-contain rounded-lg"
 									/>

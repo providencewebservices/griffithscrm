@@ -36,6 +36,7 @@ import {
 	TableRow,
 } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
 import {
 	useQuoteQuery,
@@ -196,6 +197,7 @@ export function QuoteDetailPage() {
 	// State for new line item input
 	const [newLineItemDesc, setNewLineItemDesc] = useState('');
 	const [newLineItemPrice, setNewLineItemPrice] = useState('');
+	const [newLineItemVatExempt, setNewLineItemVatExempt] = useState(false);
 
 	// Can only edit pricing on draft quotes
 	const canEditPricing = quote?.status === 'draft';
@@ -572,7 +574,10 @@ export function QuoteDetailPage() {
 										<p className="text-sm font-medium">Other Charges:</p>
 										{quote.lineItems.map((item) => (
 											<div key={item.id} className="flex justify-between text-sm">
-												<span className="text-muted-foreground">{item.description}</span>
+												<span className="text-muted-foreground">
+													{item.description}
+													{item.vatExempt && <span className="text-xs ml-1">(VAT Exempt)</span>}
+												</span>
 												<span>{formatCurrency(item.price)}</span>
 											</div>
 										))}
@@ -672,7 +677,7 @@ export function QuoteDetailPage() {
 						</CardContent>
 					</Card>
 
-					{/* Components Card - Internal view shows supplier costs and multipliers */}
+					{/* Components Card - Internal view shows supplier costs and markup */}
 					{quote.components.length > 0 && (
 						<Card>
 							<CardHeader>
@@ -691,7 +696,7 @@ export function QuoteDetailPage() {
 												<TableHead>Dimensions</TableHead>
 												<TableHead className="text-center">Qty</TableHead>
 												<TableHead className="text-right text-orange-600">Supplier</TableHead>
-												<TableHead className="text-center">×</TableHead>
+												<TableHead className="text-center">Markup</TableHead>
 												<TableHead className="text-right">Retail</TableHead>
 												<TableHead className="text-right">Total</TableHead>
 											</TableRow>
@@ -732,16 +737,17 @@ export function QuoteDetailPage() {
 													</TableCell>
 													<TableCell className="text-center text-muted-foreground text-sm">
 														<EditableNumber
-															value={parseFloat(comp.multiplier)}
+															value={parseFloat(comp.markupPercent)}
 															onSave={async (value) => {
 																await updateComponentPricing.mutateAsync({
 																	quoteId: quote.id,
 																	itemId: comp.id,
-																	multiplier: value,
+																	markupPercent: value,
 																});
 															}}
 															disabled={!canEditPricing}
-															min={0.01}
+															min={0}
+															formatValue={(val) => `${val.toFixed(0)}%`}
 														/>
 													</TableCell>
 													<TableCell className="text-right">
@@ -778,7 +784,7 @@ export function QuoteDetailPage() {
 												<TableHead>Text</TableHead>
 												<TableHead className="text-center">Letters</TableHead>
 												<TableHead className="text-right text-orange-600">Cost/Letter</TableHead>
-												<TableHead className="text-center">×</TableHead>
+												<TableHead className="text-center">Markup</TableHead>
 												<TableHead className="text-right">Retail</TableHead>
 												<TableHead className="text-right">Total</TableHead>
 											</TableRow>
@@ -810,16 +816,17 @@ export function QuoteDetailPage() {
 													</TableCell>
 													<TableCell className="text-center text-muted-foreground text-sm">
 														<EditableNumber
-															value={parseFloat(lett.multiplier)}
+															value={parseFloat(lett.markupPercent)}
 															onSave={async (value) => {
 																await updateLetteringPricing.mutateAsync({
 																	quoteId: quote.id,
 																	itemId: lett.id,
-																	multiplier: value,
+																	markupPercent: value,
 																});
 															}}
 															disabled={!canEditPricing}
-															min={0.01}
+															min={0}
+															formatValue={(val) => `${val.toFixed(0)}%`}
 														/>
 													</TableCell>
 													<TableCell className="text-right">
@@ -854,7 +861,7 @@ export function QuoteDetailPage() {
 												<TableHead>Item</TableHead>
 												<TableHead className="text-center">Qty</TableHead>
 												<TableHead className="text-right text-orange-600">Supplier</TableHead>
-												<TableHead className="text-center">×</TableHead>
+												<TableHead className="text-center">Markup</TableHead>
 												<TableHead className="text-right">Retail</TableHead>
 												<TableHead className="text-right">Total</TableHead>
 											</TableRow>
@@ -882,16 +889,17 @@ export function QuoteDetailPage() {
 													</TableCell>
 													<TableCell className="text-center text-muted-foreground text-sm">
 														<EditableNumber
-															value={parseFloat(sundry.multiplier)}
+															value={parseFloat(sundry.markupPercent)}
 															onSave={async (value) => {
 																await updateSundryPricing.mutateAsync({
 																	quoteId: quote.id,
 																	itemId: sundry.id,
-																	multiplier: value,
+																	markupPercent: value,
 																});
 															}}
 															disabled={!canEditPricing}
-															min={0.01}
+															min={0}
+															formatValue={(val) => `${val.toFixed(0)}%`}
 														/>
 													</TableCell>
 													<TableCell className="text-right">
@@ -927,6 +935,7 @@ export function QuoteDetailPage() {
 											<TableRow>
 												<TableHead>Description</TableHead>
 												<TableHead className="text-right w-32">Price</TableHead>
+												<TableHead className="text-center w-24">VAT Exempt</TableHead>
 												{canEditPricing && <TableHead className="w-16"></TableHead>}
 											</TableRow>
 										</TableHeader>
@@ -964,6 +973,19 @@ export function QuoteDetailPage() {
 															}}
 															disabled={!canEditPricing}
 															isCurrency
+														/>
+													</TableCell>
+													<TableCell className="text-center">
+														<Checkbox
+															checked={item.vatExempt}
+															onCheckedChange={async (checked) => {
+																await updateLineItem.mutateAsync({
+																	quoteId: quote.id,
+																	itemId: item.id,
+																	vatExempt: checked === true,
+																});
+															}}
+															disabled={!canEditPricing}
 														/>
 													</TableCell>
 													{canEditPricing && (
@@ -1018,6 +1040,14 @@ export function QuoteDetailPage() {
 											className="h-9"
 										/>
 									</div>
+									<div className="flex items-center gap-2 pb-1">
+										<Checkbox
+											id="lineItemVatExempt"
+											checked={newLineItemVatExempt}
+											onCheckedChange={(checked) => setNewLineItemVatExempt(checked === true)}
+										/>
+										<Label htmlFor="lineItemVatExempt" className="text-xs whitespace-nowrap">VAT Exempt</Label>
+									</div>
 									<Button
 										size="sm"
 										className="h-9"
@@ -1027,9 +1057,11 @@ export function QuoteDetailPage() {
 												quoteId: quote.id,
 												description: newLineItemDesc.trim(),
 												price: parseFloat(newLineItemPrice),
+												vatExempt: newLineItemVatExempt,
 											});
 											setNewLineItemDesc('');
 											setNewLineItemPrice('');
+											setNewLineItemVatExempt(false);
 										}}
 										disabled={!newLineItemDesc.trim() || !newLineItemPrice || addLineItem.isPending}
 									>

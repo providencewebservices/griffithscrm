@@ -1,16 +1,24 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
-import { eq, and, like, desc } from 'drizzle-orm';
+import { eq, and, like, desc, asc, sql } from 'drizzle-orm';
 import { requireAuth, requireTenant } from '../middleware/auth';
 import { db } from '../lib/auth';
+import { generatePresignedUploadUrl, isS3Configured } from '../lib/s3';
 import {
 	jobs,
 	quotes,
 	customers,
 	products,
 	services,
+	quoteComponents,
+	quoteLettering,
+	quoteSundries,
+	quoteLineItems,
+	jobPaymentScheduleItems,
+	jobAttachments,
 	JOB_STATUSES,
+	JOB_ATTACHMENT_CATEGORIES,
 } from '@griffiths-crm/shared/db/schema';
 
 // Validation schemas
@@ -24,6 +32,52 @@ const updateStatusSchema = z.object({
 });
 
 const updateNotesSchema = z.object({
+	notes: z.string().optional(),
+});
+
+// Payment schedule validation schemas
+const createPaymentScheduleItemSchema = z.object({
+	description: z.string().min(1),
+	amount: z.string().or(z.number()).transform((val) => String(val)),
+	dueDate: z.string().datetime().nullable().optional(),
+	notes: z.string().optional(),
+});
+
+const updatePaymentScheduleItemSchema = z.object({
+	description: z.string().min(1).optional(),
+	amount: z.string().or(z.number()).transform((val) => String(val)).optional(),
+	dueDate: z.string().datetime().nullable().optional(),
+	paidAmount: z.string().or(z.number()).transform((val) => String(val)).optional(),
+	paidAt: z.string().datetime().nullable().optional(),
+	paymentMethod: z.string().nullable().optional(),
+	notes: z.string().nullable().optional(),
+});
+
+// Attachment validation schemas
+const ALLOWED_ATTACHMENT_CONTENT_TYPES = [
+	'image/jpeg',
+	'image/png',
+	'image/gif',
+	'image/webp',
+	'application/pdf',
+] as const;
+
+const presignAttachmentSchema = z.object({
+	filename: z.string().min(1),
+	contentType: z.enum(ALLOWED_ATTACHMENT_CONTENT_TYPES, {
+		errorMap: () => ({
+			message: `Content type must be one of: ${ALLOWED_ATTACHMENT_CONTENT_TYPES.join(', ')}`,
+		}),
+	}),
+	category: z.enum(JOB_ATTACHMENT_CATEGORIES),
+});
+
+const confirmAttachmentSchema = z.object({
+	s3Key: z.string().min(1),
+	filename: z.string().min(1),
+	contentType: z.string().min(1),
+	category: z.enum(JOB_ATTACHMENT_CATEGORIES),
+	size: z.number().optional(),
 	notes: z.string().optional(),
 });
 
@@ -57,35 +111,45 @@ async function getJobWithQuoteSummary(jobId: string, tenantId: string) {
 
 	if (!quote) return null;
 
-	// Get customer if exists
-	let customer = null;
-	if (quote.customerId) {
-		[customer] = await db
-			.select()
-			.from(customers)
-			.where(eq(customers.id, quote.customerId))
-			.limit(1);
-	}
-
-	// Get product if exists
-	let product = null;
-	if (quote.productId) {
-		[product] = await db
-			.select()
-			.from(products)
-			.where(eq(products.id, quote.productId))
-			.limit(1);
-	}
-
-	// Get service if exists
-	let service = null;
-	if (quote.serviceId) {
-		[service] = await db
-			.select()
-			.from(services)
-			.where(eq(services.id, quote.serviceId))
-			.limit(1);
-	}
+	// Get all quote details in parallel
+	const [customer, product, service, components, lettering, sundries, lineItems] =
+		await Promise.all([
+			// Customer
+			quote.customerId
+				? db
+						.select()
+						.from(customers)
+						.where(eq(customers.id, quote.customerId))
+						.limit(1)
+						.then((r) => r[0] || null)
+				: Promise.resolve(null),
+			// Product
+			quote.productId
+				? db
+						.select()
+						.from(products)
+						.where(eq(products.id, quote.productId))
+						.limit(1)
+						.then((r) => r[0] || null)
+				: Promise.resolve(null),
+			// Service
+			quote.serviceId
+				? db
+						.select()
+						.from(services)
+						.where(eq(services.id, quote.serviceId))
+						.limit(1)
+						.then((r) => r[0] || null)
+				: Promise.resolve(null),
+			// Components
+			db.select().from(quoteComponents).where(eq(quoteComponents.quoteId, quote.id)),
+			// Lettering
+			db.select().from(quoteLettering).where(eq(quoteLettering.quoteId, quote.id)),
+			// Sundries
+			db.select().from(quoteSundries).where(eq(quoteSundries.quoteId, quote.id)),
+			// Line Items
+			db.select().from(quoteLineItems).where(eq(quoteLineItems.quoteId, quote.id)),
+		]);
 
 	return {
 		...job,
@@ -93,11 +157,42 @@ async function getJobWithQuoteSummary(jobId: string, tenantId: string) {
 			id: quote.id,
 			quoteNumber: quote.quoteNumber,
 			total: quote.total,
+			proposedInscription: quote.proposedInscription,
+			flowerHoles: quote.flowerHoles,
 			customer: customer
 				? { id: customer.id, firstName: customer.firstName, lastName: customer.lastName }
 				: null,
 			product: product ? { id: product.id, name: product.name } : null,
 			service: service ? { id: service.id, name: service.name } : null,
+			// Include full details for job execution (no pricing - that's on quote page)
+			components: components.map((c) => ({
+				id: c.id,
+				componentType: c.componentType,
+				materialName: c.materialName,
+				finishName: c.finishName,
+				height: c.height,
+				width: c.width,
+				depth: c.depth,
+				quantity: c.quantity,
+			})),
+			lettering: lettering.map((l) => ({
+				id: l.id,
+				text: l.text,
+				letterCount: l.letterCount,
+				techniqueName: l.techniqueName,
+				colorName: l.colorName,
+			})),
+			sundries: sundries.map((s) => ({
+				id: s.id,
+				sundryName: s.sundryName,
+				quantity: s.quantity,
+			})),
+			lineItems: lineItems.map((li) => ({
+				id: li.id,
+				description: li.description,
+				price: li.price,
+				vatExempt: li.vatExempt,
+			})),
 		},
 	};
 }
@@ -153,7 +248,7 @@ export const jobsRouter = new Hono()
 			.where(and(...conditions))
 			.orderBy(desc(jobs.createdAt));
 
-		// Get quote summaries for each job
+		// Get quote summaries and payment status for each job
 		const jobsWithSummaries = await Promise.all(
 			jobsList.map(async (job) => {
 				const [quote] = await db
@@ -169,6 +264,7 @@ export const jobsRouter = new Hono()
 						customerLastName: null,
 						serviceName: null,
 						total: '0',
+						paymentSummary: null,
 					};
 				}
 
@@ -198,12 +294,37 @@ export const jobsRouter = new Hono()
 					}
 				}
 
+				// Get payment schedule summary
+				const paymentItems = await db
+					.select()
+					.from(jobPaymentScheduleItems)
+					.where(eq(jobPaymentScheduleItems.jobId, job.id));
+
+				let paymentSummary = null;
+				if (paymentItems.length > 0) {
+					const totalAmount = paymentItems.reduce((sum, item) => sum + parseFloat(item.amount), 0);
+					const paidAmount = paymentItems.reduce((sum, item) => sum + parseFloat(item.paidAmount), 0);
+					const hasOverdue = paymentItems.some(
+						(item) =>
+							item.dueDate &&
+							new Date(item.dueDate) < new Date() &&
+							parseFloat(item.paidAmount) < parseFloat(item.amount)
+					);
+					paymentSummary = {
+						totalAmount: totalAmount.toFixed(2),
+						paidAmount: paidAmount.toFixed(2),
+						outstandingAmount: (totalAmount - paidAmount).toFixed(2),
+						hasOverdue,
+					};
+				}
+
 				return {
 					...job,
 					customerFirstName,
 					customerLastName,
 					serviceName,
 					total: quote.total,
+					paymentSummary,
 				};
 			})
 		);
@@ -322,6 +443,372 @@ export const jobsRouter = new Hono()
 		}
 
 		await db.delete(jobs).where(eq(jobs.id, id));
+
+		return c.json({ success: true });
+	})
+
+	// ============================================
+	// PAYMENT SCHEDULE ROUTES
+	// ============================================
+
+	// Get payment schedule for a job
+	.get('/:id/payment-schedule', async (c) => {
+		const currentUser = c.get('user');
+		const tenantId = currentUser.tenantId!;
+		const jobId = c.req.param('id');
+
+		// Verify job exists and belongs to tenant
+		const [job] = await db
+			.select()
+			.from(jobs)
+			.where(and(eq(jobs.id, jobId), eq(jobs.tenantId, tenantId)))
+			.limit(1);
+
+		if (!job) {
+			return c.json({ error: 'Job not found' }, 404);
+		}
+
+		// Get payment schedule items
+		const items = await db
+			.select()
+			.from(jobPaymentScheduleItems)
+			.where(eq(jobPaymentScheduleItems.jobId, jobId))
+			.orderBy(asc(jobPaymentScheduleItems.sortOrder), asc(jobPaymentScheduleItems.createdAt));
+
+		// Calculate totals
+		const totalAmount = items.reduce((sum, item) => sum + parseFloat(item.amount), 0);
+		const paidAmount = items.reduce((sum, item) => sum + parseFloat(item.paidAmount), 0);
+		const hasOverdue = items.some(
+			(item) =>
+				item.dueDate &&
+				new Date(item.dueDate) < new Date() &&
+				parseFloat(item.paidAmount) < parseFloat(item.amount)
+		);
+
+		return c.json({
+			paymentSchedule: items,
+			summary: {
+				totalAmount: totalAmount.toFixed(2),
+				paidAmount: paidAmount.toFixed(2),
+				outstandingAmount: (totalAmount - paidAmount).toFixed(2),
+				hasOverdue,
+			},
+		});
+	})
+
+	// Add new payment schedule item
+	.post('/:id/payment-schedule', zValidator('json', createPaymentScheduleItemSchema), async (c) => {
+		const currentUser = c.get('user');
+		const tenantId = currentUser.tenantId!;
+		const jobId = c.req.param('id');
+		const data = c.req.valid('json');
+
+		// Verify job exists and belongs to tenant
+		const [job] = await db
+			.select()
+			.from(jobs)
+			.where(and(eq(jobs.id, jobId), eq(jobs.tenantId, tenantId)))
+			.limit(1);
+
+		if (!job) {
+			return c.json({ error: 'Job not found' }, 404);
+		}
+
+		// Get max sort order
+		const [maxSort] = await db
+			.select({ maxOrder: sql<number>`COALESCE(MAX(${jobPaymentScheduleItems.sortOrder}), -1)` })
+			.from(jobPaymentScheduleItems)
+			.where(eq(jobPaymentScheduleItems.jobId, jobId));
+
+		const newItem = {
+			id: crypto.randomUUID(),
+			tenantId,
+			jobId,
+			description: data.description,
+			amount: data.amount,
+			dueDate: data.dueDate ? new Date(data.dueDate) : null,
+			paidAmount: '0',
+			sortOrder: (maxSort?.maxOrder ?? -1) + 1,
+			notes: data.notes || null,
+		};
+
+		const [created] = await db.insert(jobPaymentScheduleItems).values(newItem).returning();
+
+		return c.json({ paymentScheduleItem: created }, 201);
+	})
+
+	// Update payment schedule item
+	.put(
+		'/:id/payment-schedule/:itemId',
+		zValidator('json', updatePaymentScheduleItemSchema),
+		async (c) => {
+			const currentUser = c.get('user');
+			const tenantId = currentUser.tenantId!;
+			const jobId = c.req.param('id');
+			const itemId = c.req.param('itemId');
+			const data = c.req.valid('json');
+
+			// Verify job exists and belongs to tenant
+			const [job] = await db
+				.select()
+				.from(jobs)
+				.where(and(eq(jobs.id, jobId), eq(jobs.tenantId, tenantId)))
+				.limit(1);
+
+			if (!job) {
+				return c.json({ error: 'Job not found' }, 404);
+			}
+
+			// Verify item exists and belongs to job
+			const [existingItem] = await db
+				.select()
+				.from(jobPaymentScheduleItems)
+				.where(
+					and(
+						eq(jobPaymentScheduleItems.id, itemId),
+						eq(jobPaymentScheduleItems.jobId, jobId)
+					)
+				)
+				.limit(1);
+
+			if (!existingItem) {
+				return c.json({ error: 'Payment schedule item not found' }, 404);
+			}
+
+			// Build update object
+			const updateData: Record<string, unknown> = { updatedAt: new Date() };
+
+			if (data.description !== undefined) updateData.description = data.description;
+			if (data.amount !== undefined) updateData.amount = data.amount;
+			if (data.dueDate !== undefined)
+				updateData.dueDate = data.dueDate ? new Date(data.dueDate) : null;
+			if (data.paidAmount !== undefined) updateData.paidAmount = data.paidAmount;
+			if (data.paidAt !== undefined)
+				updateData.paidAt = data.paidAt ? new Date(data.paidAt) : null;
+			if (data.paymentMethod !== undefined) updateData.paymentMethod = data.paymentMethod;
+			if (data.notes !== undefined) updateData.notes = data.notes;
+
+			const [updated] = await db
+				.update(jobPaymentScheduleItems)
+				.set(updateData)
+				.where(eq(jobPaymentScheduleItems.id, itemId))
+				.returning();
+
+			return c.json({ paymentScheduleItem: updated });
+		}
+	)
+
+	// Delete payment schedule item
+	.delete('/:id/payment-schedule/:itemId', async (c) => {
+		const currentUser = c.get('user');
+		const tenantId = currentUser.tenantId!;
+		const jobId = c.req.param('id');
+		const itemId = c.req.param('itemId');
+
+		// Verify job exists and belongs to tenant
+		const [job] = await db
+			.select()
+			.from(jobs)
+			.where(and(eq(jobs.id, jobId), eq(jobs.tenantId, tenantId)))
+			.limit(1);
+
+		if (!job) {
+			return c.json({ error: 'Job not found' }, 404);
+		}
+
+		// Verify item exists and belongs to job
+		const [existingItem] = await db
+			.select()
+			.from(jobPaymentScheduleItems)
+			.where(
+				and(eq(jobPaymentScheduleItems.id, itemId), eq(jobPaymentScheduleItems.jobId, jobId))
+			)
+			.limit(1);
+
+		if (!existingItem) {
+			return c.json({ error: 'Payment schedule item not found' }, 404);
+		}
+
+		await db.delete(jobPaymentScheduleItems).where(eq(jobPaymentScheduleItems.id, itemId));
+
+		return c.json({ success: true });
+	})
+
+	// ============================================
+	// ATTACHMENT ROUTES
+	// ============================================
+
+	// Get presigned URL for attachment upload
+	.post('/:id/attachments/presign', zValidator('json', presignAttachmentSchema), async (c) => {
+		// Check if S3 is configured
+		if (!isS3Configured()) {
+			return c.json(
+				{ error: 'File storage is not configured.' },
+				503
+			);
+		}
+
+		const currentUser = c.get('user');
+		const tenantId = currentUser.tenantId!;
+		const jobId = c.req.param('id');
+		const { filename, contentType, category } = c.req.valid('json');
+
+		// Verify job exists and belongs to tenant
+		const [job] = await db
+			.select()
+			.from(jobs)
+			.where(and(eq(jobs.id, jobId), eq(jobs.tenantId, tenantId)))
+			.limit(1);
+
+		if (!job) {
+			return c.json({ error: 'Job not found' }, 404);
+		}
+
+		try {
+			// Include attachment ID in path for uniqueness
+			const attachmentId = crypto.randomUUID();
+			const { uploadUrl, publicUrl, key } = await generatePresignedUploadUrl({
+				tenantId,
+				category: 'jobs',
+				entityId: `${jobId}/${category}/${attachmentId}`,
+				filename,
+				contentType,
+			});
+
+			return c.json({
+				uploadUrl,
+				publicUrl,
+				key,
+				attachmentId,
+			});
+		} catch (error) {
+			console.error('Error generating presigned URL:', error);
+			return c.json({ error: 'Failed to generate upload URL' }, 500);
+		}
+	})
+
+	// Confirm attachment upload and save metadata
+	.post('/:id/attachments', zValidator('json', confirmAttachmentSchema), async (c) => {
+		const currentUser = c.get('user');
+		const tenantId = currentUser.tenantId!;
+		const jobId = c.req.param('id');
+		const { s3Key, filename, contentType, category, size, notes } = c.req.valid('json');
+
+		// Verify job exists and belongs to tenant
+		const [job] = await db
+			.select()
+			.from(jobs)
+			.where(and(eq(jobs.id, jobId), eq(jobs.tenantId, tenantId)))
+			.limit(1);
+
+		if (!job) {
+			return c.json({ error: 'Job not found' }, 404);
+		}
+
+		// Verify s3Key belongs to this tenant and job
+		if (!s3Key.startsWith(`${tenantId}/jobs/${jobId}/`)) {
+			return c.json({ error: 'Invalid S3 key' }, 400);
+		}
+
+		// Create attachment record
+		const attachment = {
+			id: crypto.randomUUID(),
+			tenantId,
+			jobId,
+			category,
+			filename,
+			s3Key,
+			contentType,
+			size: size || null,
+			notes: notes || null,
+			uploadedBy: currentUser.id,
+		};
+
+		const [created] = await db.insert(jobAttachments).values(attachment).returning();
+
+		return c.json({ attachment: created }, 201);
+	})
+
+	// List attachments for a job
+	.get('/:id/attachments', async (c) => {
+		const currentUser = c.get('user');
+		const tenantId = currentUser.tenantId!;
+		const jobId = c.req.param('id');
+
+		// Verify job exists and belongs to tenant
+		const [job] = await db
+			.select()
+			.from(jobs)
+			.where(and(eq(jobs.id, jobId), eq(jobs.tenantId, tenantId)))
+			.limit(1);
+
+		if (!job) {
+			return c.json({ error: 'Job not found' }, 404);
+		}
+
+		// Get attachments
+		const attachments = await db
+			.select()
+			.from(jobAttachments)
+			.where(eq(jobAttachments.jobId, jobId))
+			.orderBy(desc(jobAttachments.createdAt));
+
+		// Generate public URLs for each attachment
+		const s3Endpoint = process.env.S3_ENDPOINT || '';
+		const s3Bucket = process.env.S3_BUCKET || '';
+		const s3Region = process.env.S3_REGION || 'us-east-1';
+
+		const attachmentsWithUrls = attachments.map((attachment) => {
+			let publicUrl: string;
+			if (s3Endpoint) {
+				// LocalStack: path-style URL
+				publicUrl = `${s3Endpoint}/${s3Bucket}/${attachment.s3Key}`;
+			} else {
+				// AWS: virtual-hosted style URL
+				publicUrl = `https://${s3Bucket}.s3.${s3Region}.amazonaws.com/${attachment.s3Key}`;
+			}
+			return { ...attachment, publicUrl };
+		});
+
+		return c.json({ attachments: attachmentsWithUrls });
+	})
+
+	// Delete attachment
+	.delete('/:id/attachments/:attachmentId', async (c) => {
+		const currentUser = c.get('user');
+		const tenantId = currentUser.tenantId!;
+		const jobId = c.req.param('id');
+		const attachmentId = c.req.param('attachmentId');
+
+		// Verify job exists and belongs to tenant
+		const [job] = await db
+			.select()
+			.from(jobs)
+			.where(and(eq(jobs.id, jobId), eq(jobs.tenantId, tenantId)))
+			.limit(1);
+
+		if (!job) {
+			return c.json({ error: 'Job not found' }, 404);
+		}
+
+		// Verify attachment exists and belongs to job
+		const [existingAttachment] = await db
+			.select()
+			.from(jobAttachments)
+			.where(
+				and(
+					eq(jobAttachments.id, attachmentId),
+					eq(jobAttachments.jobId, jobId)
+				)
+			)
+			.limit(1);
+
+		if (!existingAttachment) {
+			return c.json({ error: 'Attachment not found' }, 404);
+		}
+
+		// Delete from database (S3 file orphaned - acceptable for MVP)
+		await db.delete(jobAttachments).where(eq(jobAttachments.id, attachmentId));
 
 		return c.json({ success: true });
 	});

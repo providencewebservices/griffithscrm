@@ -482,7 +482,7 @@ export function LetteringTechniqueDetailPage() {
 						</Field>
 
 						<Field>
-							<FieldLabel htmlFor="pricePerLetter">Price Per Letter ($)</FieldLabel>
+							<FieldLabel htmlFor="pricePerLetter">Price Per Letter (£)</FieldLabel>
 							<Input
 								id="pricePerLetter"
 								type="number"

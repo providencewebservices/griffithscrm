@@ -155,9 +155,9 @@ export function ServicesTab() {
 			return '-';
 		}
 		if (item.pricingType === 'hourly') {
-			return `$${item.basePrice}/hr`;
+			return `£${item.basePrice}/hr`;
 		}
-		return `$${item.basePrice}`;
+		return `£${item.basePrice}`;
 	};
 
 	if (isLoading) {
@@ -312,7 +312,7 @@ export function ServicesTab() {
 						{formPricingType !== 'quoted' && (
 							<Field>
 								<FieldLabel htmlFor="basePrice">
-									{formPricingType === 'hourly' ? 'Hourly Rate ($)' : 'Price ($)'}
+									{formPricingType === 'hourly' ? 'Hourly Rate (£)' : 'Price (£)'}
 								</FieldLabel>
 								<Input
 									id="basePrice"

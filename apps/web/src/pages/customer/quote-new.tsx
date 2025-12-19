@@ -61,7 +61,21 @@ import { useLetteringColorsQuery } from '@/hooks/use-lettering-colors';
 import { useSundriesQuery } from '@/hooks/use-sundries';
 import { useServicesQuery } from '@/hooks/use-services';
 import { COMPONENT_TYPES } from '@griffiths-crm/shared/db/schema';
-import { ArrowLeft, Plus, Trash2, User } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, User, Check, ChevronsUpDown } from 'lucide-react';
+import {
+	Command,
+	CommandEmpty,
+	CommandGroup,
+	CommandInput,
+	CommandItem,
+	CommandList,
+} from '@/components/ui/command';
+import {
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+} from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
 
 // Types for form state
 type ComponentFormItem = ComponentInput & { id: string };
@@ -78,6 +92,7 @@ export function QuoteNewPage() {
 	// Form state
 	const [serviceId, setServiceId] = useState<string>('');
 	const [customerId, setCustomerId] = useState<string>('');
+	const [customerComboOpen, setCustomerComboOpen] = useState(false);
 	const [productId, setProductId] = useState<string>('');
 	const [dimensionComboId, setDimensionComboId] = useState<string>('');
 	const [stoneColourMaterialId, setStoneColourMaterialId] = useState<string>('');
@@ -462,23 +477,25 @@ export function QuoteNewPage() {
 			)}
 
 			<div className="space-y-6">
-				{/* Quote Header Card */}
+				{/* Card 1: Service & Customer */}
 				<Card>
 					<CardHeader>
-						<CardTitle>Quote Details</CardTitle>
-						<CardDescription>Basic information about the quote</CardDescription>
+						<CardTitle>Service & Customer</CardTitle>
+						<CardDescription>Who is this quote for?</CardDescription>
 					</CardHeader>
 					<CardContent>
-						<FieldGroup>
-							{/* Service Selection (Required) */}
-							<Field>
-								<FieldLabel>Service *</FieldLabel>
+						<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+							{/* Service Selection */}
+							<div className="space-y-2">
+								<div className="flex items-center justify-between h-5">
+									<FieldLabel className="mb-0">Service *</FieldLabel>
+								</div>
 								<Select
 									value={serviceId || NONE_VALUE}
 									onValueChange={(v) => setServiceId(v === NONE_VALUE ? '' : v)}
 								>
 									<SelectTrigger>
-										<SelectValue placeholder="Select the service this quote is for" />
+										<SelectValue placeholder="Select service" />
 									</SelectTrigger>
 									<SelectContent>
 										<SelectItem value={NONE_VALUE}>Select service</SelectItem>
@@ -491,21 +508,17 @@ export function QuoteNewPage() {
 											))}
 									</SelectContent>
 								</Select>
-								{!serviceId && (
-									<p className="text-sm text-muted-foreground mt-1">
-										Select the type of service this quote is for
-									</p>
-								)}
-							</Field>
+							</div>
 
-							{/* Customer Section */}
-							<div className="space-y-4">
-								<div className="flex items-center justify-between">
-									<FieldLabel>Customer</FieldLabel>
+							{/* Customer Selection */}
+							<div className="space-y-2">
+								<div className="flex items-center justify-between h-5">
+									<FieldLabel className="mb-0">Customer</FieldLabel>
 									<Button
 										type="button"
 										variant="ghost"
 										size="sm"
+										className="h-auto py-0 px-2 text-xs"
 										onClick={() => {
 											setIsCreatingCustomer(!isCreatingCustomer);
 											if (!isCreatingCustomer) {
@@ -513,335 +526,367 @@ export function QuoteNewPage() {
 											}
 										}}
 									>
-										<User className="h-4 w-4 mr-2" />
-										{isCreatingCustomer ? 'Select Existing' : 'New Customer'}
+										<User className="h-3 w-3 mr-1" />
+										{isCreatingCustomer ? 'Select Existing' : 'New'}
 									</Button>
 								</div>
-
-								{!isCreatingCustomer ? (
-									<Select
-										value={customerId || NONE_VALUE}
-										onValueChange={(v) => setCustomerId(v === NONE_VALUE ? '' : v)}
-									>
-										<SelectTrigger>
-											<SelectValue placeholder="Select customer or leave for walk-in" />
-										</SelectTrigger>
-										<SelectContent>
-											<SelectItem value={NONE_VALUE}>Walk-in Customer</SelectItem>
-											{customers?.map((customer) => (
-												<SelectItem key={customer.id} value={customer.id}>
-													{customer.firstName} {customer.lastName}
-												</SelectItem>
-											))}
-										</SelectContent>
-									</Select>
-								) : (
-									<div className="border rounded-lg p-4 space-y-4 bg-muted/30">
-										<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-											<Field>
-												<FieldLabel>First Name *</FieldLabel>
-												<Input
-													value={customerDetails.firstName}
-													onChange={(e) =>
-														setCustomerDetails({
-															...customerDetails,
-															firstName: e.target.value,
-														})
-													}
-													placeholder="First name"
-												/>
-											</Field>
-											<Field>
-												<FieldLabel>Last Name *</FieldLabel>
-												<Input
-													value={customerDetails.lastName}
-													onChange={(e) =>
-														setCustomerDetails({
-															...customerDetails,
-															lastName: e.target.value,
-														})
-													}
-													placeholder="Last name"
-												/>
-											</Field>
-											<Field>
-												<FieldLabel>Email</FieldLabel>
-												<Input
-													type="email"
-													value={customerDetails.email}
-													onChange={(e) =>
-														setCustomerDetails({
-															...customerDetails,
-															email: e.target.value,
-														})
-													}
-													placeholder="email@example.com"
-												/>
-											</Field>
-											<Field>
-												<FieldLabel>Phone</FieldLabel>
-												<Input
-													type="tel"
-													value={customerDetails.phone}
-													onChange={(e) =>
-														setCustomerDetails({
-															...customerDetails,
-															phone: e.target.value,
-														})
-													}
-													placeholder="Phone number"
-												/>
-											</Field>
-										</div>
-
-										<div className="border-t pt-4">
-											<FieldLabel className="mb-2 block">Address</FieldLabel>
-											<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-												<Field className="md:col-span-2">
-													<Input
-														value={customerDetails.address?.line1}
-														onChange={(e) =>
-															setCustomerDetails({
-																...customerDetails,
-																address: {
-																	...customerDetails.address!,
-																	line1: e.target.value,
-																},
-															})
-														}
-														placeholder="Street address"
-													/>
-												</Field>
-												<Field className="md:col-span-2">
-													<Input
-														value={customerDetails.address?.line2}
-														onChange={(e) =>
-															setCustomerDetails({
-																...customerDetails,
-																address: {
-																	...customerDetails.address!,
-																	line2: e.target.value,
-																},
-															})
-														}
-														placeholder="Apartment, suite, etc. (optional)"
-													/>
-												</Field>
-												<Field>
-													<Input
-														value={customerDetails.address?.city}
-														onChange={(e) =>
-															setCustomerDetails({
-																...customerDetails,
-																address: {
-																	...customerDetails.address!,
-																	city: e.target.value,
-																},
-															})
-														}
-														placeholder="City"
-													/>
-												</Field>
-												<Field>
-													<Input
-														value={customerDetails.address?.county}
-														onChange={(e) =>
-															setCustomerDetails({
-																...customerDetails,
-																address: {
-																	...customerDetails.address!,
-																	county: e.target.value,
-																},
-															})
-														}
-														placeholder="County (optional)"
-													/>
-												</Field>
-												<Field>
-													<Input
-														value={customerDetails.address?.postcode}
-														onChange={(e) =>
-															setCustomerDetails({
-																...customerDetails,
-																address: {
-																	...customerDetails.address!,
-																	postcode: e.target.value,
-																},
-															})
-														}
-														placeholder="Postcode"
-													/>
-												</Field>
-												<Field>
-													<Input
-														value={customerDetails.address?.country}
-														onChange={(e) =>
-															setCustomerDetails({
-																...customerDetails,
-																address: {
-																	...customerDetails.address!,
-																	country: e.target.value,
-																},
-															})
-														}
-														placeholder="Country"
-													/>
-												</Field>
-											</div>
-										</div>
-									</div>
+								{!isCreatingCustomer && (
+									<Popover open={customerComboOpen} onOpenChange={setCustomerComboOpen}>
+										<PopoverTrigger asChild>
+											<Button
+												variant="outline"
+												role="combobox"
+												aria-expanded={customerComboOpen}
+												className="w-full justify-between font-normal"
+											>
+												{customerId
+													? customers?.find((c) => c.id === customerId)
+														? `${customers.find((c) => c.id === customerId)?.firstName} ${customers.find((c) => c.id === customerId)?.lastName}`
+														: 'Select customer...'
+													: 'Select customer...'}
+												<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+											</Button>
+										</PopoverTrigger>
+										<PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+											<Command>
+												<CommandInput placeholder="Search customers..." />
+												<CommandList>
+													<CommandEmpty>
+														<div className="py-2 text-center">
+															<p className="text-sm text-muted-foreground mb-2">No customer found.</p>
+															<Button
+																variant="outline"
+																size="sm"
+																onClick={() => {
+																	setIsCreatingCustomer(true);
+																	setCustomerComboOpen(false);
+																}}
+															>
+																<User className="h-4 w-4 mr-2" />
+																Create New Customer
+															</Button>
+														</div>
+													</CommandEmpty>
+													<CommandGroup>
+														{customers?.map((customer) => (
+															<CommandItem
+																key={customer.id}
+																value={`${customer.firstName} ${customer.lastName}`}
+																onSelect={() => {
+																	setCustomerId(customer.id);
+																	setCustomerComboOpen(false);
+																}}
+															>
+																<Check
+																	className={cn(
+																		'mr-2 h-4 w-4',
+																		customerId === customer.id ? 'opacity-100' : 'opacity-0'
+																	)}
+																/>
+																{customer.firstName} {customer.lastName}
+															</CommandItem>
+														))}
+													</CommandGroup>
+												</CommandList>
+											</Command>
+										</PopoverContent>
+									</Popover>
 								)}
 							</div>
+						</div>
 
-							{/* Product and Dimension Combo */}
-							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+						{/* New Customer Form - expands below */}
+						{isCreatingCustomer && (
+							<div className="mt-6 border rounded-lg p-4 space-y-4 bg-muted/30">
+								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+									<Field>
+										<FieldLabel>First Name *</FieldLabel>
+										<Input
+											value={customerDetails.firstName}
+											onChange={(e) =>
+												setCustomerDetails({
+													...customerDetails,
+													firstName: e.target.value,
+												})
+											}
+											placeholder="First name"
+										/>
+									</Field>
+									<Field>
+										<FieldLabel>Last Name *</FieldLabel>
+										<Input
+											value={customerDetails.lastName}
+											onChange={(e) =>
+												setCustomerDetails({
+													...customerDetails,
+													lastName: e.target.value,
+												})
+											}
+											placeholder="Last name"
+										/>
+									</Field>
+									<Field>
+										<FieldLabel>Email</FieldLabel>
+										<Input
+											type="email"
+											value={customerDetails.email}
+											onChange={(e) =>
+												setCustomerDetails({
+													...customerDetails,
+													email: e.target.value,
+												})
+											}
+											placeholder="email@example.com"
+										/>
+									</Field>
+									<Field>
+										<FieldLabel>Phone</FieldLabel>
+										<Input
+											type="tel"
+											value={customerDetails.phone}
+											onChange={(e) =>
+												setCustomerDetails({
+													...customerDetails,
+													phone: e.target.value,
+												})
+											}
+											placeholder="Phone number"
+										/>
+									</Field>
+								</div>
+
+								<div className="border-t pt-4">
+									<FieldLabel className="mb-2 block">Address</FieldLabel>
+									<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+										<Field className="md:col-span-2">
+											<Input
+												value={customerDetails.address?.line1}
+												onChange={(e) =>
+													setCustomerDetails({
+														...customerDetails,
+														address: {
+															...customerDetails.address!,
+															line1: e.target.value,
+														},
+													})
+												}
+												placeholder="Street address"
+											/>
+										</Field>
+										<Field className="md:col-span-2">
+											<Input
+												value={customerDetails.address?.line2}
+												onChange={(e) =>
+													setCustomerDetails({
+														...customerDetails,
+														address: {
+															...customerDetails.address!,
+															line2: e.target.value,
+														},
+													})
+												}
+												placeholder="Apartment, suite, etc. (optional)"
+											/>
+										</Field>
+										<Field>
+											<Input
+												value={customerDetails.address?.city}
+												onChange={(e) =>
+													setCustomerDetails({
+														...customerDetails,
+														address: {
+															...customerDetails.address!,
+															city: e.target.value,
+														},
+													})
+												}
+												placeholder="City"
+											/>
+										</Field>
+										<Field>
+											<Input
+												value={customerDetails.address?.county}
+												onChange={(e) =>
+													setCustomerDetails({
+														...customerDetails,
+														address: {
+															...customerDetails.address!,
+															county: e.target.value,
+														},
+													})
+												}
+												placeholder="County (optional)"
+											/>
+										</Field>
+										<Field>
+											<Input
+												value={customerDetails.address?.postcode}
+												onChange={(e) =>
+													setCustomerDetails({
+														...customerDetails,
+														address: {
+															...customerDetails.address!,
+															postcode: e.target.value,
+														},
+													})
+												}
+												placeholder="Postcode"
+											/>
+										</Field>
+										<Field>
+											<Input
+												value={customerDetails.address?.country}
+												onChange={(e) =>
+													setCustomerDetails({
+														...customerDetails,
+														address: {
+															...customerDetails.address!,
+															country: e.target.value,
+														},
+													})
+												}
+												placeholder="Country"
+											/>
+										</Field>
+									</div>
+								</div>
+							</div>
+						)}
+					</CardContent>
+				</Card>
+
+				{/* Card 2: Memorial Details */}
+				<Card>
+					<CardHeader>
+						<CardTitle>Memorial Details</CardTitle>
+						<CardDescription>Product selection and specifications</CardDescription>
+					</CardHeader>
+					<CardContent>
+						<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+							{/* Product Reference */}
+							<Field>
+								<FieldLabel>Product Reference</FieldLabel>
+								<Select
+									value={productId || NONE_VALUE}
+									onValueChange={(v) => {
+										const newValue = v === NONE_VALUE ? '' : v;
+										setProductId(newValue);
+										setDimensionComboId('');
+									}}
+								>
+									<SelectTrigger>
+										<SelectValue placeholder="Select product (optional)" />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value={NONE_VALUE}>No product</SelectItem>
+										{productsData?.products?.map((product) => (
+											<SelectItem key={product.id} value={product.id}>
+												{product.name} ({product.sku})
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							</Field>
+
+							{/* Dimensions - only show when product selected */}
+							{productId && dimensionCombos && dimensionCombos.length > 0 && (
 								<Field>
-									<FieldLabel>Product Reference (optional)</FieldLabel>
+									<FieldLabel>Memorial Dimensions</FieldLabel>
 									<Select
-										value={productId || NONE_VALUE}
-										onValueChange={(v) => {
-											const newValue = v === NONE_VALUE ? '' : v;
-											setProductId(newValue);
-											setDimensionComboId(''); // Reset combo when product changes
-										}}
+										value={dimensionComboId || NONE_VALUE}
+										onValueChange={(v) => setDimensionComboId(v === NONE_VALUE ? '' : v)}
 									>
 										<SelectTrigger>
-											<SelectValue placeholder="Select product" />
+											<SelectValue placeholder="Select dimensions" />
 										</SelectTrigger>
 										<SelectContent>
-											<SelectItem value={NONE_VALUE}>No product</SelectItem>
-											{productsData?.products?.map((product) => (
-												<SelectItem key={product.id} value={product.id}>
-													{product.name} ({product.sku})
-												</SelectItem>
+											<SelectItem value={NONE_VALUE}>Custom dimensions</SelectItem>
+											{dimensionCombos
+												.filter((c) => c.isActive)
+												.map((combo) => (
+													<SelectItem key={combo.id} value={combo.id}>
+														{combo.name || formatDimensionCombo(combo)}
+														{parseFloat(combo.priceAdjustment) > 0 &&
+															` (+£${combo.priceAdjustment})`}
+													</SelectItem>
+												))}
+										</SelectContent>
+									</Select>
+								</Field>
+							)}
+
+							{/* Stone Colour - only show in product-based mode */}
+							{isProductBasedMode && (
+								<Field>
+									<FieldLabel>Stone Colour *</FieldLabel>
+									<Select
+										value={stoneColourMaterialId || NONE_VALUE}
+										onValueChange={(v) => setStoneColourMaterialId(v === NONE_VALUE ? '' : v)}
+									>
+										<SelectTrigger>
+											<SelectValue placeholder="Select stone colour" />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value={NONE_VALUE}>Select a colour</SelectItem>
+											{materialsGroupedBySection.map((section) => (
+												<SelectGroup key={section.id}>
+													<SelectLabel>{section.name}</SelectLabel>
+													{section.materials.map((material) => (
+														<SelectItem key={material.id} value={material.id}>
+															{material.name}
+														</SelectItem>
+													))}
+												</SelectGroup>
 											))}
 										</SelectContent>
 									</Select>
 								</Field>
-
-								{productId && dimensionCombos && dimensionCombos.length > 0 && (
-									<Field>
-										<FieldLabel>Memorial Dimensions</FieldLabel>
-										<Select
-											value={dimensionComboId || NONE_VALUE}
-											onValueChange={(v) => setDimensionComboId(v === NONE_VALUE ? '' : v)}
-										>
-											<SelectTrigger>
-												<SelectValue placeholder="Select dimensions" />
-											</SelectTrigger>
-											<SelectContent>
-												<SelectItem value={NONE_VALUE}>Custom dimensions</SelectItem>
-												{dimensionCombos
-													.filter((c) => c.isActive)
-													.map((combo) => (
-														<SelectItem key={combo.id} value={combo.id}>
-															{combo.name || formatDimensionCombo(combo)}
-															{parseFloat(combo.priceAdjustment) > 0 &&
-																` (+£${combo.priceAdjustment})`}
-														</SelectItem>
-													))}
-											</SelectContent>
-										</Select>
-									</Field>
-								)}
-							</div>
-
-							{/* Stone Colour - shown when dimension combo is selected */}
-							{isProductBasedMode && (
-								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-									<Field>
-										<FieldLabel>Stone Colour *</FieldLabel>
-										<Select
-											value={stoneColourMaterialId || NONE_VALUE}
-											onValueChange={(v) => setStoneColourMaterialId(v === NONE_VALUE ? '' : v)}
-										>
-											<SelectTrigger>
-												<SelectValue placeholder="Select stone colour" />
-											</SelectTrigger>
-											<SelectContent>
-												<SelectItem value={NONE_VALUE}>Select a colour</SelectItem>
-												{materialsGroupedBySection.map((section) => (
-													<SelectGroup key={section.id}>
-														<SelectLabel>{section.name}</SelectLabel>
-														{section.materials.map((material) => (
-															<SelectItem key={material.id} value={material.id}>
-																{material.name}
-															</SelectItem>
-														))}
-													</SelectGroup>
-												))}
-											</SelectContent>
-										</Select>
-									</Field>
-								</div>
 							)}
 
 							{/* Flower Holes */}
-							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-								<Field>
-									<FieldLabel>Flower Holes</FieldLabel>
-									<Select
-										value={flowerHoles}
-										onValueChange={(v) => setFlowerHoles(v as FlowerHoleChoice | '')}
-									>
-										<SelectTrigger>
-											<SelectValue placeholder="Select flower holes option" />
-										</SelectTrigger>
-										<SelectContent>
-											{FLOWER_HOLE_CHOICES.map((choice) => (
-												<SelectItem key={choice} value={choice}>
-													{choice}
-												</SelectItem>
-											))}
-										</SelectContent>
-									</Select>
-								</Field>
-
-								<Field>
-									<FieldLabel>Valid Until (optional)</FieldLabel>
-									<Input
-										type="date"
-										value={validUntil}
-										onChange={(e) => setValidUntil(e.target.value)}
-									/>
-								</Field>
-							</div>
-
 							<Field>
-								<FieldLabel>Proposed Inscription (optional)</FieldLabel>
-								<Textarea
-									value={proposedInscription}
-									onChange={(e) => setProposedInscription(e.target.value)}
-									placeholder="Enter the full text of the desired inscription..."
-									rows={4}
-								/>
-								{proposedInscription && (
-									<p className="text-sm text-muted-foreground mt-1">
-										{proposedInscription.length} characters
-									</p>
-								)}
+								<FieldLabel>Flower Holes</FieldLabel>
+								<Select
+									value={flowerHoles}
+									onValueChange={(v) => setFlowerHoles(v as FlowerHoleChoice | '')}
+								>
+									<SelectTrigger>
+										<SelectValue placeholder="Select option" />
+									</SelectTrigger>
+									<SelectContent>
+										{FLOWER_HOLE_CHOICES.map((choice) => (
+											<SelectItem key={choice} value={choice}>
+												{choice}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
 							</Field>
+						</div>
+					</CardContent>
+				</Card>
 
-							<Field>
-								<FieldLabel>Notes (optional)</FieldLabel>
-								<Textarea
-									value={notes}
-									onChange={(e) => setNotes(e.target.value)}
-									placeholder="Any special instructions or notes for the customer..."
-									rows={3}
-								/>
-							</Field>
-
-							<Field>
-								<FieldLabel>Internal Notes (optional)</FieldLabel>
-								<Textarea
-									value={internalNotes}
-									onChange={(e) => setInternalNotes(e.target.value)}
-									placeholder="Internal notes - not shown to customer..."
-									rows={3}
-								/>
-							</Field>
-						</FieldGroup>
+				{/* Card 3: Inscription */}
+				<Card>
+					<CardHeader>
+						<CardTitle>Proposed Inscription</CardTitle>
+						<CardDescription>The text to be engraved on the memorial</CardDescription>
+					</CardHeader>
+					<CardContent>
+						<div className="max-w-2xl">
+							<Textarea
+								value={proposedInscription}
+								onChange={(e) => setProposedInscription(e.target.value)}
+								placeholder="Enter the full text of the desired inscription..."
+								rows={4}
+								className="font-mono"
+							/>
+							{proposedInscription && (
+								<p className="text-sm text-muted-foreground mt-2">
+									{proposedInscription.length} characters
+								</p>
+							)}
+						</div>
 					</CardContent>
 				</Card>
 
@@ -1255,6 +1300,53 @@ export function QuoteNewPage() {
 								</Table>
 							</div>
 						)}
+					</CardContent>
+				</Card>
+
+				{/* Card: Additional Information */}
+				<Card>
+					<CardHeader>
+						<CardTitle>Additional Information</CardTitle>
+						<CardDescription>Notes and quote validity</CardDescription>
+					</CardHeader>
+					<CardContent>
+						<div className="space-y-6">
+							{/* Valid Until - standalone at top */}
+							<div className="max-w-xs">
+								<Field>
+									<FieldLabel>Valid Until</FieldLabel>
+									<Input
+										type="date"
+										value={validUntil}
+										onChange={(e) => setValidUntil(e.target.value)}
+									/>
+								</Field>
+							</div>
+
+							{/* Notes side by side */}
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+								<Field>
+									<FieldLabel>Notes for Customer</FieldLabel>
+									<Textarea
+										value={notes}
+										onChange={(e) => setNotes(e.target.value)}
+										placeholder="Any special instructions or notes visible to the customer..."
+										rows={3}
+									/>
+								</Field>
+
+								<Field>
+									<FieldLabel>Internal Notes</FieldLabel>
+									<Textarea
+										value={internalNotes}
+										onChange={(e) => setInternalNotes(e.target.value)}
+										placeholder="Internal notes - not shown to customer..."
+										rows={3}
+										className="bg-orange-50/50 border-orange-200"
+									/>
+								</Field>
+							</div>
+						</div>
 					</CardContent>
 				</Card>
 

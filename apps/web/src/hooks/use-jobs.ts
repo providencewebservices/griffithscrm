@@ -6,10 +6,45 @@ const API_URL = 'http://localhost:3000';
 // Types
 export type JobStatus = (typeof JOB_STATUSES)[number];
 
+// Quote detail types for job execution
+export type JobQuoteComponent = {
+	id: string;
+	componentType: string;
+	materialName: string | null;
+	finishName: string | null;
+	height: string | null;
+	width: string | null;
+	depth: string | null;
+	quantity: number;
+};
+
+export type JobQuoteLettering = {
+	id: string;
+	text: string | null;
+	letterCount: number;
+	techniqueName: string | null;
+	colorName: string | null;
+};
+
+export type JobQuoteSundry = {
+	id: string;
+	sundryName: string | null;
+	quantity: number;
+};
+
+export type JobQuoteLineItem = {
+	id: string;
+	description: string;
+	price: string;
+	vatExempt: boolean;
+};
+
 export type JobQuoteSummary = {
 	id: string;
 	quoteNumber: string;
 	total: string;
+	proposedInscription: string | null;
+	flowerHoles: string | null;
 	customer: {
 		id: string;
 		firstName: string;
@@ -23,6 +58,10 @@ export type JobQuoteSummary = {
 		id: string;
 		name: string;
 	} | null;
+	components: JobQuoteComponent[];
+	lettering: JobQuoteLettering[];
+	sundries: JobQuoteSundry[];
+	lineItems: JobQuoteLineItem[];
 };
 
 export type Job = {
@@ -36,11 +75,19 @@ export type Job = {
 	updatedAt: string;
 };
 
+export type JobPaymentSummary = {
+	totalAmount: string;
+	paidAmount: string;
+	outstandingAmount: string;
+	hasOverdue: boolean;
+};
+
 export type JobListItem = Job & {
 	customerFirstName: string | null;
 	customerLastName: string | null;
 	serviceName: string | null;
 	total: string;
+	paymentSummary: JobPaymentSummary | null;
 };
 
 export type JobWithQuoteSummary = Job & {
@@ -50,6 +97,53 @@ export type JobWithQuoteSummary = Job & {
 export type JobSearchParams = {
 	status?: JobStatus;
 	search?: string;
+};
+
+// Payment schedule types
+export type PaymentScheduleItem = {
+	id: string;
+	tenantId: string;
+	jobId: string;
+	description: string;
+	amount: string;
+	dueDate: string | null;
+	paidAmount: string;
+	paidAt: string | null;
+	paymentMethod: string | null;
+	externalPaymentId: string | null;
+	sortOrder: number;
+	notes: string | null;
+	createdAt: string;
+	updatedAt: string;
+};
+
+export type PaymentScheduleSummary = {
+	totalAmount: string;
+	paidAmount: string;
+	outstandingAmount: string;
+	hasOverdue: boolean;
+};
+
+export type PaymentScheduleResponse = {
+	paymentSchedule: PaymentScheduleItem[];
+	summary: PaymentScheduleSummary;
+};
+
+export type CreatePaymentScheduleItemInput = {
+	description: string;
+	amount: string;
+	dueDate?: string | null;
+	notes?: string;
+};
+
+export type UpdatePaymentScheduleItemInput = {
+	description?: string;
+	amount?: string;
+	dueDate?: string | null;
+	paidAmount?: string;
+	paidAt?: string | null;
+	paymentMethod?: string | null;
+	notes?: string | null;
 };
 
 // Response types
@@ -154,6 +248,73 @@ async function deleteJob(id: string): Promise<void> {
 	}
 }
 
+// Payment schedule fetch functions
+async function fetchPaymentSchedule(jobId: string): Promise<PaymentScheduleResponse> {
+	const response = await fetch(`${API_URL}/api/jobs/${jobId}/payment-schedule`, {
+		credentials: 'include',
+	});
+
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.error || 'Failed to fetch payment schedule');
+	}
+
+	return response.json();
+}
+
+async function createPaymentScheduleItem(
+	jobId: string,
+	input: CreatePaymentScheduleItemInput
+): Promise<PaymentScheduleItem> {
+	const response = await fetch(`${API_URL}/api/jobs/${jobId}/payment-schedule`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		credentials: 'include',
+		body: JSON.stringify(input),
+	});
+
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.error || 'Failed to create payment schedule item');
+	}
+
+	const data = await response.json();
+	return data.paymentScheduleItem;
+}
+
+async function updatePaymentScheduleItem(
+	jobId: string,
+	itemId: string,
+	input: UpdatePaymentScheduleItemInput
+): Promise<PaymentScheduleItem> {
+	const response = await fetch(`${API_URL}/api/jobs/${jobId}/payment-schedule/${itemId}`, {
+		method: 'PUT',
+		headers: { 'Content-Type': 'application/json' },
+		credentials: 'include',
+		body: JSON.stringify(input),
+	});
+
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.error || 'Failed to update payment schedule item');
+	}
+
+	const data = await response.json();
+	return data.paymentScheduleItem;
+}
+
+async function deletePaymentScheduleItem(jobId: string, itemId: string): Promise<void> {
+	const response = await fetch(`${API_URL}/api/jobs/${jobId}/payment-schedule/${itemId}`, {
+		method: 'DELETE',
+		credentials: 'include',
+	});
+
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.error || 'Failed to delete payment schedule item');
+	}
+}
+
 // React Query hooks
 export function useJobsQuery(params?: JobSearchParams) {
 	return useQuery({
@@ -202,6 +363,221 @@ export function useDeleteJobMutation() {
 			queryClient.invalidateQueries({ queryKey: ['jobs'] });
 		},
 	});
+}
+
+// Payment schedule hooks
+export function usePaymentScheduleQuery(jobId: string | undefined) {
+	return useQuery({
+		queryKey: ['payment-schedule', jobId],
+		queryFn: () => fetchPaymentSchedule(jobId!),
+		enabled: !!jobId,
+	});
+}
+
+export function useCreatePaymentScheduleItemMutation() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: ({ jobId, input }: { jobId: string; input: CreatePaymentScheduleItemInput }) =>
+			createPaymentScheduleItem(jobId, input),
+		onSuccess: (_, { jobId }) => {
+			queryClient.invalidateQueries({ queryKey: ['payment-schedule', jobId] });
+		},
+	});
+}
+
+export function useUpdatePaymentScheduleItemMutation() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: ({
+			jobId,
+			itemId,
+			input,
+		}: {
+			jobId: string;
+			itemId: string;
+			input: UpdatePaymentScheduleItemInput;
+		}) => updatePaymentScheduleItem(jobId, itemId, input),
+		onSuccess: (_, { jobId }) => {
+			queryClient.invalidateQueries({ queryKey: ['payment-schedule', jobId] });
+		},
+	});
+}
+
+export function useDeletePaymentScheduleItemMutation() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: ({ jobId, itemId }: { jobId: string; itemId: string }) =>
+			deletePaymentScheduleItem(jobId, itemId),
+		onSuccess: (_, { jobId }) => {
+			queryClient.invalidateQueries({ queryKey: ['payment-schedule', jobId] });
+		},
+	});
+}
+
+// ============================================
+// ATTACHMENT TYPES AND HOOKS
+// ============================================
+
+export type JobAttachmentCategory = 'artwork' | 'proof' | 'document';
+
+export type JobAttachment = {
+	id: string;
+	tenantId: string;
+	jobId: string;
+	category: JobAttachmentCategory;
+	filename: string;
+	s3Key: string;
+	contentType: string;
+	size: number | null;
+	notes: string | null;
+	uploadedBy: string | null;
+	createdAt: string;
+	publicUrl: string;
+};
+
+export type PresignAttachmentInput = {
+	filename: string;
+	contentType: string;
+	category: JobAttachmentCategory;
+};
+
+export type PresignAttachmentResponse = {
+	uploadUrl: string;
+	publicUrl: string;
+	key: string;
+	attachmentId: string;
+};
+
+export type ConfirmAttachmentInput = {
+	s3Key: string;
+	filename: string;
+	contentType: string;
+	category: JobAttachmentCategory;
+	size?: number;
+	notes?: string;
+};
+
+type AttachmentsResponse = {
+	attachments: JobAttachment[];
+};
+
+// Attachment fetch functions
+async function fetchAttachments(jobId: string): Promise<JobAttachment[]> {
+	const response = await fetch(`${API_URL}/api/jobs/${jobId}/attachments`, {
+		credentials: 'include',
+	});
+
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.error || 'Failed to fetch attachments');
+	}
+
+	const data: AttachmentsResponse = await response.json();
+	return data.attachments;
+}
+
+async function presignAttachment(
+	jobId: string,
+	input: PresignAttachmentInput
+): Promise<PresignAttachmentResponse> {
+	const response = await fetch(`${API_URL}/api/jobs/${jobId}/attachments/presign`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		credentials: 'include',
+		body: JSON.stringify(input),
+	});
+
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.error || 'Failed to get upload URL');
+	}
+
+	return response.json();
+}
+
+async function confirmAttachment(
+	jobId: string,
+	input: ConfirmAttachmentInput
+): Promise<JobAttachment> {
+	const response = await fetch(`${API_URL}/api/jobs/${jobId}/attachments`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		credentials: 'include',
+		body: JSON.stringify(input),
+	});
+
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.error || 'Failed to save attachment');
+	}
+
+	const data = await response.json();
+	return data.attachment;
+}
+
+async function deleteAttachment(jobId: string, attachmentId: string): Promise<void> {
+	const response = await fetch(`${API_URL}/api/jobs/${jobId}/attachments/${attachmentId}`, {
+		method: 'DELETE',
+		credentials: 'include',
+	});
+
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.error || 'Failed to delete attachment');
+	}
+}
+
+// Attachment hooks
+export function useAttachmentsQuery(jobId: string | undefined) {
+	return useQuery({
+		queryKey: ['attachments', jobId],
+		queryFn: () => fetchAttachments(jobId!),
+		enabled: !!jobId,
+	});
+}
+
+export function usePresignAttachmentMutation() {
+	return useMutation({
+		mutationFn: ({ jobId, input }: { jobId: string; input: PresignAttachmentInput }) =>
+			presignAttachment(jobId, input),
+	});
+}
+
+export function useConfirmAttachmentMutation() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: ({ jobId, input }: { jobId: string; input: ConfirmAttachmentInput }) =>
+			confirmAttachment(jobId, input),
+		onSuccess: (_, { jobId }) => {
+			queryClient.invalidateQueries({ queryKey: ['attachments', jobId] });
+		},
+	});
+}
+
+export function useDeleteAttachmentMutation() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: ({ jobId, attachmentId }: { jobId: string; attachmentId: string }) =>
+			deleteAttachment(jobId, attachmentId),
+		onSuccess: (_, { jobId }) => {
+			queryClient.invalidateQueries({ queryKey: ['attachments', jobId] });
+		},
+	});
+}
+
+// Helper: Format attachment category for display
+export function formatAttachmentCategory(category: JobAttachmentCategory): string {
+	const labels: Record<JobAttachmentCategory, string> = {
+		artwork: 'Artwork',
+		proof: 'Proof',
+		document: 'Document',
+	};
+	return labels[category] || category;
 }
 
 // Helper: Format status for display

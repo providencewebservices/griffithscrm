@@ -35,7 +35,7 @@ import {
 	useDeleteMaterialMutation,
 } from '@/hooks/use-materials';
 import { useMaterialSectionQuery } from '@/hooks/use-material-sections';
-import { useUploadImageMutation } from '@/hooks/use-uploads';
+import { useUploadImageMutation, useSignedUrl } from '@/hooks/use-uploads';
 import { ArrowLeft, ImageIcon, Upload, X, Loader2 } from 'lucide-react';
 
 export function MaterialDetailPage() {
@@ -53,6 +53,7 @@ export function MaterialDetailPage() {
 
 	const { data: material, isLoading, error } = useMaterialQuery(id);
 	const { data: section } = useMaterialSectionQuery(material?.sectionId);
+	const { data: signedImageUrl } = useSignedUrl(material?.imageUrl);
 	const updateMutation = useUpdateMaterialMutation();
 	const deleteMutation = useDeleteMaterialMutation(material?.sectionId || '');
 	const uploadMutation = useUploadImageMutation();
@@ -126,7 +127,7 @@ export function MaterialDetailPage() {
 	};
 
 	const formatPrice = (price: string) => {
-		return `$${parseFloat(price).toFixed(2)}`;
+		return `£${parseFloat(price).toFixed(2)}`;
 	};
 
 	const formatDate = (dateString: string) => {
@@ -278,7 +279,7 @@ export function MaterialDetailPage() {
 							{material.imageUrl ? (
 								<div className="relative flex justify-center bg-muted/30 rounded-lg p-4">
 									<img
-										src={material.imageUrl}
+										src={signedImageUrl || material.imageUrl}
 										alt={material.name}
 										className="max-h-80 max-w-full object-contain rounded-lg"
 									/>
@@ -372,7 +373,7 @@ export function MaterialDetailPage() {
 						</Field>
 
 						<Field>
-							<FieldLabel htmlFor="supplierCost">Supplier Cost ($)</FieldLabel>
+							<FieldLabel htmlFor="supplierCost">Supplier Cost (£)</FieldLabel>
 							<Input
 								id="supplierCost"
 								type="number"

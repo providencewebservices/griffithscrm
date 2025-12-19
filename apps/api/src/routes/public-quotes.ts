@@ -9,6 +9,7 @@ import {
 	quoteLettering,
 	quoteSundries,
 	quoteServices,
+	quoteLineItems,
 	customers,
 	products,
 	tenants,
@@ -46,11 +47,12 @@ const publicQuotesRoutes = new Hono()
 		}
 
 		// Get quote line items and related data (customer-visible only)
-		const [components, lettering, sundryItems, serviceItems] = await Promise.all([
+		const [components, lettering, sundryItems, serviceItems, lineItems] = await Promise.all([
 			db.select().from(quoteComponents).where(eq(quoteComponents.quoteId, quote.id)),
 			db.select().from(quoteLettering).where(eq(quoteLettering.quoteId, quote.id)),
 			db.select().from(quoteSundries).where(eq(quoteSundries.quoteId, quote.id)),
 			db.select().from(quoteServices).where(eq(quoteServices.quoteId, quote.id)),
+			db.select().from(quoteLineItems).where(eq(quoteLineItems.quoteId, quote.id)),
 		]);
 
 		// Get tenant info for branding
@@ -136,6 +138,11 @@ const publicQuotesRoutes = new Hono()
 				unitPrice: s.unitPrice,
 				lineTotal: s.lineTotal,
 				serviceName: s.serviceName,
+			})),
+			lineItems: lineItems.map((li) => ({
+				description: li.description,
+				price: li.price,
+				vatExempt: li.vatExempt,
 			})),
 		});
 	})

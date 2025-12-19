@@ -5,6 +5,7 @@ import { requireAuth, requireTenant } from '../middleware/auth';
 import {
 	generatePresignedUploadUrl,
 	isS3Configured,
+	getSignedImageUrl,
 	type UploadCategory,
 } from '../lib/s3';
 
@@ -67,6 +68,66 @@ const uploadRoutes = new Hono()
 			console.error('Error generating presigned URL:', error);
 			return c.json({ error: 'Failed to generate upload URL' }, 500);
 		}
-	});
+	})
+
+	// Get signed URL for viewing an image
+	.post(
+		'/sign-url',
+		zValidator(
+			'json',
+			z.object({
+				url: z.string().min(1, 'URL is required'),
+			})
+		),
+		async (c) => {
+			if (!isS3Configured()) {
+				return c.json({ error: 'S3 is not configured' }, 503);
+			}
+
+			const { url } = c.req.valid('json');
+
+			try {
+				const signedUrl = await getSignedImageUrl(url);
+				if (!signedUrl) {
+					return c.json({ error: 'Could not generate signed URL' }, 400);
+				}
+				return c.json({ signedUrl });
+			} catch (error) {
+				console.error('Error generating signed URL:', error);
+				return c.json({ error: 'Failed to generate signed URL' }, 500);
+			}
+		}
+	)
+
+	// Batch sign multiple URLs
+	.post(
+		'/sign-urls',
+		zValidator(
+			'json',
+			z.object({
+				urls: z.array(z.string()).min(1).max(50),
+			})
+		),
+		async (c) => {
+			if (!isS3Configured()) {
+				return c.json({ error: 'S3 is not configured' }, 503);
+			}
+
+			const { urls } = c.req.valid('json');
+
+			try {
+				const signedUrls = await Promise.all(
+					urls.map(async (url) => ({
+						original: url,
+						signed: await getSignedImageUrl(url),
+					}))
+				);
+				return c.json({ signedUrls });
+			} catch (error) {
+				console.error('Error generating signed URLs:', error);
+				return c.json({ error: 'Failed to generate signed URLs' }, 500);
+			}
+		}
+	);
 
 export { uploadRoutes };

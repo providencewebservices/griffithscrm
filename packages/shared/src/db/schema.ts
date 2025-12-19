@@ -416,6 +416,9 @@ export const tenantPricingSettings = pgTable('tenant_pricing_settings', {
 		.notNull()
 		.default('100'), // 100 = 100% markup = 2x multiplier
 	vatRate: numeric('vat_rate', { precision: 5, scale: 4 }).notNull().default('0'), // e.g., 0.20 for 20%
+	defaultDepositPercent: numeric('default_deposit_percent', { precision: 5, scale: 2 })
+		.notNull()
+		.default('50'), // 50 = 50% deposit
 	createdAt: timestamp('created_at').notNull().defaultNow(),
 	updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
@@ -563,8 +566,8 @@ export const quoteComponents = pgTable('quote_components', {
 	quantity: integer('quantity').notNull().default(1),
 	// Price snapshots (captured at quote creation)
 	supplierCost: numeric('supplier_cost', { precision: 10, scale: 2 }).notNull().default('0'),
-	multiplier: numeric('multiplier', { precision: 10, scale: 4 }).notNull().default('1'), // Markup multiplier
-	unitPrice: numeric('unit_price', { precision: 10, scale: 2 }).notNull().default('0'), // supplierCost × multiplier
+	markupPercent: numeric('markup_percent', { precision: 10, scale: 2 }).notNull().default('100'), // 100 = 100% markup
+	unitPrice: numeric('unit_price', { precision: 10, scale: 2 }).notNull().default('0'), // supplierCost × (1 + markupPercent/100)
 	lineTotal: numeric('line_total', { precision: 10, scale: 2 }).notNull().default('0'), // unitPrice × quantity
 	// Descriptive snapshots for historical accuracy
 	materialName: text('material_name'),
@@ -590,8 +593,8 @@ export const quoteLettering = pgTable('quote_lettering', {
 	appliesTo: text('applies_to'), // 'new_memorial' | 'refurbishment' | 'both'
 	// Price snapshots
 	supplierCost: numeric('supplier_cost', { precision: 10, scale: 2 }).notNull().default('0'), // Cost per letter
-	multiplier: numeric('multiplier', { precision: 10, scale: 4 }).notNull().default('1'), // Markup multiplier
-	unitPrice: numeric('unit_price', { precision: 10, scale: 2 }).notNull().default('0'), // supplierCost × multiplier (per letter)
+	markupPercent: numeric('markup_percent', { precision: 10, scale: 2 }).notNull().default('100'), // 100 = 100% markup
+	unitPrice: numeric('unit_price', { precision: 10, scale: 2 }).notNull().default('0'), // supplierCost × (1 + markupPercent/100) per letter
 	lineTotal: numeric('line_total', { precision: 10, scale: 2 }).notNull().default('0'), // unitPrice × letterCount
 	// Descriptive snapshots
 	techniqueName: text('technique_name'),
@@ -612,8 +615,8 @@ export const quoteSundries = pgTable('quote_sundries', {
 	quantity: integer('quantity').notNull().default(1),
 	// Price snapshots
 	supplierCost: numeric('supplier_cost', { precision: 10, scale: 2 }).notNull().default('0'), // Cost per unit
-	multiplier: numeric('multiplier', { precision: 10, scale: 4 }).notNull().default('1'), // Markup multiplier
-	unitPrice: numeric('unit_price', { precision: 10, scale: 2 }).notNull().default('0'), // supplierCost × multiplier
+	markupPercent: numeric('markup_percent', { precision: 10, scale: 2 }).notNull().default('100'), // 100 = 100% markup
+	unitPrice: numeric('unit_price', { precision: 10, scale: 2 }).notNull().default('0'), // supplierCost × (1 + markupPercent/100)
 	lineTotal: numeric('line_total', { precision: 10, scale: 2 }).notNull().default('0'), // unitPrice × quantity
 	// Descriptive snapshot
 	sundryName: text('sundry_name'),
@@ -633,8 +636,8 @@ export const quoteServices = pgTable('quote_services', {
 	quantity: integer('quantity').notNull().default(1),
 	// Price snapshots
 	supplierCost: numeric('supplier_cost', { precision: 10, scale: 2 }).notNull().default('0'), // Cost per unit (labor cost)
-	multiplier: numeric('multiplier', { precision: 10, scale: 4 }).notNull().default('1'), // Markup multiplier
-	unitPrice: numeric('unit_price', { precision: 10, scale: 2 }).notNull().default('0'), // supplierCost × multiplier
+	markupPercent: numeric('markup_percent', { precision: 10, scale: 2 }).notNull().default('100'), // 100 = 100% markup
+	unitPrice: numeric('unit_price', { precision: 10, scale: 2 }).notNull().default('0'), // supplierCost × (1 + markupPercent/100)
 	lineTotal: numeric('line_total', { precision: 10, scale: 2 }).notNull().default('0'), // unitPrice × quantity
 	// Descriptive snapshot
 	serviceName: text('service_name'),
@@ -652,6 +655,7 @@ export const quoteLineItems = pgTable('quote_line_items', {
 		.references(() => quotes.id, { onDelete: 'cascade' }),
 	description: text('description').notNull(), // e.g., "Installation Labor"
 	price: numeric('price', { precision: 10, scale: 2 }).notNull().default('0'), // Flat price (no markup)
+	vatExempt: boolean('vat_exempt').notNull().default(false), // True for items like church fees that are not subject to VAT
 	sortOrder: integer('sort_order').notNull().default(0),
 	createdAt: timestamp('created_at').notNull().defaultNow(),
 	updatedAt: timestamp('updated_at').notNull().defaultNow(),
@@ -685,4 +689,48 @@ export const jobs = pgTable('jobs', {
 	notes: text('notes'), // Job-specific notes
 	createdAt: timestamp('created_at').notNull().defaultNow(),
 	updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// Job payment schedule items (installment payments for a job)
+export const jobPaymentScheduleItems = pgTable('job_payment_schedule_items', {
+	id: text('id').primaryKey(),
+	tenantId: text('tenant_id')
+		.notNull()
+		.references(() => tenants.id, { onDelete: 'cascade' }),
+	jobId: text('job_id')
+		.notNull()
+		.references(() => jobs.id, { onDelete: 'cascade' }),
+	description: text('description').notNull(), // "Deposit", "Balance", or custom
+	amount: numeric('amount', { precision: 10, scale: 2 }).notNull(),
+	dueDate: timestamp('due_date'), // Nullable - user sets manually for balance
+	paidAmount: numeric('paid_amount', { precision: 10, scale: 2 }).notNull().default('0'),
+	paidAt: timestamp('paid_at'), // When fully paid
+	paymentMethod: text('payment_method'), // "manual", "card", "bank_transfer" - for future Stripe integration
+	externalPaymentId: text('external_payment_id'), // Stripe payment intent ID - for future
+	sortOrder: integer('sort_order').notNull().default(0),
+	notes: text('notes'),
+	createdAt: timestamp('created_at').notNull().defaultNow(),
+	updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// Job attachment categories
+export const JOB_ATTACHMENT_CATEGORIES = ['artwork', 'proof', 'document'] as const;
+
+// Job attachments (artwork, proofs, documents)
+export const jobAttachments = pgTable('job_attachments', {
+	id: text('id').primaryKey(),
+	tenantId: text('tenant_id')
+		.notNull()
+		.references(() => tenants.id, { onDelete: 'cascade' }),
+	jobId: text('job_id')
+		.notNull()
+		.references(() => jobs.id, { onDelete: 'cascade' }),
+	category: text('category').notNull(), // From JOB_ATTACHMENT_CATEGORIES
+	filename: text('filename').notNull(), // Original filename for display
+	s3Key: text('s3_key').notNull(), // Full S3 path
+	contentType: text('content_type').notNull(), // MIME type
+	size: integer('size'), // File size in bytes
+	notes: text('notes'), // Optional description
+	uploadedBy: text('uploaded_by').references(() => users.id, { onDelete: 'set null' }),
+	createdAt: timestamp('created_at').notNull().defaultNow(),
 });

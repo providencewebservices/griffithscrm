@@ -24,8 +24,9 @@ import {
 	getJobStatusVariant,
 	JOB_STATUSES,
 	type JobStatus,
+	type JobListItem,
 } from '@/hooks/use-jobs';
-import { Search } from 'lucide-react';
+import { Search, AlertCircle } from 'lucide-react';
 
 const ALL_STATUS_VALUE = '_all';
 
@@ -61,6 +62,15 @@ export function JobsPage() {
 			day: 'numeric',
 			year: 'numeric',
 		});
+	};
+
+	const getPaymentStatus = (job: JobListItem) => {
+		if (!job.paymentSummary) return null;
+		const { paidAmount, totalAmount, hasOverdue } = job.paymentSummary;
+		const paidNum = parseFloat(paidAmount);
+		const totalNum = parseFloat(totalAmount);
+		const isPaid = paidNum >= totalNum;
+		return { paidAmount: paidNum, totalAmount: totalNum, isPaid, hasOverdue };
 	};
 
 	return (
@@ -135,41 +145,70 @@ export function JobsPage() {
 								<TableHead>Customer</TableHead>
 								<TableHead>Service</TableHead>
 								<TableHead className="text-right">Total</TableHead>
+								<TableHead>Payment</TableHead>
 								<TableHead>Status</TableHead>
 								<TableHead>Created</TableHead>
 								<TableHead className="w-[100px]"></TableHead>
 							</TableRow>
 						</TableHeader>
 						<TableBody>
-							{jobs.map((job) => (
-								<TableRow key={job.id}>
-									<TableCell className="font-medium">
-										{job.jobNumber}
-									</TableCell>
-									<TableCell>
-										{job.customerFirstName && job.customerLastName
-											? `${job.customerFirstName} ${job.customerLastName}`
-											: 'Walk-in'}
-									</TableCell>
-									<TableCell>{job.serviceName || '-'}</TableCell>
-									<TableCell className="text-right">
-										{formatCurrency(job.total)}
-									</TableCell>
-									<TableCell>
-										<Badge variant={getJobStatusVariant(job.status)}>
-											{formatJobStatus(job.status)}
-										</Badge>
-									</TableCell>
-									<TableCell>{formatDate(job.createdAt)}</TableCell>
-									<TableCell>
-										<Link to={`/app/jobs/${job.id}`}>
-											<Button variant="ghost" size="sm">
-												View
-											</Button>
-										</Link>
-									</TableCell>
-								</TableRow>
-							))}
+							{jobs.map((job) => {
+								const paymentStatus = getPaymentStatus(job);
+								return (
+									<TableRow key={job.id}>
+										<TableCell className="font-medium">
+											{job.jobNumber}
+										</TableCell>
+										<TableCell>
+											{job.customerFirstName && job.customerLastName
+												? `${job.customerFirstName} ${job.customerLastName}`
+												: 'Walk-in'}
+										</TableCell>
+										<TableCell>{job.serviceName || '-'}</TableCell>
+										<TableCell className="text-right">
+											{formatCurrency(job.total)}
+										</TableCell>
+										<TableCell>
+											{paymentStatus ? (
+												<div className="flex items-center gap-1.5">
+													{paymentStatus.isPaid ? (
+														<Badge variant="default" className="bg-green-600">
+															Paid
+														</Badge>
+													) : (
+														<>
+															<span className="text-sm">
+																{formatCurrency(paymentStatus.paidAmount)} of {formatCurrency(paymentStatus.totalAmount)}
+															</span>
+															{paymentStatus.hasOverdue && (
+																<Badge variant="destructive" className="h-5 text-xs px-1.5">
+																	<AlertCircle className="h-3 w-3 mr-0.5" />
+																	Late
+																</Badge>
+															)}
+														</>
+													)}
+												</div>
+											) : (
+												<span className="text-muted-foreground">-</span>
+											)}
+										</TableCell>
+										<TableCell>
+											<Badge variant={getJobStatusVariant(job.status)}>
+												{formatJobStatus(job.status)}
+											</Badge>
+										</TableCell>
+										<TableCell>{formatDate(job.createdAt)}</TableCell>
+										<TableCell>
+											<Link to={`/app/jobs/${job.id}`}>
+												<Button variant="ghost" size="sm">
+													View
+												</Button>
+											</Link>
+										</TableCell>
+									</TableRow>
+								);
+							})}
 						</TableBody>
 					</Table>
 				</div>

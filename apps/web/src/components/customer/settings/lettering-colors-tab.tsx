@@ -166,7 +166,7 @@ export function LetteringColorsTab() {
 							{colors?.map((item) => (
 								<TableRow key={item.id}>
 									<TableCell className="font-medium">{item.name}</TableCell>
-									<TableCell>${item.price}</TableCell>
+									<TableCell>£{item.price}</TableCell>
 									<TableCell>
 										<Badge variant={item.isActive ? 'default' : 'secondary'}>
 											{item.isActive ? 'Active' : 'Inactive'}
@@ -234,7 +234,7 @@ export function LetteringColorsTab() {
 						</Field>
 
 						<Field>
-							<FieldLabel htmlFor="price">Price ($)</FieldLabel>
+							<FieldLabel htmlFor="price">Price (£)</FieldLabel>
 							<Input
 								id="price"
 								type="number"

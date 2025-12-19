@@ -70,6 +70,11 @@ interface PublicQuoteResponse {
 		lineTotal: string;
 		serviceName: string | null;
 	}>;
+	lineItems: Array<{
+		description: string;
+		price: string;
+		vatExempt: boolean;
+	}>;
 }
 
 async function fetchPublicQuote(token: string): Promise<PublicQuoteResponse> {
@@ -219,7 +224,7 @@ export function PublicQuoteViewPage() {
 
 	if (!data) return null;
 
-	const { quote, customer, product, tenant, components, lettering, sundries, services } = data;
+	const { quote, customer, product, tenant, components, lettering, sundries, services, lineItems } = data;
 	const hasResponded = !!quote.customerDecision;
 	const canRespond = quote.status === 'presented' && !hasResponded;
 
@@ -362,6 +367,22 @@ export function PublicQuoteViewPage() {
 											{s.serviceName} {s.quantity > 1 && `x${s.quantity}`}
 										</span>
 										<span>{formatCurrency(s.lineTotal)}</span>
+									</div>
+								))}
+							</div>
+						)}
+
+						{/* Line Items (Other Charges) */}
+						{lineItems.length > 0 && (
+							<div className="space-y-2">
+								<p className="font-medium text-sm text-muted-foreground">Other Charges</p>
+								{lineItems.map((item, idx) => (
+									<div key={idx} className="flex justify-between text-sm">
+										<span>
+											{item.description}
+											{item.vatExempt && <span className="text-xs ml-1">(VAT Exempt)</span>}
+										</span>
+										<span>{formatCurrency(item.price)}</span>
 									</div>
 								))}
 							</div>

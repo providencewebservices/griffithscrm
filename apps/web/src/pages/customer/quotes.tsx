@@ -47,9 +47,9 @@ export function QuotesPage() {
 	});
 
 	const formatCurrency = (value: string) => {
-		return new Intl.NumberFormat('en-US', {
+		return new Intl.NumberFormat('en-GB', {
 			style: 'currency',
-			currency: 'USD',
+			currency: 'GBP',
 		}).format(parseFloat(value));
 	};
 

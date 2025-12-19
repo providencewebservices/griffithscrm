@@ -13,6 +13,7 @@ export function PricingTab() {
 
 	const [defaultMarkupPercent, setDefaultMarkupPercent] = useState('100');
 	const [vatRate, setVatRate] = useState('0');
+	const [defaultDepositPercent, setDefaultDepositPercent] = useState('50');
 	const [saveError, setSaveError] = useState<string | null>(null);
 	const [saveSuccess, setSaveSuccess] = useState(false);
 
@@ -23,6 +24,7 @@ export function PricingTab() {
 			// Convert VAT rate from decimal (0.20) to percentage (20)
 			const vatPercent = parseFloat(settings.vatRate) * 100;
 			setVatRate(String(vatPercent));
+			setDefaultDepositPercent(settings.defaultDepositPercent);
 		}
 	}, [settings]);
 
@@ -33,6 +35,7 @@ export function PricingTab() {
 		try {
 			const markupNum = parseFloat(defaultMarkupPercent);
 			const vatNum = parseFloat(vatRate) / 100; // Convert percentage back to decimal
+			const depositNum = parseFloat(defaultDepositPercent);
 
 			if (isNaN(markupNum) || markupNum < 0) {
 				setSaveError('Markup percentage must be a valid number 0 or greater');
@@ -44,9 +47,15 @@ export function PricingTab() {
 				return;
 			}
 
+			if (isNaN(depositNum) || depositNum < 0 || depositNum > 100) {
+				setSaveError('Deposit percentage must be between 0 and 100%');
+				return;
+			}
+
 			await updateMutation.mutateAsync({
 				defaultMarkupPercent: markupNum,
 				vatRate: vatNum,
+				defaultDepositPercent: depositNum,
 			});
 
 			setSaveSuccess(true);
@@ -146,6 +155,42 @@ export function PricingTab() {
 						</div>
 					</Field>
 				</FieldGroup>
+			</div>
+
+			{/* Payment Settings */}
+			<div className="border rounded-lg p-6">
+				<h3 className="text-lg font-semibold mb-4">Payment Settings</h3>
+				<FieldGroup>
+					<Field>
+						<FieldLabel htmlFor="depositPercent">Default Deposit Percentage</FieldLabel>
+						<FieldDescription>
+							The default deposit percentage for new jobs. When a quote is accepted and a job is created, this percentage of the total will be set as the initial deposit payment.
+						</FieldDescription>
+						<div className="flex items-center gap-2 mt-2">
+							<Input
+								id="depositPercent"
+								type="number"
+								min="0"
+								max="100"
+								step="1"
+								value={defaultDepositPercent}
+								onChange={(e) => setDefaultDepositPercent(e.target.value)}
+								className="w-24"
+							/>
+							<span className="text-muted-foreground">%</span>
+						</div>
+					</Field>
+				</FieldGroup>
+
+				<div className="mt-4 p-4 bg-muted/50 rounded-lg">
+					<p className="text-sm text-muted-foreground">
+						<strong>Example:</strong> For a {'\u00A3'}1,000 job with {defaultDepositPercent}% deposit, the payment schedule will be:
+					</p>
+					<ul className="text-sm text-muted-foreground mt-2 space-y-1">
+						<li>• Deposit: {'\u00A3'}{(1000 * parseFloat(defaultDepositPercent || '0') / 100).toFixed(2)}</li>
+						<li>• Balance: {'\u00A3'}{(1000 * (1 - parseFloat(defaultDepositPercent || '0') / 100)).toFixed(2)}</li>
+					</ul>
+				</div>
 			</div>
 
 			{/* Save Button */}

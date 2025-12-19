@@ -254,7 +254,7 @@ export function DimensionCombosCard({ productId }: DimensionCombosCardProps) {
 	const formatPrice = (price: string) => {
 		const num = parseFloat(price);
 		if (num === 0) return '-';
-		return num > 0 ? `+$${num.toFixed(2)}` : `-$${Math.abs(num).toFixed(2)}`;
+		return num > 0 ? `+£${num.toFixed(2)}` : `-£${Math.abs(num).toFixed(2)}`;
 	};
 
 	const isLoading = combosLoading || componentsLoading;
@@ -381,7 +381,7 @@ export function DimensionCombosCard({ productId }: DimensionCombosCardProps) {
 							</Field>
 
 							<Field>
-								<FieldLabel htmlFor="priceAdjustment">Price Adjustment ($)</FieldLabel>
+								<FieldLabel htmlFor="priceAdjustment">Price Adjustment (£)</FieldLabel>
 								<Input
 									id="priceAdjustment"
 									type="number"

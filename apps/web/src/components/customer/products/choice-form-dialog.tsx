@@ -88,7 +88,7 @@ export function ChoiceFormDialog({
 					</Field>
 
 					<Field>
-						<FieldLabel htmlFor="priceAdjustment">Price Adjustment ($)</FieldLabel>
+						<FieldLabel htmlFor="priceAdjustment">Price Adjustment (£)</FieldLabel>
 						<Input
 							id="priceAdjustment"
 							type="number"

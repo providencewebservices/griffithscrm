@@ -23,7 +23,7 @@ export type QuoteComponent = {
 	depth: string | null;
 	quantity: number;
 	supplierCost: string;
-	multiplier: string;
+	markupPercent: string;
 	unitPrice: string;
 	lineTotal: string;
 	materialName: string | null;
@@ -43,7 +43,7 @@ export type QuoteLettering = {
 	letterCount: number;
 	appliesTo: string | null;
 	supplierCost: string;
-	multiplier: string;
+	markupPercent: string;
 	unitPrice: string;
 	lineTotal: string;
 	techniqueName: string | null;
@@ -60,7 +60,7 @@ export type QuoteSundry = {
 	sundryId: string | null;
 	quantity: number;
 	supplierCost: string;
-	multiplier: string;
+	markupPercent: string;
 	unitPrice: string;
 	lineTotal: string;
 	sundryName: string | null;
@@ -75,6 +75,7 @@ export type QuoteLineItem = {
 	quoteId: string;
 	description: string;
 	price: string;
+	vatExempt: boolean;
 	sortOrder: number;
 	createdAt: string;
 	updatedAt: string;
@@ -454,7 +455,7 @@ type UpdateLineItemPricingInput = {
 	quoteId: string;
 	itemId: string;
 	supplierCost?: number;
-	multiplier?: number;
+	markupPercent?: number;
 	quantity?: number;
 };
 
@@ -468,6 +469,7 @@ export type AddLineItemInput = {
 	quoteId: string;
 	description: string;
 	price: number;
+	vatExempt?: boolean;
 };
 
 export type UpdateLineItemInput = {
@@ -475,6 +477,7 @@ export type UpdateLineItemInput = {
 	itemId: string;
 	description?: string;
 	price?: number;
+	vatExempt?: boolean;
 };
 
 export type DeleteLineItemInput = {
@@ -588,12 +591,13 @@ async function addLineItem({
 	quoteId,
 	description,
 	price,
+	vatExempt,
 }: AddLineItemInput): Promise<QuoteWithLineItems> {
 	const response = await fetch(`${API_URL}/api/quotes/${quoteId}/line-items`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		credentials: 'include',
-		body: JSON.stringify({ description, price }),
+		body: JSON.stringify({ description, price, vatExempt }),
 	});
 
 	if (!response.ok) {
@@ -610,12 +614,13 @@ async function updateLineItem({
 	itemId,
 	description,
 	price,
+	vatExempt,
 }: UpdateLineItemInput): Promise<QuoteWithLineItems> {
 	const response = await fetch(`${API_URL}/api/quotes/${quoteId}/line-items/${itemId}`, {
 		method: 'PUT',
 		headers: { 'Content-Type': 'application/json' },
 		credentials: 'include',
-		body: JSON.stringify({ description, price }),
+		body: JSON.stringify({ description, price, vatExempt }),
 	});
 
 	if (!response.ok) {

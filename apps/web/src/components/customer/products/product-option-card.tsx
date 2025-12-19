@@ -35,6 +35,7 @@ import {
 	useDeleteOptionChoiceMutation,
 	type OptionChoice,
 } from '@/hooks/use-option-choices';
+import { useSignedUrls } from '@/hooks/use-uploads';
 import { ChevronDown, ChevronRight, MoreHorizontal, Plus, ImageIcon } from 'lucide-react';
 
 const OPTION_TYPE_LABELS: Record<ProductOptionType, string> = {
@@ -57,6 +58,9 @@ export function ProductOptionCard({ option, defaultOpen = false }: ProductOption
 	const [selectedChoice, setSelectedChoice] = useState<OptionChoice | null>(null);
 	const [deleteChoiceDialogOpen, setDeleteChoiceDialogOpen] = useState(false);
 	const [mutationError, setMutationError] = useState<string | null>(null);
+
+	const choiceImageUrls = option.choices?.map((c) => c.imageUrl) || [];
+	const { data: signedChoiceImages } = useSignedUrls(choiceImageUrls);
 
 	const updateOptionMutation = useUpdateProductOptionMutation();
 	const deleteOptionMutation = useDeleteProductOptionMutation();
@@ -137,7 +141,7 @@ export function ProductOptionCard({ option, defaultOpen = false }: ProductOption
 	const formatPrice = (price: string) => {
 		const num = parseFloat(price);
 		if (num === 0) return '-';
-		return num > 0 ? `+$${num.toFixed(2)}` : `-$${Math.abs(num).toFixed(2)}`;
+		return num > 0 ? `+£${num.toFixed(2)}` : `-£${Math.abs(num).toFixed(2)}`;
 	};
 
 	return (
@@ -211,7 +215,10 @@ export function ProductOptionCard({ option, defaultOpen = false }: ProductOption
 													<TableCell>
 														{choice.imageUrl ? (
 															<img
-																src={choice.imageUrl}
+																src={
+																	(signedChoiceImages?.get(choice.imageUrl)) ||
+																	choice.imageUrl
+																}
 																alt={choice.name}
 																className="w-8 h-8 object-cover rounded"
 															/>

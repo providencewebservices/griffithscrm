@@ -25,6 +25,7 @@ import { tenantPricingSettingsRoutes } from './routes/tenant-pricing-settings';
 import { quotesRoutes } from './routes/quotes';
 import { publicQuotesRoutes } from './routes/public-quotes';
 import { jobsRouter } from './routes/jobs';
+import { dashboardRoutes } from './routes/dashboard';
 
 const app = new Hono();
 
@@ -109,6 +110,9 @@ app.route('/api/quotes', quotesRoutes);
 
 // Job routes (for tenant users)
 app.route('/api/jobs', jobsRouter);
+
+// Dashboard routes (for tenant users)
+app.route('/api/dashboard', dashboardRoutes);
 
 // Export type for RPC client
 export type AppType = typeof api;

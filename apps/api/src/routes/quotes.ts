@@ -31,6 +31,7 @@ import {
 	customerAddresses,
 	tenants,
 	jobs,
+	jobPaymentScheduleItems,
 	QUOTE_STATUSES,
 	COMPONENT_TYPES,
 	LETTERING_COST_APPLIES_TO,
@@ -79,7 +80,7 @@ async function getTenantPricingSettings(tenantId: string) {
 			.values({
 				id: crypto.randomUUID(),
 				tenantId,
-				defaultMarkupPercent: '100', // 100% markup = 2x multiplier
+				defaultMarkupPercent: '100', // 100% markup = 2x retail price
 				vatRate: '0',
 			})
 			.returning();
@@ -91,13 +92,10 @@ async function getTenantPricingSettings(tenantId: string) {
 	};
 }
 
-// Convert markup percentage to multiplier (100% = 2.0x)
-function percentageToMultiplier(percent: number): number {
-	return 1 + (percent / 100);
-}
-
-function calculateRetailPrice(supplierCost: number, multiplier: number): number {
-	return supplierCost * multiplier;
+// Calculate retail price from supplier cost and markup percentage
+// 100% markup means retail = supplierCost × 2
+function calculateRetailPrice(supplierCost: number, markupPercent: number): number {
+	return supplierCost * (1 + markupPercent / 100);
 }
 
 async function getQuoteWithLineItems(quoteId: string, tenantId: string) {
@@ -202,8 +200,16 @@ async function recalculateQuoteTotals(quoteId: string): Promise<void> {
 	const componentTotal = components.reduce((sum, c) => sum + parseFloat(c.lineTotal), 0);
 	const letteringTotal = letteringItems.reduce((sum, l) => sum + parseFloat(l.lineTotal), 0);
 	const sundryTotal = sundryItems.reduce((sum, s) => sum + parseFloat(s.lineTotal), 0);
-	const lineItemTotal = lineItems.reduce((sum, li) => sum + parseFloat(li.price), 0);
-	const subtotal = componentTotal + letteringTotal + sundryTotal + lineItemTotal;
+
+	// Split line items into VAT-able and VAT-exempt
+	const vatableLineItemTotal = lineItems
+		.filter((li) => !li.vatExempt)
+		.reduce((sum, li) => sum + parseFloat(li.price), 0);
+	const vatExemptLineItemTotal = lineItems
+		.filter((li) => li.vatExempt)
+		.reduce((sum, li) => sum + parseFloat(li.price), 0);
+
+	const subtotal = componentTotal + letteringTotal + sundryTotal + vatableLineItemTotal + vatExemptLineItemTotal;
 
 	// Calculate total cost (sum of all supplier costs - line items are flat amounts with no cost tracking)
 	const componentCost = components.reduce((sum, c) => sum + parseFloat(c.supplierCost) * c.quantity, 0);
@@ -211,9 +217,10 @@ async function recalculateQuoteTotals(quoteId: string): Promise<void> {
 	const sundryCost = sundryItems.reduce((sum, s) => sum + parseFloat(s.supplierCost) * s.quantity, 0);
 	const totalCost = componentCost + letteringCost + sundryCost;
 
-	// Calculate VAT and total
+	// Calculate VAT only on VAT-able amounts (components, lettering, sundries, and non-exempt line items)
 	const vatRate = parseFloat(quote.vatRate);
-	const vatAmount = subtotal * vatRate;
+	const vatableSubtotal = componentTotal + letteringTotal + sundryTotal + vatableLineItemTotal;
+	const vatAmount = vatableSubtotal * vatRate;
 	const total = subtotal + vatAmount;
 
 	// Update quote totals
@@ -340,7 +347,7 @@ const updateStatusSchema = z.object({
 
 const updateLineItemPricingSchema = z.object({
 	supplierCost: z.number().min(0).optional(),
-	multiplier: z.number().min(0.01).optional(),
+	markupPercent: z.number().min(0).optional(),
 	quantity: z.number().int().min(1).optional(),
 });
 
@@ -348,11 +355,13 @@ const updateLineItemPricingSchema = z.object({
 const lineItemInputSchema = z.object({
 	description: z.string().min(1),
 	price: z.number().min(0),
+	vatExempt: z.boolean().optional().default(false),
 });
 
 const updateLineItemSchema = z.object({
 	description: z.string().min(1).optional(),
 	price: z.number().min(0).optional(),
+	vatExempt: z.boolean().optional(),
 });
 
 const listQuerySchema = z.object({
@@ -628,8 +637,8 @@ const quotesRoutes = new Hono()
 				}
 
 				const supplierCost = parseFloat(material.supplierCost);
-				const multiplier = percentageToMultiplier(pricingSettings.defaultMarkupPercent);
-				const unitPrice = calculateRetailPrice(supplierCost, multiplier);
+				const markupPercent = pricingSettings.defaultMarkupPercent;
+				const unitPrice = calculateRetailPrice(supplierCost, markupPercent);
 				const lineTotal = unitPrice * comp.quantity;
 
 				return {
@@ -642,7 +651,7 @@ const quotesRoutes = new Hono()
 					depth: comp.depth ? String(comp.depth) : null,
 					quantity: comp.quantity,
 					supplierCost: String(supplierCost),
-					multiplier: String(multiplier),
+					markupPercent: String(markupPercent),
 					unitPrice: String(unitPrice),
 					lineTotal: String(lineTotal),
 					materialName: material.name,
@@ -705,8 +714,8 @@ const quotesRoutes = new Hono()
 				const freeLetters = activeCostRule?.freeLetters || 0;
 				const supplierCostPerLetter = parseFloat(activeCostRule?.pricePerLetter || '0');
 				const billableLetters = Math.max(0, letterCount - freeLetters);
-				const multiplier = percentageToMultiplier(pricingSettings.defaultMarkupPercent);
-				const unitPrice = calculateRetailPrice(supplierCostPerLetter, multiplier);
+				const markupPercent = pricingSettings.defaultMarkupPercent;
+				const unitPrice = calculateRetailPrice(supplierCostPerLetter, markupPercent);
 				const lineTotal = billableLetters * unitPrice;
 
 				return {
@@ -717,7 +726,7 @@ const quotesRoutes = new Hono()
 					letterCount,
 					appliesTo: lett.appliesTo,
 					supplierCost: String(supplierCostPerLetter),
-					multiplier: String(multiplier),
+					markupPercent: String(markupPercent),
 					unitPrice: String(unitPrice),
 					lineTotal: String(lineTotal),
 					techniqueName: technique.name,
@@ -743,8 +752,8 @@ const quotesRoutes = new Hono()
 
 				// Sundry.price is treated as supplier cost
 				const supplierCost = parseFloat(sundry.price);
-				const multiplier = percentageToMultiplier(pricingSettings.defaultMarkupPercent);
-				const unitPrice = calculateRetailPrice(supplierCost, multiplier);
+				const markupPercent = pricingSettings.defaultMarkupPercent;
+				const unitPrice = calculateRetailPrice(supplierCost, markupPercent);
 				const lineTotal = unitPrice * sund.quantity;
 
 				return {
@@ -752,7 +761,7 @@ const quotesRoutes = new Hono()
 					sundryId: sund.sundryId,
 					quantity: sund.quantity,
 					supplierCost: String(supplierCost),
-					multiplier: String(multiplier),
+					markupPercent: String(markupPercent),
 					unitPrice: String(unitPrice),
 					lineTotal: String(lineTotal),
 					sundryName: sundry.name,
@@ -949,8 +958,8 @@ const quotesRoutes = new Hono()
 				}
 
 				const supplierCost = parseFloat(material.supplierCost);
-				const multiplier = percentageToMultiplier(pricingSettings.defaultMarkupPercent);
-				const unitPrice = calculateRetailPrice(supplierCost, multiplier);
+				const markupPercent = pricingSettings.defaultMarkupPercent;
+				const unitPrice = calculateRetailPrice(supplierCost, markupPercent);
 				const lineTotal = unitPrice * comp.quantity;
 
 				return {
@@ -963,7 +972,7 @@ const quotesRoutes = new Hono()
 					depth: comp.depth ? String(comp.depth) : null,
 					quantity: comp.quantity,
 					supplierCost: String(supplierCost),
-					multiplier: String(multiplier),
+					markupPercent: String(markupPercent),
 					unitPrice: String(unitPrice),
 					lineTotal: String(lineTotal),
 					materialName: material.name,
@@ -1023,8 +1032,8 @@ const quotesRoutes = new Hono()
 				const freeLetters = activeCostRule?.freeLetters || 0;
 				const supplierCostPerLetter = parseFloat(activeCostRule?.pricePerLetter || '0');
 				const billableLetters = Math.max(0, letterCount - freeLetters);
-				const multiplier = percentageToMultiplier(pricingSettings.defaultMarkupPercent);
-				const unitPrice = calculateRetailPrice(supplierCostPerLetter, multiplier);
+				const markupPercent = pricingSettings.defaultMarkupPercent;
+				const unitPrice = calculateRetailPrice(supplierCostPerLetter, markupPercent);
 				const lineTotal = billableLetters * unitPrice;
 
 				return {
@@ -1035,7 +1044,7 @@ const quotesRoutes = new Hono()
 					letterCount,
 					appliesTo: lett.appliesTo,
 					supplierCost: String(supplierCostPerLetter),
-					multiplier: String(multiplier),
+					markupPercent: String(markupPercent),
 					unitPrice: String(unitPrice),
 					lineTotal: String(lineTotal),
 					techniqueName: technique.name,
@@ -1059,8 +1068,8 @@ const quotesRoutes = new Hono()
 				}
 
 				const supplierCost = parseFloat(sundry.price);
-				const multiplier = percentageToMultiplier(pricingSettings.defaultMarkupPercent);
-				const unitPrice = calculateRetailPrice(supplierCost, multiplier);
+				const markupPercent = pricingSettings.defaultMarkupPercent;
+				const unitPrice = calculateRetailPrice(supplierCost, markupPercent);
 				const lineTotal = unitPrice * sund.quantity;
 
 				return {
@@ -1068,7 +1077,7 @@ const quotesRoutes = new Hono()
 					sundryId: sund.sundryId,
 					quantity: sund.quantity,
 					supplierCost: String(supplierCost),
-					multiplier: String(multiplier),
+					markupPercent: String(markupPercent),
 					unitPrice: String(unitPrice),
 					lineTotal: String(lineTotal),
 					sundryName: sundry.name,
@@ -1206,12 +1215,59 @@ const quotesRoutes = new Hono()
 		// Auto-create job when quote is accepted
 		if (newStatus === 'accepted') {
 			const jobNumber = await generateJobNumber(tenantId);
+			const jobId = crypto.randomUUID();
+
+			// Create the job
 			await db.insert(jobs).values({
-				id: crypto.randomUUID(),
+				id: jobId,
 				tenantId,
 				quoteId: id,
 				jobNumber,
 				status: 'pending',
+			});
+
+			// Get tenant's deposit percentage setting
+			let depositPercent = 50; // Default 50%
+			const [pricingSettings] = await db
+				.select()
+				.from(tenantPricingSettings)
+				.where(eq(tenantPricingSettings.tenantId, tenantId))
+				.limit(1);
+
+			if (pricingSettings?.defaultDepositPercent) {
+				depositPercent = parseFloat(pricingSettings.defaultDepositPercent);
+			}
+
+			// Calculate deposit and balance amounts
+			const total = parseFloat(quote.total);
+			const depositAmount = (total * depositPercent) / 100;
+			const balanceAmount = total - depositAmount;
+
+			// Create payment schedule items
+			const now = new Date();
+
+			// Deposit - due immediately
+			await db.insert(jobPaymentScheduleItems).values({
+				id: crypto.randomUUID(),
+				tenantId,
+				jobId,
+				description: 'Deposit',
+				amount: depositAmount.toFixed(2),
+				dueDate: now,
+				paidAmount: '0',
+				sortOrder: 0,
+			});
+
+			// Balance - no due date (user sets later)
+			await db.insert(jobPaymentScheduleItems).values({
+				id: crypto.randomUUID(),
+				tenantId,
+				jobId,
+				description: 'Balance',
+				amount: balanceAmount.toFixed(2),
+				dueDate: null,
+				paidAmount: '0',
+				sortOrder: 1,
 			});
 		}
 
@@ -1285,9 +1341,9 @@ const quotesRoutes = new Hono()
 
 			// Calculate new values
 			const supplierCost = data.supplierCost ?? parseFloat(component.supplierCost);
-			const multiplier = data.multiplier ?? parseFloat(component.multiplier);
+			const markupPercent = data.markupPercent ?? parseFloat(component.markupPercent);
 			const quantity = data.quantity ?? component.quantity;
-			const unitPrice = calculateRetailPrice(supplierCost, multiplier);
+			const unitPrice = calculateRetailPrice(supplierCost, markupPercent);
 			const lineTotal = unitPrice * quantity;
 
 			// Update component
@@ -1295,7 +1351,7 @@ const quotesRoutes = new Hono()
 				.update(quoteComponents)
 				.set({
 					supplierCost: String(supplierCost),
-					multiplier: String(multiplier),
+					markupPercent: String(markupPercent),
 					quantity,
 					unitPrice: String(unitPrice),
 					lineTotal: String(lineTotal),
@@ -1351,8 +1407,8 @@ const quotesRoutes = new Hono()
 
 			// Calculate new values (lettering uses letterCount for quantity)
 			const supplierCost = data.supplierCost ?? parseFloat(lettering.supplierCost);
-			const multiplier = data.multiplier ?? parseFloat(lettering.multiplier);
-			const unitPrice = calculateRetailPrice(supplierCost, multiplier);
+			const markupPercent = data.markupPercent ?? parseFloat(lettering.markupPercent);
+			const unitPrice = calculateRetailPrice(supplierCost, markupPercent);
 			const lineTotal = unitPrice * lettering.letterCount;
 
 			// Update lettering
@@ -1360,7 +1416,7 @@ const quotesRoutes = new Hono()
 				.update(quoteLettering)
 				.set({
 					supplierCost: String(supplierCost),
-					multiplier: String(multiplier),
+					markupPercent: String(markupPercent),
 					unitPrice: String(unitPrice),
 					lineTotal: String(lineTotal),
 					updatedAt: new Date(),
@@ -1415,9 +1471,9 @@ const quotesRoutes = new Hono()
 
 			// Calculate new values
 			const supplierCost = data.supplierCost ?? parseFloat(sundry.supplierCost);
-			const multiplier = data.multiplier ?? parseFloat(sundry.multiplier);
+			const markupPercent = data.markupPercent ?? parseFloat(sundry.markupPercent);
 			const quantity = data.quantity ?? sundry.quantity;
-			const unitPrice = calculateRetailPrice(supplierCost, multiplier);
+			const unitPrice = calculateRetailPrice(supplierCost, markupPercent);
 			const lineTotal = unitPrice * quantity;
 
 			// Update sundry
@@ -1425,7 +1481,7 @@ const quotesRoutes = new Hono()
 				.update(quoteSundries)
 				.set({
 					supplierCost: String(supplierCost),
-					multiplier: String(multiplier),
+					markupPercent: String(markupPercent),
 					quantity,
 					unitPrice: String(unitPrice),
 					lineTotal: String(lineTotal),
@@ -1682,6 +1738,7 @@ ${tenantName}
 					quoteId,
 					description: data.description,
 					price: String(data.price),
+					vatExempt: data.vatExempt ?? false,
 					sortOrder,
 				})
 				.returning();
@@ -1736,6 +1793,7 @@ ${tenantName}
 			const updateData: Record<string, unknown> = { updatedAt: new Date() };
 			if (data.description !== undefined) updateData.description = data.description;
 			if (data.price !== undefined) updateData.price = String(data.price);
+			if (data.vatExempt !== undefined) updateData.vatExempt = data.vatExempt;
 
 			await db
 				.update(quoteLineItems)

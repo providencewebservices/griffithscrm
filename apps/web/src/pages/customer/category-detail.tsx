@@ -44,6 +44,7 @@ import {
 	useDeleteProductCategoryMutation,
 	type UpdateProductCategoryInput,
 } from '@/hooks/use-product-categories';
+import { useSignedUrl, useSignedUrls } from '@/hooks/use-uploads';
 import { ArrowLeft, Package, ImageIcon } from 'lucide-react';
 
 export function CategoryDetailPage() {
@@ -60,6 +61,9 @@ export function CategoryDetailPage() {
 	const [formImageUrl, setFormImageUrl] = useState<string | null>(null);
 
 	const { data: category, isLoading, error } = useProductCategoryQuery(id);
+	const { data: signedCategoryImageUrl } = useSignedUrl(category?.imageUrl);
+	const productImageUrls = category?.products?.map((p) => p.imageUrl) || [];
+	const { data: signedProductImages } = useSignedUrls(productImageUrls);
 	const updateMutation = useUpdateProductCategoryMutation();
 	const deleteMutation = useDeleteProductCategoryMutation();
 
@@ -102,7 +106,7 @@ export function CategoryDetailPage() {
 
 	const formatPrice = (price: string | null) => {
 		if (!price) return '-';
-		return `$${parseFloat(price).toFixed(2)}`;
+		return `£${parseFloat(price).toFixed(2)}`;
 	};
 
 	if (isLoading) {
@@ -206,7 +210,7 @@ export function CategoryDetailPage() {
 							</CardHeader>
 							<CardContent>
 								<img
-									src={category.imageUrl}
+									src={signedCategoryImageUrl || category.imageUrl}
 									alt={category.name}
 									className="w-full max-w-md h-48 object-cover rounded-lg border"
 								/>
@@ -261,7 +265,10 @@ export function CategoryDetailPage() {
 													<TableCell>
 														{product.imageUrl ? (
 															<img
-																src={product.imageUrl}
+																src={
+																	(signedProductImages?.get(product.imageUrl)) ||
+																	product.imageUrl
+																}
 																alt={product.name}
 																className="w-10 h-10 object-cover rounded"
 															/>

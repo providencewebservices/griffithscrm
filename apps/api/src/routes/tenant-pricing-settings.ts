@@ -10,6 +10,7 @@ import { tenantPricingSettings } from '@griffiths-crm/shared/db/schema';
 const updateSchema = z.object({
 	defaultMarkupPercent: z.number().min(0).optional(), // 100 = 100% markup = 2x multiplier
 	vatRate: z.number().min(0).max(1).optional(), // 0.20 = 20%
+	defaultDepositPercent: z.number().min(0).max(100).optional(), // 50 = 50% deposit
 });
 
 // Create tenant pricing settings routes
@@ -37,6 +38,7 @@ const tenantPricingSettingsRoutes = new Hono()
 					tenantId,
 					defaultMarkupPercent: '100', // 100% markup = 2x multiplier
 					vatRate: '0',
+					defaultDepositPercent: '50', // 50% deposit
 				})
 				.returning();
 		}
@@ -67,6 +69,8 @@ const tenantPricingSettingsRoutes = new Hono()
 					defaultMarkupPercent:
 						data.defaultMarkupPercent !== undefined ? String(data.defaultMarkupPercent) : '100',
 					vatRate: data.vatRate !== undefined ? String(data.vatRate) : '0',
+					defaultDepositPercent:
+						data.defaultDepositPercent !== undefined ? String(data.defaultDepositPercent) : '50',
 				})
 				.returning();
 
@@ -78,6 +82,8 @@ const tenantPricingSettingsRoutes = new Hono()
 		if (data.defaultMarkupPercent !== undefined)
 			updateData.defaultMarkupPercent = String(data.defaultMarkupPercent);
 		if (data.vatRate !== undefined) updateData.vatRate = String(data.vatRate);
+		if (data.defaultDepositPercent !== undefined)
+			updateData.defaultDepositPercent = String(data.defaultDepositPercent);
 
 		const [updated] = await db
 			.update(tenantPricingSettings)

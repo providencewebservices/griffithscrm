@@ -118,7 +118,7 @@ export function ProductsPage() {
 
 	const formatPrice = (price: string | null) => {
 		if (!price) return '-';
-		return `$${parseFloat(price).toFixed(2)}`;
+		return `£${parseFloat(price).toFixed(2)}`;
 	};
 
 	const products = data?.products || [];

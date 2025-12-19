@@ -37,9 +37,12 @@ import {
 	type Sundry,
 	type CreateSundryInput,
 } from '@/hooks/use-sundries';
+import { useSignedUrls } from '@/hooks/use-uploads';
 
 export function SundriesTab() {
 	const { data: sundries, isLoading, error } = useSundriesQuery();
+	const sundryImageUrls = sundries?.map((s) => s.imageUrl) || [];
+	const { data: signedSundryImages } = useSignedUrls(sundryImageUrls);
 	const createMutation = useCreateSundryMutation();
 	const updateMutation = useUpdateSundryMutation();
 	const deleteMutation = useDeleteSundryMutation();
@@ -180,7 +183,10 @@ export function SundriesTab() {
 									<TableCell>
 										{item.imageUrl ? (
 											<img
-												src={item.imageUrl}
+												src={
+													(signedSundryImages?.get(item.imageUrl)) ||
+													item.imageUrl
+												}
 												alt={item.name}
 												className="w-10 h-10 object-cover rounded"
 											/>
@@ -194,7 +200,7 @@ export function SundriesTab() {
 									<TableCell className="max-w-[200px] truncate">
 										{item.description || <span className="text-muted-foreground">-</span>}
 									</TableCell>
-									<TableCell>${item.price}</TableCell>
+									<TableCell>£{item.price}</TableCell>
 									<TableCell>
 										<Badge variant={item.isActive ? 'default' : 'secondary'}>
 											{item.isActive ? 'Active' : 'Inactive'}
@@ -273,7 +279,7 @@ export function SundriesTab() {
 						</Field>
 
 						<Field>
-							<FieldLabel htmlFor="price">Price ($)</FieldLabel>
+							<FieldLabel htmlFor="price">Price (£)</FieldLabel>
 							<Input
 								id="price"
 								type="number"
