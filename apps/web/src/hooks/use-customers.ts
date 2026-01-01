@@ -102,14 +102,14 @@ export type UpdateCustomerInput = {
 
 export type CustomerSearchParams = {
 	q?: string;
-	includeArchived?: boolean;
+	archivedOnly?: boolean;
 };
 
 // Fetch functions
 async function fetchCustomers(params?: CustomerSearchParams): Promise<CustomerListItem[]> {
 	const searchParams = new URLSearchParams();
 	if (params?.q) searchParams.set('q', params.q);
-	if (params?.includeArchived) searchParams.set('includeArchived', 'true');
+	if (params?.archivedOnly) searchParams.set('archivedOnly', 'true');
 
 	const url = `${API_URL}/api/customers${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
 

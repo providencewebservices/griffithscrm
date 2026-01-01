@@ -150,6 +150,262 @@ export const customerAddresses = pgTable(
 );
 
 // ============================================
+// LINKED RECORDS (Funeral Directors, Councils, Churches, Chapels)
+// ============================================
+
+// Referral arrangement types for funeral directors
+export const REFERRAL_ARRANGEMENTS = ['none', 'informal', 'commission', 'preferred_partner'] as const;
+
+// Memorial site types
+export const MEMORIAL_SITE_TYPES = ['churchyard', 'crematorium'] as const;
+
+// Payment terms for suppliers
+export const PAYMENT_TERMS = ['cod', 'net_7', 'net_14', 'net_30', 'net_60', 'net_90'] as const;
+
+// Church denominations (for churchyard sites)
+export const CHURCH_DENOMINATIONS = [
+	'church_of_england',
+	'catholic',
+	'methodist',
+	'baptist',
+	'presbyterian',
+	'quaker',
+	'jewish',
+	'muslim',
+	'hindu',
+	'sikh',
+	'other',
+] as const;
+
+// Funeral Directors (referral partners)
+export const funeralDirectors = pgTable('funeral_directors', {
+	id: text('id').primaryKey(),
+	tenantId: text('tenant_id')
+		.notNull()
+		.references(() => tenants.id, { onDelete: 'cascade' }),
+	businessName: text('business_name').notNull(),
+	tradingName: text('trading_name'), // If different from legal name
+	branchName: text('branch_name'), // For chains with multiple branches
+	website: text('website'),
+	referralArrangement: text('referral_arrangement').notNull().default('none'), // From REFERRAL_ARRANGEMENTS
+	commissionRate: numeric('commission_rate', { precision: 5, scale: 2 }), // Percentage if commission-based
+	notes: text('notes'),
+	isActive: boolean('is_active').notNull().default(true),
+	archivedAt: timestamp('archived_at'),
+	createdAt: timestamp('created_at').notNull().defaultNow(),
+	updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// Funeral Director <-> Contact Info join table
+export const funeralDirectorContactInfo = pgTable(
+	'funeral_director_contact_info',
+	{
+		funeralDirectorId: text('funeral_director_id')
+			.notNull()
+			.references(() => funeralDirectors.id, { onDelete: 'cascade' }),
+		contactInfoId: text('contact_info_id')
+			.notNull()
+			.references(() => contactInfo.id, { onDelete: 'cascade' }),
+		createdAt: timestamp('created_at').notNull().defaultNow(),
+	},
+	(table) => ({
+		pk: primaryKey({ columns: [table.funeralDirectorId, table.contactInfoId] }),
+	})
+);
+
+// Funeral Director <-> Addresses join table
+export const funeralDirectorAddresses = pgTable(
+	'funeral_director_addresses',
+	{
+		funeralDirectorId: text('funeral_director_id')
+			.notNull()
+			.references(() => funeralDirectors.id, { onDelete: 'cascade' }),
+		addressId: text('address_id')
+			.notNull()
+			.references(() => addresses.id, { onDelete: 'cascade' }),
+		createdAt: timestamp('created_at').notNull().defaultNow(),
+	},
+	(table) => ({
+		pk: primaryKey({ columns: [table.funeralDirectorId, table.addressId] }),
+	})
+);
+
+// Councils / Cemeteries (local authorities managing public cemeteries)
+export const councils = pgTable('councils', {
+	id: text('id').primaryKey(),
+	tenantId: text('tenant_id')
+		.notNull()
+		.references(() => tenants.id, { onDelete: 'cascade' }),
+	councilName: text('council_name').notNull(), // e.g., "Chester City Council"
+	cemeteryName: text('cemetery_name'), // Specific cemetery name
+	department: text('department'), // e.g., "Bereavement Services"
+	permitRequired: boolean('permit_required').notNull().default(true),
+	permitFee: numeric('permit_fee', { precision: 10, scale: 2 }),
+	foundationSpec: text('foundation_spec'), // Foundation requirements
+	maxHeadstoneHeight: text('max_headstone_height'), // e.g., "3ft 6in"
+	maxHeadstoneWidth: text('max_headstone_width'),
+	approvedMaterials: text('approved_materials'), // Allowed stone types
+	installationRules: text('installation_rules'), // Specific installation requirements
+	notes: text('notes'),
+	isActive: boolean('is_active').notNull().default(true),
+	archivedAt: timestamp('archived_at'),
+	createdAt: timestamp('created_at').notNull().defaultNow(),
+	updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// Council <-> Contact Info join table
+export const councilContactInfo = pgTable(
+	'council_contact_info',
+	{
+		councilId: text('council_id')
+			.notNull()
+			.references(() => councils.id, { onDelete: 'cascade' }),
+		contactInfoId: text('contact_info_id')
+			.notNull()
+			.references(() => contactInfo.id, { onDelete: 'cascade' }),
+		createdAt: timestamp('created_at').notNull().defaultNow(),
+	},
+	(table) => ({
+		pk: primaryKey({ columns: [table.councilId, table.contactInfoId] }),
+	})
+);
+
+// Council <-> Addresses join table
+export const councilAddresses = pgTable(
+	'council_addresses',
+	{
+		councilId: text('council_id')
+			.notNull()
+			.references(() => councils.id, { onDelete: 'cascade' }),
+		addressId: text('address_id')
+			.notNull()
+			.references(() => addresses.id, { onDelete: 'cascade' }),
+		createdAt: timestamp('created_at').notNull().defaultNow(),
+	},
+	(table) => ({
+		pk: primaryKey({ columns: [table.councilId, table.addressId] }),
+	})
+);
+
+// Memorial Sites (churchyards, crematoria - unified entity for burial/memorial locations)
+export const memorialSites = pgTable('memorial_sites', {
+	id: text('id').primaryKey(),
+	tenantId: text('tenant_id')
+		.notNull()
+		.references(() => tenants.id, { onDelete: 'cascade' }),
+	name: text('name').notNull(), // e.g., "St Mary's Church" or "Blacon Crematorium"
+	siteType: text('site_type').notNull(), // From MEMORIAL_SITE_TYPES: 'churchyard' | 'crematorium'
+	// Churchyard-specific fields
+	denomination: text('denomination'), // From CHURCH_DENOMINATIONS
+	diocese: text('diocese'), // For CofE churches
+	parish: text('parish'),
+	churchyardOpen: boolean('churchyard_open'), // Accepting new burials?
+	facultyRequired: boolean('faculty_required'), // Needs faculty application? (CofE)
+	// Crematorium-specific fields
+	operatorName: text('operator_name'), // e.g., "Dignity Funerals"
+	hasMemorialGarden: boolean('has_memorial_garden'),
+	plaquesOffered: boolean('plaques_offered'),
+	memorialOptions: text('memorial_options'), // Available memorial types
+	preferredSupplier: boolean('preferred_supplier'), // Are we a preferred supplier?
+	// Common fields
+	memorialRegulations: text('memorial_regulations'), // Specific rules/restrictions
+	approvedMaterials: text('approved_materials'), // Allowed stone types
+	notes: text('notes'),
+	isActive: boolean('is_active').notNull().default(true),
+	archivedAt: timestamp('archived_at'),
+	createdAt: timestamp('created_at').notNull().defaultNow(),
+	updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// Memorial Site <-> Contact Info join table
+export const memorialSiteContactInfo = pgTable(
+	'memorial_site_contact_info',
+	{
+		memorialSiteId: text('memorial_site_id')
+			.notNull()
+			.references(() => memorialSites.id, { onDelete: 'cascade' }),
+		contactInfoId: text('contact_info_id')
+			.notNull()
+			.references(() => contactInfo.id, { onDelete: 'cascade' }),
+		createdAt: timestamp('created_at').notNull().defaultNow(),
+	},
+	(table) => ({
+		pk: primaryKey({ columns: [table.memorialSiteId, table.contactInfoId] }),
+	})
+);
+
+// Memorial Site <-> Addresses join table
+export const memorialSiteAddresses = pgTable(
+	'memorial_site_addresses',
+	{
+		memorialSiteId: text('memorial_site_id')
+			.notNull()
+			.references(() => memorialSites.id, { onDelete: 'cascade' }),
+		addressId: text('address_id')
+			.notNull()
+			.references(() => addresses.id, { onDelete: 'cascade' }),
+		createdAt: timestamp('created_at').notNull().defaultNow(),
+	},
+	(table) => ({
+		pk: primaryKey({ columns: [table.memorialSiteId, table.addressId] }),
+	})
+);
+
+// Suppliers (companies that supply materials and products)
+export const suppliers = pgTable('suppliers', {
+	id: text('id').primaryKey(),
+	tenantId: text('tenant_id')
+		.notNull()
+		.references(() => tenants.id, { onDelete: 'cascade' }),
+	businessName: text('business_name').notNull(),
+	tradingName: text('trading_name'), // If different from legal name
+	accountNumber: text('account_number'), // Tenant's account with this supplier
+	website: text('website'),
+	paymentTerms: text('payment_terms'), // From PAYMENT_TERMS
+	defaultLeadTimeDays: integer('default_lead_time_days'), // Typical delivery time
+	minimumOrderValue: numeric('minimum_order_value', { precision: 10, scale: 2 }), // Minimum order requirement
+	notes: text('notes'),
+	isActive: boolean('is_active').notNull().default(true),
+	archivedAt: timestamp('archived_at'),
+	createdAt: timestamp('created_at').notNull().defaultNow(),
+	updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// Supplier <-> Contact Info join table
+export const supplierContactInfo = pgTable(
+	'supplier_contact_info',
+	{
+		supplierId: text('supplier_id')
+			.notNull()
+			.references(() => suppliers.id, { onDelete: 'cascade' }),
+		contactInfoId: text('contact_info_id')
+			.notNull()
+			.references(() => contactInfo.id, { onDelete: 'cascade' }),
+		createdAt: timestamp('created_at').notNull().defaultNow(),
+	},
+	(table) => ({
+		pk: primaryKey({ columns: [table.supplierId, table.contactInfoId] }),
+	})
+);
+
+// Supplier <-> Addresses join table
+export const supplierAddresses = pgTable(
+	'supplier_addresses',
+	{
+		supplierId: text('supplier_id')
+			.notNull()
+			.references(() => suppliers.id, { onDelete: 'cascade' }),
+		addressId: text('address_id')
+			.notNull()
+			.references(() => addresses.id, { onDelete: 'cascade' }),
+		createdAt: timestamp('created_at').notNull().defaultNow(),
+	},
+	(table) => ({
+		pk: primaryKey({ columns: [table.supplierId, table.addressId] }),
+	})
+);
+
+// ============================================
 // PRODUCT CATALOG TABLES
 // ============================================
 
@@ -174,6 +430,9 @@ export const products = pgTable('products', {
 		.notNull()
 		.references(() => tenants.id, { onDelete: 'cascade' }),
 	categoryId: text('category_id').references(() => productCategories.id, {
+		onDelete: 'set null',
+	}),
+	supplierId: text('supplier_id').references(() => suppliers.id, {
 		onDelete: 'set null',
 	}),
 	sku: text('sku').notNull(),
@@ -372,6 +631,7 @@ export const sundries = pgTable('sundries', {
 	tenantId: text('tenant_id')
 		.notNull()
 		.references(() => tenants.id, { onDelete: 'cascade' }),
+	supplierId: text('supplier_id').references(() => suppliers.id, { onDelete: 'set null' }),
 	name: text('name').notNull(),
 	description: text('description'),
 	price: numeric('price', { precision: 10, scale: 2 }).notNull().default('0'),
@@ -444,6 +704,7 @@ export const materials = pgTable('materials', {
 	sectionId: text('section_id')
 		.notNull()
 		.references(() => materialSections.id, { onDelete: 'cascade' }),
+	supplierId: text('supplier_id').references(() => suppliers.id, { onDelete: 'set null' }),
 	name: text('name').notNull(),
 	imageUrl: text('image_url'),
 	supplierCost: numeric('supplier_cost', { precision: 10, scale: 2 }).notNull().default('0'),
@@ -511,6 +772,19 @@ export const QUOTE_STATUSES = [
 	'expired', // Validity period passed
 ] as const;
 
+// Enquiry source options (how the customer contacted us)
+export const ENQUIRY_SOURCES = [
+	'walk_in', // Customer visited in person
+	'phone', // Phone call
+	'email', // Email enquiry
+	'website', // Website contact form
+	'facebook', // Facebook/Messenger
+	'instagram', // Instagram DM
+	'whatsapp', // WhatsApp message
+	'referral', // Referred by another customer
+	'other', // Other source
+] as const;
+
 // Quotes table (immutable with versioning)
 export const quotes = pgTable('quotes', {
 	id: text('id').primaryKey(),
@@ -525,8 +799,15 @@ export const quotes = pgTable('quotes', {
 	dimensionComboId: text('dimension_combo_id').references(() => dimensionCombos.id, {
 		onDelete: 'set null',
 	}),
+	// Linked records (where the memorial will be installed / who referred)
+	funeralDirectorId: text('funeral_director_id').references(() => funeralDirectors.id, {
+		onDelete: 'set null',
+	}),
+	councilId: text('council_id').references(() => councils.id, { onDelete: 'set null' }),
+	memorialSiteId: text('memorial_site_id').references(() => memorialSites.id, { onDelete: 'set null' }),
 	quoteNumber: text('quote_number').notNull(), // Tenant-unique: "Q-00001"
 	status: text('status').notNull().default('draft'), // From QUOTE_STATUSES
+	source: text('source'), // From ENQUIRY_SOURCES - how the customer contacted us
 	subtotal: numeric('subtotal', { precision: 10, scale: 2 }).notNull().default('0'),
 	vatAmount: numeric('vat_amount', { precision: 10, scale: 2 }).notNull().default('0'),
 	total: numeric('total', { precision: 10, scale: 2 }).notNull().default('0'),
@@ -716,7 +997,7 @@ export const jobPaymentScheduleItems = pgTable('job_payment_schedule_items', {
 // Job attachment categories
 export const JOB_ATTACHMENT_CATEGORIES = ['artwork', 'proof', 'document'] as const;
 
-// Job attachments (artwork, proofs, documents)
+// Job attachments (artwork, proofs, documents) - DEPRECATED: Use documents table instead
 export const jobAttachments = pgTable('job_attachments', {
 	id: text('id').primaryKey(),
 	tenantId: text('tenant_id')
@@ -733,4 +1014,44 @@ export const jobAttachments = pgTable('job_attachments', {
 	notes: text('notes'), // Optional description
 	uploadedBy: text('uploaded_by').references(() => users.id, { onDelete: 'set null' }),
 	createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+// ============================================
+// UNIFIED DOCUMENT MANAGEMENT
+// ============================================
+
+// Entity types that can have documents attached (polymorphic pattern)
+export const DOCUMENT_ENTITY_TYPES = [
+	'customer',
+	'quote',
+	'job',
+	'funeral_director',
+	'supplier',
+	'council',
+	'memorial_site',
+	'product',
+] as const;
+
+// Documents table (unified, polymorphic document storage)
+export const documents = pgTable('documents', {
+	id: text('id').primaryKey(),
+	tenantId: text('tenant_id')
+		.notNull()
+		.references(() => tenants.id, { onDelete: 'cascade' }),
+	// Polymorphic relationship
+	entityType: text('entity_type').notNull(), // From DOCUMENT_ENTITY_TYPES
+	entityId: text('entity_id').notNull(),
+	// User-controlled metadata
+	name: text('name').notNull(), // User-defined document name
+	tags: text('tags'), // Comma-separated freeform tags
+	notes: text('notes'), // Free-form notes
+	// File information
+	filename: text('filename').notNull(), // Original filename
+	s3Key: text('s3_key').notNull(), // Full S3 path
+	contentType: text('content_type').notNull(), // MIME type
+	size: integer('size'), // File size in bytes
+	// Audit
+	uploadedBy: text('uploaded_by').references(() => users.id, { onDelete: 'set null' }),
+	createdAt: timestamp('created_at').notNull().defaultNow(),
+	updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });

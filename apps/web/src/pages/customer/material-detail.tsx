@@ -35,7 +35,15 @@ import {
 	useDeleteMaterialMutation,
 } from '@/hooks/use-materials';
 import { useMaterialSectionQuery } from '@/hooks/use-material-sections';
+import { useSuppliersQuery } from '@/hooks/use-suppliers';
 import { useUploadImageMutation, useSignedUrl } from '@/hooks/use-uploads';
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from '@/components/ui/select';
 import { ArrowLeft, ImageIcon, Upload, X, Loader2 } from 'lucide-react';
 
 export function MaterialDetailPage() {
@@ -50,9 +58,11 @@ export function MaterialDetailPage() {
 	const [formName, setFormName] = useState('');
 	const [formSupplierCost, setFormSupplierCost] = useState('0');
 	const [formImageUrl, setFormImageUrl] = useState<string | null>(null);
+	const [formSupplierId, setFormSupplierId] = useState<string | null>(null);
 
 	const { data: material, isLoading, error } = useMaterialQuery(id);
 	const { data: section } = useMaterialSectionQuery(material?.sectionId);
+	const { data: suppliers } = useSuppliersQuery({});
 	const { data: signedImageUrl } = useSignedUrl(material?.imageUrl);
 	const updateMutation = useUpdateMaterialMutation();
 	const deleteMutation = useDeleteMaterialMutation(material?.sectionId || '');
@@ -63,6 +73,7 @@ export function MaterialDetailPage() {
 		setFormName(material.name);
 		setFormSupplierCost(material.supplierCost);
 		setFormImageUrl(material.imageUrl);
+		setFormSupplierId(material.supplierId);
 		setMutationError(null);
 		setEditDialogOpen(true);
 	};
@@ -76,6 +87,7 @@ export function MaterialDetailPage() {
 				name: formName,
 				supplierCost: parseFloat(formSupplierCost) || 0,
 				imageUrl: formImageUrl,
+				supplierId: formSupplierId,
 			});
 			setEditDialogOpen(false);
 		} catch (err) {
@@ -323,6 +335,20 @@ export function MaterialDetailPage() {
 							</div>
 							<Separator />
 							<div>
+								<p className="text-sm font-medium text-muted-foreground">Supplier</p>
+								{material.supplierName ? (
+									<Link
+										to={`/app/suppliers/${material.supplierId}`}
+										className="text-primary hover:underline"
+									>
+										{material.supplierName}
+									</Link>
+								) : (
+									<p className="text-muted-foreground">-</p>
+								)}
+							</div>
+							<Separator />
+							<div>
 								<p className="text-sm font-medium text-muted-foreground">Supplier Cost</p>
 								<p className="text-lg font-semibold">{formatPrice(material.supplierCost)}</p>
 							</div>
@@ -370,6 +396,28 @@ export function MaterialDetailPage() {
 								onChange={(e) => setFormName(e.target.value)}
 								placeholder="e.g., Carrara White"
 							/>
+						</Field>
+
+						<Field>
+							<FieldLabel htmlFor="supplier">Supplier (optional)</FieldLabel>
+							<Select
+								value={formSupplierId || 'none'}
+								onValueChange={(value) =>
+									setFormSupplierId(value === 'none' ? null : value)
+								}
+							>
+								<SelectTrigger id="supplier">
+									<SelectValue placeholder="Select a supplier" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="none">No supplier</SelectItem>
+									{suppliers?.map((supplier) => (
+										<SelectItem key={supplier.id} value={supplier.id}>
+											{supplier.tradingName || supplier.businessName}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
 						</Field>
 
 						<Field>

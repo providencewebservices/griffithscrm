@@ -11,23 +11,15 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CustomerFormDialog } from '@/components/customer/customer-form-dialog';
-import {
-	useCustomersQuery,
-	useCreateCustomerMutation,
-	type CreateCustomerInput,
-} from '@/hooks/use-customers';
-import { useTenantSettingsQuery } from '@/hooks/use-tenant-settings';
+import { useSuppliersQuery } from '@/hooks/use-suppliers';
 import { Search } from 'lucide-react';
 
 type ViewMode = 'active' | 'archived';
 
-export function CustomersPage() {
+export function SuppliersPage() {
 	const [searchQuery, setSearchQuery] = useState('');
 	const [viewMode, setViewMode] = useState<ViewMode>('active');
 	const [debouncedSearch, setDebouncedSearch] = useState('');
-	const [formDialogOpen, setFormDialogOpen] = useState(false);
-	const [mutationError, setMutationError] = useState<string | null>(null);
 
 	// Debounce search
 	useMemo(() => {
@@ -37,41 +29,21 @@ export function CustomersPage() {
 		return () => clearTimeout(timer);
 	}, [searchQuery]);
 
-	const { data: customers, isLoading, error } = useCustomersQuery({
+	const { data: suppliers, isLoading, error } = useSuppliersQuery({
 		q: debouncedSearch || undefined,
 		archivedOnly: viewMode === 'archived',
 	});
-
-	const createMutation = useCreateCustomerMutation();
-
-	const { data: tenantSettings } = useTenantSettingsQuery();
-	const defaultCountry = tenantSettings?.address?.country || 'US';
-
-	const handleAddCustomer = () => {
-		setMutationError(null);
-		setFormDialogOpen(true);
-	};
-
-	const handleFormSubmit = async (data: CreateCustomerInput) => {
-		setMutationError(null);
-		try {
-			await createMutation.mutateAsync(data);
-			setFormDialogOpen(false);
-		} catch (err) {
-			setMutationError(err instanceof Error ? err.message : 'An error occurred');
-		}
-	};
 
 	if (isLoading) {
 		return (
 			<div>
 				<div className="mb-6">
-					<h2 className="text-2xl font-bold">Customers</h2>
+					<h2 className="text-2xl font-bold">Suppliers</h2>
 					<p className="text-muted-foreground mt-1">
-						Manage your customer database
+						Manage your material and product suppliers
 					</p>
 				</div>
-				<div className="text-muted-foreground">Loading customers...</div>
+				<div className="text-muted-foreground">Loading suppliers...</div>
 			</div>
 		);
 	}
@@ -80,13 +52,13 @@ export function CustomersPage() {
 		return (
 			<div>
 				<div className="mb-6">
-					<h2 className="text-2xl font-bold">Customers</h2>
+					<h2 className="text-2xl font-bold">Suppliers</h2>
 					<p className="text-muted-foreground mt-1">
-						Manage your customer database
+						Manage your material and product suppliers
 					</p>
 				</div>
 				<div className="text-destructive">
-					Error loading customers: {error.message}
+					Error loading suppliers: {error.message}
 				</div>
 			</div>
 		);
@@ -95,9 +67,9 @@ export function CustomersPage() {
 	return (
 		<div>
 			<div className="mb-6">
-				<h2 className="text-2xl font-bold">Customers</h2>
+				<h2 className="text-2xl font-bold">Suppliers</h2>
 				<p className="text-muted-foreground mt-1">
-					Manage your customer database
+					Manage your material and product suppliers
 				</p>
 			</div>
 
@@ -112,29 +84,25 @@ export function CustomersPage() {
 					<div className="relative flex-1">
 						<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
 						<Input
-							placeholder="Search by name, email, phone, or address..."
+							placeholder="Search by name, account number, or location..."
 							value={searchQuery}
 							onChange={(e) => setSearchQuery(e.target.value)}
 							className="pl-9"
 						/>
 					</div>
 				</div>
-				<Button onClick={handleAddCustomer}>Add Customer</Button>
+				<Link to="/app/suppliers/new">
+					<Button>Add Supplier</Button>
+				</Link>
 			</div>
 
-			{mutationError && (
-				<div className="bg-destructive/10 text-destructive px-4 py-2 rounded mb-4">
-					{mutationError}
-				</div>
-			)}
-
-			{customers && customers.length === 0 ? (
+			{suppliers && suppliers.length === 0 ? (
 				<div className="text-center py-8 text-muted-foreground">
 					{searchQuery
-						? 'No customers found matching your search.'
+						? 'No suppliers found matching your search.'
 						: viewMode === 'archived'
-							? 'No archived customers.'
-							: 'No customers yet. Add your first customer to get started.'}
+							? 'No archived suppliers.'
+							: 'No suppliers yet. Add your first supplier to get started.'}
 				</div>
 			) : (
 				<div className="border rounded-lg">
@@ -142,41 +110,42 @@ export function CustomersPage() {
 						<TableHeader>
 							<TableRow>
 								<TableHead>Name</TableHead>
-								<TableHead>Email</TableHead>
+								<TableHead>Account #</TableHead>
 								<TableHead>Phone</TableHead>
-								<TableHead>Location</TableHead>
+								<TableHead className="text-center">Materials</TableHead>
+								<TableHead className="text-center">Sundries</TableHead>
 								<TableHead className="w-[100px]">Actions</TableHead>
 							</TableRow>
 						</TableHeader>
 						<TableBody>
-							{customers?.map((customer) => (
-								<TableRow key={customer.id}>
+							{suppliers?.map((supplier) => (
+								<TableRow key={supplier.id}>
 									<TableCell className="font-medium">
-										{customer.firstName} {customer.lastName}
-									</TableCell>
-									<TableCell>
-										{customer.primaryEmail?.value || (
-											<span className="text-muted-foreground">-</span>
-										)}
-									</TableCell>
-									<TableCell>
-										{customer.primaryPhone?.value || (
-											<span className="text-muted-foreground">-</span>
-										)}
-									</TableCell>
-									<TableCell>
-										{customer.primaryAddress ? (
-											<span>
-												{customer.primaryAddress.locality}
-												{customer.primaryAddress.administrativeAreaLevel1 &&
-													`, ${customer.primaryAddress.administrativeAreaLevel1}`}
+										{supplier.tradingName || supplier.businessName}
+										{supplier.tradingName && supplier.tradingName !== supplier.businessName && (
+											<span className="text-muted-foreground text-sm block">
+												{supplier.businessName}
 											</span>
-										) : (
+										)}
+									</TableCell>
+									<TableCell>
+										{supplier.accountNumber || (
 											<span className="text-muted-foreground">-</span>
 										)}
 									</TableCell>
 									<TableCell>
-										<Link to={`/app/customers/${customer.id}`}>
+										{supplier.primaryPhone?.value || (
+											<span className="text-muted-foreground">-</span>
+										)}
+									</TableCell>
+									<TableCell className="text-center">
+										{supplier.materialsCount}
+									</TableCell>
+									<TableCell className="text-center">
+										{supplier.sundriesCount}
+									</TableCell>
+									<TableCell>
+										<Link to={`/app/suppliers/${supplier.id}`}>
 											<Button variant="ghost" size="sm">
 												View
 											</Button>
@@ -188,16 +157,6 @@ export function CustomersPage() {
 					</Table>
 				</div>
 			)}
-
-			<CustomerFormDialog
-				open={formDialogOpen}
-				onOpenChange={setFormDialogOpen}
-				onSubmit={handleFormSubmit}
-				customer={null}
-				isLoading={createMutation.isPending}
-				error={mutationError}
-				defaultCountry={defaultCountry}
-			/>
 		</div>
 	);
 }

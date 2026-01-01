@@ -11,8 +11,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from '@/components/ui/select';
 import { CategorySelect } from './category-select';
 import { ImageUpload } from '@/components/ui/image-upload';
+import { useSuppliersQuery } from '@/hooks/use-suppliers';
 import type { Product, CreateProductInput } from '@/hooks/use-products';
 
 type ProductFormDialogProps = {
@@ -32,10 +40,13 @@ export function ProductFormDialog({
 	isLoading,
 	error,
 }: ProductFormDialogProps) {
+	const { data: suppliers } = useSuppliersQuery({});
+
 	const [sku, setSku] = useState('');
 	const [name, setName] = useState('');
 	const [description, setDescription] = useState('');
 	const [categoryId, setCategoryId] = useState<string | null>(null);
+	const [supplierId, setSupplierId] = useState<string | null>(null);
 	const [imageUrl, setImageUrl] = useState<string | null>(null);
 	const [entityId, setEntityId] = useState('');
 
@@ -48,6 +59,7 @@ export function ProductFormDialog({
 				setName(product.name);
 				setDescription(product.description || '');
 				setCategoryId(product.categoryId);
+				setSupplierId(product.supplierId);
 				setImageUrl(product.imageUrl);
 				setEntityId(product.id);
 			} else {
@@ -55,6 +67,7 @@ export function ProductFormDialog({
 				setName('');
 				setDescription('');
 				setCategoryId(null);
+				setSupplierId(null);
 				setImageUrl(null);
 				setEntityId(crypto.randomUUID());
 			}
@@ -67,6 +80,7 @@ export function ProductFormDialog({
 			name,
 			description: description || undefined,
 			categoryId: categoryId || null,
+			supplierId: supplierId || null,
 			imageUrl,
 		};
 		onSubmit(data);
@@ -113,6 +127,26 @@ export function ProductFormDialog({
 							/>
 						</Field>
 					</div>
+
+					<Field>
+						<FieldLabel htmlFor="supplier">Supplier (optional)</FieldLabel>
+						<Select
+							value={supplierId || 'none'}
+							onValueChange={(value) => setSupplierId(value === 'none' ? null : value)}
+						>
+							<SelectTrigger id="supplier">
+								<SelectValue placeholder="Select a supplier" />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="none">No supplier</SelectItem>
+								{suppliers?.map((supplier) => (
+									<SelectItem key={supplier.id} value={supplier.id}>
+										{supplier.tradingName || supplier.businessName}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+					</Field>
 
 					<Field>
 						<FieldLabel htmlFor="name">Name</FieldLabel>

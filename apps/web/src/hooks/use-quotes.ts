@@ -117,6 +117,7 @@ export type Quote = {
 	customerId: string | null;
 	productId: string | null;
 	dimensionComboId: string | null;
+	source: string | null;
 	quoteNumber: string;
 	status: QuoteStatus;
 	subtotal: string;
@@ -206,6 +207,7 @@ export type CreateQuoteInput = {
 	productId?: string;
 	dimensionComboId?: string;
 	flowerHoles?: FlowerHoleChoice;
+	source?: string;
 	proposedInscription?: string;
 	notes?: string;
 	internalNotes?: string;

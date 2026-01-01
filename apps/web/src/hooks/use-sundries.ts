@@ -5,6 +5,7 @@ const API_URL = 'http://localhost:3000';
 export type Sundry = {
 	id: string;
 	tenantId: string;
+	supplierId: string | null;
 	name: string;
 	description: string | null;
 	price: string;
@@ -13,12 +14,14 @@ export type Sundry = {
 	sortOrder: number;
 	createdAt: string;
 	updatedAt: string;
+	supplierName: string | null;
 };
 
 export type CreateSundryInput = {
 	name: string;
 	description?: string;
 	price: number;
+	supplierId?: string | null;
 	imageUrl?: string | null;
 };
 
@@ -26,6 +29,7 @@ export type UpdateSundryInput = {
 	name?: string;
 	description?: string | null;
 	price?: number;
+	supplierId?: string | null;
 	imageUrl?: string | null;
 	isActive?: boolean;
 };

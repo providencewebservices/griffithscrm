@@ -31,6 +31,7 @@ export type Product = {
 	id: string;
 	tenantId: string;
 	categoryId: string | null;
+	supplierId: string | null;
 	sku: string;
 	name: string;
 	description: string | null;
@@ -41,6 +42,7 @@ export type Product = {
 	createdAt: string;
 	updatedAt: string;
 	category: { id: string; name: string } | null;
+	supplierName: string | null;
 	optionCount?: number;
 	options?: ProductOption[];
 };
@@ -66,6 +68,7 @@ export type CreateProductInput = {
 	name: string;
 	description?: string;
 	categoryId?: string | null;
+	supplierId?: string | null;
 	imageUrl?: string | null;
 	isActive?: boolean;
 };
@@ -75,6 +78,7 @@ export type UpdateProductInput = {
 	name?: string;
 	description?: string | null;
 	categoryId?: string | null;
+	supplierId?: string | null;
 	imageUrl?: string | null;
 	isActive?: boolean;
 };

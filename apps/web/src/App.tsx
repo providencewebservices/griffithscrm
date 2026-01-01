@@ -22,6 +22,18 @@ import { QuoteDetailPage } from './pages/customer/quote-detail';
 import { QuoteNewPage } from './pages/customer/quote-new';
 import { JobsPage } from './pages/customer/jobs';
 import { JobDetailPage } from './pages/customer/job-detail';
+import { FuneralDirectorsPage } from './pages/customer/funeral-directors';
+import { FuneralDirectorDetailPage } from './pages/customer/funeral-director-detail';
+import { FuneralDirectorFormPage } from './pages/customer/funeral-director-form';
+import { CouncilsPage } from './pages/customer/councils';
+import { CouncilDetailPage } from './pages/customer/council-detail';
+import { CouncilFormPage } from './pages/customer/council-form';
+import { MemorialSitesPage } from './pages/customer/memorial-sites';
+import { MemorialSiteDetailPage } from './pages/customer/memorial-site-detail';
+import { MemorialSiteFormPage } from './pages/customer/memorial-site-form';
+import { SuppliersPage } from './pages/customer/suppliers';
+import { SupplierDetailPage } from './pages/customer/supplier-detail';
+import { SupplierFormPage } from './pages/customer/supplier-form';
 import { PublicQuoteViewPage } from './pages/public/quote-view';
 import { ProtectedRoute } from './components/protected-route';
 import { RoleBasedRedirect } from './components/role-based-redirect';
@@ -78,6 +90,22 @@ function App() {
 					<Route path="lettering-techniques/:id" element={<LetteringTechniqueDetailPage />} />
 					<Route path="material-sections/:id" element={<MaterialSectionDetailPage />} />
 					<Route path="materials/:id" element={<MaterialDetailPage />} />
+					<Route path="funeral-directors" element={<FuneralDirectorsPage />} />
+					<Route path="funeral-directors/new" element={<FuneralDirectorFormPage />} />
+					<Route path="funeral-directors/:id" element={<FuneralDirectorDetailPage />} />
+					<Route path="funeral-directors/:id/edit" element={<FuneralDirectorFormPage />} />
+					<Route path="councils" element={<CouncilsPage />} />
+					<Route path="councils/new" element={<CouncilFormPage />} />
+					<Route path="councils/:id" element={<CouncilDetailPage />} />
+					<Route path="councils/:id/edit" element={<CouncilFormPage />} />
+					<Route path="memorial-sites" element={<MemorialSitesPage />} />
+					<Route path="memorial-sites/new" element={<MemorialSiteFormPage />} />
+					<Route path="memorial-sites/:id" element={<MemorialSiteDetailPage />} />
+					<Route path="memorial-sites/:id/edit" element={<MemorialSiteFormPage />} />
+					<Route path="suppliers" element={<SuppliersPage />} />
+					<Route path="suppliers/new" element={<SupplierFormPage />} />
+					<Route path="suppliers/:id" element={<SupplierDetailPage />} />
+					<Route path="suppliers/:id/edit" element={<SupplierFormPage />} />
 				</Route>
 			</Routes>
 		</BrowserRouter>

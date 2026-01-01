@@ -11,23 +11,16 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CustomerFormDialog } from '@/components/customer/customer-form-dialog';
-import {
-	useCustomersQuery,
-	useCreateCustomerMutation,
-	type CreateCustomerInput,
-} from '@/hooks/use-customers';
-import { useTenantSettingsQuery } from '@/hooks/use-tenant-settings';
-import { Search } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { useCouncilsQuery } from '@/hooks/use-councils';
+import { Search, CheckCircle, XCircle } from 'lucide-react';
 
 type ViewMode = 'active' | 'archived';
 
-export function CustomersPage() {
+export function CouncilsPage() {
 	const [searchQuery, setSearchQuery] = useState('');
 	const [viewMode, setViewMode] = useState<ViewMode>('active');
 	const [debouncedSearch, setDebouncedSearch] = useState('');
-	const [formDialogOpen, setFormDialogOpen] = useState(false);
-	const [mutationError, setMutationError] = useState<string | null>(null);
 
 	// Debounce search
 	useMemo(() => {
@@ -37,41 +30,21 @@ export function CustomersPage() {
 		return () => clearTimeout(timer);
 	}, [searchQuery]);
 
-	const { data: customers, isLoading, error } = useCustomersQuery({
+	const { data: councils, isLoading, error } = useCouncilsQuery({
 		q: debouncedSearch || undefined,
 		archivedOnly: viewMode === 'archived',
 	});
-
-	const createMutation = useCreateCustomerMutation();
-
-	const { data: tenantSettings } = useTenantSettingsQuery();
-	const defaultCountry = tenantSettings?.address?.country || 'US';
-
-	const handleAddCustomer = () => {
-		setMutationError(null);
-		setFormDialogOpen(true);
-	};
-
-	const handleFormSubmit = async (data: CreateCustomerInput) => {
-		setMutationError(null);
-		try {
-			await createMutation.mutateAsync(data);
-			setFormDialogOpen(false);
-		} catch (err) {
-			setMutationError(err instanceof Error ? err.message : 'An error occurred');
-		}
-	};
 
 	if (isLoading) {
 		return (
 			<div>
 				<div className="mb-6">
-					<h2 className="text-2xl font-bold">Customers</h2>
+					<h2 className="text-2xl font-bold">Councils</h2>
 					<p className="text-muted-foreground mt-1">
-						Manage your customer database
+						Manage council cemetery regulations and requirements
 					</p>
 				</div>
-				<div className="text-muted-foreground">Loading customers...</div>
+				<div className="text-muted-foreground">Loading councils...</div>
 			</div>
 		);
 	}
@@ -80,13 +53,13 @@ export function CustomersPage() {
 		return (
 			<div>
 				<div className="mb-6">
-					<h2 className="text-2xl font-bold">Customers</h2>
+					<h2 className="text-2xl font-bold">Councils</h2>
 					<p className="text-muted-foreground mt-1">
-						Manage your customer database
+						Manage council cemetery regulations and requirements
 					</p>
 				</div>
 				<div className="text-destructive">
-					Error loading customers: {error.message}
+					Error loading councils: {error.message}
 				</div>
 			</div>
 		);
@@ -95,9 +68,9 @@ export function CustomersPage() {
 	return (
 		<div>
 			<div className="mb-6">
-				<h2 className="text-2xl font-bold">Customers</h2>
+				<h2 className="text-2xl font-bold">Councils</h2>
 				<p className="text-muted-foreground mt-1">
-					Manage your customer database
+					Manage council cemetery regulations and requirements
 				</p>
 			</div>
 
@@ -112,71 +85,81 @@ export function CustomersPage() {
 					<div className="relative flex-1">
 						<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
 						<Input
-							placeholder="Search by name, email, phone, or address..."
+							placeholder="Search by council name, cemetery, or location..."
 							value={searchQuery}
 							onChange={(e) => setSearchQuery(e.target.value)}
 							className="pl-9"
 						/>
 					</div>
 				</div>
-				<Button onClick={handleAddCustomer}>Add Customer</Button>
+				<Link to="/app/councils/new">
+					<Button>Add Council</Button>
+				</Link>
 			</div>
 
-			{mutationError && (
-				<div className="bg-destructive/10 text-destructive px-4 py-2 rounded mb-4">
-					{mutationError}
-				</div>
-			)}
-
-			{customers && customers.length === 0 ? (
+			{councils && councils.length === 0 ? (
 				<div className="text-center py-8 text-muted-foreground">
 					{searchQuery
-						? 'No customers found matching your search.'
+						? 'No councils found matching your search.'
 						: viewMode === 'archived'
-							? 'No archived customers.'
-							: 'No customers yet. Add your first customer to get started.'}
+							? 'No archived councils.'
+							: 'No councils yet. Add your first council to get started.'}
 				</div>
 			) : (
 				<div className="border rounded-lg">
 					<Table>
 						<TableHeader>
 							<TableRow>
-								<TableHead>Name</TableHead>
-								<TableHead>Email</TableHead>
+								<TableHead>Council Name</TableHead>
+								<TableHead>Cemetery</TableHead>
+								<TableHead>Permit Required</TableHead>
 								<TableHead>Phone</TableHead>
 								<TableHead>Location</TableHead>
 								<TableHead className="w-[100px]">Actions</TableHead>
 							</TableRow>
 						</TableHeader>
 						<TableBody>
-							{customers?.map((customer) => (
-								<TableRow key={customer.id}>
+							{councils?.map((council) => (
+								<TableRow key={council.id}>
 									<TableCell className="font-medium">
-										{customer.firstName} {customer.lastName}
+										{council.councilName}
 									</TableCell>
 									<TableCell>
-										{customer.primaryEmail?.value || (
+										{council.cemeteryName || (
 											<span className="text-muted-foreground">-</span>
 										)}
 									</TableCell>
 									<TableCell>
-										{customer.primaryPhone?.value || (
+										{council.permitRequired ? (
+											<Badge variant="default" className="gap-1">
+												<CheckCircle className="h-3 w-3" />
+												Required
+											</Badge>
+										) : (
+											<Badge variant="secondary" className="gap-1">
+												<XCircle className="h-3 w-3" />
+												Not Required
+											</Badge>
+										)}
+									</TableCell>
+									<TableCell>
+										{council.primaryPhone?.value || (
 											<span className="text-muted-foreground">-</span>
 										)}
 									</TableCell>
 									<TableCell>
-										{customer.primaryAddress ? (
+										{council.primaryAddress ? (
 											<span>
-												{customer.primaryAddress.locality}
-												{customer.primaryAddress.administrativeAreaLevel1 &&
-													`, ${customer.primaryAddress.administrativeAreaLevel1}`}
+												{council.primaryAddress.locality}
+												{council.primaryAddress.administrativeAreaLevel1 &&
+													`, ${council.primaryAddress.administrativeAreaLevel1}`}
 											</span>
 										) : (
 											<span className="text-muted-foreground">-</span>
 										)}
 									</TableCell>
 									<TableCell>
-										<Link to={`/app/customers/${customer.id}`}>
+										<Link to={`/app/councils/${council.id}`}>
 											<Button variant="ghost" size="sm">
 												View
 											</Button>
@@ -188,16 +171,6 @@ export function CustomersPage() {
 					</Table>
 				</div>
 			)}
-
-			<CustomerFormDialog
-				open={formDialogOpen}
-				onOpenChange={setFormDialogOpen}
-				onSubmit={handleFormSubmit}
-				customer={null}
-				isLoading={createMutation.isPending}
-				error={mutationError}
-				defaultCountry={defaultCountry}
-			/>
 		</div>
 	);
 }

@@ -6,6 +6,7 @@ export type Material = {
 	id: string;
 	tenantId: string;
 	sectionId: string;
+	supplierId: string | null;
 	name: string;
 	imageUrl: string | null;
 	supplierCost: string;
@@ -13,10 +14,12 @@ export type Material = {
 	sortOrder: number;
 	createdAt: string;
 	updatedAt: string;
+	supplierName: string | null;
 };
 
 export type CreateMaterialInput = {
 	sectionId: string;
+	supplierId?: string | null;
 	name: string;
 	imageUrl?: string | null;
 	supplierCost: number;
@@ -25,6 +28,7 @@ export type CreateMaterialInput = {
 
 export type UpdateMaterialInput = {
 	name?: string;
+	supplierId?: string | null;
 	imageUrl?: string | null;
 	supplierCost?: number;
 	isActive?: boolean;

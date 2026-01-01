@@ -4,13 +4,14 @@ import { z } from 'zod';
 import { eq, and, asc } from 'drizzle-orm';
 import { requireAuth, requireTenant } from '../middleware/auth';
 import { db } from '../lib/auth';
-import { sundries } from '@griffiths-crm/shared/db/schema';
+import { sundries, suppliers } from '@griffiths-crm/shared/db/schema';
 
 // Validation schemas
 const createSchema = z.object({
 	name: z.string().min(1, 'Name is required'),
 	description: z.string().optional(),
 	price: z.number().min(0, 'Price must be non-negative'),
+	supplierId: z.string().nullable().optional(),
 	imageUrl: z.string().url().optional().nullable(),
 	isActive: z.boolean().optional().default(true),
 });
@@ -19,6 +20,7 @@ const updateSchema = z.object({
 	name: z.string().min(1, 'Name is required').optional(),
 	description: z.string().optional().nullable(),
 	price: z.number().min(0, 'Price must be non-negative').optional(),
+	supplierId: z.string().nullable().optional(),
 	imageUrl: z.string().url().optional().nullable(),
 	isActive: z.boolean().optional(),
 });
@@ -34,8 +36,22 @@ const sundriesRoutes = new Hono()
 		const tenantId = currentUser.tenantId!;
 
 		const items = await db
-			.select()
+			.select({
+				id: sundries.id,
+				tenantId: sundries.tenantId,
+				supplierId: sundries.supplierId,
+				name: sundries.name,
+				description: sundries.description,
+				price: sundries.price,
+				imageUrl: sundries.imageUrl,
+				isActive: sundries.isActive,
+				sortOrder: sundries.sortOrder,
+				createdAt: sundries.createdAt,
+				updatedAt: sundries.updatedAt,
+				supplierName: suppliers.businessName,
+			})
 			.from(sundries)
+			.leftJoin(suppliers, eq(sundries.supplierId, suppliers.id))
 			.where(eq(sundries.tenantId, tenantId))
 			.orderBy(asc(sundries.sortOrder), asc(sundries.name));
 
@@ -65,6 +81,7 @@ const sundriesRoutes = new Hono()
 				name: data.name,
 				description: data.description || null,
 				price: String(data.price),
+				supplierId: data.supplierId || null,
 				imageUrl: data.imageUrl || null,
 				isActive: data.isActive ?? true,
 				sortOrder: maxSortOrder + 1,
@@ -96,6 +113,7 @@ const sundriesRoutes = new Hono()
 		if (data.name !== undefined) updateData.name = data.name;
 		if (data.description !== undefined) updateData.description = data.description;
 		if (data.price !== undefined) updateData.price = String(data.price);
+		if (data.supplierId !== undefined) updateData.supplierId = data.supplierId;
 		if (data.imageUrl !== undefined) updateData.imageUrl = data.imageUrl;
 		if (data.isActive !== undefined) updateData.isActive = data.isActive;
 

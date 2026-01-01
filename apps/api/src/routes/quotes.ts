@@ -36,6 +36,7 @@ import {
 	COMPONENT_TYPES,
 	LETTERING_COST_APPLIES_TO,
 	FLOWER_HOLE_CHOICES,
+	ENQUIRY_SOURCES,
 } from '@griffiths-crm/shared/db/schema';
 import { generateJobNumber } from './jobs';
 
@@ -329,6 +330,7 @@ const createQuoteSchema = z.object({
 	customerId: z.string().optional(),
 	productId: z.string().optional(),
 	dimensionComboId: z.string().optional(),
+	source: z.enum(ENQUIRY_SOURCES).optional(), // How the customer contacted us
 	flowerHoles: z.enum(FLOWER_HOLE_CHOICES).optional(),
 	proposedInscription: z.string().optional(), // Full text of desired inscription
 	notes: z.string().optional(), // Customer-visible notes
@@ -816,6 +818,7 @@ const quotesRoutes = new Hono()
 				customerId,
 				productId: data.productId || null,
 				dimensionComboId: data.dimensionComboId || null,
+				source: data.source || null,
 				quoteNumber,
 				status: 'draft',
 				subtotal: String(subtotal),
@@ -1130,6 +1133,7 @@ const quotesRoutes = new Hono()
 			customerId: mergedData.customerId || null,
 			productId: mergedData.productId || null,
 			dimensionComboId: data.dimensionComboId ?? original.dimensionComboId ?? null,
+			source: data.source ?? original.source ?? null,
 			quoteNumber,
 			status: 'draft',
 			subtotal: String(subtotal),

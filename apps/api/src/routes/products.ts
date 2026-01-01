@@ -9,6 +9,7 @@ import {
 	productCategories,
 	productOptions,
 	optionChoices,
+	suppliers,
 } from '@griffiths-crm/shared/db/schema';
 
 // Validation schemas
@@ -17,6 +18,7 @@ const createSchema = z.object({
 	name: z.string().min(1, 'Name is required'),
 	description: z.string().optional(),
 	categoryId: z.string().optional().nullable(),
+	supplierId: z.string().optional().nullable(),
 	imageUrl: z.string().optional().nullable(),
 	isActive: z.boolean().optional().default(true),
 });
@@ -26,6 +28,7 @@ const updateSchema = z.object({
 	name: z.string().min(1, 'Name is required').optional(),
 	description: z.string().optional().nullable(),
 	categoryId: z.string().optional().nullable(),
+	supplierId: z.string().optional().nullable(),
 	imageUrl: z.string().optional().nullable(),
 	isActive: z.boolean().optional(),
 });
@@ -41,12 +44,13 @@ const listQuerySchema = z.object({
 
 // Helper function to get product with all relations
 async function getProductWithRelations(productId: string, tenantId: string) {
-	// Get product with category
+	// Get product with category and supplier
 	const [product] = await db
 		.select({
 			id: products.id,
 			tenantId: products.tenantId,
 			categoryId: products.categoryId,
+			supplierId: products.supplierId,
 			sku: products.sku,
 			name: products.name,
 			description: products.description,
@@ -57,9 +61,12 @@ async function getProductWithRelations(productId: string, tenantId: string) {
 			createdAt: products.createdAt,
 			updatedAt: products.updatedAt,
 			categoryName: productCategories.name,
+			supplierBusinessName: suppliers.businessName,
+			supplierTradingName: suppliers.tradingName,
 		})
 		.from(products)
 		.leftJoin(productCategories, eq(productCategories.id, products.categoryId))
+		.leftJoin(suppliers, eq(suppliers.id, products.supplierId))
 		.where(and(eq(products.id, productId), eq(products.tenantId, tenantId)))
 		.limit(1);
 
@@ -92,6 +99,7 @@ async function getProductWithRelations(productId: string, tenantId: string) {
 		category: product.categoryId
 			? { id: product.categoryId, name: product.categoryName }
 			: null,
+		supplierName: product.supplierTradingName || product.supplierBusinessName || null,
 		options: optionsWithChoices,
 	};
 }
@@ -145,7 +153,7 @@ const productsRoutes = new Hono()
 			.where(and(...conditions));
 		const total = Number(totalResult.count);
 
-		// Get paginated products with category name and option count
+		// Get paginated products with category name, supplier, and option count
 		const offset = (page - 1) * limit;
 		const productList = await db
 			.select({
@@ -159,11 +167,15 @@ const productsRoutes = new Hono()
 				archivedAt: products.archivedAt,
 				categoryId: products.categoryId,
 				categoryName: productCategories.name,
+				supplierId: products.supplierId,
+				supplierBusinessName: suppliers.businessName,
+				supplierTradingName: suppliers.tradingName,
 				createdAt: products.createdAt,
 				updatedAt: products.updatedAt,
 			})
 			.from(products)
 			.leftJoin(productCategories, eq(productCategories.id, products.categoryId))
+			.leftJoin(suppliers, eq(suppliers.id, products.supplierId))
 			.where(and(...conditions))
 			.orderBy(desc(products.createdAt))
 			.limit(limit)
@@ -188,6 +200,7 @@ const productsRoutes = new Hono()
 		const productsWithMeta = productList.map((p) => ({
 			...p,
 			category: p.categoryId ? { id: p.categoryId, name: p.categoryName } : null,
+			supplierName: p.supplierTradingName || p.supplierBusinessName || null,
 			optionCount: optionCountMap.get(p.id) || 0,
 		}));
 
@@ -261,6 +274,7 @@ const productsRoutes = new Hono()
 				name: data.name,
 				description: data.description || null,
 				categoryId: data.categoryId || null,
+				supplierId: data.supplierId || null,
 				imageUrl: data.imageUrl || null,
 				isActive: data.isActive ?? true,
 			})
@@ -331,6 +345,7 @@ const productsRoutes = new Hono()
 		if (data.name !== undefined) updateData.name = data.name;
 		if (data.description !== undefined) updateData.description = data.description;
 		if (data.categoryId !== undefined) updateData.categoryId = data.categoryId;
+		if (data.supplierId !== undefined) updateData.supplierId = data.supplierId;
 		if (data.imageUrl !== undefined) updateData.imageUrl = data.imageUrl;
 		if (data.isActive !== undefined) updateData.isActive = data.isActive;
 
@@ -466,6 +481,7 @@ const productsRoutes = new Hono()
 			name: `${existing.name} (Copy)`,
 			description: existing.description,
 			categoryId: existing.categoryId,
+			supplierId: existing.supplierId,
 			basePrice: existing.basePrice,
 			isActive: false, // New copies start inactive
 		});

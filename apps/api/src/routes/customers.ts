@@ -53,7 +53,7 @@ const updateCustomerSchema = z.object({
 
 const searchQuerySchema = z.object({
 	q: z.string().optional(),
-	includeArchived: z.enum(['true', 'false']).optional().default('false'),
+	archivedOnly: z.enum(['true', 'false']).optional().default('false'),
 });
 
 // Helper function to get customer with relations
@@ -98,13 +98,15 @@ const customerRoutes = new Hono()
 	.get('/', zValidator('query', searchQuerySchema), async (c) => {
 		const currentUser = c.get('user');
 		const tenantId = currentUser.tenantId!;
-		const { q, includeArchived } = c.req.valid('query');
+		const { q, archivedOnly } = c.req.valid('query');
 
 		// Build base query
 		let baseConditions = [eq(customers.tenantId, tenantId)];
 
-		// Filter archived unless includeArchived is true
-		if (includeArchived !== 'true') {
+		// Filter by archived status
+		if (archivedOnly === 'true') {
+			baseConditions.push(isNotNull(customers.archivedAt));
+		} else {
 			baseConditions.push(isNull(customers.archivedAt));
 		}
 

@@ -47,6 +47,14 @@ import {
 	useCreateMaterialMutation,
 	type CreateMaterialInput,
 } from '@/hooks/use-materials';
+import { useSuppliersQuery } from '@/hooks/use-suppliers';
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from '@/components/ui/select';
 import { ArrowLeft, Plus } from 'lucide-react';
 
 export function MaterialSectionDetailPage() {
@@ -66,8 +74,10 @@ export function MaterialSectionDetailPage() {
 	const [materialSupplierCost, setMaterialSupplierCost] = useState('0');
 	const [materialImageUrl, setMaterialImageUrl] = useState<string | null>(null);
 	const [materialEntityId, setMaterialEntityId] = useState('');
+	const [materialSupplierId, setMaterialSupplierId] = useState<string | null>(null);
 
 	const { data: section, isLoading, error } = useMaterialSectionQuery(id);
+	const { data: suppliers } = useSuppliersQuery({});
 	const updateMutation = useUpdateMaterialSectionMutation();
 	const deleteMutation = useDeleteMaterialSectionMutation();
 	const createMaterialMutation = useCreateMaterialMutation();
@@ -110,6 +120,7 @@ export function MaterialSectionDetailPage() {
 		setMaterialSupplierCost('0');
 		setMaterialImageUrl(null);
 		setMaterialEntityId(crypto.randomUUID());
+		setMaterialSupplierId(null);
 		setMutationError(null);
 		setMaterialFormOpen(true);
 	};
@@ -124,6 +135,7 @@ export function MaterialSectionDetailPage() {
 				name: materialName,
 				supplierCost: parseFloat(materialSupplierCost) || 0,
 				imageUrl: materialImageUrl,
+				supplierId: materialSupplierId,
 			};
 			await createMaterialMutation.mutateAsync(data);
 			setMaterialFormOpen(false);
@@ -235,6 +247,7 @@ export function MaterialSectionDetailPage() {
 										<TableHeader>
 											<TableRow>
 												<TableHead>Name</TableHead>
+												<TableHead>Supplier</TableHead>
 												<TableHead>Supplier Cost</TableHead>
 												<TableHead>Status</TableHead>
 												<TableHead className="w-[80px]"></TableHead>
@@ -251,7 +264,19 @@ export function MaterialSectionDetailPage() {
 															{material.name}
 														</Link>
 													</TableCell>
-													<TableCell>${material.supplierCost}</TableCell>
+													<TableCell>
+														{material.supplierName ? (
+															<Link
+																to={`/app/suppliers/${material.supplierId}`}
+																className="text-primary hover:underline"
+															>
+																{material.supplierName}
+															</Link>
+														) : (
+															<span className="text-muted-foreground">-</span>
+														)}
+													</TableCell>
+													<TableCell>£{material.supplierCost}</TableCell>
 													<TableCell>
 														<Badge variant={material.isActive ? 'default' : 'secondary'}>
 															{material.isActive ? 'Active' : 'Inactive'}
@@ -375,6 +400,28 @@ export function MaterialSectionDetailPage() {
 								onChange={(e) => setMaterialName(e.target.value)}
 								placeholder="e.g., Carrara White, Nero Assoluto"
 							/>
+						</Field>
+
+						<Field>
+							<FieldLabel htmlFor="materialSupplier">Supplier (optional)</FieldLabel>
+							<Select
+								value={materialSupplierId || 'none'}
+								onValueChange={(value) =>
+									setMaterialSupplierId(value === 'none' ? null : value)
+								}
+							>
+								<SelectTrigger id="materialSupplier">
+									<SelectValue placeholder="Select a supplier" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="none">No supplier</SelectItem>
+									{suppliers?.map((supplier) => (
+										<SelectItem key={supplier.id} value={supplier.id}>
+											{supplier.tradingName || supplier.businessName}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
 						</Field>
 
 						<Field>

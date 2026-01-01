@@ -26,6 +26,10 @@ import { quotesRoutes } from './routes/quotes';
 import { publicQuotesRoutes } from './routes/public-quotes';
 import { jobsRouter } from './routes/jobs';
 import { dashboardRoutes } from './routes/dashboard';
+import { funeralDirectorsRoutes } from './routes/funeral-directors';
+import { councilsRoutes } from './routes/councils';
+import { memorialSitesRoutes } from './routes/memorial-sites';
+import { suppliersRoutes } from './routes/suppliers';
 
 const app = new Hono();
 
@@ -113,6 +117,12 @@ app.route('/api/jobs', jobsRouter);
 
 // Dashboard routes (for tenant users)
 app.route('/api/dashboard', dashboardRoutes);
+
+// Linked records routes (for tenant users)
+app.route('/api/funeral-directors', funeralDirectorsRoutes);
+app.route('/api/councils', councilsRoutes);
+app.route('/api/memorial-sites', memorialSitesRoutes);
+app.route('/api/suppliers', suppliersRoutes);
 
 // Export type for RPC client
 export type AppType = typeof api;

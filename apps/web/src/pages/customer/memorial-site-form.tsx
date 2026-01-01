@@ -1,0 +1,740 @@
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate, Link } from 'react-router';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
+} from '@/components/ui/card';
+import {
+	Breadcrumb,
+	BreadcrumbItem,
+	BreadcrumbLink,
+	BreadcrumbList,
+	BreadcrumbPage,
+	BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from '@/components/ui/select';
+import {
+	Field,
+	FieldGroup,
+	FieldLabel,
+} from '@/components/ui/field';
+import { Plus, Trash2, Church, Flame } from 'lucide-react';
+import {
+	useMemorialSiteQuery,
+	useCreateMemorialSiteMutation,
+	useUpdateMemorialSiteMutation,
+	SITE_TYPE_LABELS,
+	DENOMINATION_LABELS,
+	type CreateMemorialSiteInput,
+	type ContactInfoInput,
+	type AddressInput,
+	type MemorialSiteType,
+	type ChurchDenomination,
+} from '@/hooks/use-memorial-sites';
+
+const CONTACT_TYPES = [
+	{ value: 'email', label: 'Email' },
+	{ value: 'phone', label: 'Phone' },
+	{ value: 'mobile', label: 'Mobile' },
+	{ value: 'fax', label: 'Fax' },
+	{ value: 'other', label: 'Other' },
+] as const;
+
+const emptyContact: ContactInfoInput = {
+	type: 'email',
+	value: '',
+	label: '',
+	isPrimary: false,
+};
+
+const emptyAddress: AddressInput = {
+	streetNumber: '',
+	route: '',
+	locality: '',
+	administrativeAreaLevel1: '',
+	postalCode: '',
+	country: 'GB',
+	formattedAddress: '',
+	label: '',
+	isPrimary: false,
+};
+
+export function MemorialSiteFormPage() {
+	const { id } = useParams<{ id: string }>();
+	const navigate = useNavigate();
+	const isEditing = !!id;
+
+	const { data: existingData, isLoading: isLoadingData } = useMemorialSiteQuery(id);
+	const createMutation = useCreateMemorialSiteMutation();
+	const updateMutation = useUpdateMemorialSiteMutation();
+
+	// Common fields
+	const [name, setName] = useState('');
+	const [siteType, setSiteType] = useState<MemorialSiteType>('churchyard');
+	const [memorialRegulations, setMemorialRegulations] = useState('');
+	const [approvedMaterials, setApprovedMaterials] = useState('');
+	const [notes, setNotes] = useState('');
+
+	// Churchyard-specific fields
+	const [denomination, setDenomination] = useState<ChurchDenomination | ''>('');
+	const [diocese, setDiocese] = useState('');
+	const [parish, setParish] = useState('');
+	const [churchyardOpen, setChurchyardOpen] = useState<boolean | null>(null);
+	const [facultyRequired, setFacultyRequired] = useState<boolean | null>(null);
+
+	// Crematorium-specific fields
+	const [operatorName, setOperatorName] = useState('');
+	const [hasMemorialGarden, setHasMemorialGarden] = useState<boolean | null>(null);
+	const [plaquesOffered, setPlaquesOffered] = useState<boolean | null>(null);
+	const [memorialOptions, setMemorialOptions] = useState('');
+	const [preferredSupplier, setPreferredSupplier] = useState<boolean | null>(null);
+
+	const [contacts, setContacts] = useState<ContactInfoInput[]>([]);
+	const [addresses, setAddresses] = useState<AddressInput[]>([]);
+	const [error, setError] = useState<string | null>(null);
+
+	useEffect(() => {
+		if (existingData) {
+			setName(existingData.name);
+			setSiteType(existingData.siteType);
+			setMemorialRegulations(existingData.memorialRegulations || '');
+			setApprovedMaterials(existingData.approvedMaterials || '');
+			setNotes(existingData.notes || '');
+
+			// Churchyard fields
+			setDenomination(existingData.denomination || '');
+			setDiocese(existingData.diocese || '');
+			setParish(existingData.parish || '');
+			setChurchyardOpen(existingData.churchyardOpen);
+			setFacultyRequired(existingData.facultyRequired);
+
+			// Crematorium fields
+			setOperatorName(existingData.operatorName || '');
+			setHasMemorialGarden(existingData.hasMemorialGarden);
+			setPlaquesOffered(existingData.plaquesOffered);
+			setMemorialOptions(existingData.memorialOptions || '');
+			setPreferredSupplier(existingData.preferredSupplier);
+
+			setContacts(
+				existingData.contactInfo.map((c) => ({
+					type: c.type,
+					value: c.value,
+					label: c.label || '',
+					isPrimary: c.isPrimary,
+				}))
+			);
+			setAddresses(
+				existingData.addresses.map((a) => ({
+					streetNumber: a.streetNumber || '',
+					route: a.route || '',
+					locality: a.locality || '',
+					administrativeAreaLevel1: a.administrativeAreaLevel1 || '',
+					postalCode: a.postalCode || '',
+					country: a.country || 'GB',
+					formattedAddress: a.formattedAddress,
+					label: a.label || '',
+					isPrimary: a.isPrimary,
+				}))
+			);
+		}
+	}, [existingData]);
+
+	const handleSubmit = async (e: React.FormEvent) => {
+		e.preventDefault();
+		setError(null);
+
+		const data: CreateMemorialSiteInput = {
+			name,
+			siteType,
+			memorialRegulations: memorialRegulations || undefined,
+			approvedMaterials: approvedMaterials || undefined,
+			notes: notes || undefined,
+			contactInfo: contacts.filter((c) => c.value.trim()),
+			addresses: addresses.filter((a) => a.formattedAddress.trim()),
+		};
+
+		// Add site-type-specific fields
+		if (siteType === 'churchyard') {
+			data.denomination = denomination || undefined;
+			data.diocese = diocese || undefined;
+			data.parish = parish || undefined;
+			data.churchyardOpen = churchyardOpen ?? undefined;
+			data.facultyRequired = facultyRequired ?? undefined;
+		} else {
+			data.operatorName = operatorName || undefined;
+			data.hasMemorialGarden = hasMemorialGarden ?? undefined;
+			data.plaquesOffered = plaquesOffered ?? undefined;
+			data.memorialOptions = memorialOptions || undefined;
+			data.preferredSupplier = preferredSupplier ?? undefined;
+		}
+
+		try {
+			if (isEditing && id) {
+				await updateMutation.mutateAsync({ id, ...data });
+				navigate(`/app/memorial-sites/${id}`);
+			} else {
+				const result = await createMutation.mutateAsync(data);
+				navigate(`/app/memorial-sites/${result.id}`);
+			}
+		} catch (err) {
+			setError(err instanceof Error ? err.message : 'An error occurred');
+		}
+	};
+
+	const addContact = () => {
+		setContacts([...contacts, { ...emptyContact }]);
+	};
+
+	const removeContact = (index: number) => {
+		setContacts(contacts.filter((_, i) => i !== index));
+	};
+
+	const updateContact = (index: number, updates: Partial<ContactInfoInput>) => {
+		setContacts(contacts.map((c, i) => (i === index ? { ...c, ...updates } : c)));
+	};
+
+	const addAddress = () => {
+		setAddresses([...addresses, { ...emptyAddress }]);
+	};
+
+	const removeAddress = (index: number) => {
+		setAddresses(addresses.filter((_, i) => i !== index));
+	};
+
+	const updateAddress = (index: number, updates: Partial<AddressInput>) => {
+		setAddresses(addresses.map((a, i) => (i === index ? { ...a, ...updates } : a)));
+	};
+
+	const generateFormattedAddress = (address: AddressInput): string => {
+		const parts = [];
+		if (address.streetNumber && address.route) {
+			parts.push(`${address.streetNumber} ${address.route}`);
+		} else if (address.route) {
+			parts.push(address.route);
+		}
+		if (address.locality) parts.push(address.locality);
+		if (address.administrativeAreaLevel1) parts.push(address.administrativeAreaLevel1);
+		if (address.postalCode) parts.push(address.postalCode);
+		return parts.join(', ');
+	};
+
+	const isLoading = createMutation.isPending || updateMutation.isPending;
+	const isChurchyard = siteType === 'churchyard';
+
+	if (isEditing && isLoadingData) {
+		return (
+			<div>
+				<div className="mb-6">
+					<h2 className="text-2xl font-bold">Edit Memorial Site</h2>
+				</div>
+				<div className="text-muted-foreground">Loading...</div>
+			</div>
+		);
+	}
+
+	return (
+		<div>
+			<Breadcrumb className="mb-4">
+				<BreadcrumbList>
+					<BreadcrumbItem>
+						<BreadcrumbLink asChild>
+							<Link to="/app/memorial-sites">Memorial Sites</Link>
+						</BreadcrumbLink>
+					</BreadcrumbItem>
+					<BreadcrumbSeparator />
+					<BreadcrumbItem>
+						<BreadcrumbPage>
+							{isEditing ? 'Edit' : 'New Memorial Site'}
+						</BreadcrumbPage>
+					</BreadcrumbItem>
+				</BreadcrumbList>
+			</Breadcrumb>
+
+			<div className="mb-6">
+				<h2 className="text-2xl font-bold">
+					{isEditing ? 'Edit Memorial Site' : 'New Memorial Site'}
+				</h2>
+				<p className="text-muted-foreground mt-1">
+					{isEditing
+						? 'Update memorial site details'
+						: 'Add a new memorial site to your records'}
+				</p>
+			</div>
+
+			{error && (
+				<div className="bg-destructive/10 text-destructive px-4 py-2 rounded mb-4">
+					{error}
+				</div>
+			)}
+
+			<form onSubmit={handleSubmit}>
+				<div className="space-y-6">
+					<Card>
+						<CardHeader>
+							<CardTitle>Basic Information</CardTitle>
+							<CardDescription>Site name and type</CardDescription>
+						</CardHeader>
+						<CardContent>
+							<FieldGroup>
+								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+									<Field>
+										<FieldLabel htmlFor="name">Site Name *</FieldLabel>
+										<Input
+											id="name"
+											value={name}
+											onChange={(e) => setName(e.target.value)}
+											required
+											placeholder="e.g., St Mary's Church or Chester Crematorium"
+										/>
+									</Field>
+									<Field>
+										<FieldLabel htmlFor="siteType">Site Type *</FieldLabel>
+										<Select
+											value={siteType}
+											onValueChange={(v) => setSiteType(v as MemorialSiteType)}
+											disabled={isEditing}
+										>
+											<SelectTrigger>
+												<SelectValue />
+											</SelectTrigger>
+											<SelectContent>
+												<SelectItem value="churchyard">
+													<div className="flex items-center gap-2">
+														<Church className="h-4 w-4" />
+														{SITE_TYPE_LABELS.churchyard}
+													</div>
+												</SelectItem>
+												<SelectItem value="crematorium">
+													<div className="flex items-center gap-2">
+														<Flame className="h-4 w-4" />
+														{SITE_TYPE_LABELS.crematorium}
+													</div>
+												</SelectItem>
+											</SelectContent>
+										</Select>
+									</Field>
+								</div>
+							</FieldGroup>
+						</CardContent>
+					</Card>
+
+					{/* Churchyard-specific fields */}
+					{isChurchyard && (
+						<Card>
+							<CardHeader>
+								<CardTitle className="flex items-center gap-2">
+									<Church className="h-5 w-5" />
+									Churchyard Details
+								</CardTitle>
+								<CardDescription>Church-specific information</CardDescription>
+							</CardHeader>
+							<CardContent>
+								<FieldGroup>
+									<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+										<Field>
+											<FieldLabel htmlFor="denomination">Denomination</FieldLabel>
+											<Select
+												value={denomination}
+												onValueChange={(v) => setDenomination(v as ChurchDenomination)}
+											>
+												<SelectTrigger>
+													<SelectValue placeholder="Select denomination..." />
+												</SelectTrigger>
+												<SelectContent>
+													{Object.entries(DENOMINATION_LABELS).map(([value, label]) => (
+														<SelectItem key={value} value={value}>
+															{label}
+														</SelectItem>
+													))}
+												</SelectContent>
+											</Select>
+										</Field>
+										<Field>
+											<FieldLabel htmlFor="diocese">Diocese</FieldLabel>
+											<Input
+												id="diocese"
+												value={diocese}
+												onChange={(e) => setDiocese(e.target.value)}
+												placeholder="e.g., Diocese of Chester"
+											/>
+										</Field>
+									</div>
+									<Field>
+										<FieldLabel htmlFor="parish">Parish</FieldLabel>
+										<Input
+											id="parish"
+											value={parish}
+											onChange={(e) => setParish(e.target.value)}
+											placeholder="e.g., Parish of St Mary"
+										/>
+									</Field>
+									<div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+										<label className="flex items-center gap-3 cursor-pointer">
+											<Checkbox
+												id="churchyardOpen"
+												checked={churchyardOpen === true}
+												onCheckedChange={(checked: boolean) => setChurchyardOpen(checked)}
+											/>
+											<span className="text-sm font-medium">
+												Churchyard Open for Burials
+											</span>
+										</label>
+										<label className="flex items-center gap-3 cursor-pointer">
+											<Checkbox
+												id="facultyRequired"
+												checked={facultyRequired === true}
+												onCheckedChange={(checked: boolean) => setFacultyRequired(checked)}
+											/>
+											<span className="text-sm font-medium">
+												Faculty Required
+											</span>
+										</label>
+									</div>
+								</FieldGroup>
+							</CardContent>
+						</Card>
+					)}
+
+					{/* Crematorium-specific fields */}
+					{!isChurchyard && (
+						<Card>
+							<CardHeader>
+								<CardTitle className="flex items-center gap-2">
+									<Flame className="h-5 w-5" />
+									Crematorium Details
+								</CardTitle>
+								<CardDescription>Crematorium-specific information</CardDescription>
+							</CardHeader>
+							<CardContent>
+								<FieldGroup>
+									<Field>
+										<FieldLabel htmlFor="operatorName">Operator Name</FieldLabel>
+										<Input
+											id="operatorName"
+											value={operatorName}
+											onChange={(e) => setOperatorName(e.target.value)}
+											placeholder="e.g., Dignity Funerals Ltd"
+										/>
+									</Field>
+									<div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+										<label className="flex items-center gap-3 cursor-pointer">
+											<Checkbox
+												id="hasMemorialGarden"
+												checked={hasMemorialGarden === true}
+												onCheckedChange={(checked: boolean) => setHasMemorialGarden(checked)}
+											/>
+											<span className="text-sm font-medium">
+												Has Memorial Garden
+											</span>
+										</label>
+										<label className="flex items-center gap-3 cursor-pointer">
+											<Checkbox
+												id="plaquesOffered"
+												checked={plaquesOffered === true}
+												onCheckedChange={(checked: boolean) => setPlaquesOffered(checked)}
+											/>
+											<span className="text-sm font-medium">
+												Plaques Offered
+											</span>
+										</label>
+										<label className="flex items-center gap-3 cursor-pointer">
+											<Checkbox
+												id="preferredSupplier"
+												checked={preferredSupplier === true}
+												onCheckedChange={(checked: boolean) => setPreferredSupplier(checked)}
+											/>
+											<span className="text-sm font-medium">
+												We Are Preferred Supplier
+											</span>
+										</label>
+									</div>
+									<Field>
+										<FieldLabel htmlFor="memorialOptions">Memorial Options Available</FieldLabel>
+										<Textarea
+											id="memorialOptions"
+											value={memorialOptions}
+											onChange={(e) => setMemorialOptions(e.target.value)}
+											placeholder="e.g., Wall plaques, Book of Remembrance, Memorial trees..."
+											rows={3}
+										/>
+									</Field>
+								</FieldGroup>
+							</CardContent>
+						</Card>
+					)}
+
+					<Card>
+						<CardHeader>
+							<CardTitle>Regulations & Requirements</CardTitle>
+							<CardDescription>Memorial regulations for this site</CardDescription>
+						</CardHeader>
+						<CardContent>
+							<FieldGroup>
+								<Field>
+									<FieldLabel htmlFor="memorialRegulations">Memorial Regulations</FieldLabel>
+									<Textarea
+										id="memorialRegulations"
+										value={memorialRegulations}
+										onChange={(e) => setMemorialRegulations(e.target.value)}
+										placeholder="e.g., Size restrictions, design guidelines..."
+										rows={4}
+									/>
+								</Field>
+								<Field>
+									<FieldLabel htmlFor="approvedMaterials">Approved Materials</FieldLabel>
+									<Textarea
+										id="approvedMaterials"
+										value={approvedMaterials}
+										onChange={(e) => setApprovedMaterials(e.target.value)}
+										placeholder="e.g., Granite, Marble, Slate..."
+										rows={3}
+									/>
+								</Field>
+							</FieldGroup>
+						</CardContent>
+					</Card>
+
+					<Card>
+						<CardHeader>
+							<div className="flex justify-between items-center">
+								<div>
+									<CardTitle>Contact Information</CardTitle>
+									<CardDescription>Email addresses and phone numbers</CardDescription>
+								</div>
+								<Button type="button" variant="outline" size="sm" onClick={addContact}>
+									<Plus className="h-4 w-4 mr-1" />
+									Add Contact
+								</Button>
+							</div>
+						</CardHeader>
+						<CardContent>
+							{contacts.length === 0 ? (
+								<p className="text-sm text-muted-foreground">
+									No contact information added.
+								</p>
+							) : (
+								<div className="space-y-3">
+									{contacts.map((contact, index) => (
+										<div key={index} className="p-3 border rounded-lg space-y-2">
+											<div className="flex gap-2">
+												<Select
+													value={contact.type}
+													onValueChange={(value) =>
+														updateContact(index, { type: value as ContactInfoInput['type'] })
+													}
+												>
+													<SelectTrigger className="w-28">
+														<SelectValue />
+													</SelectTrigger>
+													<SelectContent>
+														{CONTACT_TYPES.map((type) => (
+															<SelectItem key={type.value} value={type.value}>
+																{type.label}
+															</SelectItem>
+														))}
+													</SelectContent>
+												</Select>
+												<Input
+													placeholder={contact.type === 'email' ? 'email@example.com' : '01234 567890'}
+													value={contact.value}
+													onChange={(e) => updateContact(index, { value: e.target.value })}
+													className="flex-1"
+												/>
+											</div>
+											<div className="flex gap-2 items-center">
+												<Input
+													placeholder="Label (optional)"
+													value={contact.label || ''}
+													onChange={(e) => updateContact(index, { label: e.target.value })}
+													className="flex-1"
+												/>
+												<label className="flex items-center gap-1.5 text-sm whitespace-nowrap">
+													<Checkbox
+														checked={contact.isPrimary}
+														onCheckedChange={(checked) =>
+															updateContact(index, { isPrimary: checked === true })
+														}
+													/>
+													Primary
+												</label>
+												<Button
+													type="button"
+													variant="ghost"
+													size="icon"
+													onClick={() => removeContact(index)}
+													className="h-8 w-8 shrink-0"
+												>
+													<Trash2 className="h-4 w-4 text-destructive" />
+												</Button>
+											</div>
+										</div>
+									))}
+								</div>
+							)}
+						</CardContent>
+					</Card>
+
+					<Card>
+						<CardHeader>
+							<div className="flex justify-between items-center">
+								<div>
+									<CardTitle>Addresses</CardTitle>
+									<CardDescription>Physical locations</CardDescription>
+								</div>
+								<Button type="button" variant="outline" size="sm" onClick={addAddress}>
+									<Plus className="h-4 w-4 mr-1" />
+									Add Address
+								</Button>
+							</div>
+						</CardHeader>
+						<CardContent>
+							{addresses.length === 0 ? (
+								<p className="text-sm text-muted-foreground">No addresses added.</p>
+							) : (
+								<div className="space-y-3">
+									{addresses.map((address, index) => (
+										<div key={index} className="p-3 border rounded-lg space-y-2">
+											<div className="flex gap-2">
+												<Input
+													placeholder="House #/Name"
+													value={address.streetNumber || ''}
+													onChange={(e) => {
+														const updated = { ...address, streetNumber: e.target.value };
+														updated.formattedAddress = generateFormattedAddress(updated);
+														updateAddress(index, updated);
+													}}
+													className="w-28"
+												/>
+												<Input
+													placeholder="Street Name"
+													value={address.route || ''}
+													onChange={(e) => {
+														const updated = { ...address, route: e.target.value };
+														updated.formattedAddress = generateFormattedAddress(updated);
+														updateAddress(index, updated);
+													}}
+													className="flex-1"
+												/>
+											</div>
+											<div className="flex gap-2">
+												<Input
+													placeholder="City/Town"
+													value={address.locality || ''}
+													onChange={(e) => {
+														const updated = { ...address, locality: e.target.value };
+														updated.formattedAddress = generateFormattedAddress(updated);
+														updateAddress(index, updated);
+													}}
+													className="flex-1"
+												/>
+												<Input
+													placeholder="County"
+													value={address.administrativeAreaLevel1 || ''}
+													onChange={(e) => {
+														const updated = { ...address, administrativeAreaLevel1: e.target.value };
+														updated.formattedAddress = generateFormattedAddress(updated);
+														updateAddress(index, updated);
+													}}
+													className="w-32"
+												/>
+												<Input
+													placeholder="Postcode"
+													value={address.postalCode || ''}
+													onChange={(e) => {
+														const updated = { ...address, postalCode: e.target.value };
+														updated.formattedAddress = generateFormattedAddress(updated);
+														updateAddress(index, updated);
+													}}
+													className="w-28"
+												/>
+											</div>
+											<div className="flex gap-2 items-center">
+												<Input
+													placeholder="Label (optional)"
+													value={address.label || ''}
+													onChange={(e) => updateAddress(index, { label: e.target.value })}
+													className="flex-1"
+												/>
+												<label className="flex items-center gap-1.5 text-sm whitespace-nowrap">
+													<Checkbox
+														checked={address.isPrimary}
+														onCheckedChange={(checked) =>
+															updateAddress(index, { isPrimary: checked === true })
+														}
+													/>
+													Primary
+												</label>
+												<Button
+													type="button"
+													variant="ghost"
+													size="icon"
+													onClick={() => removeAddress(index)}
+													className="h-8 w-8 shrink-0"
+												>
+													<Trash2 className="h-4 w-4 text-destructive" />
+												</Button>
+											</div>
+											{address.formattedAddress && (
+												<p className="text-xs text-muted-foreground pt-1 border-t">
+													{address.formattedAddress}
+												</p>
+											)}
+										</div>
+									))}
+								</div>
+							)}
+						</CardContent>
+					</Card>
+
+					<Card>
+						<CardHeader>
+							<CardTitle>Notes</CardTitle>
+							<CardDescription>Additional information</CardDescription>
+						</CardHeader>
+						<CardContent>
+							<Textarea
+								value={notes}
+								onChange={(e) => setNotes(e.target.value)}
+								placeholder="Any additional notes about this memorial site..."
+								rows={4}
+							/>
+						</CardContent>
+					</Card>
+				</div>
+
+				<div className="flex justify-end gap-2 mt-6">
+					<Button
+						type="button"
+						variant="outline"
+						onClick={() => navigate('/app/memorial-sites')}
+						disabled={isLoading}
+					>
+						Cancel
+					</Button>
+					<Button type="submit" disabled={isLoading}>
+						{isLoading
+							? isEditing
+								? 'Saving...'
+								: 'Creating...'
+							: isEditing
+								? 'Save Changes'
+								: 'Create Memorial Site'}
+					</Button>
+				</div>
+			</form>
+		</div>
+	);
+}

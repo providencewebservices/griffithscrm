@@ -37,10 +37,20 @@ import {
 	type Sundry,
 	type CreateSundryInput,
 } from '@/hooks/use-sundries';
+import { useSuppliersQuery } from '@/hooks/use-suppliers';
 import { useSignedUrls } from '@/hooks/use-uploads';
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from '@/components/ui/select';
+import { Link } from 'react-router';
 
 export function SundriesTab() {
 	const { data: sundries, isLoading, error } = useSundriesQuery();
+	const { data: suppliers } = useSuppliersQuery({});
 	const sundryImageUrls = sundries?.map((s) => s.imageUrl) || [];
 	const { data: signedSundryImages } = useSignedUrls(sundryImageUrls);
 	const createMutation = useCreateSundryMutation();
@@ -57,6 +67,7 @@ export function SundriesTab() {
 	const [formDescription, setFormDescription] = useState('');
 	const [formPrice, setFormPrice] = useState('0');
 	const [formImageUrl, setFormImageUrl] = useState<string | null>(null);
+	const [formSupplierId, setFormSupplierId] = useState<string | null>(null);
 
 	const isEditing = !!selectedItem;
 
@@ -65,6 +76,7 @@ export function SundriesTab() {
 		setFormDescription('');
 		setFormPrice('0');
 		setFormImageUrl(null);
+		setFormSupplierId(null);
 		setMutationError(null);
 	};
 
@@ -80,6 +92,7 @@ export function SundriesTab() {
 		setFormDescription(item.description || '');
 		setFormPrice(item.price);
 		setFormImageUrl(item.imageUrl);
+		setFormSupplierId(item.supplierId);
 		setMutationError(null);
 		setFormDialogOpen(true);
 	};
@@ -107,6 +120,7 @@ export function SundriesTab() {
 			description: formDescription || undefined,
 			price: parseFloat(formPrice) || 0,
 			imageUrl: formImageUrl,
+			supplierId: formSupplierId,
 		};
 
 		try {
@@ -171,6 +185,7 @@ export function SundriesTab() {
 							<TableRow>
 								<TableHead className="w-[60px]">Image</TableHead>
 								<TableHead>Name</TableHead>
+								<TableHead>Supplier</TableHead>
 								<TableHead>Description</TableHead>
 								<TableHead>Price</TableHead>
 								<TableHead>Status</TableHead>
@@ -197,6 +212,18 @@ export function SundriesTab() {
 										)}
 									</TableCell>
 									<TableCell className="font-medium">{item.name}</TableCell>
+									<TableCell>
+										{item.supplierName ? (
+											<Link
+												to={`/app/suppliers/${item.supplierId}`}
+												className="text-primary hover:underline"
+											>
+												{item.supplierName}
+											</Link>
+										) : (
+											<span className="text-muted-foreground">-</span>
+										)}
+									</TableCell>
 									<TableCell className="max-w-[200px] truncate">
 										{item.description || <span className="text-muted-foreground">-</span>}
 									</TableCell>
@@ -265,6 +292,28 @@ export function SundriesTab() {
 								onChange={(e) => setFormName(e.target.value)}
 								placeholder="e.g., Ceramic Rose (Red), Oval Photo Plaque"
 							/>
+						</Field>
+
+						<Field>
+							<FieldLabel htmlFor="supplier">Supplier (optional)</FieldLabel>
+							<Select
+								value={formSupplierId || 'none'}
+								onValueChange={(value) =>
+									setFormSupplierId(value === 'none' ? null : value)
+								}
+							>
+								<SelectTrigger id="supplier">
+									<SelectValue placeholder="Select a supplier" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="none">No supplier</SelectItem>
+									{suppliers?.map((supplier) => (
+										<SelectItem key={supplier.id} value={supplier.id}>
+											{supplier.tradingName || supplier.businessName}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
 						</Field>
 
 						<Field>

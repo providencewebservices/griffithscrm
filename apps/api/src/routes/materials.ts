@@ -4,11 +4,12 @@ import { z } from 'zod';
 import { eq, and, asc } from 'drizzle-orm';
 import { requireAuth, requireTenant } from '../middleware/auth';
 import { db } from '../lib/auth';
-import { materials, materialSections } from '@griffiths-crm/shared/db/schema';
+import { materials, materialSections, suppliers } from '@griffiths-crm/shared/db/schema';
 
 // Validation schemas
 const createSchema = z.object({
 	sectionId: z.string().min(1, 'Section ID is required'),
+	supplierId: z.string().nullable().optional(),
 	name: z.string().min(1, 'Name is required'),
 	imageUrl: z.string().nullable().optional(),
 	supplierCost: z.number().min(0).default(0),
@@ -17,6 +18,7 @@ const createSchema = z.object({
 
 const updateSchema = z.object({
 	name: z.string().min(1, 'Name is required').optional(),
+	supplierId: z.string().nullable().optional(),
 	imageUrl: z.string().nullable().optional(),
 	supplierCost: z.number().min(0).optional(),
 	isActive: z.boolean().optional(),
@@ -33,8 +35,22 @@ const materialsRoutes = new Hono()
 		const tenantId = currentUser.tenantId!;
 
 		const allMaterials = await db
-			.select()
+			.select({
+				id: materials.id,
+				tenantId: materials.tenantId,
+				sectionId: materials.sectionId,
+				supplierId: materials.supplierId,
+				name: materials.name,
+				imageUrl: materials.imageUrl,
+				supplierCost: materials.supplierCost,
+				isActive: materials.isActive,
+				sortOrder: materials.sortOrder,
+				createdAt: materials.createdAt,
+				updatedAt: materials.updatedAt,
+				supplierName: suppliers.businessName,
+			})
 			.from(materials)
+			.leftJoin(suppliers, eq(materials.supplierId, suppliers.id))
 			.where(eq(materials.tenantId, tenantId))
 			.orderBy(asc(materials.sortOrder), asc(materials.name));
 
@@ -48,8 +64,22 @@ const materialsRoutes = new Hono()
 		const id = c.req.param('id');
 
 		const [material] = await db
-			.select()
+			.select({
+				id: materials.id,
+				tenantId: materials.tenantId,
+				sectionId: materials.sectionId,
+				supplierId: materials.supplierId,
+				name: materials.name,
+				imageUrl: materials.imageUrl,
+				supplierCost: materials.supplierCost,
+				isActive: materials.isActive,
+				sortOrder: materials.sortOrder,
+				createdAt: materials.createdAt,
+				updatedAt: materials.updatedAt,
+				supplierName: suppliers.businessName,
+			})
 			.from(materials)
+			.leftJoin(suppliers, eq(materials.supplierId, suppliers.id))
 			.where(and(eq(materials.id, id), eq(materials.tenantId, tenantId)))
 			.limit(1);
 
@@ -92,6 +122,7 @@ const materialsRoutes = new Hono()
 				id: crypto.randomUUID(),
 				tenantId,
 				sectionId: data.sectionId,
+				supplierId: data.supplierId || null,
 				name: data.name,
 				imageUrl: data.imageUrl || null,
 				supplierCost: String(data.supplierCost),
@@ -123,6 +154,7 @@ const materialsRoutes = new Hono()
 
 		const updateData: Record<string, unknown> = { updatedAt: new Date() };
 		if (data.name !== undefined) updateData.name = data.name;
+		if (data.supplierId !== undefined) updateData.supplierId = data.supplierId;
 		if (data.imageUrl !== undefined) updateData.imageUrl = data.imageUrl;
 		if (data.supplierCost !== undefined) updateData.supplierCost = String(data.supplierCost);
 		if (data.isActive !== undefined) updateData.isActive = data.isActive;

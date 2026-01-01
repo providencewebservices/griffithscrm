@@ -60,7 +60,7 @@ import { useLetteringTechniquesQuery } from '@/hooks/use-lettering-techniques';
 import { useLetteringColorsQuery } from '@/hooks/use-lettering-colors';
 import { useSundriesQuery } from '@/hooks/use-sundries';
 import { useServicesQuery } from '@/hooks/use-services';
-import { COMPONENT_TYPES } from '@griffiths-crm/shared/db/schema';
+import { COMPONENT_TYPES, ENQUIRY_SOURCES } from '@griffiths-crm/shared/db/schema';
 import { ArrowLeft, Plus, Trash2, User, Check, ChevronsUpDown } from 'lucide-react';
 import {
 	Command,
@@ -81,6 +81,20 @@ import { cn } from '@/lib/utils';
 type ComponentFormItem = ComponentInput & { id: string };
 type LetteringFormItem = LetteringInput & { id: string };
 type SundryFormItem = SundryInput & { id: string };
+type EnquirySource = (typeof ENQUIRY_SOURCES)[number];
+
+// Human-readable labels for enquiry sources
+const ENQUIRY_SOURCE_LABELS: Record<EnquirySource, string> = {
+	walk_in: 'Walk-in',
+	phone: 'Phone',
+	email: 'Email',
+	website: 'Website',
+	facebook: 'Facebook',
+	instagram: 'Instagram',
+	whatsapp: 'WhatsApp',
+	referral: 'Referral',
+	other: 'Other',
+};
 
 const NONE_VALUE = '_none';
 
@@ -97,6 +111,7 @@ export function QuoteNewPage() {
 	const [dimensionComboId, setDimensionComboId] = useState<string>('');
 	const [stoneColourMaterialId, setStoneColourMaterialId] = useState<string>('');
 	const [flowerHoles, setFlowerHoles] = useState<FlowerHoleChoice | ''>('');
+	const [source, setSource] = useState<EnquirySource | ''>('');
 	const [proposedInscription, setProposedInscription] = useState('');
 	const [notes, setNotes] = useState('');
 	const [internalNotes, setInternalNotes] = useState('');
@@ -181,6 +196,7 @@ export function QuoteNewPage() {
 			setProductId(originalQuote.productId || '');
 			setDimensionComboId(originalQuote.dimensionComboId || '');
 			setFlowerHoles(originalQuote.flowerHoles || '');
+			setSource((originalQuote.source as EnquirySource) || '');
 			setProposedInscription(originalQuote.proposedInscription || '');
 			setNotes(originalQuote.notes || '');
 			setInternalNotes(originalQuote.internalNotes || '');
@@ -369,6 +385,7 @@ export function QuoteNewPage() {
 			productId: productId || undefined,
 			dimensionComboId: dimensionComboId || undefined,
 			flowerHoles: flowerHoles || undefined,
+			source: source || undefined,
 			proposedInscription: proposedInscription || undefined,
 			notes: notes || undefined,
 			internalNotes: internalNotes || undefined,
@@ -481,24 +498,25 @@ export function QuoteNewPage() {
 				<Card>
 					<CardHeader>
 						<CardTitle>Service & Customer</CardTitle>
-						<CardDescription>Who is this quote for?</CardDescription>
+						<CardDescription>Select the service type and assign a customer to this quote</CardDescription>
 					</CardHeader>
-					<CardContent>
+					<CardContent className="space-y-6">
+						{/* Primary fields - Service & Customer side by side */}
 						<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 							{/* Service Selection */}
 							<div className="space-y-2">
-								<div className="flex items-center justify-between h-5">
+								<div className="flex items-center justify-between h-7">
 									<FieldLabel className="mb-0">Service *</FieldLabel>
 								</div>
 								<Select
 									value={serviceId || NONE_VALUE}
 									onValueChange={(v) => setServiceId(v === NONE_VALUE ? '' : v)}
 								>
-									<SelectTrigger>
-										<SelectValue placeholder="Select service" />
+									<SelectTrigger className="w-full">
+										<SelectValue placeholder="Select service type" />
 									</SelectTrigger>
 									<SelectContent>
-										<SelectItem value={NONE_VALUE}>Select service</SelectItem>
+										<SelectItem value={NONE_VALUE}>Select service type</SelectItem>
 										{serviceItems
 											?.filter((s) => s.isActive)
 											.map((item) => (
@@ -512,13 +530,13 @@ export function QuoteNewPage() {
 
 							{/* Customer Selection */}
 							<div className="space-y-2">
-								<div className="flex items-center justify-between h-5">
+								<div className="flex items-center justify-between h-7">
 									<FieldLabel className="mb-0">Customer</FieldLabel>
 									<Button
 										type="button"
-										variant="ghost"
+										variant="outline"
 										size="sm"
-										className="h-auto py-0 px-2 text-xs"
+										className="h-7 text-xs"
 										onClick={() => {
 											setIsCreatingCustomer(!isCreatingCustomer);
 											if (!isCreatingCustomer) {
@@ -527,7 +545,7 @@ export function QuoteNewPage() {
 										}}
 									>
 										<User className="h-3 w-3 mr-1" />
-										{isCreatingCustomer ? 'Select Existing' : 'New'}
+										{isCreatingCustomer ? 'Select Existing' : 'New Customer'}
 									</Button>
 								</div>
 								{!isCreatingCustomer && (
@@ -542,8 +560,8 @@ export function QuoteNewPage() {
 												{customerId
 													? customers?.find((c) => c.id === customerId)
 														? `${customers.find((c) => c.id === customerId)?.firstName} ${customers.find((c) => c.id === customerId)?.lastName}`
-														: 'Select customer...'
-													: 'Select customer...'}
+														: 'Search or select customer...'
+													: 'Search or select customer...'}
 												<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
 											</Button>
 										</PopoverTrigger>
@@ -595,9 +613,9 @@ export function QuoteNewPage() {
 							</div>
 						</div>
 
-						{/* New Customer Form - expands below */}
+						{/* New Customer Form - expands below when creating */}
 						{isCreatingCustomer && (
-							<div className="mt-6 border rounded-lg p-4 space-y-4 bg-muted/30">
+							<div className="border rounded-lg p-4 space-y-4 bg-muted/30">
 								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 									<Field>
 										<FieldLabel>First Name *</FieldLabel>
@@ -752,6 +770,34 @@ export function QuoteNewPage() {
 								</div>
 							</div>
 						)}
+
+						{/* Secondary field - Enquiry Source (aligned to Customer column) */}
+						<div className="pt-4 border-t">
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+								<div>{/* Empty left column for alignment */}</div>
+								<Field>
+									<FieldLabel className="text-muted-foreground text-sm">
+										How did they contact us?
+									</FieldLabel>
+									<Select
+										value={source || NONE_VALUE}
+										onValueChange={(v) => setSource(v === NONE_VALUE ? '' : (v as EnquirySource))}
+									>
+										<SelectTrigger className="bg-muted/30">
+											<SelectValue placeholder="Select enquiry source" />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value={NONE_VALUE}>Not specified</SelectItem>
+											{ENQUIRY_SOURCES.map((src) => (
+												<SelectItem key={src} value={src}>
+													{ENQUIRY_SOURCE_LABELS[src]}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+								</Field>
+							</div>
+						</div>
 					</CardContent>
 				</Card>
 

@@ -35,7 +35,7 @@ function getPublicUrl(key: string): string {
 	return `https://${s3Config.bucket}.s3.${s3Config.region}.amazonaws.com/${key}`;
 }
 
-export type UploadCategory = 'products' | 'options' | 'sundries' | 'categories' | 'materials' | 'jobs';
+export type UploadCategory = 'products' | 'options' | 'sundries' | 'categories' | 'materials' | 'jobs' | 'documents';
 
 interface PresignedUrlOptions {
 	tenantId: string;

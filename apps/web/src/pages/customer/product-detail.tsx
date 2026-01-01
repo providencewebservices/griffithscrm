@@ -437,6 +437,20 @@ export function ProductDetailPage() {
 							</div>
 							<Separator />
 							<div>
+								<p className="text-sm font-medium text-muted-foreground">Supplier</p>
+								{product.supplierName ? (
+									<Link
+										to={`/app/suppliers/${product.supplierId}`}
+										className="text-primary hover:underline"
+									>
+										{product.supplierName}
+									</Link>
+								) : (
+									<p className="text-muted-foreground">-</p>
+								)}
+							</div>
+							<Separator />
+							<div>
 								<p className="text-sm font-medium text-muted-foreground">Status</p>
 								<p>
 									{product.archivedAt
