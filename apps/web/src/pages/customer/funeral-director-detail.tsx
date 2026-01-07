@@ -32,6 +32,7 @@ import {
 	ArrowLeft,
 	Handshake,
 } from 'lucide-react';
+import { DocumentsCard } from '@/components/documents';
 
 const REFERRAL_LABELS: Record<string, string> = {
 	none: 'None',
@@ -347,6 +348,16 @@ export function FuneralDirectorDetailPage() {
 					</CardContent>
 				</Card>
 			)}
+
+			{/* Documents */}
+			<div className="mt-6">
+				<DocumentsCard
+					entityType="funeral_director"
+					entityId={funeralDirector.id}
+					title="Documents"
+					description="Files and documents for this funeral director"
+				/>
+			</div>
 
 			<DeleteConfirmDialog
 				open={archiveDialogOpen}

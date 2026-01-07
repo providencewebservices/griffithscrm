@@ -1,36 +1,16 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
-import { eq, and, or, like, desc, count, sql } from 'drizzle-orm';
+import { eq, and, desc, count, sql } from 'drizzle-orm';
 import { requireAuth, requireTenant } from '../middleware/auth';
 import { db } from '../lib/auth';
 import {
 	generatePresignedUploadUrl,
 	isS3Configured,
 	getSignedImageUrl,
-	extractKeyFromUrl,
+	deleteObject,
 } from '../lib/s3';
 import { documents, users } from '@griffiths-crm/shared/db/schema';
-import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3';
-
-// S3 client for delete operations
-const s3Config = {
-	bucket: process.env.S3_BUCKET || '',
-	region: process.env.S3_REGION || 'us-east-1',
-	endpoint: process.env.S3_ENDPOINT || '',
-};
-
-const s3Client = new S3Client({
-	region: s3Config.region,
-	credentials: {
-		accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-		secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
-	},
-	...(s3Config.endpoint && {
-		endpoint: s3Config.endpoint,
-		forcePathStyle: true,
-	}),
-});
 
 // Entity types that can have documents attached
 const entityTypeSchema = z.enum([
@@ -389,21 +369,8 @@ const documentsRoutes = new Hono()
 			return c.json({ error: 'Document not found' }, 404);
 		}
 
-		// Delete from S3
-		if (isS3Configured()) {
-			try {
-				const key = extractKeyFromUrl(existing.s3Key) || existing.s3Key;
-				await s3Client.send(
-					new DeleteObjectCommand({
-						Bucket: s3Config.bucket,
-						Key: key,
-					})
-				);
-			} catch (error) {
-				console.error('Error deleting from S3:', error);
-				// Continue with database deletion even if S3 fails
-			}
-		}
+		// Delete from S3 (continue even if this fails)
+		await deleteObject(existing.s3Key);
 
 		// Delete from database
 		await db.delete(documents).where(eq(documents.id, documentId));

@@ -33,7 +33,7 @@ export type Address = {
 	updatedAt: string;
 };
 
-export type MemorialSiteType = 'churchyard' | 'crematorium';
+export type MemorialSiteType = 'churchyard' | 'crematorium' | 'council_cemetery';
 
 export type ChurchDenomination =
 	| 'church_of_england'
@@ -65,6 +65,16 @@ export type MemorialSite = {
 	plaquesOffered: boolean | null;
 	memorialOptions: string | null;
 	preferredSupplier: boolean | null;
+	// Council cemetery fields
+	councilName: string | null;
+	cemeteryName: string | null;
+	department: string | null;
+	permitRequired: boolean | null;
+	permitFee: string | null;
+	foundationSpec: string | null;
+	maxHeadstoneHeight: string | null;
+	maxHeadstoneWidth: string | null;
+	installationRules: string | null;
 	// Common fields
 	memorialRegulations: string | null;
 	approvedMaterials: string | null;
@@ -125,6 +135,16 @@ export type CreateMemorialSiteInput = {
 	plaquesOffered?: boolean;
 	memorialOptions?: string;
 	preferredSupplier?: boolean;
+	// Council cemetery fields
+	councilName?: string;
+	cemeteryName?: string;
+	department?: string;
+	permitRequired?: boolean;
+	permitFee?: string;
+	foundationSpec?: string;
+	maxHeadstoneHeight?: string;
+	maxHeadstoneWidth?: string;
+	installationRules?: string;
 	// Common fields
 	memorialRegulations?: string;
 	approvedMaterials?: string;
@@ -307,6 +327,7 @@ export function useUnarchiveMemorialSiteMutation() {
 export const SITE_TYPE_LABELS: Record<MemorialSiteType, string> = {
 	churchyard: 'Churchyard',
 	crematorium: 'Crematorium',
+	council_cemetery: 'Council Cemetery',
 };
 
 export const DENOMINATION_LABELS: Record<ChurchDenomination, string> = {

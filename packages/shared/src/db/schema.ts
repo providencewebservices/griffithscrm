@@ -157,7 +157,7 @@ export const customerAddresses = pgTable(
 export const REFERRAL_ARRANGEMENTS = ['none', 'informal', 'commission', 'preferred_partner'] as const;
 
 // Memorial site types
-export const MEMORIAL_SITE_TYPES = ['churchyard', 'crematorium'] as const;
+export const MEMORIAL_SITE_TYPES = ['churchyard', 'crematorium', 'council_cemetery'] as const;
 
 // Payment terms for suppliers
 export const PAYMENT_TERMS = ['cod', 'net_7', 'net_14', 'net_30', 'net_60', 'net_90'] as const;
@@ -287,14 +287,14 @@ export const councilAddresses = pgTable(
 	})
 );
 
-// Memorial Sites (churchyards, crematoria - unified entity for burial/memorial locations)
+// Memorial Sites (churchyards, crematoria, council cemeteries - unified entity for burial/memorial locations)
 export const memorialSites = pgTable('memorial_sites', {
 	id: text('id').primaryKey(),
 	tenantId: text('tenant_id')
 		.notNull()
 		.references(() => tenants.id, { onDelete: 'cascade' }),
 	name: text('name').notNull(), // e.g., "St Mary's Church" or "Blacon Crematorium"
-	siteType: text('site_type').notNull(), // From MEMORIAL_SITE_TYPES: 'churchyard' | 'crematorium'
+	siteType: text('site_type').notNull(), // From MEMORIAL_SITE_TYPES: 'churchyard' | 'crematorium' | 'council_cemetery'
 	// Churchyard-specific fields
 	denomination: text('denomination'), // From CHURCH_DENOMINATIONS
 	diocese: text('diocese'), // For CofE churches
@@ -307,6 +307,16 @@ export const memorialSites = pgTable('memorial_sites', {
 	plaquesOffered: boolean('plaques_offered'),
 	memorialOptions: text('memorial_options'), // Available memorial types
 	preferredSupplier: boolean('preferred_supplier'), // Are we a preferred supplier?
+	// Council cemetery-specific fields
+	councilName: text('council_name'), // e.g., "Chester City Council"
+	cemeteryName: text('cemetery_name'), // Specific cemetery name within council
+	department: text('department'), // e.g., "Bereavement Services"
+	permitRequired: boolean('permit_required'), // Needs permit for memorial work?
+	permitFee: numeric('permit_fee', { precision: 10, scale: 2 }),
+	foundationSpec: text('foundation_spec'), // Foundation requirements
+	maxHeadstoneHeight: text('max_headstone_height'), // e.g., "3ft 6in"
+	maxHeadstoneWidth: text('max_headstone_width'),
+	installationRules: text('installation_rules'), // Specific installation requirements
 	// Common fields
 	memorialRegulations: text('memorial_regulations'), // Specific rules/restrictions
 	approvedMaterials: text('approved_materials'), // Allowed stone types
@@ -1027,7 +1037,6 @@ export const DOCUMENT_ENTITY_TYPES = [
 	'job',
 	'funeral_director',
 	'supplier',
-	'council',
 	'memorial_site',
 	'product',
 ] as const;

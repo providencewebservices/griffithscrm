@@ -47,6 +47,7 @@ import {
 } from '@/hooks/use-product-options';
 import { useUploadImageMutation, useSignedUrl } from '@/hooks/use-uploads';
 import { ArrowLeft, MoreHorizontal, Plus, Package, Upload, X, Loader2 } from 'lucide-react';
+import { DocumentsCard } from '@/components/documents';
 
 export function ProductDetailPage() {
 	const { id } = useParams<{ id: string }>();
@@ -472,6 +473,16 @@ export function ProductDetailPage() {
 						</CardContent>
 					</Card>
 				</div>
+			</div>
+
+			{/* Documents */}
+			<div className="mt-6">
+				<DocumentsCard
+					entityType="product"
+					entityId={product.id}
+					title="Documents"
+					description="Files and documents for this product"
+				/>
 			</div>
 
 			{/* Edit Product Dialog */}

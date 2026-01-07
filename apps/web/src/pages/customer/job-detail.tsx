@@ -77,6 +77,7 @@ import {
 	Upload,
 	X,
 } from 'lucide-react';
+import { DocumentsCard } from '@/components/documents';
 
 // Job status order for progress calculation
 const JOB_STATUS_ORDER: JobStatus[] = [
@@ -1148,6 +1149,16 @@ export function JobDetailPage() {
 					</div>
 				</TabsContent>
 			</Tabs>
+
+			{/* Documents */}
+			<div className="mt-6">
+				<DocumentsCard
+					entityType="job"
+					entityId={job.id}
+					title="Documents"
+					description="Files and documents for this job"
+				/>
+			</div>
 
 			{/* Delete Confirmation Dialog */}
 			<DeleteConfirmDialog

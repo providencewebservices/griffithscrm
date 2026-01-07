@@ -54,6 +54,16 @@ const createMemorialSiteSchema = z.object({
 	plaquesOffered: z.boolean().optional(),
 	memorialOptions: z.string().optional(),
 	preferredSupplier: z.boolean().optional(),
+	// Council cemetery fields
+	councilName: z.string().optional(),
+	cemeteryName: z.string().optional(),
+	department: z.string().optional(),
+	permitRequired: z.boolean().optional(),
+	permitFee: z.string().optional(),
+	foundationSpec: z.string().optional(),
+	maxHeadstoneHeight: z.string().optional(),
+	maxHeadstoneWidth: z.string().optional(),
+	installationRules: z.string().optional(),
 	// Common fields
 	memorialRegulations: z.string().optional(),
 	approvedMaterials: z.string().optional(),
@@ -77,6 +87,16 @@ const updateMemorialSiteSchema = z.object({
 	plaquesOffered: z.boolean().nullable().optional(),
 	memorialOptions: z.string().nullable().optional(),
 	preferredSupplier: z.boolean().nullable().optional(),
+	// Council cemetery fields
+	councilName: z.string().nullable().optional(),
+	cemeteryName: z.string().nullable().optional(),
+	department: z.string().nullable().optional(),
+	permitRequired: z.boolean().nullable().optional(),
+	permitFee: z.string().nullable().optional(),
+	foundationSpec: z.string().nullable().optional(),
+	maxHeadstoneHeight: z.string().nullable().optional(),
+	maxHeadstoneWidth: z.string().nullable().optional(),
+	installationRules: z.string().nullable().optional(),
 	// Common fields
 	memorialRegulations: z.string().nullable().optional(),
 	approvedMaterials: z.string().nullable().optional(),
@@ -158,7 +178,9 @@ const memorialSitesRoutes = new Hono()
 					(s) =>
 						s.name.toLowerCase().includes(q.toLowerCase()) ||
 						s.parish?.toLowerCase().includes(q.toLowerCase()) ||
-						s.operatorName?.toLowerCase().includes(q.toLowerCase())
+						s.operatorName?.toLowerCase().includes(q.toLowerCase()) ||
+						s.councilName?.toLowerCase().includes(q.toLowerCase()) ||
+						s.cemeteryName?.toLowerCase().includes(q.toLowerCase())
 				)
 				.map((s) => s.id);
 
@@ -279,6 +301,16 @@ const memorialSitesRoutes = new Hono()
 				plaquesOffered: data.plaquesOffered ?? null,
 				memorialOptions: data.memorialOptions || null,
 				preferredSupplier: data.preferredSupplier ?? null,
+				// Council cemetery fields
+				councilName: data.councilName || null,
+				cemeteryName: data.cemeteryName || null,
+				department: data.department || null,
+				permitRequired: data.permitRequired ?? null,
+				permitFee: data.permitFee || null,
+				foundationSpec: data.foundationSpec || null,
+				maxHeadstoneHeight: data.maxHeadstoneHeight || null,
+				maxHeadstoneWidth: data.maxHeadstoneWidth || null,
+				installationRules: data.installationRules || null,
 				// Common fields
 				memorialRegulations: data.memorialRegulations || null,
 				approvedMaterials: data.approvedMaterials || null,
@@ -376,6 +408,16 @@ const memorialSitesRoutes = new Hono()
 			if (updates.plaquesOffered !== undefined) updateData.plaquesOffered = updates.plaquesOffered;
 			if (updates.memorialOptions !== undefined) updateData.memorialOptions = updates.memorialOptions;
 			if (updates.preferredSupplier !== undefined) updateData.preferredSupplier = updates.preferredSupplier;
+			// Council cemetery fields
+			if (updates.councilName !== undefined) updateData.councilName = updates.councilName;
+			if (updates.cemeteryName !== undefined) updateData.cemeteryName = updates.cemeteryName;
+			if (updates.department !== undefined) updateData.department = updates.department;
+			if (updates.permitRequired !== undefined) updateData.permitRequired = updates.permitRequired;
+			if (updates.permitFee !== undefined) updateData.permitFee = updates.permitFee;
+			if (updates.foundationSpec !== undefined) updateData.foundationSpec = updates.foundationSpec;
+			if (updates.maxHeadstoneHeight !== undefined) updateData.maxHeadstoneHeight = updates.maxHeadstoneHeight;
+			if (updates.maxHeadstoneWidth !== undefined) updateData.maxHeadstoneWidth = updates.maxHeadstoneWidth;
+			if (updates.installationRules !== undefined) updateData.installationRules = updates.installationRules;
 			// Common fields
 			if (updates.memorialRegulations !== undefined) updateData.memorialRegulations = updates.memorialRegulations;
 			if (updates.approvedMaterials !== undefined) updateData.approvedMaterials = updates.approvedMaterials;

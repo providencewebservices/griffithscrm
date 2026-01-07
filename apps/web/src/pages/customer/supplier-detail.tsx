@@ -46,6 +46,7 @@ import {
 	Package,
 	ShoppingBag,
 } from 'lucide-react';
+import { DocumentsCard } from '@/components/documents';
 
 export function SupplierDetailPage() {
 	const { id } = useParams<{ id: string }>();
@@ -470,6 +471,16 @@ export function SupplierDetailPage() {
 					</CardContent>
 				</Card>
 			)}
+
+			{/* Documents */}
+			<div className="mt-6">
+				<DocumentsCard
+					entityType="supplier"
+					entityId={supplier.id}
+					title="Documents"
+					description="Files and documents for this supplier"
+				/>
+			</div>
 
 			<DeleteConfirmDialog
 				open={archiveDialogOpen}

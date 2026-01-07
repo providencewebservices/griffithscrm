@@ -1,0 +1,104 @@
+import { useState } from 'react';
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { DocumentRow } from './document-row';
+import { DocumentUploadDialog } from './document-upload-dialog';
+import {
+	useEntityDocumentsQuery,
+	useUploadDocumentMutation,
+	type DocumentEntityType,
+} from '@/hooks/use-documents';
+import { Plus, Files } from 'lucide-react';
+
+interface DocumentsCardProps {
+	entityType: DocumentEntityType;
+	entityId: string;
+	title?: string;
+	description?: string;
+}
+
+export function DocumentsCard({
+	entityType,
+	entityId,
+	title = 'Documents',
+	description = 'Attached files and documents',
+}: DocumentsCardProps) {
+	const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+	const [uploadError, setUploadError] = useState<string | null>(null);
+
+	const { data: documents, isLoading } = useEntityDocumentsQuery(entityType, entityId);
+	const uploadMutation = useUploadDocumentMutation();
+
+	const handleUpload = async (data: {
+		file: File;
+		name: string;
+		tags?: string;
+		notes?: string;
+	}) => {
+		setUploadError(null);
+		try {
+			await uploadMutation.mutateAsync({
+				entityType,
+				entityId,
+				file: data.file,
+				name: data.name,
+				tags: data.tags,
+				notes: data.notes,
+			});
+			setUploadDialogOpen(false);
+		} catch (err) {
+			setUploadError(err instanceof Error ? err.message : 'Upload failed');
+		}
+	};
+
+	return (
+		<>
+			<Card>
+				<CardHeader>
+					<div className="flex items-center justify-between">
+						<div>
+							<CardTitle>{title}</CardTitle>
+							<CardDescription>{description}</CardDescription>
+						</div>
+						<Button onClick={() => setUploadDialogOpen(true)}>
+							<Plus className="h-4 w-4 mr-2" />
+							Upload
+						</Button>
+					</div>
+				</CardHeader>
+				<CardContent>
+					{isLoading ? (
+						<div className="text-center py-8 text-muted-foreground">
+							Loading documents...
+						</div>
+					) : !documents || documents.length === 0 ? (
+						<div className="text-center py-8 text-muted-foreground border rounded-lg">
+							<Files className="h-8 w-8 mx-auto mb-2 opacity-50" />
+							No documents uploaded yet
+						</div>
+					) : (
+						<div className="space-y-2">
+							{documents.map((doc) => (
+								<DocumentRow key={doc.id} document={doc} />
+							))}
+						</div>
+					)}
+				</CardContent>
+			</Card>
+
+			<DocumentUploadDialog
+				open={uploadDialogOpen}
+				onOpenChange={setUploadDialogOpen}
+				onSubmit={handleUpload}
+				isLoading={uploadMutation.isPending}
+				error={uploadError}
+			/>
+		</>
+	);
+}

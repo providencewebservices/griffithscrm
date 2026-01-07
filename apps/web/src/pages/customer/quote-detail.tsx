@@ -56,6 +56,7 @@ import {
 } from '@/hooks/use-quotes';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowLeft, Send, Check, X, Clock, FileEdit, Trash2, Eye, EyeOff, Loader2, Mail, MessageSquare, Plus } from 'lucide-react';
+import { DocumentsCard } from '@/components/documents';
 
 // Editable number component for inline editing
 function EditableNumber({
@@ -1248,6 +1249,16 @@ export function QuoteDetailPage() {
 				</div>
 			</div>
 			)}
+
+			{/* Documents */}
+			<div className="mt-6">
+				<DocumentsCard
+					entityType="quote"
+					entityId={quote.id}
+					title="Documents"
+					description="Files and documents for this quote"
+				/>
+			</div>
 
 			{/* Delete Confirmation Dialog */}
 			<DeleteConfirmDialog

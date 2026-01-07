@@ -25,7 +25,7 @@ import {
 	DENOMINATION_LABELS,
 	type MemorialSiteType,
 } from '@/hooks/use-memorial-sites';
-import { Search, Church, Flame } from 'lucide-react';
+import { Search, Church, Flame, Building2 } from 'lucide-react';
 
 type ViewMode = 'active' | 'archived';
 
@@ -107,6 +107,7 @@ export function MemorialSitesPage() {
 							<SelectItem value="all">All Types</SelectItem>
 							<SelectItem value="churchyard">Churchyards</SelectItem>
 							<SelectItem value="crematorium">Crematoria</SelectItem>
+							<SelectItem value="council_cemetery">Council Cemeteries</SelectItem>
 						</SelectContent>
 					</Select>
 					<div className="relative flex-1">
@@ -151,11 +152,13 @@ export function MemorialSitesPage() {
 									<TableCell className="font-medium">{site.name}</TableCell>
 									<TableCell>
 										<Badge
-											variant={site.siteType === 'churchyard' ? 'default' : 'secondary'}
+											variant={site.siteType === 'churchyard' ? 'default' : site.siteType === 'council_cemetery' ? 'outline' : 'secondary'}
 											className="gap-1"
 										>
 											{site.siteType === 'churchyard' ? (
 												<Church className="h-3 w-3" />
+											) : site.siteType === 'council_cemetery' ? (
+												<Building2 className="h-3 w-3" />
 											) : (
 												<Flame className="h-3 w-3" />
 											)}
@@ -167,6 +170,8 @@ export function MemorialSitesPage() {
 											<span>{DENOMINATION_LABELS[site.denomination]}</span>
 										) : site.siteType === 'crematorium' && site.operatorName ? (
 											<span>{site.operatorName}</span>
+										) : site.siteType === 'council_cemetery' && site.councilName ? (
+											<span>{site.councilName}</span>
 										) : (
 											<span className="text-muted-foreground">-</span>
 										)}

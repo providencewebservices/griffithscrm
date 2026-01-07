@@ -33,10 +33,12 @@ import {
 	ArrowLeft,
 	Church,
 	Flame,
+	Building2,
 	FileText,
 	CheckCircle,
 	XCircle,
 } from 'lucide-react';
+import { DocumentsCard } from '@/components/documents';
 
 export function MemorialSiteDetailPage() {
 	const { id } = useParams<{ id: string }>();
@@ -118,6 +120,20 @@ export function MemorialSiteDetailPage() {
 		site.contactInfo.filter((c) => c.type === 'phone' || c.type === 'mobile');
 
 	const isChurchyard = site.siteType === 'churchyard';
+	const isCrematorium = site.siteType === 'crematorium';
+	const isCouncilCemetery = site.siteType === 'council_cemetery';
+
+	const getSiteTypeIcon = () => {
+		if (isChurchyard) return <Church className="h-3 w-3" />;
+		if (isCouncilCemetery) return <Building2 className="h-3 w-3" />;
+		return <Flame className="h-3 w-3" />;
+	};
+
+	const getBadgeVariant = () => {
+		if (isChurchyard) return 'default';
+		if (isCouncilCemetery) return 'outline';
+		return 'secondary';
+	};
 
 	return (
 		<div>
@@ -140,14 +156,10 @@ export function MemorialSiteDetailPage() {
 					<div className="flex items-center gap-3">
 						<h2 className="text-2xl font-bold">{site.name}</h2>
 						<Badge
-							variant={isChurchyard ? 'default' : 'secondary'}
+							variant={getBadgeVariant()}
 							className="gap-1"
 						>
-							{isChurchyard ? (
-								<Church className="h-3 w-3" />
-							) : (
-								<Flame className="h-3 w-3" />
-							)}
+							{getSiteTypeIcon()}
 							{SITE_TYPE_LABELS[site.siteType]}
 						</Badge>
 						{site.archivedAt ? (
@@ -159,9 +171,14 @@ export function MemorialSiteDetailPage() {
 							{DENOMINATION_LABELS[site.denomination]}
 						</p>
 					)}
-					{!isChurchyard && site.operatorName && (
+					{isCrematorium && site.operatorName && (
 						<p className="text-muted-foreground mt-1">
 							Operated by: {site.operatorName}
+						</p>
+					)}
+					{isCouncilCemetery && site.councilName && (
+						<p className="text-muted-foreground mt-1">
+							Managed by: {site.councilName}
 						</p>
 					)}
 				</div>
@@ -297,7 +314,7 @@ export function MemorialSiteDetailPage() {
 			</div>
 
 			{/* Site-specific details */}
-			{isChurchyard ? (
+			{isChurchyard && (
 				<Card className="mt-6">
 					<CardHeader>
 						<CardTitle className="flex items-center gap-2">
@@ -367,7 +384,9 @@ export function MemorialSiteDetailPage() {
 						</div>
 					</CardContent>
 				</Card>
-			) : (
+			)}
+
+			{isCrematorium && (
 				<Card className="mt-6">
 					<CardHeader>
 						<CardTitle className="flex items-center gap-2">
@@ -451,6 +470,94 @@ export function MemorialSiteDetailPage() {
 				</Card>
 			)}
 
+			{isCouncilCemetery && (
+				<Card className="mt-6">
+					<CardHeader>
+						<CardTitle className="flex items-center gap-2">
+							<Building2 className="h-5 w-5" />
+							Council Cemetery Details
+						</CardTitle>
+						<CardDescription>
+							Council-specific information and requirements
+						</CardDescription>
+					</CardHeader>
+					<CardContent>
+						<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+							{site.councilName && (
+								<div>
+									<p className="text-sm font-medium mb-1">Council</p>
+									<p>{site.councilName}</p>
+								</div>
+							)}
+							{site.cemeteryName && (
+								<div>
+									<p className="text-sm font-medium mb-1">Cemetery Name</p>
+									<p>{site.cemeteryName}</p>
+								</div>
+							)}
+							{site.department && (
+								<div>
+									<p className="text-sm font-medium mb-1">Department</p>
+									<p>{site.department}</p>
+								</div>
+							)}
+							<div>
+								<p className="text-sm font-medium mb-1">Permit Required</p>
+								<div className="flex items-center gap-2">
+									{site.permitRequired ? (
+										<>
+											<CheckCircle className="h-4 w-4 text-amber-600" />
+											<span>Yes</span>
+										</>
+									) : site.permitRequired === false ? (
+										<>
+											<XCircle className="h-4 w-4 text-green-600" />
+											<span>No</span>
+										</>
+									) : (
+										<span className="text-muted-foreground">Unknown</span>
+									)}
+								</div>
+							</div>
+							{site.permitFee && (
+								<div>
+									<p className="text-sm font-medium mb-1">Permit Fee</p>
+									<p>£{site.permitFee}</p>
+								</div>
+							)}
+							{site.maxHeadstoneHeight && (
+								<div>
+									<p className="text-sm font-medium mb-1">Max Headstone Height</p>
+									<p>{site.maxHeadstoneHeight}</p>
+								</div>
+							)}
+							{site.maxHeadstoneWidth && (
+								<div>
+									<p className="text-sm font-medium mb-1">Max Headstone Width</p>
+									<p>{site.maxHeadstoneWidth}</p>
+								</div>
+							)}
+						</div>
+						{(site.foundationSpec || site.installationRules) && (
+							<div className="mt-6 space-y-4">
+								{site.foundationSpec && (
+									<div>
+										<p className="text-sm font-medium mb-1">Foundation Specification</p>
+										<p className="whitespace-pre-wrap">{site.foundationSpec}</p>
+									</div>
+								)}
+								{site.installationRules && (
+									<div>
+										<p className="text-sm font-medium mb-1">Installation Rules</p>
+										<p className="whitespace-pre-wrap">{site.installationRules}</p>
+									</div>
+								)}
+							</div>
+						)}
+					</CardContent>
+				</Card>
+			)}
+
 			{/* Regulations (common to both types) */}
 			{(site.memorialRegulations || site.approvedMaterials) && (
 				<Card className="mt-6">
@@ -490,6 +597,16 @@ export function MemorialSiteDetailPage() {
 					</CardContent>
 				</Card>
 			)}
+
+			{/* Documents */}
+			<div className="mt-6">
+				<DocumentsCard
+					entityType="memorial_site"
+					entityId={site.id}
+					title="Documents"
+					description="Files and documents for this memorial site"
+				/>
+			</div>
 
 			<DeleteConfirmDialog
 				open={archiveDialogOpen}

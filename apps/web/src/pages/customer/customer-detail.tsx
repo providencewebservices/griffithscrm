@@ -48,6 +48,7 @@ import {
 	Clock,
 	ArrowLeft,
 } from 'lucide-react';
+import { DocumentsCard } from '@/components/documents';
 
 export function CustomerDetailPage() {
 	const { id } = useParams<{ id: string }>();
@@ -466,6 +467,16 @@ export function CustomerDetailPage() {
 					)}
 				</CardContent>
 			</Card>
+
+			{/* Documents */}
+			<div className="mt-6">
+				<DocumentsCard
+					entityType="customer"
+					entityId={customer.id}
+					title="Documents"
+					description="Files and documents for this customer"
+				/>
+			</div>
 
 			<CustomerFormDialog
 				open={formDialogOpen}
