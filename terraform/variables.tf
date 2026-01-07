@@ -71,6 +71,34 @@ variable "better_auth_secret" {
   sensitive   = true
 }
 
+# OAuth - Google
+variable "google_client_id" {
+  description = "Google OAuth client ID"
+  type        = string
+  default     = ""
+}
+
+variable "google_client_secret" {
+  description = "Google OAuth client secret"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+# OAuth - Microsoft
+variable "microsoft_client_id" {
+  description = "Microsoft OAuth client ID"
+  type        = string
+  default     = ""
+}
+
+variable "microsoft_client_secret" {
+  description = "Microsoft OAuth client secret"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
 
 # S3 Documents
 variable "s3_documents_bucket_name" {

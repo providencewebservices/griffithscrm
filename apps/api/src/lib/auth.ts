@@ -13,7 +13,23 @@ export const auth = betterAuth({
 		provider: 'pg',
 		usePlural: true,
 	}),
-	trustedOrigins: ['http://localhost:5173'],
+	trustedOrigins: [
+		'http://localhost:5173',
+		process.env.CORS_ORIGIN,
+	].filter(Boolean) as string[],
+	socialProviders: {
+		google: {
+			clientId: process.env.GOOGLE_CLIENT_ID || '',
+			clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+			disableSignUp: true, // Only existing users can sign in
+		},
+		microsoft: {
+			clientId: process.env.MICROSOFT_CLIENT_ID || '',
+			clientSecret: process.env.MICROSOFT_CLIENT_SECRET || '',
+			tenantId: 'common', // Allow any Microsoft account
+			disableSignUp: true, // Only existing users can sign in
+		},
+	},
 	emailVerification: {
 		sendVerificationEmail: async ({ user, url }) => {
 			await sendEmail({

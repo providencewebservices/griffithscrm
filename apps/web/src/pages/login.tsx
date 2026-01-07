@@ -117,6 +117,10 @@ export function LoginPage() {
 								variant="outline"
 								className="w-full"
 								type="button"
+								onClick={() => signIn.social({
+									provider: 'google',
+									callbackURL: '/',
+								})}
 							>
 								<svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
 									<path
@@ -143,6 +147,10 @@ export function LoginPage() {
 								variant="outline"
 								className="w-full"
 								type="button"
+								onClick={() => signIn.social({
+									provider: 'microsoft',
+									callbackURL: '/',
+								})}
 							>
 								<svg className="mr-2 h-4 w-4" viewBox="0 0 23 23">
 									<rect x="1" y="1" width="10" height="10" fill="#F25022" />

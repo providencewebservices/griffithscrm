@@ -89,10 +89,11 @@ const teamRoutes = new Hono()
 			}
 
 			// Trigger password reset email so user can set their own password
+			const webUrl = process.env.CORS_ORIGIN || 'http://localhost:5173';
 			await auth.api.requestPasswordReset({
 				body: {
 					email,
-					redirectTo: 'http://localhost:5173/reset-password',
+					redirectTo: `${webUrl}/reset-password`,
 				},
 			});
 
@@ -210,10 +211,11 @@ const teamRoutes = new Hono()
 
 		try {
 			// Trigger password reset email
+			const webUrl = process.env.CORS_ORIGIN || 'http://localhost:5173';
 			await auth.api.requestPasswordReset({
 				body: {
 					email: existingUser.email,
-					redirectTo: 'http://localhost:5173/reset-password',
+					redirectTo: `${webUrl}/reset-password`,
 				},
 			});
 

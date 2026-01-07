@@ -172,7 +172,7 @@ resource "aws_ecs_task_definition" "api" {
         }
       ]
 
-      secrets = [
+      secrets = concat([
         {
           name      = "DATABASE_URL"
           valueFrom = aws_ssm_parameter.database_url.arn
@@ -181,7 +181,27 @@ resource "aws_ecs_task_definition" "api" {
           name      = "BETTER_AUTH_SECRET"
           valueFrom = aws_ssm_parameter.better_auth_secret.arn
         }
-      ]
+      ],
+      var.google_client_id != "" ? [
+        {
+          name      = "GOOGLE_CLIENT_ID"
+          valueFrom = aws_ssm_parameter.google_client_id[0].arn
+        },
+        {
+          name      = "GOOGLE_CLIENT_SECRET"
+          valueFrom = aws_ssm_parameter.google_client_secret[0].arn
+        }
+      ] : [],
+      var.microsoft_client_id != "" ? [
+        {
+          name      = "MICROSOFT_CLIENT_ID"
+          valueFrom = aws_ssm_parameter.microsoft_client_id[0].arn
+        },
+        {
+          name      = "MICROSOFT_CLIENT_SECRET"
+          valueFrom = aws_ssm_parameter.microsoft_client_secret[0].arn
+        }
+      ] : [])
 
       logConfiguration = {
         logDriver = "awslogs"
@@ -211,6 +231,48 @@ resource "aws_ssm_parameter" "better_auth_secret" {
   description = "Better Auth secret key"
   type        = "SecureString"
   value       = var.better_auth_secret
+
+  tags = local.tags
+}
+
+# OAuth - Google (optional)
+resource "aws_ssm_parameter" "google_client_id" {
+  count       = var.google_client_id != "" ? 1 : 0
+  name        = "/${local.name}/app/google-client-id"
+  description = "Google OAuth client ID"
+  type        = "String"
+  value       = var.google_client_id
+
+  tags = local.tags
+}
+
+resource "aws_ssm_parameter" "google_client_secret" {
+  count       = var.google_client_secret != "" ? 1 : 0
+  name        = "/${local.name}/app/google-client-secret"
+  description = "Google OAuth client secret"
+  type        = "SecureString"
+  value       = var.google_client_secret
+
+  tags = local.tags
+}
+
+# OAuth - Microsoft (optional)
+resource "aws_ssm_parameter" "microsoft_client_id" {
+  count       = var.microsoft_client_id != "" ? 1 : 0
+  name        = "/${local.name}/app/microsoft-client-id"
+  description = "Microsoft OAuth client ID"
+  type        = "String"
+  value       = var.microsoft_client_id
+
+  tags = local.tags
+}
+
+resource "aws_ssm_parameter" "microsoft_client_secret" {
+  count       = var.microsoft_client_secret != "" ? 1 : 0
+  name        = "/${local.name}/app/microsoft-client-secret"
+  description = "Microsoft OAuth client secret"
+  type        = "SecureString"
+  value       = var.microsoft_client_secret
 
   tags = local.tags
 }
