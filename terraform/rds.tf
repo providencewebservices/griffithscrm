@@ -110,7 +110,7 @@ resource "aws_ssm_parameter" "database_url" {
   name        = "/${local.name}/database/url"
   description = "Full database connection URL"
   type        = "SecureString"
-  value       = "postgresql://griffiths_admin:${random_password.db_password.result}@${module.rds.db_instance_endpoint}/${var.db_name}"
+  value       = "postgresql://griffiths_admin:${random_password.db_password.result}@${module.rds.db_instance_endpoint}/${var.db_name}?sslmode=require"
 
   tags = local.tags
 }

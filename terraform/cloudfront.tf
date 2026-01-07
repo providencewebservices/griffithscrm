@@ -98,7 +98,7 @@ resource "aws_cloudfront_distribution" "web" {
   enabled             = true
   is_ipv6_enabled     = true
   default_root_object = "index.html"
-  aliases             = var.route53_zone_id != "" ? [var.web_domain] : []
+  aliases             = var.web_domain != "" ? [var.web_domain] : []
   price_class         = "PriceClass_100" # Cost savings - only US, Canada, Europe
 
   origin {
@@ -146,13 +146,14 @@ resource "aws_cloudfront_distribution" "web" {
   }
 
   viewer_certificate {
-    acm_certificate_arn            = var.route53_zone_id != "" ? aws_acm_certificate.web.arn : null
-    cloudfront_default_certificate = var.route53_zone_id == ""
-    ssl_support_method             = var.route53_zone_id != "" ? "sni-only" : null
+    acm_certificate_arn            = var.web_domain != "" ? aws_acm_certificate.web.arn : null
+    cloudfront_default_certificate = var.web_domain == ""
+    ssl_support_method             = var.web_domain != "" ? "sni-only" : null
     minimum_protocol_version       = "TLSv1.2_2021"
   }
 
-  depends_on = [aws_acm_certificate_validation.web]
+  # Only depend on Route53 validation if using Route53
+  depends_on = []
 
   tags = local.tags
 }
