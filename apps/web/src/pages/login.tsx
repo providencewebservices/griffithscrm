@@ -119,7 +119,7 @@ export function LoginPage() {
 								type="button"
 								onClick={() => signIn.social({
 									provider: 'google',
-									callbackURL: '/',
+									callbackURL: window.location.origin,
 								})}
 							>
 								<svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
@@ -149,7 +149,7 @@ export function LoginPage() {
 								type="button"
 								onClick={() => signIn.social({
 									provider: 'microsoft',
-									callbackURL: '/',
+									callbackURL: window.location.origin,
 								})}
 							>
 								<svg className="mr-2 h-4 w-4" viewBox="0 0 23 23">

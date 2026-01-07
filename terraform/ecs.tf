@@ -121,6 +121,30 @@ resource "aws_iam_role_policy" "ecs_task_s3" {
   })
 }
 
+# Allow task role to use ECS Exec (SSM Session Manager)
+# Required for shell access to running containers for bootstrap/debugging
+# Reference: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs-exec.html
+resource "aws_iam_role_policy" "ecs_task_exec_command" {
+  name = "${local.name}-ecs-task-exec-command"
+  role = aws_iam_role.ecs_task.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ssmmessages:CreateControlChannel",
+          "ssmmessages:CreateDataChannel",
+          "ssmmessages:OpenControlChannel",
+          "ssmmessages:OpenDataChannel"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
 # ECS Task Definition
 resource "aws_ecs_task_definition" "api" {
   family                   = "${local.name}-api"
@@ -284,6 +308,10 @@ resource "aws_ecs_service" "api" {
   task_definition = aws_ecs_task_definition.api.arn
   desired_count   = var.api_desired_count
   launch_type     = "FARGATE"
+
+  # Enable ECS Exec for shell access to containers (bootstrap admin, debugging)
+  # Reference: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs-exec.html
+  enable_execute_command = true
 
   network_configuration {
     subnets          = module.vpc.public_subnets
