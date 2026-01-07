@@ -1,0 +1,33 @@
+# AWS Configuration
+aws_region  = "eu-west-2" # London
+environment = "prod"
+
+# Domain Configuration
+web_domain = "griffiths.uwchlanventures.com"
+api_domain = "griffiths-api.uwchlanventures.com"
+
+# Route53 Zone ID (optional - leave empty for manual DNS)
+# If you have a Route53 hosted zone for uwchlanventures.com, provide its ID
+# Find it with: aws route53 list-hosted-zones
+route53_zone_id = ""
+
+# Database Configuration
+db_instance_class    = "db.t4g.micro" # ~$12/month
+db_allocated_storage = 20             # GB
+db_name              = "griffiths_crm"
+
+# ECS Configuration (cost-conscious defaults)
+api_cpu           = 256  # 0.25 vCPU (~$10/month with FARGATE_SPOT)
+api_memory        = 512  # MB
+api_desired_count = 1
+
+# Application Secrets
+# Generate with: openssl rand -base64 32
+better_auth_secret = "your-secure-random-string-at-least-32-chars"
+
+# S3 Documents Bucket (optional - will auto-generate if empty)
+# Must be globally unique
+s3_documents_bucket_name = ""
+
+# VPC CIDR (usually don't need to change)
+vpc_cidr = "10.0.0.0/16"

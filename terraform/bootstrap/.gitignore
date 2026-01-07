@@ -1,0 +1,9 @@
+# Terraform
+.terraform/
+.terraform.lock.hcl
+crash.log
+
+# Keep terraform.tfstate committed for bootstrap
+# (it's the source of truth for the state bucket itself)
+# !terraform.tfstate
+# !terraform.tfstate.backup
