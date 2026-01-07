@@ -1,5 +1,5 @@
 # Build stage
-FROM oven/bun:1.1-alpine AS builder
+FROM oven/bun:1.3.4-alpine AS builder
 
 WORKDIR /app
 
@@ -9,7 +9,9 @@ COPY apps/api/package.json ./apps/api/
 COPY packages/shared/package.json ./packages/shared/
 
 # Install dependencies
-RUN bun install --frozen-lockfile
+# Note: --frozen-lockfile removed due to known bun bug in monorepos/Docker
+# See: https://github.com/oven-sh/bun/issues/12252
+RUN bun install
 
 # Copy source code
 COPY apps/api ./apps/api
@@ -20,25 +22,22 @@ WORKDIR /app/apps/api
 RUN bun run build
 
 # Production stage
-FROM oven/bun:1.1-alpine AS production
+FROM oven/bun:1.3.4-alpine AS production
 
 WORKDIR /app
 
-# Install curl for health checks and npm for drizzle-kit
-RUN apk add --no-cache curl nodejs npm
+# Install curl for health checks
+RUN apk add --no-cache curl
 
 # Copy built application
 COPY --from=builder /app/apps/api/dist ./dist
 COPY --from=builder /app/apps/api/package.json ./
 COPY --from=builder /app/node_modules ./node_modules
 
-# Copy migration files and config
+# Copy migration files and scripts
 COPY --from=builder /app/packages/shared/drizzle ./drizzle
-COPY apps/api/drizzle.config.js ./drizzle.config.js
+COPY --from=builder /app/apps/api/scripts ./scripts
 COPY apps/api/docker-entrypoint.sh ./docker-entrypoint.sh
-
-# Install drizzle-kit globally for migrations
-RUN npm install -g drizzle-kit
 
 # Make entrypoint executable
 RUN chmod +x ./docker-entrypoint.sh

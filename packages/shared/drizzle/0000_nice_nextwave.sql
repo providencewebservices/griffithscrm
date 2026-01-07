@@ -1,3 +1,49 @@
+CREATE TABLE "accounts" (
+	"id" text PRIMARY KEY NOT NULL,
+	"user_id" text NOT NULL,
+	"account_id" text NOT NULL,
+	"provider_id" text NOT NULL,
+	"access_token" text,
+	"refresh_token" text,
+	"access_token_expires_at" timestamp,
+	"refresh_token_expires_at" timestamp,
+	"scope" text,
+	"id_token" text,
+	"password" text,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "addresses" (
+	"id" text PRIMARY KEY NOT NULL,
+	"street_number" text,
+	"route" text,
+	"locality" text,
+	"administrative_area_level_1" text,
+	"administrative_area_level_2" text,
+	"postal_code" text,
+	"postal_code_suffix" text,
+	"country" text DEFAULT 'US' NOT NULL,
+	"formatted_address" text NOT NULL,
+	"place_id" text,
+	"latitude" text,
+	"longitude" text,
+	"label" text,
+	"is_primary" boolean DEFAULT false NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "contact_info" (
+	"id" text PRIMARY KEY NOT NULL,
+	"type" text NOT NULL,
+	"value" text NOT NULL,
+	"label" text,
+	"is_primary" boolean DEFAULT false NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "council_addresses" (
 	"council_id" text NOT NULL,
 	"address_id" text NOT NULL,
@@ -27,6 +73,30 @@ CREATE TABLE "councils" (
 	"installation_rules" text,
 	"notes" text,
 	"is_active" boolean DEFAULT true NOT NULL,
+	"archived_at" timestamp,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "customer_addresses" (
+	"customer_id" text NOT NULL,
+	"address_id" text NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "customer_addresses_customer_id_address_id_pk" PRIMARY KEY("customer_id","address_id")
+);
+--> statement-breakpoint
+CREATE TABLE "customer_contact_info" (
+	"customer_id" text NOT NULL,
+	"contact_info_id" text NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "customer_contact_info_customer_id_contact_info_id_pk" PRIMARY KEY("customer_id","contact_info_id")
+);
+--> statement-breakpoint
+CREATE TABLE "customers" (
+	"id" text PRIMARY KEY NOT NULL,
+	"first_name" text NOT NULL,
+	"last_name" text NOT NULL,
+	"tenant_id" text NOT NULL,
 	"archived_at" timestamp,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL
@@ -153,12 +223,33 @@ CREATE TABLE "jobs" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE "lettering_colors" (
+	"id" text PRIMARY KEY NOT NULL,
+	"tenant_id" text NOT NULL,
+	"name" text NOT NULL,
+	"price" numeric(10, 2) DEFAULT '0' NOT NULL,
+	"is_active" boolean DEFAULT true NOT NULL,
+	"sort_order" integer DEFAULT 0 NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "lettering_costs" (
 	"id" text PRIMARY KEY NOT NULL,
 	"technique_id" text NOT NULL,
 	"applies_to" text NOT NULL,
 	"free_letters" integer DEFAULT 0 NOT NULL,
 	"price_per_letter" numeric(10, 2) DEFAULT '0' NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "lettering_techniques" (
+	"id" text PRIMARY KEY NOT NULL,
+	"tenant_id" text NOT NULL,
+	"name" text NOT NULL,
+	"is_active" boolean DEFAULT true NOT NULL,
+	"sort_order" integer DEFAULT 0 NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
@@ -233,6 +324,28 @@ CREATE TABLE "memorial_sites" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE "option_choices" (
+	"id" text PRIMARY KEY NOT NULL,
+	"option_id" text NOT NULL,
+	"name" text NOT NULL,
+	"price_adjustment" numeric(10, 2) DEFAULT '0' NOT NULL,
+	"image_url" text,
+	"sort_order" integer DEFAULT 0 NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "product_categories" (
+	"id" text PRIMARY KEY NOT NULL,
+	"tenant_id" text NOT NULL,
+	"name" text NOT NULL,
+	"description" text,
+	"image_url" text,
+	"sort_order" integer DEFAULT 0 NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "product_components" (
 	"id" text PRIMARY KEY NOT NULL,
 	"product_id" text NOT NULL,
@@ -240,6 +353,33 @@ CREATE TABLE "product_components" (
 	"name" text,
 	"quantity" integer DEFAULT 1 NOT NULL,
 	"sort_order" integer DEFAULT 0 NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "product_options" (
+	"id" text PRIMARY KEY NOT NULL,
+	"product_id" text NOT NULL,
+	"name" text NOT NULL,
+	"type" text NOT NULL,
+	"is_required" boolean DEFAULT true NOT NULL,
+	"sort_order" integer DEFAULT 0 NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "products" (
+	"id" text PRIMARY KEY NOT NULL,
+	"tenant_id" text NOT NULL,
+	"category_id" text,
+	"supplier_id" text,
+	"sku" text NOT NULL,
+	"name" text NOT NULL,
+	"description" text,
+	"image_url" text,
+	"base_price" numeric(10, 2),
+	"is_active" boolean DEFAULT true NOT NULL,
+	"archived_at" timestamp,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
@@ -367,6 +507,45 @@ CREATE TABLE "quotes" (
 	CONSTRAINT "quotes_access_token_unique" UNIQUE("access_token")
 );
 --> statement-breakpoint
+CREATE TABLE "services" (
+	"id" text PRIMARY KEY NOT NULL,
+	"tenant_id" text NOT NULL,
+	"name" text NOT NULL,
+	"description" text,
+	"base_price" numeric(10, 2),
+	"pricing_type" text DEFAULT 'fixed' NOT NULL,
+	"is_active" boolean DEFAULT true NOT NULL,
+	"sort_order" integer DEFAULT 0 NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "sessions" (
+	"id" text PRIMARY KEY NOT NULL,
+	"user_id" text NOT NULL,
+	"token" text NOT NULL,
+	"expires_at" timestamp NOT NULL,
+	"ip_address" text,
+	"user_agent" text,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "sessions_token_unique" UNIQUE("token")
+);
+--> statement-breakpoint
+CREATE TABLE "sundries" (
+	"id" text PRIMARY KEY NOT NULL,
+	"tenant_id" text NOT NULL,
+	"supplier_id" text,
+	"name" text NOT NULL,
+	"description" text,
+	"price" numeric(10, 2) DEFAULT '0' NOT NULL,
+	"image_url" text,
+	"is_active" boolean DEFAULT true NOT NULL,
+	"sort_order" integer DEFAULT 0 NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "supplier_addresses" (
 	"supplier_id" text NOT NULL,
 	"address_id" text NOT NULL,
@@ -409,13 +588,52 @@ CREATE TABLE "tenant_pricing_settings" (
 	CONSTRAINT "tenant_pricing_settings_tenant_id_unique" UNIQUE("tenant_id")
 );
 --> statement-breakpoint
-ALTER TABLE "products" ADD COLUMN "supplier_id" text;--> statement-breakpoint
-ALTER TABLE "sundries" ADD COLUMN "supplier_id" text;--> statement-breakpoint
+CREATE TABLE "tenants" (
+	"id" text PRIMARY KEY NOT NULL,
+	"name" text NOT NULL,
+	"slug" text NOT NULL,
+	"address_id" text,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "tenants_slug_unique" UNIQUE("slug")
+);
+--> statement-breakpoint
+CREATE TABLE "users" (
+	"id" text PRIMARY KEY NOT NULL,
+	"name" text NOT NULL,
+	"email" text NOT NULL,
+	"email_verified" boolean DEFAULT false NOT NULL,
+	"image" text,
+	"role" text DEFAULT 'tenant_user' NOT NULL,
+	"tenant_id" text,
+	"banned" boolean,
+	"ban_reason" text,
+	"ban_expires" timestamp,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "users_email_unique" UNIQUE("email")
+);
+--> statement-breakpoint
+CREATE TABLE "verifications" (
+	"id" text PRIMARY KEY NOT NULL,
+	"identifier" text NOT NULL,
+	"value" text NOT NULL,
+	"expires_at" timestamp NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+ALTER TABLE "accounts" ADD CONSTRAINT "accounts_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "council_addresses" ADD CONSTRAINT "council_addresses_council_id_councils_id_fk" FOREIGN KEY ("council_id") REFERENCES "public"."councils"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "council_addresses" ADD CONSTRAINT "council_addresses_address_id_addresses_id_fk" FOREIGN KEY ("address_id") REFERENCES "public"."addresses"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "council_contact_info" ADD CONSTRAINT "council_contact_info_council_id_councils_id_fk" FOREIGN KEY ("council_id") REFERENCES "public"."councils"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "council_contact_info" ADD CONSTRAINT "council_contact_info_contact_info_id_contact_info_id_fk" FOREIGN KEY ("contact_info_id") REFERENCES "public"."contact_info"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "councils" ADD CONSTRAINT "councils_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "customer_addresses" ADD CONSTRAINT "customer_addresses_customer_id_customers_id_fk" FOREIGN KEY ("customer_id") REFERENCES "public"."customers"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "customer_addresses" ADD CONSTRAINT "customer_addresses_address_id_addresses_id_fk" FOREIGN KEY ("address_id") REFERENCES "public"."addresses"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "customer_contact_info" ADD CONSTRAINT "customer_contact_info_customer_id_customers_id_fk" FOREIGN KEY ("customer_id") REFERENCES "public"."customers"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "customer_contact_info" ADD CONSTRAINT "customer_contact_info_contact_info_id_contact_info_id_fk" FOREIGN KEY ("contact_info_id") REFERENCES "public"."contact_info"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "customers" ADD CONSTRAINT "customers_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "dimension_combo_values" ADD CONSTRAINT "dimension_combo_values_combo_id_dimension_combos_id_fk" FOREIGN KEY ("combo_id") REFERENCES "public"."dimension_combos"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "dimension_combo_values" ADD CONSTRAINT "dimension_combo_values_product_component_id_product_components_id_fk" FOREIGN KEY ("product_component_id") REFERENCES "public"."product_components"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "dimension_combos" ADD CONSTRAINT "dimension_combos_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -434,7 +652,9 @@ ALTER TABLE "job_payment_schedule_items" ADD CONSTRAINT "job_payment_schedule_it
 ALTER TABLE "job_payment_schedule_items" ADD CONSTRAINT "job_payment_schedule_items_job_id_jobs_id_fk" FOREIGN KEY ("job_id") REFERENCES "public"."jobs"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "jobs" ADD CONSTRAINT "jobs_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "jobs" ADD CONSTRAINT "jobs_quote_id_quotes_id_fk" FOREIGN KEY ("quote_id") REFERENCES "public"."quotes"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "lettering_colors" ADD CONSTRAINT "lettering_colors_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "lettering_costs" ADD CONSTRAINT "lettering_costs_technique_id_lettering_techniques_id_fk" FOREIGN KEY ("technique_id") REFERENCES "public"."lettering_techniques"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "lettering_techniques" ADD CONSTRAINT "lettering_techniques_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "material_sections" ADD CONSTRAINT "material_sections_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "materials" ADD CONSTRAINT "materials_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "materials" ADD CONSTRAINT "materials_section_id_material_sections_id_fk" FOREIGN KEY ("section_id") REFERENCES "public"."material_sections"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -444,7 +664,13 @@ ALTER TABLE "memorial_site_addresses" ADD CONSTRAINT "memorial_site_addresses_ad
 ALTER TABLE "memorial_site_contact_info" ADD CONSTRAINT "memorial_site_contact_info_memorial_site_id_memorial_sites_id_fk" FOREIGN KEY ("memorial_site_id") REFERENCES "public"."memorial_sites"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "memorial_site_contact_info" ADD CONSTRAINT "memorial_site_contact_info_contact_info_id_contact_info_id_fk" FOREIGN KEY ("contact_info_id") REFERENCES "public"."contact_info"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "memorial_sites" ADD CONSTRAINT "memorial_sites_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "option_choices" ADD CONSTRAINT "option_choices_option_id_product_options_id_fk" FOREIGN KEY ("option_id") REFERENCES "public"."product_options"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "product_categories" ADD CONSTRAINT "product_categories_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "product_components" ADD CONSTRAINT "product_components_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "product_options" ADD CONSTRAINT "product_options_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "products" ADD CONSTRAINT "products_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "products" ADD CONSTRAINT "products_category_id_product_categories_id_fk" FOREIGN KEY ("category_id") REFERENCES "public"."product_categories"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "products" ADD CONSTRAINT "products_supplier_id_suppliers_id_fk" FOREIGN KEY ("supplier_id") REFERENCES "public"."suppliers"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "quote_components" ADD CONSTRAINT "quote_components_quote_id_quotes_id_fk" FOREIGN KEY ("quote_id") REFERENCES "public"."quotes"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "quote_components" ADD CONSTRAINT "quote_components_material_id_materials_id_fk" FOREIGN KEY ("material_id") REFERENCES "public"."materials"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "quote_components" ADD CONSTRAINT "quote_components_finish_id_finishes_id_fk" FOREIGN KEY ("finish_id") REFERENCES "public"."finishes"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
@@ -464,13 +690,14 @@ ALTER TABLE "quotes" ADD CONSTRAINT "quotes_dimension_combo_id_dimension_combos_
 ALTER TABLE "quotes" ADD CONSTRAINT "quotes_funeral_director_id_funeral_directors_id_fk" FOREIGN KEY ("funeral_director_id") REFERENCES "public"."funeral_directors"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "quotes" ADD CONSTRAINT "quotes_council_id_councils_id_fk" FOREIGN KEY ("council_id") REFERENCES "public"."councils"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "quotes" ADD CONSTRAINT "quotes_memorial_site_id_memorial_sites_id_fk" FOREIGN KEY ("memorial_site_id") REFERENCES "public"."memorial_sites"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "services" ADD CONSTRAINT "services_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "sessions" ADD CONSTRAINT "sessions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "sundries" ADD CONSTRAINT "sundries_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "sundries" ADD CONSTRAINT "sundries_supplier_id_suppliers_id_fk" FOREIGN KEY ("supplier_id") REFERENCES "public"."suppliers"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "supplier_addresses" ADD CONSTRAINT "supplier_addresses_supplier_id_suppliers_id_fk" FOREIGN KEY ("supplier_id") REFERENCES "public"."suppliers"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "supplier_addresses" ADD CONSTRAINT "supplier_addresses_address_id_addresses_id_fk" FOREIGN KEY ("address_id") REFERENCES "public"."addresses"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "supplier_contact_info" ADD CONSTRAINT "supplier_contact_info_supplier_id_suppliers_id_fk" FOREIGN KEY ("supplier_id") REFERENCES "public"."suppliers"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "supplier_contact_info" ADD CONSTRAINT "supplier_contact_info_contact_info_id_contact_info_id_fk" FOREIGN KEY ("contact_info_id") REFERENCES "public"."contact_info"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "suppliers" ADD CONSTRAINT "suppliers_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "tenant_pricing_settings" ADD CONSTRAINT "tenant_pricing_settings_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "products" ADD CONSTRAINT "products_supplier_id_suppliers_id_fk" FOREIGN KEY ("supplier_id") REFERENCES "public"."suppliers"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "sundries" ADD CONSTRAINT "sundries_supplier_id_suppliers_id_fk" FOREIGN KEY ("supplier_id") REFERENCES "public"."suppliers"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "lettering_techniques" DROP COLUMN "free_letters";--> statement-breakpoint
-ALTER TABLE "lettering_techniques" DROP COLUMN "price_per_letter";
+ALTER TABLE "users" ADD CONSTRAINT "users_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE set null ON UPDATE no action;
