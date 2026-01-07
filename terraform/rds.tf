@@ -21,9 +21,10 @@ module "rds" {
   username = "griffiths_admin"
   port     = 5432
 
-  # Use random password
+  # Use our random password (password_wo = write-only, never stored in state)
   manage_master_user_password = false
-  password                    = random_password.db_password.result
+  password_wo                 = random_password.db_password.result
+  password_wo_version         = 1 # Increment to trigger password update
 
   # Single-AZ for cost savings
   multi_az = false
