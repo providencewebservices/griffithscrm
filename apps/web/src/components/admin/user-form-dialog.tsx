@@ -91,12 +91,7 @@ export function UserFormDialog({
 			return;
 		}
 
-		if (!isEdit && !password) {
-			setError('Password is required');
-			return;
-		}
-
-		if (password && password.length < 8) {
+		if (isEdit && password && password.length < 8) {
 			setError('Password must be at least 8 characters');
 			return;
 		}
@@ -130,7 +125,7 @@ export function UserFormDialog({
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent>
 				<DialogHeader>
-					<DialogTitle>{isEdit ? 'Edit User' : 'Create User'}</DialogTitle>
+					<DialogTitle>{isEdit ? 'Edit User' : 'Invite User'}</DialogTitle>
 				</DialogHeader>
 				<form onSubmit={handleSubmit}>
 					<FieldGroup>
@@ -156,19 +151,21 @@ export function UserFormDialog({
 								disabled={isLoading}
 							/>
 						</Field>
-						<Field>
-							<FieldLabel htmlFor="user-password">
-								Password{isEdit && ' (leave blank to keep current)'}
-							</FieldLabel>
-							<Input
-								id="user-password"
-								type="password"
-								value={password}
-								onChange={(e) => setPassword(e.target.value)}
-								placeholder={isEdit ? '(unchanged)' : ''}
-								disabled={isLoading}
-							/>
-						</Field>
+						{isEdit && (
+							<Field>
+								<FieldLabel htmlFor="user-password">
+									Password (leave blank to keep current)
+								</FieldLabel>
+								<Input
+									id="user-password"
+									type="password"
+									value={password}
+									onChange={(e) => setPassword(e.target.value)}
+									placeholder="(unchanged)"
+									disabled={isLoading}
+								/>
+							</Field>
+						)}
 						<Field>
 							<FieldLabel htmlFor="user-role">Role</FieldLabel>
 							<Select
@@ -222,7 +219,7 @@ export function UserFormDialog({
 							Cancel
 						</Button>
 						<Button type="submit" disabled={isLoading}>
-							{isLoading ? 'Saving...' : isEdit ? 'Save Changes' : 'Create'}
+							{isLoading ? 'Saving...' : isEdit ? 'Save Changes' : 'Send Invite'}
 						</Button>
 					</DialogFooter>
 				</form>

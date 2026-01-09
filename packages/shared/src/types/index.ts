@@ -18,7 +18,7 @@ import type {
 import { PRODUCT_OPTION_TYPES, SERVICE_PRICING_TYPES } from '../db/schema';
 
 // Role types
-export const USER_ROLES = ['app_admin', 'tenant_user'] as const;
+export const USER_ROLES = ['app_admin', 'manager', 'tenant_user'] as const;
 export type UserRole = (typeof USER_ROLES)[number];
 
 // Contact info types

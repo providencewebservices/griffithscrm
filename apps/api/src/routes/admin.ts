@@ -26,7 +26,6 @@ const updateTenantSchema = z.object({
 
 const createUserSchema = z.object({
 	email: z.string().email('Invalid email'),
-	password: z.string().min(8, 'Password must be at least 8 characters'),
 	name: z.string().min(1, 'Name is required'),
 	role: z.enum(['app_admin', 'tenant_user']),
 	tenantId: z.string().optional(),
@@ -186,7 +185,7 @@ const adminRoutes = new Hono()
 
 	// Create a new user
 	.post('/users', zValidator('json', createUserSchema), async (c) => {
-		const { email, password, name, role, tenantId } = c.req.valid('json');
+		const { email, name, role, tenantId } = c.req.valid('json');
 
 		// Validate tenant requirement for tenant_user role
 		if (role === 'tenant_user' && !tenantId) {
@@ -218,10 +217,13 @@ const adminRoutes = new Hono()
 		// No headers passed - server-side calls are trusted by Better Auth
 		// Admin authorization already verified by requireAdmin middleware
 		try {
+			// Generate a random password (user will set their own via email)
+			const randomPassword = crypto.randomUUID() + crypto.randomUUID();
+
 			const result = await auth.api.createUser({
 				body: {
 					email,
-					password,
+					password: randomPassword,
 					name,
 					role,
 					data: {
@@ -235,6 +237,15 @@ const adminRoutes = new Hono()
 				await db.update(users).set({ tenantId }).where(eq(users.id, result.user.id));
 			}
 
+			// Send password reset email so user can set their own password
+			const webUrl = process.env.CORS_ORIGIN || 'http://localhost:5173';
+			await auth.api.requestPasswordReset({
+				body: {
+					email,
+					redirectTo: `${webUrl}/reset-password`,
+				},
+			});
+
 			return c.json(
 				{
 					user: {
@@ -244,6 +255,7 @@ const adminRoutes = new Hono()
 						role,
 						tenantId: tenantId || null,
 					},
+					message: 'Invitation sent. User will receive an email to set their password.',
 				},
 				201
 			);

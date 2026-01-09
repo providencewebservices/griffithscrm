@@ -29,6 +29,8 @@ import { dashboardRoutes } from './routes/dashboard';
 import { funeralDirectorsRoutes } from './routes/funeral-directors';
 import { memorialSitesRoutes } from './routes/memorial-sites';
 import { suppliersRoutes } from './routes/suppliers';
+import { calendarRoutes } from './routes/calendar';
+import { timeOffRoutes } from './routes/time-off';
 
 const app = new Hono();
 
@@ -121,6 +123,10 @@ app.route('/api/dashboard', dashboardRoutes);
 app.route('/api/funeral-directors', funeralDirectorsRoutes);
 app.route('/api/memorial-sites', memorialSitesRoutes);
 app.route('/api/suppliers', suppliersRoutes);
+
+// Calendar routes (for tenant users)
+app.route('/api/calendar', calendarRoutes);
+app.route('/api/time-off', timeOffRoutes);
 
 // Export type for RPC client
 export type AppType = typeof api;

@@ -977,6 +977,8 @@ export const jobs = pgTable('jobs', {
 		.references(() => quotes.id, { onDelete: 'restrict' }),
 	jobNumber: text('job_number').notNull(), // Tenant-unique: "J-00001"
 	status: text('status').notNull().default('pending'), // From JOB_STATUSES
+	installationDate: timestamp('installation_date'), // Scheduled installation date
+	deadline: timestamp('deadline'), // Job deadline
 	notes: text('notes'), // Job-specific notes
 	createdAt: timestamp('created_at').notNull().defaultNow(),
 	updatedAt: timestamp('updated_at').notNull().defaultNow(),
@@ -1061,6 +1063,90 @@ export const documents = pgTable('documents', {
 	size: integer('size'), // File size in bytes
 	// Audit
 	uploadedBy: text('uploaded_by').references(() => users.id, { onDelete: 'set null' }),
+	createdAt: timestamp('created_at').notNull().defaultNow(),
+	updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// ============================================
+// CALENDAR & TIME-OFF TABLES
+// ============================================
+
+// Calendar event types
+export const CALENDAR_EVENT_TYPES = ['custom'] as const;
+
+// Recurrence patterns for recurring events
+export const RECURRENCE_PATTERNS = ['none', 'daily', 'weekly', 'monthly'] as const;
+
+// Calendar events table (custom events)
+export const calendarEvents = pgTable('calendar_events', {
+	id: text('id').primaryKey(),
+	tenantId: text('tenant_id')
+		.notNull()
+		.references(() => tenants.id, { onDelete: 'cascade' }),
+	createdById: text('created_by_id')
+		.notNull()
+		.references(() => users.id, { onDelete: 'cascade' }),
+	// Event details
+	title: text('title').notNull(),
+	description: text('description'),
+	startAt: timestamp('start_at').notNull(),
+	endAt: timestamp('end_at'), // Nullable for all-day events
+	isAllDay: boolean('is_all_day').notNull().default(false),
+	// Event type
+	eventType: text('event_type').notNull().default('custom'), // From CALENDAR_EVENT_TYPES
+	// Optional links to other entities
+	linkedQuoteId: text('linked_quote_id').references(() => quotes.id, { onDelete: 'cascade' }),
+	linkedJobId: text('linked_job_id').references(() => jobs.id, { onDelete: 'cascade' }),
+	linkedCustomerId: text('linked_customer_id').references(() => customers.id, { onDelete: 'set null' }),
+	// Recurrence
+	recurrencePattern: text('recurrence_pattern').notNull().default('none'), // From RECURRENCE_PATTERNS
+	recurrenceEndDate: timestamp('recurrence_end_date'),
+	recurrenceParentId: text('recurrence_parent_id'), // Self-reference for recurring instances
+	// Soft delete
+	archivedAt: timestamp('archived_at'),
+	createdAt: timestamp('created_at').notNull().defaultNow(),
+	updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// Time-off request statuses
+export const TIME_OFF_STATUSES = ['pending', 'approved', 'rejected'] as const;
+
+// Time-off requests table
+export const timeOffRequests = pgTable('time_off_requests', {
+	id: text('id').primaryKey(),
+	tenantId: text('tenant_id')
+		.notNull()
+		.references(() => tenants.id, { onDelete: 'cascade' }),
+	userId: text('user_id')
+		.notNull()
+		.references(() => users.id, { onDelete: 'cascade' }),
+	// Request details
+	startDate: timestamp('start_date').notNull(),
+	endDate: timestamp('end_date').notNull(),
+	reason: text('reason'),
+	// Approval workflow
+	status: text('status').notNull().default('pending'), // From TIME_OFF_STATUSES
+	reviewedById: text('reviewed_by_id').references(() => users.id, { onDelete: 'set null' }),
+	reviewedAt: timestamp('reviewed_at'),
+	reviewNotes: text('review_notes'),
+	createdAt: timestamp('created_at').notNull().defaultNow(),
+	updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// Calendar settings table (tenant-configurable colors)
+export const calendarSettings = pgTable('calendar_settings', {
+	id: text('id').primaryKey(),
+	tenantId: text('tenant_id')
+		.notNull()
+		.unique()
+		.references(() => tenants.id, { onDelete: 'cascade' }),
+	// Event type colors (hex values)
+	quoteValidUntilColor: text('quote_valid_until_color').notNull().default('#3B82F6'), // Blue
+	jobInstallationColor: text('job_installation_color').notNull().default('#10B981'), // Green
+	jobDeadlineColor: text('job_deadline_color').notNull().default('#F59E0B'), // Amber
+	customEventColor: text('custom_event_color').notNull().default('#8B5CF6'), // Purple
+	timeOffApprovedColor: text('time_off_approved_color').notNull().default('#6B7280'), // Gray
+	timeOffPendingColor: text('time_off_pending_color').notNull().default('#EF4444'), // Red
 	createdAt: timestamp('created_at').notNull().defaultNow(),
 	updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });

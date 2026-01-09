@@ -101,3 +101,29 @@ export function isAdmin(c: Context): boolean {
 	const user = getUser(c);
 	return user?.role === 'app_admin';
 }
+
+/**
+ * Middleware that requires manager or app_admin role.
+ * Must be used AFTER requireAuth middleware.
+ * Returns 403 if user is not a manager or admin.
+ */
+export const requireManager = createMiddleware(async (c, next) => {
+	const user = c.get('user');
+
+	if (!user) {
+		return c.json({ error: 'Unauthorized' }, 401);
+	}
+
+	if (user.role !== 'app_admin' && user.role !== 'manager') {
+		return c.json({ error: 'Forbidden: Manager access required' }, 403);
+	}
+
+	await next();
+});
+
+/**
+ * Helper to check if a role has manager privileges.
+ */
+export function isManagerRole(role: string): boolean {
+	return role === 'app_admin' || role === 'manager';
+}

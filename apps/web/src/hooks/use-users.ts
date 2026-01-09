@@ -22,7 +22,6 @@ type UserResponse = {
 export type CreateUserInput = {
 	name: string;
 	email: string;
-	password: string;
 	role: 'app_admin' | 'tenant_user';
 	tenantId?: string;
 };

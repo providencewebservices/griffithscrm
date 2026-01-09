@@ -72,14 +72,9 @@ export function UsersTab() {
 			if (selectedUser) {
 				await updateMutation.mutateAsync({ id: selectedUser.id, ...data });
 			} else {
-				if (!data.password) {
-					setMutationError('Password is required');
-					return;
-				}
 				await createMutation.mutateAsync({
 					name: data.name,
 					email: data.email,
-					password: data.password,
 					role: data.role,
 					tenantId: data.tenantId || undefined,
 				});
