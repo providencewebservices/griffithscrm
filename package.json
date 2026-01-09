@@ -19,6 +19,7 @@
     "format": "biome format --write ."
   },
   "dependencies": {
+    "@aws-sdk/client-ses": "^3.965.0",
     "drizzle-orm": "latest",
     "postgres": "^3.4.5"
   },

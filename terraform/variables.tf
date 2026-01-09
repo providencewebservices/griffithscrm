@@ -100,6 +100,19 @@ variable "microsoft_client_secret" {
 }
 
 
+# SES Email
+variable "ses_from_email" {
+  description = "From email address for SES (must be verified in SES)"
+  type        = string
+  default     = ""
+}
+
+variable "ses_region" {
+  description = "AWS region where SES is configured"
+  type        = string
+  default     = "us-east-2"
+}
+
 # S3 Documents
 variable "s3_documents_bucket_name" {
   description = "Name for the S3 documents bucket (must be globally unique)"

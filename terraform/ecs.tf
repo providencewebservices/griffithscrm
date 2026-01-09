@@ -145,6 +145,31 @@ resource "aws_iam_role_policy" "ecs_task_exec_command" {
   })
 }
 
+# Allow task role to send emails via SES (us-east-2)
+resource "aws_iam_role_policy" "ecs_task_ses" {
+  name = "${local.name}-ecs-task-ses"
+  role = aws_iam_role.ecs_task.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ses:SendEmail",
+          "ses:SendRawEmail"
+        ]
+        Resource = "*"
+        Condition = {
+          StringEquals = {
+            "ses:FromAddress" = var.ses_from_email
+          }
+        }
+      }
+    ]
+  })
+}
+
 # ECS Task Definition
 resource "aws_ecs_task_definition" "api" {
   family                   = "${local.name}-api"
@@ -193,6 +218,14 @@ resource "aws_ecs_task_definition" "api" {
         {
           name  = "S3_BUCKET"
           value = aws_s3_bucket.documents.id
+        },
+        {
+          name  = "SES_REGION"
+          value = var.ses_region
+        },
+        {
+          name  = "EMAIL_FROM"
+          value = var.ses_from_email
         }
       ]
 
