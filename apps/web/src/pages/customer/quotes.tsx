@@ -12,6 +12,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import {
+	Card,
+	CardContent,
+	CardHeader,
+	CardTitle,
+	CardDescription,
+} from '@/components/ui/card';
+import {
 	Select,
 	SelectContent,
 	SelectItem,
@@ -23,13 +30,17 @@ import {
 	formatQuoteStatus,
 	getQuoteStatusVariant,
 	type QuoteStatus,
+	type QuoteListItem,
 } from '@/hooks/use-quotes';
 import { QUOTE_STATUSES } from '@griffiths-crm/shared/db/schema';
-import { Search, Plus } from 'lucide-react';
+import { Search, Plus, List, LayoutGrid, Calendar, User } from 'lucide-react';
+
+type DisplayMode = 'table' | 'cards';
 
 export function QuotesPage() {
 	const [searchQuery, setSearchQuery] = useState('');
 	const [statusFilter, setStatusFilter] = useState<QuoteStatus | 'all'>('all');
+	const [displayMode, setDisplayMode] = useState<DisplayMode>('table');
 	const [debouncedSearch, setDebouncedSearch] = useState('');
 
 	// Debounce search
@@ -128,12 +139,32 @@ export function QuotesPage() {
 						</SelectContent>
 					</Select>
 				</div>
-				<Link to="/app/quotes/new">
-					<Button>
-						<Plus className="h-4 w-4 mr-2" />
-						New Quote
-					</Button>
-				</Link>
+				<div className="flex items-center gap-2">
+					<div className="flex items-center border rounded-md">
+						<Button
+							variant={displayMode === 'table' ? 'secondary' : 'ghost'}
+							size="sm"
+							className="rounded-r-none"
+							onClick={() => setDisplayMode('table')}
+						>
+							<List className="h-4 w-4" />
+						</Button>
+						<Button
+							variant={displayMode === 'cards' ? 'secondary' : 'ghost'}
+							size="sm"
+							className="rounded-l-none"
+							onClick={() => setDisplayMode('cards')}
+						>
+							<LayoutGrid className="h-4 w-4" />
+						</Button>
+					</div>
+					<Link to="/app/quotes/new">
+						<Button>
+							<Plus className="h-4 w-4 mr-2" />
+							New Quote
+						</Button>
+					</Link>
+				</div>
 			</div>
 
 			{quotes && quotes.length === 0 ? (
@@ -142,7 +173,7 @@ export function QuotesPage() {
 						? 'No quotes found matching your filters.'
 						: 'No quotes yet. Create your first quote to get started.'}
 				</div>
-			) : (
+			) : displayMode === 'table' ? (
 				<div className="border rounded-lg">
 					<Table>
 						<TableHeader>
@@ -194,7 +225,74 @@ export function QuotesPage() {
 						</TableBody>
 					</Table>
 				</div>
+			) : (
+				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+					{quotes?.map((quote) => (
+						<QuoteCard
+							key={quote.id}
+							quote={quote}
+							formatCurrency={formatCurrency}
+							formatDate={formatDate}
+						/>
+					))}
+				</div>
 			)}
 		</div>
+	);
+}
+
+function QuoteCard({
+	quote,
+	formatCurrency,
+	formatDate,
+}: {
+	quote: QuoteListItem;
+	formatCurrency: (value: string) => string;
+	formatDate: (dateString: string) => string;
+}) {
+	return (
+		<Card className="hover:shadow-md transition-shadow">
+			<CardHeader className="pb-3">
+				<div className="flex items-start justify-between">
+					<div className="space-y-1">
+						<CardTitle className="text-base">
+							{quote.quoteNumber}
+							{quote.version > 1 && (
+								<span className="text-muted-foreground font-normal ml-1">
+									(v{quote.version})
+								</span>
+							)}
+						</CardTitle>
+						<CardDescription className="flex items-center gap-1.5">
+							<User className="h-3.5 w-3.5" />
+							{quote.customerName || 'Walk-in'}
+						</CardDescription>
+					</div>
+					<Badge variant={getQuoteStatusVariant(quote.status)}>
+						{formatQuoteStatus(quote.status)}
+					</Badge>
+				</div>
+			</CardHeader>
+			<CardContent className="space-y-3">
+				<div className="flex items-center justify-between">
+					<span className="text-2xl font-bold">
+						{formatCurrency(quote.total)}
+					</span>
+				</div>
+
+				<div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+					<Calendar className="h-3.5 w-3.5" />
+					<span>{formatDate(quote.createdAt)}</span>
+				</div>
+
+				<div className="pt-2">
+					<Link to={`/app/quotes/${quote.id}`}>
+						<Button variant="outline" size="sm" className="w-full">
+							View Details
+						</Button>
+					</Link>
+				</div>
+			</CardContent>
+		</Card>
 	);
 }
