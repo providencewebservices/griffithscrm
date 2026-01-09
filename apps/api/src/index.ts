@@ -39,13 +39,72 @@ app.use('*', logger());
 app.use(
 	'*',
 	cors({
-		origin: 'http://localhost:5173',
+		origin: [
+			'http://localhost:5173',
+			process.env.CORS_ORIGIN,
+		].filter(Boolean) as string[],
 		credentials: true,
 	})
 );
 
 // Health check
 app.get('/health', (c) => c.json({ status: 'ok' }));
+
+// TEMPORARY: Bootstrap admin endpoint - DELETE AFTER USE
+app.post('/api/bootstrap-admin', async (c) => {
+	const body = await c.req.json();
+	const { email, password, secret } = body;
+
+	// Simple secret to prevent random access
+	if (secret !== 'griffiths-bootstrap-2024') {
+		return c.json({ error: 'Invalid secret' }, 401);
+	}
+
+	if (!email || !password) {
+		return c.json({ error: 'Email and password required' }, 400);
+	}
+
+	if (password.length < 12) {
+		return c.json({ error: 'Password must be at least 12 characters' }, 400);
+	}
+
+	try {
+		const result = await auth.api.createUser({
+			body: {
+				email,
+				password,
+				name: 'System Administrator',
+				role: 'app_admin',
+			},
+		});
+		return c.json({ success: true, userId: result?.id });
+	} catch (e: unknown) {
+		const message = e instanceof Error ? e.message : 'Unknown error';
+		return c.json({ error: message }, 500);
+	}
+});
+
+// TEMPORARY: Verify email endpoint - DELETE AFTER USE
+app.post('/api/bootstrap-verify', async (c) => {
+	const body = await c.req.json();
+	const { email, secret } = body;
+
+	if (secret !== 'griffiths-bootstrap-2024') {
+		return c.json({ error: 'Invalid secret' }, 401);
+	}
+
+	const { db } = await import('./lib/auth');
+	const { users } = await import('@griffiths-crm/shared/db/schema');
+	const { eq } = await import('drizzle-orm');
+
+	const result = await db
+		.update(users)
+		.set({ emailVerified: true })
+		.where(eq(users.email, email))
+		.returning({ id: users.id, email: users.email });
+
+	return c.json({ success: true, updated: result });
+});
 
 // Better Auth routes
 app.on(['POST', 'GET'], '/api/auth/**', (c) => auth.handler(c.req.raw));

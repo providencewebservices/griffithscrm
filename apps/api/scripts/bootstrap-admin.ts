@@ -25,7 +25,12 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 // Dynamic imports - must come AFTER dotenv config due to ESM hoisting
-const { auth } = await import('../src/lib/auth');
+// In production, import from compiled dist; in development, import from source
+const authModule =
+	process.env.NODE_ENV === 'production'
+		? await import('../dist/lib/auth.js')
+		: await import('../src/lib/auth');
+const { auth } = authModule;
 const { createDb } = await import('@griffiths-crm/shared/db');
 const { users } = await import('@griffiths-crm/shared/db/schema');
 const { eq } = await import('drizzle-orm');
