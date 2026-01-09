@@ -1,24 +1,32 @@
-import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import {
+	S3Client,
+	PutObjectCommand,
+	GetObjectCommand,
+	DeleteObjectCommand,
+} from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 // S3 configuration from environment
 const s3Config = {
 	bucket: process.env.S3_BUCKET || '',
-	region: process.env.S3_REGION || 'us-east-1',
+	region: process.env.S3_REGION || process.env.AWS_REGION || 'eu-west-2',
 	endpoint: process.env.S3_ENDPOINT || '', // LocalStack or custom endpoint
 };
 
-// Create S3 client with optional LocalStack support
+// Create S3 client
+// In production (ECS), credentials come from the task role automatically
+// In local dev with LocalStack, use explicit credentials
 const s3Client = new S3Client({
 	region: s3Config.region,
-	credentials: {
-		accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-		secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
-	},
-	// LocalStack/custom endpoint support
+	// Only provide explicit credentials for LocalStack (local dev)
+	// In production, the SDK uses the ECS task role automatically
 	...(s3Config.endpoint && {
 		endpoint: s3Config.endpoint,
 		forcePathStyle: true, // Required for LocalStack
+		credentials: {
+			accessKeyId: process.env.AWS_ACCESS_KEY_ID || 'test',
+			secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || 'test',
+		},
 	}),
 });
 
@@ -62,7 +70,7 @@ export async function generatePresignedUploadUrl(
 		Bucket: s3Config.bucket,
 		Key: key,
 		ContentType: contentType,
-		ACL: 'public-read',
+		// No ACL - bucket is private, all access via signed URLs
 	});
 
 	// Generate presigned URL (expires in 5 minutes)
@@ -76,13 +84,20 @@ export async function generatePresignedUploadUrl(
 
 /**
  * Check if S3 is properly configured
+ * In production with ECS task roles, we only need the bucket name
+ * In local dev with LocalStack, we need endpoint + credentials
  */
 export function isS3Configured(): boolean {
-	return !!(
-		process.env.S3_BUCKET &&
-		process.env.AWS_ACCESS_KEY_ID &&
-		process.env.AWS_SECRET_ACCESS_KEY
-	);
+	// Must have bucket configured
+	if (!process.env.S3_BUCKET) return false;
+
+	// LocalStack requires explicit credentials
+	if (process.env.S3_ENDPOINT) {
+		return !!(process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY);
+	}
+
+	// Production uses ECS task role - just need bucket
+	return true;
 }
 
 /**
@@ -142,4 +157,15 @@ export async function getSignedImageUrl(storedUrl: string | null): Promise<strin
 	if (!key) return null;
 
 	return generateSignedReadUrl(key);
+}
+
+/**
+ * Delete an object from S3
+ */
+export async function deleteObject(key: string): Promise<void> {
+	const command = new DeleteObjectCommand({
+		Bucket: s3Config.bucket,
+		Key: key,
+	});
+	await s3Client.send(command);
 }

@@ -31,6 +31,7 @@ import { memorialSitesRoutes } from './routes/memorial-sites';
 import { suppliersRoutes } from './routes/suppliers';
 import { calendarRoutes } from './routes/calendar';
 import { timeOffRoutes } from './routes/time-off';
+import { documentsRoutes } from './routes/documents';
 
 const app = new Hono();
 
@@ -51,7 +52,7 @@ app.use(
 app.get('/health', (c) => c.json({ status: 'ok' }));
 
 // Better Auth routes
-app.on(['POST', 'GET'], '/api/auth/**', (c) => auth.handler(c.req.raw));
+app.on(['POST', 'GET'], '/api/auth/*', (c) => auth.handler(c.req.raw));
 
 // Public routes (no auth required)
 app.route('/api/public/quotes', publicQuotesRoutes);
@@ -130,6 +131,9 @@ app.route('/api/suppliers', suppliersRoutes);
 // Calendar routes (for tenant users)
 app.route('/api/calendar', calendarRoutes);
 app.route('/api/time-off', timeOffRoutes);
+
+// Documents routes (for tenant users)
+app.route('/api/documents', documentsRoutes);
 
 // Export type for RPC client
 export type AppType = typeof api;

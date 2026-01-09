@@ -255,7 +255,7 @@ const documentsRoutes = new Hono()
 			return c.json(
 				{
 					error:
-						'S3 is not configured. Please set S3_BUCKET, AWS_ACCESS_KEY_ID, and AWS_SECRET_ACCESS_KEY environment variables.',
+						'S3 is not configured. Please set S3_BUCKET environment variable.',
 				},
 				503
 			);

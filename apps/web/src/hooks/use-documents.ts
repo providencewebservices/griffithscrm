@@ -1,5 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
 // Entity types that can have documents attached
 export type DocumentEntityType =
 	| 'customer'
@@ -94,79 +96,166 @@ export type DocumentUploadInput = {
 	notes?: string;
 };
 
-// MOCKED HOOKS FOR DEMO - Returns fake data, no API calls
+// API functions
+async function fetchDocuments(params?: DocumentSearchParams): Promise<DocumentsResponse> {
+	const url = new URL(`${API_URL}/api/documents`);
+	if (params?.search) url.searchParams.set('search', params.search);
+	if (params?.entityType) url.searchParams.set('entityType', params.entityType);
+	if (params?.tags) url.searchParams.set('tags', params.tags);
+	if (params?.limit) url.searchParams.set('limit', params.limit.toString());
+	if (params?.offset) url.searchParams.set('offset', params.offset.toString());
 
-const MOCK_DOCUMENTS: Document[] = [
-	{
-		id: 'doc-1',
-		tenantId: 'tenant-1',
-		entityType: 'customer',
-		entityId: 'cust-1',
-		name: 'Memorial Design Approval',
-		tags: 'approval, design',
-		notes: 'Customer approved the headstone design on 15th December',
-		filename: 'design-approval-smith.pdf',
-		s3Key: 'mock/design-approval.pdf',
-		contentType: 'application/pdf',
-		size: 245000,
-		uploadedBy: 'user-1',
-		uploaderName: 'Sarah Johnson',
-		publicUrl: null,
-		createdAt: '2024-12-15T10:30:00Z',
-		updatedAt: '2024-12-15T10:30:00Z',
-	},
-	{
-		id: 'doc-2',
-		tenantId: 'tenant-1',
-		entityType: 'job',
-		entityId: 'job-1',
-		name: 'Site Photo - Before Installation',
-		tags: 'photo, site, before',
-		notes: 'Photo of grave site before memorial installation',
-		filename: 'site-before-install.jpg',
-		s3Key: 'mock/site-photo.jpg',
-		contentType: 'image/jpeg',
-		size: 1850000,
-		uploadedBy: 'user-2',
-		uploaderName: 'Mike Williams',
-		publicUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400',
-		createdAt: '2024-12-18T14:20:00Z',
-		updatedAt: '2024-12-18T14:20:00Z',
-	},
-	{
-		id: 'doc-3',
-		tenantId: 'tenant-1',
-		entityType: 'quote',
-		entityId: 'quote-1',
-		name: 'Council Permit Application',
-		tags: 'permit, council',
-		notes: 'Submitted to Chester Council - awaiting approval',
-		filename: 'permit-application-2024.pdf',
-		s3Key: 'mock/permit.pdf',
-		contentType: 'application/pdf',
-		size: 320000,
-		uploadedBy: 'user-1',
-		uploaderName: 'Sarah Johnson',
-		publicUrl: null,
-		createdAt: '2024-12-10T09:15:00Z',
-		updatedAt: '2024-12-12T11:00:00Z',
-	},
-];
+	const response = await fetch(url.toString(), { credentials: 'include' });
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.error || 'Failed to fetch documents');
+	}
+	return response.json();
+}
 
-export function useDocumentsQuery(_params?: DocumentSearchParams) {
-	return useQuery({
-		queryKey: ['documents', _params],
-		queryFn: async (): Promise<DocumentsResponse> => ({
-			documents: MOCK_DOCUMENTS,
-			pagination: { total: 3, limit: 50, offset: 0, hasMore: false },
-		}),
+async function fetchEntityDocuments(
+	entityType: DocumentEntityType,
+	entityId: string
+): Promise<Document[]> {
+	const response = await fetch(
+		`${API_URL}/api/documents/entity/${entityType}/${entityId}`,
+		{ credentials: 'include' }
+	);
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.error || 'Failed to fetch documents');
+	}
+	const data = await response.json();
+	return data.documents;
+}
+
+async function fetchDocument(id: string): Promise<Document> {
+	const response = await fetch(`${API_URL}/api/documents/${id}`, {
+		credentials: 'include',
+	});
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.error || 'Failed to fetch document');
+	}
+	const data = await response.json();
+	return data.document;
+}
+
+async function presignDocument(input: {
+	entityType: DocumentEntityType;
+	entityId: string;
+	filename: string;
+	contentType: string;
+}): Promise<PresignResponse> {
+	const response = await fetch(`${API_URL}/api/documents/presign`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		credentials: 'include',
+		body: JSON.stringify(input),
+	});
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.error || 'Failed to get upload URL');
+	}
+	return response.json();
+}
+
+async function createDocument(input: CreateDocumentInput): Promise<Document> {
+	const response = await fetch(`${API_URL}/api/documents`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		credentials: 'include',
+		body: JSON.stringify(input),
+	});
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.error || 'Failed to create document');
+	}
+	const data = await response.json();
+	return data.document;
+}
+
+async function updateDocument(
+	input: UpdateDocumentInput & { id: string }
+): Promise<Document> {
+	const { id, ...data } = input;
+	const response = await fetch(`${API_URL}/api/documents/${id}`, {
+		method: 'PUT',
+		headers: { 'Content-Type': 'application/json' },
+		credentials: 'include',
+		body: JSON.stringify(data),
+	});
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.error || 'Failed to update document');
+	}
+	const result = await response.json();
+	return result.document;
+}
+
+async function deleteDocument(id: string): Promise<void> {
+	const response = await fetch(`${API_URL}/api/documents/${id}`, {
+		method: 'DELETE',
+		credentials: 'include',
+	});
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.error || 'Failed to delete document');
+	}
+}
+
+async function uploadDocument(input: DocumentUploadInput): Promise<Document> {
+	const { entityType, entityId, file, name, tags, notes } = input;
+
+	// Step 1: Get presigned URL
+	const presignResult = await presignDocument({
+		entityType,
+		entityId,
+		filename: file.name,
+		contentType: file.type,
+	});
+
+	// Step 2: Upload file directly to S3
+	const uploadResponse = await fetch(presignResult.uploadUrl, {
+		method: 'PUT',
+		body: file,
+		headers: {
+			'Content-Type': file.type,
+		},
+	});
+	if (!uploadResponse.ok) {
+		throw new Error('Failed to upload file to storage');
+	}
+
+	// Step 3: Create document record
+	return createDocument({
+		entityType,
+		entityId,
+		name,
+		tags,
+		notes,
+		filename: file.name,
+		s3Key: presignResult.key,
+		contentType: file.type,
+		size: file.size,
 	});
 }
 
-export function useEntityDocumentsQuery(_entityType: DocumentEntityType, entityId: string | undefined) {
+// React Query hooks
+export function useDocumentsQuery(params?: DocumentSearchParams) {
 	return useQuery({
-		queryKey: ['documents', 'entity', _entityType, entityId],
-		queryFn: async (): Promise<Document[]> => MOCK_DOCUMENTS.slice(0, 2),
+		queryKey: ['documents', params],
+		queryFn: () => fetchDocuments(params),
+	});
+}
+
+export function useEntityDocumentsQuery(
+	entityType: DocumentEntityType,
+	entityId: string | undefined
+) {
+	return useQuery({
+		queryKey: ['documents', 'entity', entityType, entityId],
+		queryFn: () => fetchEntityDocuments(entityType, entityId!),
 		enabled: !!entityId,
 	});
 }
@@ -174,26 +263,21 @@ export function useEntityDocumentsQuery(_entityType: DocumentEntityType, entityI
 export function useDocumentQuery(id: string | undefined) {
 	return useQuery({
 		queryKey: ['document', id],
-		queryFn: async (): Promise<Document | null> =>
-			MOCK_DOCUMENTS.find(d => d.id === id) || MOCK_DOCUMENTS[0],
+		queryFn: () => fetchDocument(id!),
 		enabled: !!id,
 	});
 }
 
 export function usePresignDocumentMutation() {
 	return useMutation({
-		mutationFn: async (_input: { entityType: DocumentEntityType; entityId: string; filename: string; contentType: string }): Promise<PresignResponse> => {
-			throw new Error('Document upload coming soon');
-		},
+		mutationFn: presignDocument,
 	});
 }
 
 export function useCreateDocumentMutation() {
 	const queryClient = useQueryClient();
 	return useMutation({
-		mutationFn: async (_input: CreateDocumentInput): Promise<Document> => {
-			throw new Error('Document upload coming soon');
-		},
+		mutationFn: createDocument,
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ['documents'] });
 		},
@@ -203,9 +287,7 @@ export function useCreateDocumentMutation() {
 export function useUpdateDocumentMutation() {
 	const queryClient = useQueryClient();
 	return useMutation({
-		mutationFn: async (_input: UpdateDocumentInput & { id: string }): Promise<Document> => {
-			throw new Error('Document update coming soon');
-		},
+		mutationFn: updateDocument,
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ['documents'] });
 		},
@@ -215,9 +297,7 @@ export function useUpdateDocumentMutation() {
 export function useDeleteDocumentMutation() {
 	const queryClient = useQueryClient();
 	return useMutation({
-		mutationFn: async (_id: string): Promise<void> => {
-			throw new Error('Document delete coming soon');
-		},
+		mutationFn: deleteDocument,
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ['documents'] });
 		},
@@ -227,9 +307,7 @@ export function useDeleteDocumentMutation() {
 export function useUploadDocumentMutation() {
 	const queryClient = useQueryClient();
 	return useMutation({
-		mutationFn: async (_input: DocumentUploadInput): Promise<Document> => {
-			throw new Error('Document upload coming soon');
-		},
+		mutationFn: uploadDocument,
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ['documents'] });
 		},

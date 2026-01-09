@@ -1,10 +1,19 @@
 import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
 
-// Use SES in production, fall back to console logging in development
-const sesClient =
-	process.env.NODE_ENV === 'production'
-		? new SESClient({ region: process.env.SES_REGION || 'us-east-2' })
-		: null;
+// Lazy-initialized SES client
+let sesClient: SESClient | null = null;
+
+function getSesClient(): SESClient | null {
+	// Use SES when SES_REGION is configured (indicates production)
+	const sesRegion = process.env.SES_REGION;
+	if (!sesRegion) {
+		return null;
+	}
+	if (!sesClient) {
+		sesClient = new SESClient({ region: sesRegion });
+	}
+	return sesClient;
+}
 
 export async function sendEmail({
 	to,
@@ -18,9 +27,10 @@ export async function sendEmail({
 	html?: string;
 }) {
 	const from = process.env.EMAIL_FROM || 'noreply@griffiths-crm.local';
+	const client = getSesClient();
 
 	// In development, just log the email
-	if (!sesClient) {
+	if (!client) {
 		console.log('📧 [DEV] Email would be sent:');
 		console.log(`   To: ${to}`);
 		console.log(`   From: ${from}`);
@@ -30,6 +40,7 @@ export async function sendEmail({
 	}
 
 	// In production, send via SES
+	console.log(`📧 Sending email via SES to ${to}`);
 	const command = new SendEmailCommand({
 		Source: from,
 		Destination: {
@@ -55,5 +66,6 @@ export async function sendEmail({
 		},
 	});
 
-	await sesClient.send(command);
+	await client.send(command);
+	console.log(`📧 Email sent successfully to ${to}`);
 }
