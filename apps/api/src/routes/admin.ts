@@ -375,6 +375,36 @@ const adminRoutes = new Hono()
 		});
 	})
 
+	// Resend invite email to a user
+	.post('/users/:id/resend-invite', async (c) => {
+		const id = c.req.param('id');
+
+		// Check if user exists
+		const [user] = await db.select().from(users).where(eq(users.id, id)).limit(1);
+
+		if (!user) {
+			return c.json({ error: 'User not found' }, 404);
+		}
+
+		try {
+			const webUrl = process.env.CORS_ORIGIN || 'http://localhost:5173';
+			await auth.api.requestPasswordReset({
+				body: {
+					email: user.email,
+					redirectTo: `${webUrl}/reset-password`,
+				},
+			});
+
+			return c.json({
+				success: true,
+				message: 'Invite email sent successfully',
+			});
+		} catch (error) {
+			console.error('Error sending invite:', error);
+			return c.json({ error: 'Failed to send invite email' }, 500);
+		}
+	})
+
 	// Delete a user
 	.delete('/users/:id', async (c) => {
 		const id = c.req.param('id');

@@ -104,6 +104,20 @@ async function deleteUser(id: string): Promise<void> {
 	}
 }
 
+async function resendInvite(id: string): Promise<{ success: boolean; message: string }> {
+	const response = await fetch(`${API_URL}/api/admin/users/${id}/resend-invite`, {
+		method: 'POST',
+		credentials: 'include',
+	});
+
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.error || 'Failed to resend invite');
+	}
+
+	return response.json();
+}
+
 export function useUsersQuery(tenantId?: string) {
 	return useQuery({
 		queryKey: ['users', tenantId],
@@ -141,5 +155,11 @@ export function useDeleteUserMutation() {
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ['users'] });
 		},
+	});
+}
+
+export function useResendInviteMutation() {
+	return useMutation({
+		mutationFn: resendInvite,
 	});
 }

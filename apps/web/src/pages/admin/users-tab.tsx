@@ -19,11 +19,13 @@ import { UserFormDialog } from '@/components/admin/user-form-dialog';
 import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
 import { useSession } from '@/lib/auth';
 import { useTenantsQuery } from '@/hooks/use-tenants';
+import { toast } from 'sonner';
 import {
 	useUsersQuery,
 	useCreateUserMutation,
 	useUpdateUserMutation,
 	useDeleteUserMutation,
+	useResendInviteMutation,
 	type User,
 } from '@/hooks/use-users';
 
@@ -34,6 +36,7 @@ export function UsersTab() {
 	const createMutation = useCreateUserMutation();
 	const updateMutation = useUpdateUserMutation();
 	const deleteMutation = useDeleteUserMutation();
+	const resendInviteMutation = useResendInviteMutation();
 
 	const [formDialogOpen, setFormDialogOpen] = useState(false);
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -93,6 +96,15 @@ export function UsersTab() {
 			setDeleteDialogOpen(false);
 		} catch (err) {
 			setMutationError(err instanceof Error ? err.message : 'An error occurred');
+		}
+	};
+
+	const handleResendInvite = async (user: User) => {
+		try {
+			await resendInviteMutation.mutateAsync(user.id);
+			toast.success(`Invite email sent to ${user.email}`);
+		} catch (err) {
+			toast.error(err instanceof Error ? err.message : 'Failed to send invite');
 		}
 	};
 
@@ -187,6 +199,12 @@ export function UsersTab() {
 											<DropdownMenuContent align="end">
 												<DropdownMenuItem onClick={() => handleEdit(user)}>
 													Edit
+												</DropdownMenuItem>
+												<DropdownMenuItem
+													onClick={() => handleResendInvite(user)}
+													disabled={resendInviteMutation.isPending}
+												>
+													Resend Invite
 												</DropdownMenuItem>
 												{user.id !== currentUserId && (
 													<DropdownMenuItem

@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route } from 'react-router';
+import { Toaster } from 'sonner';
 import { LoginPage } from './pages/login';
 import { ResetPasswordPage } from './pages/reset-password';
 import { AdminLayout } from './layouts/admin-layout';
@@ -41,6 +42,7 @@ import { RoleBasedRedirect } from './components/role-based-redirect';
 function App() {
 	return (
 		<BrowserRouter>
+			<Toaster position="top-right" richColors />
 			<Routes>
 				<Route path="/login" element={<LoginPage />} />
 				<Route path="/reset-password" element={<ResetPasswordPage />} />
