@@ -22,7 +22,8 @@ export function RoleBasedRedirect() {
 		return <Navigate to="/admin" replace />;
 	}
 
-	if (role === 'tenant_user') {
+	// Managers and tenant users go to the app
+	if (role === 'manager' || role === 'tenant_user') {
 		return <Navigate to="/app" replace />;
 	}
 

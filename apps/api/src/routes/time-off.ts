@@ -34,16 +34,59 @@ const timeOffRoutes = new Hono()
 	.use('*', requireTenant)
 
 	// List time-off requests
+	// - Can filter by userId query param
 	// - Regular users see: their own requests + all approved requests
 	// - Managers see: all requests
 	.get('/', async (c) => {
 		const currentUser = c.get('user');
 		const tenantId = currentUser.tenantId!;
 		const isManager = isManagerRole(currentUser.role);
+		const filterUserId = c.req.query('userId');
 
 		let requests;
 
-		if (isManager) {
+		if (filterUserId) {
+			// Filtering by specific user
+			const isOwnProfile = filterUserId === currentUser.id;
+
+			if (isManager || isOwnProfile) {
+				// Managers can see all requests for any user
+				// Users can see all their own requests
+				requests = await db
+					.select({
+						request: timeOffRequests,
+						userName: users.name,
+						reviewerName: users.name,
+					})
+					.from(timeOffRequests)
+					.leftJoin(users, eq(timeOffRequests.userId, users.id))
+					.where(
+						and(
+							eq(timeOffRequests.tenantId, tenantId),
+							eq(timeOffRequests.userId, filterUserId)
+						)
+					)
+					.orderBy(desc(timeOffRequests.createdAt));
+			} else {
+				// Non-managers viewing someone else's profile only see approved
+				requests = await db
+					.select({
+						request: timeOffRequests,
+						userName: users.name,
+						reviewerName: users.name,
+					})
+					.from(timeOffRequests)
+					.leftJoin(users, eq(timeOffRequests.userId, users.id))
+					.where(
+						and(
+							eq(timeOffRequests.tenantId, tenantId),
+							eq(timeOffRequests.userId, filterUserId),
+							eq(timeOffRequests.status, 'approved')
+						)
+					)
+					.orderBy(desc(timeOffRequests.createdAt));
+			}
+		} else if (isManager) {
 			// Managers see all requests
 			requests = await db
 				.select({

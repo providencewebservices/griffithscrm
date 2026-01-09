@@ -111,6 +111,28 @@ export function useTeamQuery() {
 	});
 }
 
+async function fetchTeamMember(id: string): Promise<TeamMember> {
+	const response = await fetch(`${API_URL}/api/team/users/${id}`, {
+		credentials: 'include',
+	});
+
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.error || 'Failed to fetch team member');
+	}
+
+	const data: TeamMemberResponse = await response.json();
+	return data.user;
+}
+
+export function useTeamMemberQuery(id: string) {
+	return useQuery({
+		queryKey: ['team', id],
+		queryFn: () => fetchTeamMember(id),
+		enabled: !!id,
+	});
+}
+
 export function useInviteUserMutation() {
 	const queryClient = useQueryClient();
 

@@ -27,7 +27,13 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
 	// Check role if required
 	if (requiredRole) {
 		const userRole = (session.user as { role?: string }).role;
-		if (userRole !== requiredRole) {
+
+		// Managers have access to tenant_user routes
+		const hasAccess =
+			userRole === requiredRole ||
+			(requiredRole === 'tenant_user' && userRole === 'manager');
+
+		if (!hasAccess) {
 			return (
 				<div className="min-h-screen flex items-center justify-center">
 					<div className="text-center">

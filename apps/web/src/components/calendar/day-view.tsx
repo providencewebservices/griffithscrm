@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import {
 	getEventsForDay,
@@ -31,110 +32,172 @@ export function DayView({
 	const today = isToday(currentDate);
 
 	return (
-		<div className="flex-1 flex flex-col overflow-hidden">
-			{/* All-day events section */}
-			{allDayEvents.length > 0 && (
-				<div className="border-b p-2">
-					<div className="text-xs text-muted-foreground mb-1 font-medium">
-						All Day
-					</div>
-					<div className="space-y-1">
-						{allDayEvents.map((event) => (
-							<button
-								key={event.id}
-								type="button"
-								onClick={() => onEventClick(event)}
-								className="w-full text-left text-sm px-3 py-1.5 rounded-md cursor-pointer"
-								style={{
-									backgroundColor: `${event.color}20`,
-									color: event.color,
-									borderLeft: `3px solid ${event.color}`,
-								}}
-							>
-								{event.title}
-							</button>
-						))}
+		<div className="flex-1 overflow-auto">
+			<div className="min-w-[300px]">
+				{/* Day header */}
+				<div className="border-b bg-background py-3 px-4 sticky top-0 z-20">
+					<div className="flex items-center gap-3">
+						<div
+							className={cn(
+								'text-2xl font-bold',
+								today &&
+									'bg-primary text-primary-foreground rounded-full w-10 h-10 flex items-center justify-center text-lg'
+							)}
+						>
+							{format(currentDate, 'd')}
+						</div>
+						<div>
+							<div className="text-base font-medium">
+								{format(currentDate, 'EEEE')}
+							</div>
+							<div className="text-sm text-muted-foreground">
+								{format(currentDate, 'MMMM yyyy')}
+							</div>
+						</div>
 					</div>
 				</div>
-			)}
 
-			{/* Time grid */}
-			<div className="flex-1 overflow-auto">
-				<div className="flex min-h-full">
-					{/* Time gutter */}
-					<div className="w-20 shrink-0 border-r">
-						{CALENDAR_HOURS.map((hour) => (
-							<div
-								key={hour}
-								className="h-12 text-sm text-muted-foreground text-right pr-3 -mt-2"
-							>
-								{formatHour(hour)}
+				{/* All-day events section */}
+				{allDayEvents.length > 0 && (
+					<div className="border-b bg-muted/30">
+						<div className="grid grid-cols-[60px_1fr]">
+							<div className="border-r bg-background flex items-center justify-end pr-2">
+								<span className="text-[10px] text-muted-foreground font-medium">
+									ALL DAY
+								</span>
 							</div>
-						))}
+							<div className="p-2 space-y-1">
+								{allDayEvents.map((event) => (
+									<button
+										key={event.id}
+										type="button"
+										onClick={() => onEventClick(event)}
+										className="w-full text-left text-sm px-3 py-1.5 rounded-md cursor-pointer hover:opacity-80 transition-opacity"
+										style={{
+											backgroundColor: `${event.color}20`,
+											color: event.color,
+											borderLeft: `3px solid ${event.color}`,
+										}}
+									>
+										{event.title}
+									</button>
+								))}
+							</div>
+						</div>
 					</div>
+				)}
 
-					{/* Day column */}
-					<div
-						className={cn(
-							'flex-1 relative',
-							today && 'bg-primary/5'
-						)}
-					>
-						{/* Time slots */}
-						{CALENDAR_HOURS.map((hour) => (
-							<div
-								key={hour}
-								className="h-12 border-b hover:bg-muted/20 transition-colors cursor-pointer"
-								onClick={() => onTimeSlotClick(currentDate, hour)}
-							/>
-						))}
-
-						{/* Event blocks */}
-						{timedEvents.map((event) => {
-							const { top, height } = calculateEventPosition(
-								event,
-								HOUR_HEIGHT
-							);
-							const adjustedTop = top - 6 * HOUR_HEIGHT;
-							if (adjustedTop < 0) return null;
-
-							return (
-								<CalendarEventBlock
-									key={event.id}
-									event={event}
-									top={adjustedTop}
-									height={height}
-									onClick={onEventClick}
-								/>
-							);
-						})}
-
-						{/* Current time indicator */}
-						{today && <CurrentTimeIndicator />}
-					</div>
+				{/* Time grid */}
+				<div className="grid grid-cols-[60px_1fr]">
+					{CALENDAR_HOURS.map((hour, hourIndex) => (
+						<HourRow
+							key={hour}
+							hour={hour}
+							hourIndex={hourIndex}
+							currentDate={currentDate}
+							timedEvents={timedEvents}
+							today={today}
+							onTimeSlotClick={onTimeSlotClick}
+							onEventClick={onEventClick}
+						/>
+					))}
 				</div>
 			</div>
 		</div>
 	);
 }
 
-function CurrentTimeIndicator() {
+function HourRow({
+	hour,
+	hourIndex,
+	currentDate,
+	timedEvents,
+	today,
+	onTimeSlotClick,
+	onEventClick,
+}: {
+	hour: number;
+	hourIndex: number;
+	currentDate: Date;
+	timedEvents: CalendarEvent[];
+	today: boolean;
+	onTimeSlotClick: (date: Date, hour: number) => void;
+	onEventClick: (event: CalendarEvent) => void;
+}) {
+	const hourEvents = timedEvents.filter((event) => {
+		const eventHour = new Date(event.start).getHours();
+		return eventHour === hour;
+	});
+
+	return (
+		<>
+			{/* Time label cell */}
+			<div
+				className="border-r border-b text-[11px] text-muted-foreground text-right pr-2 relative bg-background"
+				style={{ height: HOUR_HEIGHT }}
+			>
+				{hourIndex > 0 && (
+					<span className="absolute -top-[9px] right-2 bg-background px-0.5">
+						{formatHour(hour)}
+					</span>
+				)}
+			</div>
+
+			{/* Day cell for this hour */}
+			<div
+				className={cn(
+					'border-b relative hover:bg-muted/30 transition-colors cursor-pointer',
+					today && 'bg-primary/5'
+				)}
+				style={{ height: HOUR_HEIGHT }}
+				onClick={() => onTimeSlotClick(currentDate, hour)}
+			>
+				{hourEvents.map((event) => {
+					const { top, height } = calculateEventPosition(event, HOUR_HEIGHT);
+					const hourTop = hour * HOUR_HEIGHT;
+					const relativeTop = top - hourTop;
+
+					return (
+						<CalendarEventBlock
+							key={event.id}
+							event={event}
+							top={relativeTop}
+							height={height}
+							onClick={onEventClick}
+						/>
+					);
+				})}
+
+				{today && <CurrentTimeIndicatorForHour hour={hour} />}
+			</div>
+		</>
+	);
+}
+
+function CurrentTimeIndicatorForHour({ hour }: { hour: number }) {
+	const [, setTick] = useState(0);
+
+	useEffect(() => {
+		const interval = setInterval(() => setTick((t) => t + 1), 60000);
+		return () => clearInterval(interval);
+	}, []);
+
 	const now = new Date();
-	const hour = now.getHours();
+	const currentHour = now.getHours();
 	const minute = now.getMinutes();
 
-	if (hour < 6 || hour >= 22) return null;
+	if (currentHour !== hour) return null;
 
-	const top = (hour - 6) * HOUR_HEIGHT + (minute / 60) * HOUR_HEIGHT;
+	const top = (minute / 60) * HOUR_HEIGHT;
 
 	return (
 		<div
-			className="absolute left-0 right-0 z-10 pointer-events-none"
+			className="absolute left-0 right-0 z-20 pointer-events-none"
 			style={{ top: `${top}px` }}
 		>
 			<div className="flex items-center">
-				<div className="w-2 h-2 rounded-full bg-destructive" />
-				<div className="flex-1 h-0.5 bg-destructive" />
+				<div className="w-2.5 h-2.5 rounded-full bg-red-500 -ml-1" />
+				<div className="flex-1 h-0.5 bg-red-500" />
 			</div>
 		</div>
 	);

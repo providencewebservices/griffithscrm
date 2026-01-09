@@ -23,11 +23,14 @@ export type TimeOffRequest = {
 };
 
 // Fetch time-off requests
-export function useTimeOffRequestsQuery() {
+export function useTimeOffRequestsQuery(userId?: string) {
 	return useQuery({
-		queryKey: ['time-off-requests'],
+		queryKey: userId ? ['time-off-requests', userId] : ['time-off-requests'],
 		queryFn: async (): Promise<TimeOffRequest[]> => {
-			const response = await fetch(`${API_URL}/api/time-off`, {
+			const url = userId
+				? `${API_URL}/api/time-off?userId=${userId}`
+				: `${API_URL}/api/time-off`;
+			const response = await fetch(url, {
 				credentials: 'include',
 			});
 

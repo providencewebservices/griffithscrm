@@ -27,7 +27,7 @@ const updateTenantSchema = z.object({
 const createUserSchema = z.object({
 	email: z.string().email('Invalid email'),
 	name: z.string().min(1, 'Name is required'),
-	role: z.enum(['app_admin', 'tenant_user']),
+	role: z.enum(['app_admin', 'manager', 'tenant_user']),
 	tenantId: z.string().optional(),
 });
 
@@ -35,7 +35,7 @@ const updateUserSchema = z.object({
 	email: z.string().email('Invalid email').optional(),
 	password: z.string().min(8, 'Password must be at least 8 characters').optional(),
 	name: z.string().min(1, 'Name is required').optional(),
-	role: z.enum(['app_admin', 'tenant_user']).optional(),
+	role: z.enum(['app_admin', 'manager', 'tenant_user']).optional(),
 	tenantId: z.string().nullable().optional(),
 });
 
@@ -187,9 +187,9 @@ const adminRoutes = new Hono()
 	.post('/users', zValidator('json', createUserSchema), async (c) => {
 		const { email, name, role, tenantId } = c.req.valid('json');
 
-		// Validate tenant requirement for tenant_user role
-		if (role === 'tenant_user' && !tenantId) {
-			return c.json({ error: 'Tenant users must have a tenant assigned' }, 400);
+		// Validate tenant requirement for tenant_user and manager roles
+		if ((role === 'tenant_user' || role === 'manager') && !tenantId) {
+			return c.json({ error: 'Tenant users and managers must have a tenant assigned' }, 400);
 		}
 
 		// Validate app_admin should not have tenant
@@ -302,8 +302,8 @@ const adminRoutes = new Hono()
 		const newRole = updates.role ?? existing.role;
 		const newTenantId = updates.tenantId !== undefined ? updates.tenantId : existing.tenantId;
 
-		if (newRole === 'tenant_user' && !newTenantId) {
-			return c.json({ error: 'Tenant users must have a tenant assigned' }, 400);
+		if ((newRole === 'tenant_user' || newRole === 'manager') && !newTenantId) {
+			return c.json({ error: 'Tenant users and managers must have a tenant assigned' }, 400);
 		}
 
 		if (newRole === 'app_admin' && newTenantId) {

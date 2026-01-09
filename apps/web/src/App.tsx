@@ -8,6 +8,7 @@ import { TenantsPage } from './pages/admin/tenants';
 import { UsersPage } from './pages/admin/users';
 import { CustomerDashboard } from './pages/customer';
 import { TeamPage } from './pages/customer/team';
+import { TeamMemberDetailPage } from './pages/customer/team-member-detail';
 import { CustomersPage } from './pages/customer/customers';
 import { CustomerDetailPage } from './pages/customer/customer-detail';
 import { ProductsPage } from './pages/customer/products';
@@ -80,6 +81,7 @@ function App() {
 					<Route path="jobs" element={<JobsPage />} />
 					<Route path="jobs/:id" element={<JobDetailPage />} />
 					<Route path="team" element={<TeamPage />} />
+					<Route path="team/:id" element={<TeamMemberDetailPage />} />
 					<Route path="products" element={<ProductsPage />} />
 					<Route path="products/:id" element={<ProductDetailPage />} />
 					<Route path="customers" element={<CustomersPage />} />

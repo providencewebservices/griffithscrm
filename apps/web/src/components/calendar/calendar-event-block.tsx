@@ -16,6 +16,7 @@ export function CalendarEventBlock({
 }: CalendarEventBlockProps) {
 	const startTime = parseISO(event.start);
 	const endTime = event.end ? parseISO(event.end) : null;
+	const isCompact = height < 40;
 
 	return (
 		<button
@@ -24,26 +25,39 @@ export function CalendarEventBlock({
 				e.stopPropagation();
 				onClick(event);
 			}}
-			className="absolute left-1 right-1 rounded-md px-2 py-1 text-xs shadow-sm hover:shadow-md transition-shadow border-l-[3px] overflow-hidden cursor-pointer text-left"
+			className="absolute left-1 right-1 rounded-md px-2 overflow-hidden cursor-pointer text-left transition-all hover:shadow-md hover:z-10 border-l-[3px]"
 			style={{
 				top: `${top}px`,
 				height: `${height}px`,
 				backgroundColor: `${event.color}15`,
 				borderLeftColor: event.color,
+				paddingTop: isCompact ? '2px' : '4px',
+				paddingBottom: isCompact ? '2px' : '4px',
 			}}
-			title={event.title}
+			title={`${event.title}${endTime ? ` - ${format(startTime, 'h:mm a')} to ${format(endTime, 'h:mm a')}` : ''}`}
 		>
-			<div
-				className="font-medium truncate"
-				style={{ color: event.color }}
-			>
-				{event.title}
-			</div>
-			{height > 40 && (
-				<div className="text-muted-foreground truncate text-[10px]">
-					{format(startTime, 'h:mm a')}
-					{endTime && ` - ${format(endTime, 'h:mm a')}`}
+			{isCompact ? (
+				<div
+					className="text-xs font-medium truncate leading-tight"
+					style={{ color: event.color }}
+				>
+					{format(startTime, 'h:mm')} {event.title}
 				</div>
+			) : (
+				<>
+					<div
+						className="text-xs font-medium truncate leading-tight"
+						style={{ color: event.color }}
+					>
+						{event.title}
+					</div>
+					{height > 48 && (
+						<div className="text-[10px] text-muted-foreground truncate mt-0.5">
+							{format(startTime, 'h:mm a')}
+							{endTime && ` - ${format(endTime, 'h:mm a')}`}
+						</div>
+					)}
+				</>
 			)}
 		</button>
 	);

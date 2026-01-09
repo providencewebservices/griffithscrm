@@ -46,6 +46,33 @@ const teamRoutes = new Hono()
 		return c.json({ users: safeUsers });
 	})
 
+	// Get a single team member
+	.get('/users/:id', async (c) => {
+		const currentUser = c.get('user');
+		const tenantId = currentUser.tenantId!;
+		const userId = c.req.param('id');
+
+		const [user] = await db
+			.select()
+			.from(users)
+			.where(and(eq(users.id, userId), eq(users.tenantId, tenantId)))
+			.limit(1);
+
+		if (!user) {
+			return c.json({ error: 'User not found' }, 404);
+		}
+
+		return c.json({
+			user: {
+				id: user.id,
+				name: user.name,
+				email: user.email,
+				emailVerified: user.emailVerified,
+				createdAt: user.createdAt,
+			},
+		});
+	})
+
 	// Invite a new user to the team
 	.post('/users', zValidator('json', inviteUserSchema), async (c) => {
 		const currentUser = c.get('user');

@@ -175,8 +175,8 @@ export function formatDateRange(start: Date, end: Date | null): string {
 export { isSameMonth, isSameDay, parseISO, format, startOfDay, addDays };
 export const isToday = dateFnsIsToday;
 
-// Hours array for time grid (6 AM to 9 PM)
-export const CALENDAR_HOURS = Array.from({ length: 16 }, (_, i) => i + 6);
+// Hours array for time grid (12 AM to 11 PM - full 24 hours)
+export const CALENDAR_HOURS = Array.from({ length: 24 }, (_, i) => i);
 
 // Week day names
 export const WEEKDAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];

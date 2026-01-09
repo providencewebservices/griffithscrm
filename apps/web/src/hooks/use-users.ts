@@ -2,11 +2,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 const API_URL = 'http://localhost:3000';
 
+type UserRole = 'app_admin' | 'manager' | 'tenant_user';
+
 export type User = {
 	id: string;
 	name: string;
 	email: string;
-	role: 'app_admin' | 'tenant_user';
+	role: UserRole;
 	tenantId: string | null;
 	createdAt: string;
 };
@@ -22,15 +24,15 @@ type UserResponse = {
 export type CreateUserInput = {
 	name: string;
 	email: string;
-	role: 'app_admin' | 'tenant_user';
+	role: UserRole;
 	tenantId?: string;
 };
 
-type UpdateUserInput = {
+export type UpdateUserInput = {
 	name?: string;
 	email?: string;
 	password?: string;
-	role?: 'app_admin' | 'tenant_user';
+	role?: UserRole;
 	tenantId?: string | null;
 };
 
