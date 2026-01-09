@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { JOB_STATUSES } from '@griffiths-crm/shared/db/schema';
 
-const API_URL = 'http://localhost:3000';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 // Types
 export type JobStatus = (typeof JOB_STATUSES)[number];

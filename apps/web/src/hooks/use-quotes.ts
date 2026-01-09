@@ -5,7 +5,7 @@ import {
 	FLOWER_HOLE_CHOICES,
 } from '@griffiths-crm/shared/db/schema';
 
-const API_URL = 'http://localhost:3000';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 // Types
 export type QuoteStatus = (typeof QUOTE_STATUSES)[number];

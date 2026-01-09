@@ -5,7 +5,7 @@ import type {
 } from '@/components/calendar/types';
 import { DEFAULT_CALENDAR_SETTINGS } from '@/components/calendar/types';
 
-const API_URL = 'http://localhost:3000';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 // Fetch calendar events for a date range
 export function useCalendarEventsQuery(start: Date, end: Date) {
