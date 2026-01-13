@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from './button';
 import { Upload, X, Loader2, ImageIcon } from 'lucide-react';
@@ -29,6 +29,11 @@ export function ImageUpload({
 	const [error, setError] = useState<string | null>(null);
 	const [isDragging, setIsDragging] = useState(false);
 	const fileInputRef = useRef<HTMLInputElement>(null);
+
+	// Sync preview with value prop changes (e.g., when dialog reopens)
+	useEffect(() => {
+		setPreview(value || null);
+	}, [value]);
 
 	const uploadMutation = useUploadImageMutation();
 

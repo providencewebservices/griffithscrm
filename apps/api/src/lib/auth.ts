@@ -45,12 +45,13 @@ export const auth = betterAuth({
 	emailAndPassword: {
 		enabled: true,
 		requireEmailVerification: true,
+		resetPasswordTokenExpiresIn: 172800, // 48 hours in seconds
 		sendResetPassword: async ({ user, url }) => {
 			await sendEmail({
 				to: user.email,
 				subject: 'Set your password - Griffiths CRM',
-				text: `Click the link to set your password: ${url}`,
-				html: `<p>Click <a href="${url}">here</a> to set your password.</p>`,
+				text: `Click the link to set your password: ${url}\n\nThis link will expire in 48 hours.`,
+				html: `<p>Click <a href="${url}">here</a> to set your password.</p><p><small>This link will expire in 48 hours.</small></p>`,
 			});
 		},
 		onPasswordReset: async ({ user }) => {

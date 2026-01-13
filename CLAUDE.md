@@ -78,6 +78,22 @@ RDS requires SSL connections. The `DATABASE_URL` in SSM includes `?sslmode=requi
 
 If using external DNS (not Route53), set `web_domain` in tfvars but leave `route53_zone_id` empty. The ACM certificate must be manually validated via DNS.
 
+## API Patterns
+
+### Better Auth Routes (Hono)
+
+The Better Auth handler is mounted at `/api/auth/*`. **Use single asterisk `*`, not double `**`**:
+
+```typescript
+// Correct - Hono uses * for wildcard
+app.on(['POST', 'GET'], '/api/auth/*', (c) => auth.handler(c.req.raw));
+
+// Wrong - ** does not work in Hono
+app.on(['POST', 'GET'], '/api/auth/**', (c) => auth.handler(c.req.raw));
+```
+
+This is a common mistake because many frameworks use `**` for catch-all patterns, but Hono uses `*` which matches any number of path segments.
+
 ## UI Patterns
 
 ### List/Table Views
@@ -119,6 +135,40 @@ Detail pages handle all CRUD operations for a single entity:
 - **Edit**: Button in header or inline editing
 - **Delete/Archive**: In actions dropdown or dedicated button
 - **Related Data**: Show and manage related entities (e.g., products in a category)
+
+## Business Domain
+
+### Lettering Pricing System
+
+The lettering pricing system uses a **pricing matrix** approach where prices are determined by the combination of:
+
+1. **Lettering Technique** (e.g., "Sandblasted", "V-Cut", "Re-cut existing")
+2. **Lettering Color** (optional, e.g., "Gold Leaf", "White Paint", "Gilding")
+3. **Applies To** ("new_memorial", "refurbishment", or "both")
+
+**Schema structure:**
+- `lettering_techniques` - Technique names (tenant-scoped)
+- `lettering_colors` - Color names only, no prices (tenant-scoped)
+- `lettering_costs` - Pricing matrix with `techniqueId`, `colorId` (nullable), `appliesTo`, `pricePerLetter`, `freeLetters`
+
+**Price lookup priority** (when creating quotes):
+1. Specific color + specific appliesTo
+2. Specific color + "both"
+3. Default (null color) + specific appliesTo
+4. Default (null color) + "both"
+
+**Example pricing matrix:**
+| Technique | Color | Applies To | Price/Letter |
+|-----------|-------|------------|--------------|
+| Sandblasted | Gold Leaf | both | £3.00 |
+| Sandblasted | White Paint | both | £2.50 |
+| Sandblasted | (default) | both | £2.00 |
+| Re-cut | (default) | refurbishment | £1.50 |
+
+**UI locations:**
+- Settings → Lettering Techniques: Manage techniques and their pricing rules
+- Settings → Colors: Manage color names (prices set per technique)
+- Technique detail page: Add/edit pricing rules per color combination
 
 ## Troubleshooting
 

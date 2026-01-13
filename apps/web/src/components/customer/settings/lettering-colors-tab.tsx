@@ -49,13 +49,11 @@ export function LetteringColorsTab() {
 
 	// Form state
 	const [formName, setFormName] = useState('');
-	const [formPrice, setFormPrice] = useState('0');
 
 	const isEditing = !!selectedItem;
 
 	const resetForm = () => {
 		setFormName('');
-		setFormPrice('0');
 		setMutationError(null);
 	};
 
@@ -68,7 +66,6 @@ export function LetteringColorsTab() {
 	const handleEdit = (item: LetteringColor) => {
 		setSelectedItem(item);
 		setFormName(item.name);
-		setFormPrice(item.price);
 		setMutationError(null);
 		setFormDialogOpen(true);
 	};
@@ -93,7 +90,6 @@ export function LetteringColorsTab() {
 		setMutationError(null);
 		const data: CreateLetteringColorInput = {
 			name: formName,
-			price: parseFloat(formPrice) || 0,
 		};
 
 		try {
@@ -138,7 +134,7 @@ export function LetteringColorsTab() {
 				<div>
 					<h3 className="text-lg font-semibold">Lettering Colors</h3>
 					<p className="text-sm text-muted-foreground">
-						Manage paint finishes and their pricing
+						Manage paint finishes for lettering. Prices are set per technique/color combination.
 					</p>
 				</div>
 				<Button onClick={handleCreate}>
@@ -157,7 +153,6 @@ export function LetteringColorsTab() {
 						<TableHeader>
 							<TableRow>
 								<TableHead>Name</TableHead>
-								<TableHead>Price</TableHead>
 								<TableHead>Status</TableHead>
 								<TableHead className="w-[70px]"></TableHead>
 							</TableRow>
@@ -166,7 +161,6 @@ export function LetteringColorsTab() {
 							{colors?.map((item) => (
 								<TableRow key={item.id}>
 									<TableCell className="font-medium">{item.name}</TableCell>
-									<TableCell>£{item.price}</TableCell>
 									<TableCell>
 										<Badge variant={item.isActive ? 'default' : 'secondary'}>
 											{item.isActive ? 'Active' : 'Inactive'}
@@ -211,8 +205,8 @@ export function LetteringColorsTab() {
 						</DialogTitle>
 						<DialogDescription>
 							{isEditing
-								? 'Update the lettering color details.'
-								: 'Add a new lettering color with pricing.'}
+								? 'Update the lettering color name.'
+								: 'Add a new lettering color. Prices are set per technique/color combination.'}
 						</DialogDescription>
 					</DialogHeader>
 
@@ -230,19 +224,6 @@ export function LetteringColorsTab() {
 								value={formName}
 								onChange={(e) => setFormName(e.target.value)}
 								placeholder="e.g., Gold Leaf, White Paint, Silvered Paint"
-							/>
-						</Field>
-
-						<Field>
-							<FieldLabel htmlFor="price">Price (£)</FieldLabel>
-							<Input
-								id="price"
-								type="number"
-								min="0"
-								step="0.01"
-								value={formPrice}
-								onChange={(e) => setFormPrice(e.target.value)}
-								placeholder="0.00"
 							/>
 						</Field>
 					</FieldGroup>

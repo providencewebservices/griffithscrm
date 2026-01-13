@@ -606,12 +606,13 @@ export const letteringTechniques = pgTable('lettering_techniques', {
 // Lettering cost applies to options
 export const LETTERING_COST_APPLIES_TO = ['new_memorial', 'refurbishment', 'both'] as const;
 
-// Lettering costs (linked to techniques, tenant-scoped via technique)
+// Lettering costs (pricing matrix: technique + optional color)
 export const letteringCosts = pgTable('lettering_costs', {
 	id: text('id').primaryKey(),
 	techniqueId: text('technique_id')
 		.notNull()
 		.references(() => letteringTechniques.id, { onDelete: 'cascade' }),
+	colorId: text('color_id').references(() => letteringColors.id, { onDelete: 'cascade' }), // Nullable - null means default/base price
 	appliesTo: text('applies_to').notNull(), // 'new_memorial' | 'refurbishment' | 'both'
 	freeLetters: integer('free_letters').notNull().default(0),
 	pricePerLetter: numeric('price_per_letter', { precision: 10, scale: 2 })
@@ -628,7 +629,6 @@ export const letteringColors = pgTable('lettering_colors', {
 		.notNull()
 		.references(() => tenants.id, { onDelete: 'cascade' }),
 	name: text('name').notNull(),
-	price: numeric('price', { precision: 10, scale: 2 }).notNull().default('0'),
 	isActive: boolean('is_active').notNull().default(true),
 	sortOrder: integer('sort_order').notNull().default(0),
 	createdAt: timestamp('created_at').notNull().defaultNow(),

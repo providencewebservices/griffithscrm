@@ -7,6 +7,7 @@ export type LetteringCostAppliesTo = 'new_memorial' | 'refurbishment' | 'both';
 export type LetteringCost = {
 	id: string;
 	techniqueId: string;
+	colorId: string | null;
 	appliesTo: LetteringCostAppliesTo;
 	freeLetters: number;
 	pricePerLetter: string;
@@ -16,12 +17,14 @@ export type LetteringCost = {
 
 export type CreateLetteringCostInput = {
 	techniqueId: string;
+	colorId?: string | null;
 	appliesTo: LetteringCostAppliesTo;
 	freeLetters: number;
 	pricePerLetter: number;
 };
 
 export type UpdateLetteringCostInput = {
+	colorId?: string | null;
 	appliesTo?: LetteringCostAppliesTo;
 	freeLetters?: number;
 	pricePerLetter?: number;

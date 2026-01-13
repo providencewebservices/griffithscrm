@@ -10,6 +10,27 @@ A customer relationship management system for Griffiths Memorials, built with a 
 - **Authentication**: Better Auth with Google OAuth
 - **Infrastructure**: AWS (ECS Fargate, RDS, S3, CloudFront)
 
+## Key Features
+
+### Quote Management
+- Create and manage quotes for memorial services
+- Track quote status through approval and conversion to jobs
+- Public quote viewing links for customer approval
+
+### Lettering Pricing System
+The system uses a **pricing matrix** for lettering services:
+- **Techniques**: The method used (e.g., "Sandblasted", "V-Cut")
+- **Colors**: Optional paint finishes (e.g., "Gold Leaf", "White Paint")
+- **Costs**: Price rules combining technique + color (optional) + work type
+
+Price lookup follows this priority:
+1. Specific color + specific work type (new memorial / refurbishment)
+2. Specific color + "both" work types
+3. Default (no color) + specific work type
+4. Default (no color) + "both" work types
+
+This allows flexible pricing where some colors may cost more than the base technique price.
+
 ## Project Structure
 
 ```

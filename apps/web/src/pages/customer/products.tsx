@@ -12,6 +12,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import {
+	Card,
+	CardContent,
+	CardHeader,
+	CardTitle,
+} from '@/components/ui/card';
+import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
@@ -35,10 +41,12 @@ import {
 	useDuplicateProductMutation,
 	type CreateProductInput,
 	type ProductListParams,
+	type Product,
 } from '@/hooks/use-products';
-import { Search, MoreHorizontal, Plus, Package, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, MoreHorizontal, Plus, Package, ChevronLeft, ChevronRight, List, LayoutGrid } from 'lucide-react';
 
 type StatusFilter = 'true' | 'false' | 'all';
+type DisplayMode = 'table' | 'cards';
 
 export function ProductsPage() {
 	const navigate = useNavigate();
@@ -48,6 +56,7 @@ export function ProductsPage() {
 	const [statusFilter, setStatusFilter] = useState<StatusFilter>('true');
 	const [includeArchived, setIncludeArchived] = useState(false);
 	const [page, setPage] = useState(1);
+	const [displayMode, setDisplayMode] = useState<DisplayMode>('table');
 	const [formDialogOpen, setFormDialogOpen] = useState(false);
 	const [mutationError, setMutationError] = useState<string | null>(null);
 
@@ -214,10 +223,30 @@ export function ProductsPage() {
 						Archived
 					</label>
 				</div>
-				<Button onClick={handleAddProduct}>
-					<Plus className="h-4 w-4 mr-2" />
-					Add Product
-				</Button>
+				<div className="flex items-center gap-2">
+					<div className="flex items-center border rounded-md">
+						<Button
+							variant={displayMode === 'table' ? 'secondary' : 'ghost'}
+							size="sm"
+							className="rounded-r-none"
+							onClick={() => setDisplayMode('table')}
+						>
+							<List className="h-4 w-4" />
+						</Button>
+						<Button
+							variant={displayMode === 'cards' ? 'secondary' : 'ghost'}
+							size="sm"
+							className="rounded-l-none"
+							onClick={() => setDisplayMode('cards')}
+						>
+							<LayoutGrid className="h-4 w-4" />
+						</Button>
+					</div>
+					<Button onClick={handleAddProduct}>
+						<Plus className="h-4 w-4 mr-2" />
+						Add Product
+					</Button>
+				</div>
 			</div>
 
 			{mutationError && (
@@ -233,7 +262,7 @@ export function ProductsPage() {
 						? 'No products found matching your filters.'
 						: 'No products yet. Add your first product to get started.'}
 				</div>
-			) : (
+			) : displayMode === 'table' ? (
 				<>
 					<div className="border rounded-lg">
 						<Table>
@@ -359,6 +388,52 @@ export function ProductsPage() {
 						</div>
 					)}
 				</>
+			) : (
+				<>
+					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+						{products.map((product) => (
+							<ProductCard
+								key={product.id}
+								product={product}
+								formatPrice={formatPrice}
+							/>
+						))}
+					</div>
+
+					{/* Pagination */}
+					{pagination && pagination.totalPages > 1 && (
+						<div className="flex items-center justify-between mt-4">
+							<div className="text-sm text-muted-foreground">
+								Showing {(pagination.page - 1) * pagination.limit + 1} to{' '}
+								{Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
+								{pagination.total} products
+							</div>
+							<div className="flex items-center gap-2">
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={() => setPage((p) => Math.max(1, p - 1))}
+									disabled={pagination.page <= 1}
+								>
+									<ChevronLeft className="h-4 w-4" />
+									Previous
+								</Button>
+								<span className="text-sm">
+									Page {pagination.page} of {pagination.totalPages}
+								</span>
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={() => setPage((p) => p + 1)}
+									disabled={pagination.page >= pagination.totalPages}
+								>
+									Next
+									<ChevronRight className="h-4 w-4" />
+								</Button>
+							</div>
+						</div>
+					)}
+				</>
 			)}
 
 			<ProductFormDialog
@@ -370,5 +445,61 @@ export function ProductsPage() {
 				error={mutationError}
 			/>
 		</div>
+	);
+}
+
+function ProductCard({
+	product,
+	formatPrice,
+}: {
+	product: Product;
+	formatPrice: (price: string | null) => string;
+}) {
+	return (
+		<Card
+			className={`hover:shadow-md transition-shadow ${product.archivedAt ? 'opacity-60' : ''}`}
+		>
+			<CardHeader className="pb-3">
+				<div className="flex items-start justify-between">
+					<div className="space-y-1 flex-1 min-w-0">
+						<CardTitle className="text-base truncate">{product.name}</CardTitle>
+						{product.category?.name && (
+							<p className="text-sm text-muted-foreground">{product.category.name}</p>
+						)}
+					</div>
+					<Badge variant="outline" className="text-xs font-mono ml-2">
+						{product.sku}
+					</Badge>
+				</div>
+			</CardHeader>
+			<CardContent className="space-y-3">
+				<div className="flex items-center justify-between">
+					<span className="text-2xl font-bold">{formatPrice(product.basePrice)}</span>
+					{product.archivedAt ? (
+						<Badge variant="outline">Archived</Badge>
+					) : product.isActive ? (
+						<Badge variant="default">Active</Badge>
+					) : (
+						<Badge variant="secondary">Inactive</Badge>
+					)}
+				</div>
+
+				{(product.optionCount ?? 0) > 0 && (
+					<div className="flex items-center gap-2">
+						<Badge variant="secondary" className="text-xs">
+							{product.optionCount} option{product.optionCount !== 1 ? 's' : ''}
+						</Badge>
+					</div>
+				)}
+
+				<div className="pt-2">
+					<Link to={`/app/products/${product.id}`}>
+						<Button variant="outline" size="sm" className="w-full">
+							View Details
+						</Button>
+					</Link>
+				</div>
+			</CardContent>
+		</Card>
 	);
 }

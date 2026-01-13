@@ -57,6 +57,7 @@ import {
 	type LetteringCostAppliesTo,
 	type CreateLetteringCostInput,
 } from '@/hooks/use-lettering-costs';
+import { useLetteringColorsQuery } from '@/hooks/use-lettering-colors';
 import { ArrowLeft, Plus } from 'lucide-react';
 
 const APPLIES_TO_LABELS: Record<LetteringCostAppliesTo, string> = {
@@ -80,11 +81,13 @@ export function LetteringTechniqueDetailPage() {
 	const [formName, setFormName] = useState('');
 
 	// Cost form state
+	const [costColorId, setCostColorId] = useState<string | null>(null);
 	const [costAppliesTo, setCostAppliesTo] = useState<LetteringCostAppliesTo>('new_memorial');
 	const [costFreeLetters, setCostFreeLetters] = useState('0');
 	const [costPricePerLetter, setCostPricePerLetter] = useState('0');
 
 	const { data: technique, isLoading, error } = useLetteringTechniqueQuery(id);
+	const { data: colors } = useLetteringColorsQuery();
 	const updateMutation = useUpdateLetteringTechniqueMutation();
 	const deleteMutation = useDeleteLetteringTechniqueMutation();
 	const createCostMutation = useCreateLetteringCostMutation();
@@ -140,6 +143,7 @@ export function LetteringTechniqueDetailPage() {
 
 	const handleAddCost = () => {
 		setSelectedCost(null);
+		setCostColorId(null);
 		setCostAppliesTo('new_memorial');
 		setCostFreeLetters('0');
 		setCostPricePerLetter('0');
@@ -149,6 +153,7 @@ export function LetteringTechniqueDetailPage() {
 
 	const handleEditCost = (cost: LetteringCost) => {
 		setSelectedCost(cost);
+		setCostColorId(cost.colorId);
 		setCostAppliesTo(cost.appliesTo);
 		setCostFreeLetters(String(cost.freeLetters));
 		setCostPricePerLetter(cost.pricePerLetter);
@@ -164,6 +169,7 @@ export function LetteringTechniqueDetailPage() {
 			if (isEditingCost && selectedCost) {
 				await updateCostMutation.mutateAsync({
 					id: selectedCost.id,
+					colorId: costColorId,
 					appliesTo: costAppliesTo,
 					freeLetters: parseInt(costFreeLetters, 10) || 0,
 					pricePerLetter: parseFloat(costPricePerLetter) || 0,
@@ -171,6 +177,7 @@ export function LetteringTechniqueDetailPage() {
 			} else {
 				const data: CreateLetteringCostInput = {
 					techniqueId: id,
+					colorId: costColorId,
 					appliesTo: costAppliesTo,
 					freeLetters: parseInt(costFreeLetters, 10) || 0,
 					pricePerLetter: parseFloat(costPricePerLetter) || 0,
@@ -182,6 +189,13 @@ export function LetteringTechniqueDetailPage() {
 		} catch (err) {
 			setMutationError(err instanceof Error ? err.message : 'An error occurred');
 		}
+	};
+
+	// Helper to get color name by id
+	const getColorName = (colorId: string | null) => {
+		if (!colorId) return 'Any / No Color';
+		const color = colors?.find((c) => c.id === colorId);
+		return color?.name || 'Unknown';
 	};
 
 	const handleDeleteCost = (cost: LetteringCost) => {
@@ -310,6 +324,7 @@ export function LetteringTechniqueDetailPage() {
 									<Table>
 										<TableHeader>
 											<TableRow>
+												<TableHead>Color</TableHead>
 												<TableHead>Applies To</TableHead>
 												<TableHead>Free Letters</TableHead>
 												<TableHead>Price/Letter</TableHead>
@@ -320,10 +335,13 @@ export function LetteringTechniqueDetailPage() {
 											{technique.costs.map((cost) => (
 												<TableRow key={cost.id}>
 													<TableCell className="font-medium">
+														{getColorName(cost.colorId)}
+													</TableCell>
+													<TableCell>
 														{APPLIES_TO_LABELS[cost.appliesTo]}
 													</TableCell>
 													<TableCell>{cost.freeLetters}</TableCell>
-													<TableCell>${cost.pricePerLetter}</TableCell>
+													<TableCell>£{cost.pricePerLetter}</TableCell>
 													<TableCell>
 														<div className="flex gap-1">
 															<Button
@@ -452,6 +470,31 @@ export function LetteringTechniqueDetailPage() {
 					)}
 
 					<FieldGroup>
+						<Field>
+							<FieldLabel htmlFor="colorId">Color</FieldLabel>
+							<Select
+								value={costColorId || '__none__'}
+								onValueChange={(val) => setCostColorId(val === '__none__' ? null : val)}
+							>
+								<SelectTrigger>
+									<SelectValue placeholder="Select a color (optional)" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="__none__">Any / No Color (Default)</SelectItem>
+									{colors
+										?.filter((c) => c.isActive)
+										.map((color) => (
+											<SelectItem key={color.id} value={color.id}>
+												{color.name}
+											</SelectItem>
+										))}
+								</SelectContent>
+							</Select>
+							<p className="text-sm text-muted-foreground mt-1">
+								Select a specific color for color-specific pricing, or leave as default for base pricing.
+							</p>
+						</Field>
+
 						<Field>
 							<FieldLabel htmlFor="appliesTo">Applies To</FieldLabel>
 							<Select

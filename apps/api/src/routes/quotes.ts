@@ -679,30 +679,7 @@ const quotesRoutes = new Hono()
 					throw new Error(`Lettering technique not found: ${lett.techniqueId}`);
 				}
 
-				// Get cost rule for this technique and appliesTo
-				const [costRule] = await db
-					.select()
-					.from(letteringCosts)
-					.where(
-						and(
-							eq(letteringCosts.techniqueId, lett.techniqueId),
-							eq(letteringCosts.appliesTo, lett.appliesTo)
-						)
-					)
-					.limit(1);
-
-				// Also check for 'both' if specific rule not found
-				let activeCostRule = costRule;
-				if (!activeCostRule) {
-					[activeCostRule] = await db
-						.select()
-						.from(letteringCosts)
-						.where(
-							and(eq(letteringCosts.techniqueId, lett.techniqueId), eq(letteringCosts.appliesTo, 'both'))
-						)
-						.limit(1);
-				}
-
+				// Get color if specified
 				let color = null;
 				if (lett.colorId) {
 					[color] = await db
@@ -710,6 +687,66 @@ const quotesRoutes = new Hono()
 						.from(letteringColors)
 						.where(and(eq(letteringColors.id, lett.colorId), eq(letteringColors.tenantId, tenantId)))
 						.limit(1);
+				}
+
+				// Find cost rule using priority: specific color + appliesTo > specific color + 'both' > default + appliesTo > default + 'both'
+				let activeCostRule = null;
+
+				// 1. Try specific color + specific appliesTo
+				if (lett.colorId) {
+					[activeCostRule] = await db
+						.select()
+						.from(letteringCosts)
+						.where(
+							and(
+								eq(letteringCosts.techniqueId, lett.techniqueId),
+								eq(letteringCosts.colorId, lett.colorId),
+								eq(letteringCosts.appliesTo, lett.appliesTo)
+							)
+						)
+						.limit(1);
+
+					// 2. Try specific color + 'both'
+					if (!activeCostRule) {
+						[activeCostRule] = await db
+							.select()
+							.from(letteringCosts)
+							.where(
+								and(
+									eq(letteringCosts.techniqueId, lett.techniqueId),
+									eq(letteringCosts.colorId, lett.colorId),
+									eq(letteringCosts.appliesTo, 'both')
+								)
+							)
+							.limit(1);
+					}
+				}
+
+				// 3. Fall back to default (no color) + specific appliesTo
+				if (!activeCostRule) {
+					const defaultRules = await db
+						.select()
+						.from(letteringCosts)
+						.where(
+							and(
+								eq(letteringCosts.techniqueId, lett.techniqueId),
+								eq(letteringCosts.appliesTo, lett.appliesTo)
+							)
+						);
+					// Find the one with colorId = null (default)
+					activeCostRule = defaultRules.find((r) => r.colorId === null) || null;
+				}
+
+				// 4. Fall back to default (no color) + 'both'
+				if (!activeCostRule) {
+					const bothRules = await db
+						.select()
+						.from(letteringCosts)
+						.where(
+							and(eq(letteringCosts.techniqueId, lett.techniqueId), eq(letteringCosts.appliesTo, 'both'))
+						);
+					// Find the one with colorId = null (default)
+					activeCostRule = bothRules.find((r) => r.colorId === null) || null;
 				}
 
 				const letterCount = lett.text.replace(/\s/g, '').length; // Count non-space characters
@@ -1000,28 +1037,7 @@ const quotesRoutes = new Hono()
 					throw new Error(`Lettering technique not found: ${lett.techniqueId}`);
 				}
 
-				const [costRule] = await db
-					.select()
-					.from(letteringCosts)
-					.where(
-						and(
-							eq(letteringCosts.techniqueId, lett.techniqueId),
-							eq(letteringCosts.appliesTo, lett.appliesTo)
-						)
-					)
-					.limit(1);
-
-				let activeCostRule = costRule;
-				if (!activeCostRule) {
-					[activeCostRule] = await db
-						.select()
-						.from(letteringCosts)
-						.where(
-							and(eq(letteringCosts.techniqueId, lett.techniqueId), eq(letteringCosts.appliesTo, 'both'))
-						)
-						.limit(1);
-				}
-
+				// Get color if specified
 				let color = null;
 				if (lett.colorId) {
 					[color] = await db
@@ -1029,6 +1045,66 @@ const quotesRoutes = new Hono()
 						.from(letteringColors)
 						.where(and(eq(letteringColors.id, lett.colorId), eq(letteringColors.tenantId, tenantId)))
 						.limit(1);
+				}
+
+				// Find cost rule using priority: specific color + appliesTo > specific color + 'both' > default + appliesTo > default + 'both'
+				let activeCostRule = null;
+
+				// 1. Try specific color + specific appliesTo
+				if (lett.colorId) {
+					[activeCostRule] = await db
+						.select()
+						.from(letteringCosts)
+						.where(
+							and(
+								eq(letteringCosts.techniqueId, lett.techniqueId),
+								eq(letteringCosts.colorId, lett.colorId),
+								eq(letteringCosts.appliesTo, lett.appliesTo)
+							)
+						)
+						.limit(1);
+
+					// 2. Try specific color + 'both'
+					if (!activeCostRule) {
+						[activeCostRule] = await db
+							.select()
+							.from(letteringCosts)
+							.where(
+								and(
+									eq(letteringCosts.techniqueId, lett.techniqueId),
+									eq(letteringCosts.colorId, lett.colorId),
+									eq(letteringCosts.appliesTo, 'both')
+								)
+							)
+							.limit(1);
+					}
+				}
+
+				// 3. Fall back to default (no color) + specific appliesTo
+				if (!activeCostRule) {
+					const defaultRules = await db
+						.select()
+						.from(letteringCosts)
+						.where(
+							and(
+								eq(letteringCosts.techniqueId, lett.techniqueId),
+								eq(letteringCosts.appliesTo, lett.appliesTo)
+							)
+						);
+					// Find the one with colorId = null (default)
+					activeCostRule = defaultRules.find((r) => r.colorId === null) || null;
+				}
+
+				// 4. Fall back to default (no color) + 'both'
+				if (!activeCostRule) {
+					const bothRules = await db
+						.select()
+						.from(letteringCosts)
+						.where(
+							and(eq(letteringCosts.techniqueId, lett.techniqueId), eq(letteringCosts.appliesTo, 'both'))
+						);
+					// Find the one with colorId = null (default)
+					activeCostRule = bothRules.find((r) => r.colorId === null) || null;
 				}
 
 				const letterCount = lett.text.replace(/\s/g, '').length;

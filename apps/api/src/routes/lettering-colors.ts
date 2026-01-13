@@ -9,13 +9,11 @@ import { letteringColors } from '@griffiths-crm/shared/db/schema';
 // Validation schemas
 const createSchema = z.object({
 	name: z.string().min(1, 'Name is required'),
-	price: z.number().min(0, 'Price must be non-negative'),
 	isActive: z.boolean().optional().default(true),
 });
 
 const updateSchema = z.object({
 	name: z.string().min(1, 'Name is required').optional(),
-	price: z.number().min(0, 'Price must be non-negative').optional(),
 	isActive: z.boolean().optional(),
 });
 
@@ -59,7 +57,6 @@ const letteringColorsRoutes = new Hono()
 				id: crypto.randomUUID(),
 				tenantId,
 				name: data.name,
-				price: String(data.price),
 				isActive: data.isActive ?? true,
 				sortOrder: maxSortOrder + 1,
 			})
@@ -88,7 +85,6 @@ const letteringColorsRoutes = new Hono()
 
 		const updateData: Record<string, unknown> = { updatedAt: new Date() };
 		if (data.name !== undefined) updateData.name = data.name;
-		if (data.price !== undefined) updateData.price = String(data.price);
 		if (data.isActive !== undefined) updateData.isActive = data.isActive;
 
 		const [updated] = await db

@@ -6,7 +6,6 @@ export type LetteringColor = {
 	id: string;
 	tenantId: string;
 	name: string;
-	price: string;
 	isActive: boolean;
 	sortOrder: number;
 	createdAt: string;
@@ -15,12 +14,10 @@ export type LetteringColor = {
 
 export type CreateLetteringColorInput = {
 	name: string;
-	price: number;
 };
 
 export type UpdateLetteringColorInput = {
 	name?: string;
-	price?: number;
 	isActive?: boolean;
 };
 
