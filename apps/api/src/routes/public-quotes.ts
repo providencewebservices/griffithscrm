@@ -1,23 +1,30 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
-import { eq } from 'drizzle-orm';
+import { eq, asc } from 'drizzle-orm';
+import crypto from 'crypto';
 import { db } from '../lib/auth';
 import {
+	quotePackages,
 	quotes,
 	quoteComponents,
 	quoteLettering,
 	quoteSundries,
-	quoteServices,
 	quoteLineItems,
 	customers,
 	products,
+	services,
 	tenants,
+	jobs,
+	jobPaymentScheduleItems,
+	tenantPricingSettings,
 } from '@griffiths-crm/shared/db/schema';
+import { generateJobNumber } from './jobs';
 
 // Validation schemas
-const submitFeedbackSchema = z.object({
+const respondSchema = z.object({
 	decision: z.enum(['accepted', 'rejected']),
+	acceptedOptionId: z.string().optional(), // Required if decision is 'accepted'
 	feedback: z.string().optional(),
 });
 
@@ -26,179 +33,284 @@ const saveNotesSchema = z.object({
 });
 
 const publicQuotesRoutes = new Hono()
-	// Get quote by access token (public - no auth required)
+	// Get package by access token (public - no auth required)
 	.get('/view/:token', async (c) => {
 		const token = c.req.param('token');
 
-		// Find quote by token
-		const [quote] = await db
+		// Find package by token
+		const [pkg] = await db
 			.select()
-			.from(quotes)
-			.where(eq(quotes.accessToken, token))
+			.from(quotePackages)
+			.where(eq(quotePackages.accessToken, token))
 			.limit(1);
 
-		if (!quote) {
+		if (!pkg) {
 			return c.json({ error: 'Quote not found or link is invalid' }, 404);
 		}
 
 		// Check if quote has expired based on validUntil
-		if (quote.validUntil && new Date(quote.validUntil) < new Date()) {
+		if (pkg.validUntil && new Date(pkg.validUntil) < new Date()) {
 			return c.json({ error: 'This quote has expired', expired: true }, 410);
 		}
 
-		// Get quote line items and related data (customer-visible only)
-		const [components, lettering, sundryItems, serviceItems, lineItems] = await Promise.all([
-			db.select().from(quoteComponents).where(eq(quoteComponents.quoteId, quote.id)),
-			db.select().from(quoteLettering).where(eq(quoteLettering.quoteId, quote.id)),
-			db.select().from(quoteSundries).where(eq(quoteSundries.quoteId, quote.id)),
-			db.select().from(quoteServices).where(eq(quoteServices.quoteId, quote.id)),
-			db.select().from(quoteLineItems).where(eq(quoteLineItems.quoteId, quote.id)),
-		]);
+		// Get all options for this package
+		const optionRows = await db
+			.select()
+			.from(quotes)
+			.where(eq(quotes.packageId, pkg.id))
+			.orderBy(asc(quotes.optionOrder));
+
+		// Enrich each option with line items
+		const options = await Promise.all(
+			optionRows.map(async (opt) => {
+				const [components, lettering, sundryItems, lineItems] = await Promise.all([
+					db.select().from(quoteComponents).where(eq(quoteComponents.quoteId, opt.id)).orderBy(asc(quoteComponents.sortOrder)),
+					db.select().from(quoteLettering).where(eq(quoteLettering.quoteId, opt.id)).orderBy(asc(quoteLettering.sortOrder)),
+					db.select().from(quoteSundries).where(eq(quoteSundries.quoteId, opt.id)).orderBy(asc(quoteSundries.sortOrder)),
+					db.select().from(quoteLineItems).where(eq(quoteLineItems.quoteId, opt.id)).orderBy(asc(quoteLineItems.sortOrder)),
+				]);
+
+				// Get product name if set
+				let product = null;
+				if (opt.productId) {
+					const [productResult] = await db
+						.select({ name: products.name })
+						.from(products)
+						.where(eq(products.id, opt.productId))
+						.limit(1);
+					product = productResult || null;
+				}
+
+				return {
+					id: opt.id,
+					quoteNumber: opt.quoteNumber,
+					optionLabel: opt.optionLabel,
+					optionOrder: opt.optionOrder,
+					product,
+					flowerHoles: opt.flowerHoles,
+					subtotal: opt.subtotal,
+					vatAmount: opt.vatAmount,
+					total: opt.total,
+					vatRate: opt.vatRate,
+					// Line items with customer-visible fields only (NO supplier costs, multipliers)
+					components: components.map((comp) => ({
+						componentType: comp.componentType,
+						height: comp.height,
+						width: comp.width,
+						depth: comp.depth,
+						quantity: comp.quantity,
+						unitPrice: comp.unitPrice,
+						lineTotal: comp.lineTotal,
+						materialName: comp.materialName,
+						finishName: comp.finishName,
+					})),
+					lettering: lettering.map((lett) => ({
+						text: lett.text,
+						letterCount: lett.letterCount,
+						unitPrice: lett.unitPrice,
+						lineTotal: lett.lineTotal,
+						techniqueName: lett.techniqueName,
+						colorName: lett.colorName,
+					})),
+					sundries: sundryItems.map((s) => ({
+						quantity: s.quantity,
+						unitPrice: s.unitPrice,
+						lineTotal: s.lineTotal,
+						sundryName: s.sundryName,
+					})),
+					// Only show line items marked as visible to customer
+					lineItems: lineItems.filter((li) => li.visibleToCustomer).map((li) => ({
+						description: li.description,
+						price: li.price,
+						vatExempt: li.vatExempt,
+					})),
+				};
+			})
+		);
 
 		// Get tenant info for branding
 		const [tenant] = await db
 			.select()
 			.from(tenants)
-			.where(eq(tenants.id, quote.tenantId))
+			.where(eq(tenants.id, pkg.tenantId))
 			.limit(1);
 
-		// Get product name if set
-		let product = null;
-		if (quote.productId) {
-			const [productResult] = await db
-				.select({ name: products.name })
-				.from(products)
-				.where(eq(products.id, quote.productId))
+		// Get service name
+		let service = null;
+		if (pkg.serviceId) {
+			const [serviceResult] = await db
+				.select({ name: services.name })
+				.from(services)
+				.where(eq(services.id, pkg.serviceId))
 				.limit(1);
-			product = productResult || null;
+			service = serviceResult || null;
 		}
 
 		// Get customer name
 		let customer = null;
-		if (quote.customerId) {
+		if (pkg.customerId) {
 			const [customerResult] = await db
 				.select({ firstName: customers.firstName, lastName: customers.lastName })
 				.from(customers)
-				.where(eq(customers.id, quote.customerId))
+				.where(eq(customers.id, pkg.customerId))
 				.limit(1);
 			customer = customerResult || null;
 		}
 
-		// Return customer-safe data (NO internal notes, supplier costs, multipliers, etc.)
+		// Return customer-safe data (NO internal notes, supplier costs, etc.)
 		return c.json({
-			quote: {
-				id: quote.id,
-				quoteNumber: quote.quoteNumber,
-				status: quote.status,
-				subtotal: quote.subtotal,
-				vatAmount: quote.vatAmount,
-				total: quote.total,
-				vatRate: quote.vatRate,
-				notes: quote.notes, // Customer-visible notes only
-				flowerHoles: quote.flowerHoles,
-				proposedInscription: quote.proposedInscription,
-				validUntil: quote.validUntil,
-				createdAt: quote.createdAt,
+			package: {
+				id: pkg.id,
+				status: pkg.status,
+				quoteType: pkg.quoteType,
+				notes: pkg.notes, // Customer-visible notes only
+				proposedInscription: pkg.proposedInscription,
+				validUntil: pkg.validUntil,
+				createdAt: pkg.createdAt,
 				// Customer's previous feedback/decision if any
-				customerFeedback: quote.customerFeedback,
-				customerDecision: quote.customerDecision,
-				customerDecisionAt: quote.customerDecisionAt,
+				customerFeedback: pkg.customerFeedback,
+				acceptedOptionId: pkg.acceptedOptionId,
+				customerDecisionAt: pkg.customerDecisionAt,
 			},
+			options,
 			customer,
-			product,
+			service,
 			tenant: tenant ? { name: tenant.name } : null,
-			// Line items with customer-visible fields only (NO supplier costs, multipliers, fixed amounts)
-			components: components.map((comp) => ({
-				componentType: comp.componentType,
-				height: comp.height,
-				width: comp.width,
-				depth: comp.depth,
-				quantity: comp.quantity,
-				unitPrice: comp.unitPrice,
-				lineTotal: comp.lineTotal,
-				materialName: comp.materialName,
-				finishName: comp.finishName,
-			})),
-			lettering: lettering.map((lett) => ({
-				text: lett.text,
-				letterCount: lett.letterCount,
-				unitPrice: lett.unitPrice,
-				lineTotal: lett.lineTotal,
-				techniqueName: lett.techniqueName,
-				colorName: lett.colorName,
-			})),
-			sundries: sundryItems.map((s) => ({
-				quantity: s.quantity,
-				unitPrice: s.unitPrice,
-				lineTotal: s.lineTotal,
-				sundryName: s.sundryName,
-			})),
-			services: serviceItems.map((s) => ({
-				quantity: s.quantity,
-				unitPrice: s.unitPrice,
-				lineTotal: s.lineTotal,
-				serviceName: s.serviceName,
-			})),
-			// Only show line items marked as visible to customer
-			lineItems: lineItems.filter(li => li.visibleToCustomer).map((li) => ({
-				description: li.description,
-				price: li.price,
-				vatExempt: li.vatExempt,
-			})),
 		});
 	})
 
 	// Submit customer decision and feedback
-	.post('/view/:token/respond', zValidator('json', submitFeedbackSchema), async (c) => {
+	.post('/view/:token/respond', zValidator('json', respondSchema), async (c) => {
 		const token = c.req.param('token');
-		const { decision, feedback } = c.req.valid('json');
+		const { decision, acceptedOptionId, feedback } = c.req.valid('json');
 
-		// Find quote
-		const [quote] = await db
+		// Find package
+		const [pkg] = await db
 			.select()
-			.from(quotes)
-			.where(eq(quotes.accessToken, token))
+			.from(quotePackages)
+			.where(eq(quotePackages.accessToken, token))
 			.limit(1);
 
-		if (!quote) {
+		if (!pkg) {
 			return c.json({ error: 'Quote not found or link is invalid' }, 404);
 		}
 
 		// Check expiry
-		if (quote.validUntil && new Date(quote.validUntil) < new Date()) {
+		if (pkg.validUntil && new Date(pkg.validUntil) < new Date()) {
 			return c.json({ error: 'This quote has expired' }, 410);
 		}
 
-		// Only allow response if quote is in 'presented' status
-		if (quote.status !== 'presented') {
+		// Only allow response if package is in 'presented' status
+		if (pkg.status !== 'presented') {
 			return c.json({ error: 'This quote cannot be responded to in its current state' }, 400);
 		}
 
 		// Check if already responded
-		if (quote.customerDecision) {
+		if (pkg.acceptedOptionId || pkg.status === 'accepted' || pkg.status === 'rejected') {
 			return c.json({ error: 'You have already responded to this quote' }, 400);
+		}
+
+		// If accepting, require an option ID
+		if (decision === 'accepted' && !acceptedOptionId) {
+			return c.json({ error: 'Please select an option to accept' }, 400);
+		}
+
+		// Verify the accepted option exists in this package
+		let acceptedOption = null;
+		if (decision === 'accepted') {
+			const [opt] = await db
+				.select()
+				.from(quotes)
+				.where(eq(quotes.id, acceptedOptionId!))
+				.limit(1);
+
+			if (!opt || opt.packageId !== pkg.id) {
+				return c.json({ error: 'Invalid option selected' }, 400);
+			}
+			acceptedOption = opt;
 		}
 
 		const now = new Date();
 
-		// Update quote with customer's decision
+		// Update package with customer's decision
 		await db
-			.update(quotes)
+			.update(quotePackages)
 			.set({
-				customerDecision: decision,
+				status: decision,
+				acceptedOptionId: decision === 'accepted' ? acceptedOptionId : null,
 				customerDecisionAt: now,
 				customerFeedback: feedback || null,
 				customerFeedbackAt: feedback ? now : null,
-				status: decision, // Update status to 'accepted' or 'rejected'
 				updatedAt: now,
 			})
-			.where(eq(quotes.id, quote.id));
+			.where(eq(quotePackages.id, pkg.id));
+
+		// Update all options status to match
+		await db
+			.update(quotes)
+			.set({ status: decision, updatedAt: now })
+			.where(eq(quotes.packageId, pkg.id));
+
+		// If accepted, create a job from the accepted option
+		if (decision === 'accepted' && acceptedOption) {
+			const tenantId = pkg.tenantId;
+			const jobNumber = await generateJobNumber(tenantId);
+			const jobId = crypto.randomUUID();
+
+			await db.insert(jobs).values({
+				id: jobId,
+				tenantId,
+				quoteId: acceptedOptionId!, // Link to the specific accepted option
+				jobNumber,
+				status: 'pending',
+			});
+
+			// Get tenant's deposit percentage setting
+			let depositPercent = 50; // Default 50%
+			const [pricingSettingsRow] = await db
+				.select()
+				.from(tenantPricingSettings)
+				.where(eq(tenantPricingSettings.tenantId, tenantId))
+				.limit(1);
+
+			if (pricingSettingsRow?.defaultDepositPercent) {
+				depositPercent = parseFloat(pricingSettingsRow.defaultDepositPercent);
+			}
+
+			// Calculate deposit and balance amounts
+			const total = parseFloat(acceptedOption.total);
+			const depositAmount = (total * depositPercent) / 100;
+			const balanceAmount = total - depositAmount;
+
+			// Create payment schedule items
+			await db.insert(jobPaymentScheduleItems).values({
+				id: crypto.randomUUID(),
+				tenantId,
+				jobId,
+				description: 'Deposit',
+				amount: depositAmount.toFixed(2),
+				dueDate: now,
+				paidAmount: '0',
+				sortOrder: 0,
+			});
+
+			await db.insert(jobPaymentScheduleItems).values({
+				id: crypto.randomUUID(),
+				tenantId,
+				jobId,
+				description: 'Balance',
+				amount: balanceAmount.toFixed(2),
+				dueDate: null,
+				paidAmount: '0',
+				sortOrder: 1,
+			});
+		}
 
 		return c.json({
 			success: true,
 			message:
 				decision === 'accepted'
-					? 'Thank you for accepting this quote!'
+					? 'Thank you for accepting this quote! We will be in touch shortly.'
 					: 'Thank you for your feedback.',
 		});
 	})
@@ -208,38 +320,38 @@ const publicQuotesRoutes = new Hono()
 		const token = c.req.param('token');
 		const { notes } = c.req.valid('json');
 
-		// Find quote
-		const [quote] = await db
+		// Find package
+		const [pkg] = await db
 			.select()
-			.from(quotes)
-			.where(eq(quotes.accessToken, token))
+			.from(quotePackages)
+			.where(eq(quotePackages.accessToken, token))
 			.limit(1);
 
-		if (!quote) {
+		if (!pkg) {
 			return c.json({ error: 'Quote not found or link is invalid' }, 404);
 		}
 
 		// Check expiry
-		if (quote.validUntil && new Date(quote.validUntil) < new Date()) {
+		if (pkg.validUntil && new Date(pkg.validUntil) < new Date()) {
 			return c.json({ error: 'This quote has expired' }, 410);
 		}
 
-		// Only allow notes if quote is in 'presented' status (not yet decided)
-		if (quote.status !== 'presented') {
+		// Only allow notes if package is in 'presented' status (not yet decided)
+		if (pkg.status !== 'presented') {
 			return c.json({ error: 'Notes cannot be added to this quote in its current state' }, 400);
 		}
 
 		const now = new Date();
 
-		// Update quote with customer's notes
+		// Update package with customer's notes
 		await db
-			.update(quotes)
+			.update(quotePackages)
 			.set({
 				customerFeedback: notes || null,
 				customerFeedbackAt: notes ? now : null,
 				updatedAt: now,
 			})
-			.where(eq(quotes.id, quote.id));
+			.where(eq(quotePackages.id, pkg.id));
 
 		return c.json({
 			success: true,

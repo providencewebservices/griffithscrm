@@ -103,71 +103,110 @@ export type QuoteProduct = {
 	sku: string;
 };
 
-export type QuoteVersion = {
+export type QuoteFuneralDirector = {
 	id: string;
-	version: number;
-	status: QuoteStatus;
-	total: string;
-	createdAt: string;
+	name: string;
 };
 
-export type Quote = {
+export type QuoteCouncil = {
 	id: string;
-	tenantId: string;
-	parentQuoteId: string | null;
-	version: number;
-	quoteType: QuoteType;
-	serviceId: string | null;
-	customerId: string | null;
+	name: string;
+};
+
+export type QuoteMemorialSite = {
+	id: string;
+	name: string;
+};
+
+// Quote Option - represents a single quote within a package
+export type QuoteOption = {
+	id: string;
+	packageId: string;
+	quoteNumber: string;
+	optionLabel: string | null;
+	optionOrder: number;
 	productId: string | null;
 	dimensionComboId: string | null;
-	source: string | null;
-	quoteNumber: string;
-	status: QuoteStatus;
+	flowerHoles: FlowerHoleChoice | null;
 	subtotal: string;
 	vatAmount: string;
 	total: string;
 	totalCost: string;
 	vatRate: string;
-	notes: string | null;
-	internalNotes: string | null;
-	flowerHoles: FlowerHoleChoice | null;
-	proposedInscription: string | null;
-	// For additional inscription / refurbishment quotes
-	existingMemorialDescription: string | null;
-	relatedJobId: string | null;
-	validUntil: string | null;
-	createdAt: string;
-	updatedAt: string;
-	// Customer email notification fields
-	accessToken: string | null;
-	accessTokenCreatedAt: string | null;
-	customerFeedback: string | null;
-	customerFeedbackAt: string | null;
-	customerDecision: 'accepted' | 'rejected' | null;
-	customerDecisionAt: string | null;
-	emailSentAt: string | null;
-	emailSentCount: number;
-};
-
-export type QuoteListItem = Quote & {
-	customerFirstName: string | null;
-	customerLastName: string | null;
-	customerName: string | null;
-};
-
-export type QuoteWithLineItems = Quote & {
-	customer: QuoteCustomer | null;
 	product: QuoteProduct | null;
-	service: QuoteServiceInfo | null;
 	components: QuoteComponent[];
 	lettering: QuoteLettering[];
 	sundries: QuoteSundry[];
 	lineItems: QuoteLineItem[];
-	versions: QuoteVersion[];
+	createdAt: string;
+	updatedAt: string;
 };
 
-// Input types for creating/revising quotes
+// Quote Package - container for quote options with shared context
+export type QuotePackage = {
+	id: string;
+	tenantId: string;
+	status: QuoteStatus;
+	quoteType: QuoteType;
+	serviceId: string | null;
+	customerId: string | null;
+	funeralDirectorId: string | null;
+	councilId: string | null;
+	memorialSiteId: string | null;
+	source: string | null;
+	notes: string | null;
+	internalNotes: string | null;
+	proposedInscription: string | null;
+	existingMemorialDescription: string | null;
+	relatedJobId: string | null;
+	validUntil: string | null;
+	accessToken: string | null;
+	accessTokenCreatedAt: string | null;
+	emailSentAt: string | null;
+	emailSentCount: number;
+	customerFeedback: string | null;
+	customerFeedbackAt: string | null;
+	acceptedOptionId: string | null;
+	customerDecisionAt: string | null;
+	createdAt: string;
+	updatedAt: string;
+};
+
+// List item - package summary for quotes list
+export type QuotePackageListItem = {
+	id: string;
+	tenantId: string;
+	status: QuoteStatus;
+	quoteType: QuoteType;
+	customerId: string | null;
+	customerFirstName: string | null;
+	customerLastName: string | null;
+	serviceId: string | null;
+	serviceName: string | null;
+	notes: string | null;
+	validUntil: string | null;
+	createdAt: string;
+	updatedAt: string;
+	optionCount: number;
+	priceRange: {
+		minPrice: string;
+		maxPrice: string;
+	};
+	firstQuoteNumber: string;
+	acceptedOptionId: string | null;
+};
+
+// Full package with all options and related data
+export type QuotePackageWithOptions = QuotePackage & {
+	customer: QuoteCustomer | null;
+	service: QuoteServiceInfo | null;
+	funeralDirector: QuoteFuneralDirector | null;
+	council: QuoteCouncil | null;
+	memorialSite: QuoteMemorialSite | null;
+	options: QuoteOption[];
+};
+
+// Input types for creating/updating
 export type ComponentInput = {
 	componentType: ComponentType;
 	materialId: string;
@@ -208,25 +247,43 @@ export type CustomerDetailsInput = {
 	};
 };
 
+// Create quote - creates package with first option
 export type CreateQuoteInput = {
+	// Package-level fields (shared context)
 	quoteType?: QuoteType;
 	serviceId: string;
 	customerId?: string;
-	productId?: string;
-	dimensionComboId?: string;
-	flowerHoles?: FlowerHoleChoice;
+	funeralDirectorId?: string;
+	councilId?: string;
+	memorialSiteId?: string;
 	source?: string;
 	proposedInscription?: string;
-	// For additional inscription / refurbishment quotes
 	existingMemorialDescription?: string;
 	relatedJobId?: string;
 	notes?: string;
 	internalNotes?: string;
 	validUntil?: string;
+	customerDetails?: CustomerDetailsInput;
+	// First option fields
+	productId?: string;
+	dimensionComboId?: string;
+	flowerHoles?: FlowerHoleChoice;
 	components?: ComponentInput[];
 	lettering?: LetteringInput[];
 	sundries?: SundryInput[];
-	customerDetails?: CustomerDetailsInput;
+};
+
+// Add option to existing package
+export type AddOptionInput = {
+	packageId: string;
+	optionLabel?: string;
+	copyFromOptionId?: string;
+	productId?: string;
+	dimensionComboId?: string;
+	flowerHoles?: FlowerHoleChoice;
+	components?: ComponentInput[];
+	lettering?: LetteringInput[];
+	sundries?: SundryInput[];
 };
 
 export type QuoteSearchParams = {
@@ -234,28 +291,24 @@ export type QuoteSearchParams = {
 	quoteType?: QuoteType;
 	customerId?: string;
 	search?: string;
-	latestOnly?: boolean;
 };
 
 // Response types
-type QuotesResponse = {
-	quotes: QuoteListItem[];
+type PackagesResponse = {
+	packages: QuotePackageListItem[];
 };
 
-type QuoteResponse = {
-	quote: QuoteWithLineItems;
+type PackageResponse = {
+	package: QuotePackageWithOptions;
 };
 
 // Fetch functions
-async function fetchQuotes(params?: QuoteSearchParams): Promise<QuoteListItem[]> {
+async function fetchQuotes(params?: QuoteSearchParams): Promise<QuotePackageListItem[]> {
 	const searchParams = new URLSearchParams();
 	if (params?.status) searchParams.set('status', params.status);
 	if (params?.quoteType) searchParams.set('quoteType', params.quoteType);
 	if (params?.customerId) searchParams.set('customerId', params.customerId);
 	if (params?.search) searchParams.set('search', params.search);
-	if (params?.latestOnly !== undefined) {
-		searchParams.set('latestOnly', params.latestOnly ? 'true' : 'false');
-	}
 
 	const url = `${API_URL}/api/quotes${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
 
@@ -268,11 +321,11 @@ async function fetchQuotes(params?: QuoteSearchParams): Promise<QuoteListItem[]>
 		throw new Error(error.error || 'Failed to fetch quotes');
 	}
 
-	const data: QuotesResponse = await response.json();
-	return data.quotes;
+	const data: PackagesResponse = await response.json();
+	return data.packages;
 }
 
-async function fetchQuote(id: string): Promise<QuoteWithLineItems> {
+async function fetchQuote(id: string): Promise<QuotePackageWithOptions> {
 	const response = await fetch(`${API_URL}/api/quotes/${id}`, {
 		credentials: 'include',
 	});
@@ -282,11 +335,11 @@ async function fetchQuote(id: string): Promise<QuoteWithLineItems> {
 		throw new Error(error.error || 'Failed to fetch quote');
 	}
 
-	const data: QuoteResponse = await response.json();
-	return data.quote;
+	const data: PackageResponse = await response.json();
+	return data.package;
 }
 
-async function createQuote(input: CreateQuoteInput): Promise<QuoteWithLineItems> {
+async function createQuote(input: CreateQuoteInput): Promise<QuotePackageWithOptions> {
 	const response = await fetch(`${API_URL}/api/quotes`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
@@ -299,15 +352,12 @@ async function createQuote(input: CreateQuoteInput): Promise<QuoteWithLineItems>
 		throw new Error(error.error || 'Failed to create quote');
 	}
 
-	const data: QuoteResponse = await response.json();
-	return data.quote;
+	const data: PackageResponse = await response.json();
+	return data.package;
 }
 
-async function reviseQuote({
-	id,
-	...input
-}: CreateQuoteInput & { id: string }): Promise<QuoteWithLineItems> {
-	const response = await fetch(`${API_URL}/api/quotes/${id}/revise`, {
+async function addOption({ packageId, ...input }: AddOptionInput): Promise<QuotePackageWithOptions> {
+	const response = await fetch(`${API_URL}/api/quotes/${packageId}/options`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		credentials: 'include',
@@ -316,11 +366,57 @@ async function reviseQuote({
 
 	if (!response.ok) {
 		const error = await response.json();
-		throw new Error(error.error || 'Failed to revise quote');
+		throw new Error(error.error || 'Failed to add option');
 	}
 
-	const data: QuoteResponse = await response.json();
-	return data.quote;
+	const data: PackageResponse = await response.json();
+	return data.package;
+}
+
+async function cloneOption({
+	packageId,
+	optionId,
+	optionLabel,
+}: {
+	packageId: string;
+	optionId: string;
+	optionLabel?: string;
+}): Promise<QuotePackageWithOptions> {
+	const response = await fetch(`${API_URL}/api/quotes/${packageId}/options/${optionId}/clone`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		credentials: 'include',
+		body: JSON.stringify({ optionLabel }),
+	});
+
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.error || 'Failed to clone option');
+	}
+
+	const data: PackageResponse = await response.json();
+	return data.package;
+}
+
+async function deleteOption({
+	packageId,
+	optionId,
+}: {
+	packageId: string;
+	optionId: string;
+}): Promise<QuotePackageWithOptions> {
+	const response = await fetch(`${API_URL}/api/quotes/${packageId}/options/${optionId}`, {
+		method: 'DELETE',
+		credentials: 'include',
+	});
+
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.error || 'Failed to delete option');
+	}
+
+	const data: PackageResponse = await response.json();
+	return data.package;
 }
 
 async function updateQuoteStatus({
@@ -329,7 +425,7 @@ async function updateQuoteStatus({
 }: {
 	id: string;
 	status: QuoteStatus;
-}): Promise<Quote> {
+}): Promise<QuotePackageWithOptions> {
 	const response = await fetch(`${API_URL}/api/quotes/${id}/status`, {
 		method: 'PUT',
 		headers: { 'Content-Type': 'application/json' },
@@ -342,8 +438,8 @@ async function updateQuoteStatus({
 		throw new Error(error.error || 'Failed to update quote status');
 	}
 
-	const data: { quote: Quote } = await response.json();
-	return data.quote;
+	const data: PackageResponse = await response.json();
+	return data.package;
 }
 
 async function deleteQuote(id: string): Promise<void> {
@@ -356,6 +452,26 @@ async function deleteQuote(id: string): Promise<void> {
 		const error = await response.json();
 		throw new Error(error.error || 'Failed to delete quote');
 	}
+}
+
+async function acceptOption({
+	packageId,
+	optionId,
+}: {
+	packageId: string;
+	optionId: string;
+}): Promise<{ package: QuotePackageWithOptions; jobId: string; jobNumber: string }> {
+	const response = await fetch(`${API_URL}/api/quotes/${packageId}/accept/${optionId}`, {
+		method: 'POST',
+		credentials: 'include',
+	});
+
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.error || 'Failed to accept option');
+	}
+
+	return response.json();
 }
 
 export type SendQuoteEmailInput = {
@@ -418,14 +534,38 @@ export function useCreateQuoteMutation() {
 	});
 }
 
-export function useReviseQuoteMutation() {
+export function useAddOptionMutation() {
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: reviseQuote,
+		mutationFn: addOption,
 		onSuccess: (data) => {
+			queryClient.setQueryData(['quote', data.id], data);
 			queryClient.invalidateQueries({ queryKey: ['quotes'] });
-			queryClient.invalidateQueries({ queryKey: ['quote', data.id] });
+		},
+	});
+}
+
+export function useCloneOptionMutation() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: cloneOption,
+		onSuccess: (data) => {
+			queryClient.setQueryData(['quote', data.id], data);
+			queryClient.invalidateQueries({ queryKey: ['quotes'] });
+		},
+	});
+}
+
+export function useDeleteOptionMutation() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: deleteOption,
+		onSuccess: (data) => {
+			queryClient.setQueryData(['quote', data.id], data);
+			queryClient.invalidateQueries({ queryKey: ['quotes'] });
 		},
 	});
 }
@@ -436,8 +576,8 @@ export function useUpdateQuoteStatusMutation() {
 	return useMutation({
 		mutationFn: updateQuoteStatus,
 		onSuccess: (data) => {
+			queryClient.setQueryData(['quote', data.id], data);
 			queryClient.invalidateQueries({ queryKey: ['quotes'] });
-			queryClient.invalidateQueries({ queryKey: ['quote', data.id] });
 		},
 	});
 }
@@ -449,6 +589,19 @@ export function useDeleteQuoteMutation() {
 		mutationFn: deleteQuote,
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ['quotes'] });
+		},
+	});
+}
+
+export function useAcceptOptionMutation() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: acceptOption,
+		onSuccess: (data) => {
+			queryClient.setQueryData(['quote', data.package.id], data.package);
+			queryClient.invalidateQueries({ queryKey: ['quotes'] });
+			queryClient.invalidateQueries({ queryKey: ['jobs'] });
 		},
 	});
 }
@@ -465,9 +618,10 @@ export function useSendQuoteEmailMutation() {
 	});
 }
 
-// Line item pricing update types
+// Line item pricing update types - now include packageId and optionId
 type UpdateLineItemPricingInput = {
-	quoteId: string;
+	packageId: string;
+	optionId: string;
 	itemId: string;
 	supplierCost?: number;
 	markupPercent?: number;
@@ -483,7 +637,8 @@ export type LineItemInput = {
 };
 
 export type AddLineItemInput = {
-	quoteId: string;
+	packageId: string;
+	optionId: string;
 	description: string;
 	price: number;
 	vatExempt?: boolean;
@@ -491,7 +646,8 @@ export type AddLineItemInput = {
 };
 
 export type UpdateLineItemInput = {
-	quoteId: string;
+	packageId: string;
+	optionId: string;
 	itemId: string;
 	description?: string;
 	price?: number;
@@ -500,72 +656,85 @@ export type UpdateLineItemInput = {
 };
 
 export type DeleteLineItemInput = {
-	quoteId: string;
+	packageId: string;
+	optionId: string;
 	itemId: string;
 };
 
 // Line item update functions
 async function updateComponentPricing({
-	quoteId,
+	packageId,
+	optionId,
 	itemId,
 	...input
-}: UpdateLineItemPricingInput): Promise<QuoteWithLineItems> {
-	const response = await fetch(`${API_URL}/api/quotes/${quoteId}/components/${itemId}`, {
-		method: 'PUT',
-		headers: { 'Content-Type': 'application/json' },
-		credentials: 'include',
-		body: JSON.stringify(input),
-	});
+}: UpdateLineItemPricingInput): Promise<QuotePackageWithOptions> {
+	const response = await fetch(
+		`${API_URL}/api/quotes/${packageId}/options/${optionId}/components/${itemId}`,
+		{
+			method: 'PUT',
+			headers: { 'Content-Type': 'application/json' },
+			credentials: 'include',
+			body: JSON.stringify(input),
+		}
+	);
 
 	if (!response.ok) {
 		const error = await response.json();
 		throw new Error(error.error || 'Failed to update component pricing');
 	}
 
-	const data: QuoteResponse = await response.json();
-	return data.quote;
+	const data: PackageResponse = await response.json();
+	return data.package;
 }
 
 async function updateLetteringPricing({
-	quoteId,
+	packageId,
+	optionId,
 	itemId,
 	...input
-}: UpdateLineItemPricingInput): Promise<QuoteWithLineItems> {
-	const response = await fetch(`${API_URL}/api/quotes/${quoteId}/lettering/${itemId}`, {
-		method: 'PUT',
-		headers: { 'Content-Type': 'application/json' },
-		credentials: 'include',
-		body: JSON.stringify(input),
-	});
+}: UpdateLineItemPricingInput): Promise<QuotePackageWithOptions> {
+	const response = await fetch(
+		`${API_URL}/api/quotes/${packageId}/options/${optionId}/lettering/${itemId}`,
+		{
+			method: 'PUT',
+			headers: { 'Content-Type': 'application/json' },
+			credentials: 'include',
+			body: JSON.stringify(input),
+		}
+	);
 
 	if (!response.ok) {
 		const error = await response.json();
 		throw new Error(error.error || 'Failed to update lettering pricing');
 	}
 
-	const data: QuoteResponse = await response.json();
-	return data.quote;
+	const data: PackageResponse = await response.json();
+	return data.package;
 }
 
 async function updateSundryPricing({
-	quoteId,
+	packageId,
+	optionId,
 	itemId,
 	...input
-}: UpdateLineItemPricingInput): Promise<QuoteWithLineItems> {
-	const response = await fetch(`${API_URL}/api/quotes/${quoteId}/sundries/${itemId}`, {
-		method: 'PUT',
-		headers: { 'Content-Type': 'application/json' },
-		credentials: 'include',
-		body: JSON.stringify(input),
-	});
+}: UpdateLineItemPricingInput): Promise<QuotePackageWithOptions> {
+	const response = await fetch(
+		`${API_URL}/api/quotes/${packageId}/options/${optionId}/sundries/${itemId}`,
+		{
+			method: 'PUT',
+			headers: { 'Content-Type': 'application/json' },
+			credentials: 'include',
+			body: JSON.stringify(input),
+		}
+	);
 
 	if (!response.ok) {
 		const error = await response.json();
 		throw new Error(error.error || 'Failed to update sundry pricing');
 	}
 
-	const data: QuoteResponse = await response.json();
-	return data.quote;
+	const data: PackageResponse = await response.json();
+	return data.package;
 }
 
 // Line item pricing mutation hooks
@@ -607,13 +776,14 @@ export function useUpdateSundryPricingMutation() {
 
 // Custom line item CRUD functions
 async function addLineItem({
-	quoteId,
+	packageId,
+	optionId,
 	description,
 	price,
 	vatExempt,
 	visibleToCustomer,
-}: AddLineItemInput): Promise<QuoteWithLineItems> {
-	const response = await fetch(`${API_URL}/api/quotes/${quoteId}/line-items`, {
+}: AddLineItemInput): Promise<QuotePackageWithOptions> {
+	const response = await fetch(`${API_URL}/api/quotes/${packageId}/options/${optionId}/line-items`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		credentials: 'include',
@@ -625,50 +795,58 @@ async function addLineItem({
 		throw new Error(error.error || 'Failed to add line item');
 	}
 
-	const data: QuoteResponse = await response.json();
-	return data.quote;
+	const data: PackageResponse = await response.json();
+	return data.package;
 }
 
 async function updateLineItem({
-	quoteId,
+	packageId,
+	optionId,
 	itemId,
 	description,
 	price,
 	vatExempt,
 	visibleToCustomer,
-}: UpdateLineItemInput): Promise<QuoteWithLineItems> {
-	const response = await fetch(`${API_URL}/api/quotes/${quoteId}/line-items/${itemId}`, {
-		method: 'PUT',
-		headers: { 'Content-Type': 'application/json' },
-		credentials: 'include',
-		body: JSON.stringify({ description, price, vatExempt, visibleToCustomer }),
-	});
+}: UpdateLineItemInput): Promise<QuotePackageWithOptions> {
+	const response = await fetch(
+		`${API_URL}/api/quotes/${packageId}/options/${optionId}/line-items/${itemId}`,
+		{
+			method: 'PUT',
+			headers: { 'Content-Type': 'application/json' },
+			credentials: 'include',
+			body: JSON.stringify({ description, price, vatExempt, visibleToCustomer }),
+		}
+	);
 
 	if (!response.ok) {
 		const error = await response.json();
 		throw new Error(error.error || 'Failed to update line item');
 	}
 
-	const data: QuoteResponse = await response.json();
-	return data.quote;
+	const data: PackageResponse = await response.json();
+	return data.package;
 }
 
 async function deleteLineItem({
-	quoteId,
+	packageId,
+	optionId,
 	itemId,
-}: DeleteLineItemInput): Promise<QuoteWithLineItems> {
-	const response = await fetch(`${API_URL}/api/quotes/${quoteId}/line-items/${itemId}`, {
-		method: 'DELETE',
-		credentials: 'include',
-	});
+}: DeleteLineItemInput): Promise<QuotePackageWithOptions> {
+	const response = await fetch(
+		`${API_URL}/api/quotes/${packageId}/options/${optionId}/line-items/${itemId}`,
+		{
+			method: 'DELETE',
+			credentials: 'include',
+		}
+	);
 
 	if (!response.ok) {
 		const error = await response.json();
 		throw new Error(error.error || 'Failed to delete line item');
 	}
 
-	const data: QuoteResponse = await response.json();
-	return data.quote;
+	const data: PackageResponse = await response.json();
+	return data.package;
 }
 
 // Custom line item mutation hooks
@@ -795,16 +973,19 @@ export function getQuoteTypeVariant(
 }
 
 // Section visibility configuration based on quote type
-export const QUOTE_TYPE_SECTION_CONFIG: Record<QuoteType, {
-	showProductSelection: boolean;
-	showComponents: boolean;
-	showFlowerHoles: boolean;
-	showProposedInscription: boolean;
-	showLettering: boolean;
-	showSundries: boolean;
-	showExistingMemorial: boolean;
-	showRelatedJob: boolean;
-}> = {
+export const QUOTE_TYPE_SECTION_CONFIG: Record<
+	QuoteType,
+	{
+		showProductSelection: boolean;
+		showComponents: boolean;
+		showFlowerHoles: boolean;
+		showProposedInscription: boolean;
+		showLettering: boolean;
+		showSundries: boolean;
+		showExistingMemorial: boolean;
+		showRelatedJob: boolean;
+	}
+> = {
 	new_memorial: {
 		showProductSelection: true,
 		showComponents: true,
@@ -856,6 +1037,29 @@ export const QUOTE_TYPE_SECTION_CONFIG: Record<QuoteType, {
 		showRelatedJob: false,
 	},
 };
+
+// Helper to format price range for display
+export function formatPriceRange(priceRange: { minPrice: string; maxPrice: string }): string {
+	const min = parseFloat(priceRange.minPrice);
+	const max = parseFloat(priceRange.maxPrice);
+
+	if (min === max) {
+		return `£${min.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+	}
+
+	return `£${min.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} - £${max.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+// Helper to format quote number with option count
+export function formatQuoteNumberWithOptions(
+	firstQuoteNumber: string,
+	optionCount: number
+): string {
+	if (optionCount <= 1) {
+		return firstQuoteNumber;
+	}
+	return `${firstQuoteNumber} (+${optionCount - 1})`;
+}
 
 // Re-export for convenience
 export { FLOWER_HOLE_CHOICES, QUOTE_TYPES };

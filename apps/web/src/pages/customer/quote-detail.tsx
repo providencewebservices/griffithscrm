@@ -17,6 +17,13 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from '@/components/ui/dialog';
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import {
@@ -56,15 +63,37 @@ import {
 	useAddLineItemMutation,
 	useUpdateLineItemMutation,
 	useDeleteLineItemMutation,
+	useCloneOptionMutation,
+	useDeleteOptionMutation,
+	useAcceptOptionMutation,
 	formatQuoteStatus,
 	getQuoteStatusVariant,
 	formatComponentType,
+	formatPriceRange,
 	QUOTE_TYPE_LABELS,
 	type QuoteStatus,
 	type QuoteType,
+	type QuoteOption,
+	type QuotePackageWithOptions,
 } from '@/hooks/use-quotes';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Send, Check, X, Clock, FileEdit, Trash2, Eye, EyeOff, Loader2, Mail, MessageSquare, Plus } from 'lucide-react';
+import {
+	ArrowLeft,
+	Send,
+	Check,
+	X,
+	Clock,
+	Trash2,
+	Eye,
+	EyeOff,
+	Loader2,
+	Mail,
+	MessageSquare,
+	Plus,
+	Copy,
+	MoreVertical,
+	ChevronDown,
+} from 'lucide-react';
 import { DocumentsCard } from '@/components/documents';
 import { useLineItemPresetsQuery } from '@/hooks/use-line-item-presets';
 
@@ -189,12 +218,14 @@ export function QuoteDetailPage() {
 	const navigate = useNavigate();
 
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+	const [deleteOptionDialogOpen, setDeleteOptionDialogOpen] = useState(false);
 	const [sendEmailDialogOpen, setSendEmailDialogOpen] = useState(false);
 	const [customMessage, setCustomMessage] = useState('');
 	const [mutationError, setMutationError] = useState<string | null>(null);
 	const [viewMode, setViewMode] = useState<ViewMode>('internal');
+	const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
 
-	const { data: quote, isLoading, error } = useQuoteQuery(id);
+	const { data: pkg, isLoading, error } = useQuoteQuery(id);
 	const updateStatusMutation = useUpdateQuoteStatusMutation();
 	const deleteMutation = useDeleteQuoteMutation();
 	const sendEmailMutation = useSendQuoteEmailMutation();
@@ -204,10 +235,13 @@ export function QuoteDetailPage() {
 	const addLineItem = useAddLineItemMutation();
 	const updateLineItem = useUpdateLineItemMutation();
 	const deleteLineItem = useDeleteLineItemMutation();
+	const cloneOptionMutation = useCloneOptionMutation();
+	const deleteOptionMutation = useDeleteOptionMutation();
+	const acceptOptionMutation = useAcceptOptionMutation();
 
 	// Line item presets for dropdown
 	const { data: lineItemPresets } = useLineItemPresetsQuery();
-	const activePresets = lineItemPresets?.filter(p => p.isActive) || [];
+	const activePresets = lineItemPresets?.filter((p) => p.isActive) || [];
 
 	// State for new line item input
 	const [newLineItemPresetId, setNewLineItemPresetId] = useState<string>('');
@@ -216,17 +250,23 @@ export function QuoteDetailPage() {
 	const [newLineItemVatExempt, setNewLineItemVatExempt] = useState(false);
 	const [newLineItemVisibleToCustomer, setNewLineItemVisibleToCustomer] = useState(true);
 
+	// Set initial selected option when data loads
+	useEffect(() => {
+		if (pkg?.options && pkg.options.length > 0 && !selectedOptionId) {
+			setSelectedOptionId(pkg.options[0].id);
+		}
+	}, [pkg, selectedOptionId]);
+
 	// Handle preset selection - auto-fill fields
 	const handlePresetSelect = (presetId: string) => {
 		setNewLineItemPresetId(presetId);
 		if (presetId === 'custom') {
-			// Reset to defaults for custom entry
 			setNewLineItemDesc('');
 			setNewLineItemPrice('');
 			setNewLineItemVatExempt(false);
 			setNewLineItemVisibleToCustomer(true);
 		} else {
-			const preset = activePresets.find(p => p.id === presetId);
+			const preset = activePresets.find((p) => p.id === presetId);
 			if (preset) {
 				setNewLineItemDesc(preset.name);
 				setNewLineItemPrice(preset.defaultPrice);
@@ -236,8 +276,11 @@ export function QuoteDetailPage() {
 		}
 	};
 
+	// Get current option
+	const currentOption = pkg?.options?.find((opt) => opt.id === selectedOptionId);
+
 	// Can only edit pricing on draft quotes
-	const canEditPricing = quote?.status === 'draft';
+	const canEditPricing = pkg?.status === 'draft';
 
 	const formatCurrency = (value: string | number) => {
 		const numValue = typeof value === 'string' ? parseFloat(value) : value;
@@ -276,10 +319,6 @@ export function QuoteDetailPage() {
 		}
 	};
 
-	const handleRevise = () => {
-		navigate(`/app/quotes/new?revise=${id}`);
-	};
-
 	const handleSendEmail = async () => {
 		if (!id) return;
 		setMutationError(null);
@@ -295,6 +334,54 @@ export function QuoteDetailPage() {
 		}
 	};
 
+	const handleCloneOption = async () => {
+		if (!id || !selectedOptionId) return;
+		setMutationError(null);
+		try {
+			const result = await cloneOptionMutation.mutateAsync({
+				packageId: id,
+				optionId: selectedOptionId,
+			});
+			// Switch to the newly cloned option
+			const newOption = result.options[result.options.length - 1];
+			setSelectedOptionId(newOption.id);
+		} catch (err) {
+			setMutationError(err instanceof Error ? err.message : 'Failed to clone option');
+		}
+	};
+
+	const handleDeleteOption = async () => {
+		if (!id || !selectedOptionId || !pkg) return;
+		try {
+			const result = await deleteOptionMutation.mutateAsync({
+				packageId: id,
+				optionId: selectedOptionId,
+			});
+			setDeleteOptionDialogOpen(false);
+			// Switch to first remaining option
+			if (result.options.length > 0) {
+				setSelectedOptionId(result.options[0].id);
+			}
+		} catch (err) {
+			setMutationError(err instanceof Error ? err.message : 'Failed to delete option');
+		}
+	};
+
+	const handleAcceptOption = async (optionId: string) => {
+		if (!id) return;
+		setMutationError(null);
+		try {
+			const result = await acceptOptionMutation.mutateAsync({
+				packageId: id,
+				optionId,
+			});
+			// Navigate to the created job
+			navigate(`/app/jobs/${result.jobId}`);
+		} catch (err) {
+			setMutationError(err instanceof Error ? err.message : 'Failed to accept option');
+		}
+	};
+
 	if (isLoading) {
 		return (
 			<div>
@@ -306,7 +393,7 @@ export function QuoteDetailPage() {
 		);
 	}
 
-	if (error || !quote) {
+	if (error || !pkg) {
 		return (
 			<div>
 				<div className="mb-6">
@@ -326,15 +413,32 @@ export function QuoteDetailPage() {
 	}
 
 	// Determine available actions based on status
-	// New workflow: draft → review → ready → presented → accepted/rejected/expired
-	const canPresent = ['draft', 'ready'].includes(quote.status); // Can skip to presented
-	const canMarkReady = quote.status === 'draft' || quote.status === 'review';
-	const canAccept = quote.status === 'presented';
-	const canReject = quote.status === 'presented';
-	const canExpire = quote.status === 'presented';
-	const canDelete = quote.status === 'draft';
-	const canRevise = true; // Can always revise
-	const canSendEmail = ['ready', 'presented'].includes(quote.status) && !!quote.customerId;
+	const canPresent = ['draft', 'ready'].includes(pkg.status);
+	const canMarkReady = pkg.status === 'draft' || pkg.status === 'review';
+	const canAccept = pkg.status === 'presented';
+	const canReject = pkg.status === 'presented';
+	const canExpire = pkg.status === 'presented';
+	const canDelete = pkg.status === 'draft';
+	const canSendEmail = ['ready', 'presented'].includes(pkg.status) && !!pkg.customerId;
+	const canAddOptions = pkg.status === 'draft';
+
+	// Get first quote number for display
+	const firstQuoteNumber = pkg.options?.[0]?.quoteNumber || 'Draft';
+	const optionCount = pkg.options?.length || 0;
+
+	// Get customer name
+	const customerName = pkg.customer
+		? `${pkg.customer.firstName} ${pkg.customer.lastName}`
+		: 'Walk-in Customer';
+
+	// Calculate price range
+	const priceRange =
+		pkg.options?.length > 0
+			? {
+					minPrice: Math.min(...pkg.options.map((o) => parseFloat(o.total))).toFixed(2),
+					maxPrice: Math.max(...pkg.options.map((o) => parseFloat(o.total))).toFixed(2),
+				}
+			: { minPrice: '0', maxPrice: '0' };
 
 	return (
 		<div>
@@ -349,7 +453,8 @@ export function QuoteDetailPage() {
 					<BreadcrumbSeparator />
 					<BreadcrumbItem>
 						<BreadcrumbPage>
-							{quote.quoteNumber} (v{quote.version})
+							{firstQuoteNumber}
+							{optionCount > 1 && ` (+${optionCount - 1})`}
 						</BreadcrumbPage>
 					</BreadcrumbItem>
 				</BreadcrumbList>
@@ -365,21 +470,19 @@ export function QuoteDetailPage() {
 					</Link>
 					<div>
 						<div className="flex items-center gap-3">
-							<h2 className="text-2xl font-bold">{quote.quoteNumber}</h2>
-							{quote.version > 1 && (
-								<span className="text-muted-foreground">(Version {quote.version})</span>
-							)}
-							<Badge variant={getQuoteStatusVariant(quote.status)}>
-								{formatQuoteStatus(quote.status)}
-							</Badge>
-							{quote.quoteType && quote.quoteType !== 'new_memorial' && (
-								<Badge variant="outline">
-									{QUOTE_TYPE_LABELS[quote.quoteType as QuoteType]}
-								</Badge>
+							<h2 className="text-2xl font-bold">
+								{firstQuoteNumber}
+								{optionCount > 1 && (
+									<span className="text-muted-foreground ml-2">(+{optionCount - 1} options)</span>
+								)}
+							</h2>
+							<Badge variant={getQuoteStatusVariant(pkg.status)}>{formatQuoteStatus(pkg.status)}</Badge>
+							{pkg.quoteType && pkg.quoteType !== 'new_memorial' && (
+								<Badge variant="outline">{QUOTE_TYPE_LABELS[pkg.quoteType as QuoteType]}</Badge>
 							)}
 						</div>
 						<p className="text-muted-foreground mt-1">
-							Created {formatDate(quote.createdAt)}
+							{customerName} &bull; {formatPriceRange(priceRange)}
 						</p>
 					</div>
 				</div>
@@ -395,21 +498,18 @@ export function QuoteDetailPage() {
 						</Button>
 					)}
 					{canPresent && (
-						<Button
-							onClick={() => handleStatusChange('presented')}
-							disabled={updateStatusMutation.isPending}
-						>
+						<Button onClick={() => handleStatusChange('presented')} disabled={updateStatusMutation.isPending}>
 							<Send className="h-4 w-4 mr-2" />
 							Present to Customer
 						</Button>
 					)}
-					{canAccept && (
+					{canAccept && currentOption && (
 						<Button
-							onClick={() => handleStatusChange('accepted')}
-							disabled={updateStatusMutation.isPending}
+							onClick={() => handleAcceptOption(currentOption.id)}
+							disabled={acceptOptionMutation.isPending}
 						>
 							<Check className="h-4 w-4 mr-2" />
-							Mark Accepted
+							Accept {currentOption.quoteNumber}
 						</Button>
 					)}
 					{canReject && (
@@ -419,7 +519,7 @@ export function QuoteDetailPage() {
 							disabled={updateStatusMutation.isPending}
 						>
 							<X className="h-4 w-4 mr-2" />
-							Mark Rejected
+							Reject
 						</Button>
 					)}
 					{canExpire && (
@@ -440,24 +540,15 @@ export function QuoteDetailPage() {
 						>
 							<Mail className="h-4 w-4 mr-2" />
 							Send Email
-							{quote.emailSentCount > 0 && (
+							{pkg.emailSentCount > 0 && (
 								<Badge variant="secondary" className="ml-2">
-									{quote.emailSentCount}
+									{pkg.emailSentCount}
 								</Badge>
 							)}
 						</Button>
 					)}
-					{canRevise && (
-						<Button variant="outline" onClick={handleRevise}>
-							<FileEdit className="h-4 w-4 mr-2" />
-							Revise
-						</Button>
-					)}
 					{canDelete && (
-						<Button
-							variant="destructive"
-							onClick={() => setDeleteDialogOpen(true)}
-						>
+						<Button variant="destructive" onClick={() => setDeleteDialogOpen(true)}>
 							<Trash2 className="h-4 w-4 mr-2" />
 							Delete
 						</Button>
@@ -466,9 +557,7 @@ export function QuoteDetailPage() {
 			</div>
 
 			{mutationError && (
-				<div className="bg-destructive/10 text-destructive px-4 py-2 rounded mb-4">
-					{mutationError}
-				</div>
+				<div className="bg-destructive/10 text-destructive px-4 py-2 rounded mb-4">{mutationError}</div>
 			)}
 
 			{/* View Mode Toggle */}
@@ -486,954 +575,220 @@ export function QuoteDetailPage() {
 					</TabsList>
 				</Tabs>
 				{viewMode === 'internal' && (
-					<div className="text-sm text-muted-foreground">
-						Showing internal pricing details
-					</div>
+					<div className="text-sm text-muted-foreground">Showing internal pricing details</div>
 				)}
 			</div>
 
-			{/* Customer View - Clean presentation for customer */}
-			{viewMode === 'customer' && (
-				<div className="max-w-2xl mx-auto">
-					<Card className="border-2">
-						<CardHeader className="text-center border-b pb-6">
-							<CardTitle className="text-2xl">Quotation</CardTitle>
-							<CardDescription className="text-base">
-								{quote.quoteNumber}
-							</CardDescription>
-						</CardHeader>
-						<CardContent className="pt-6 space-y-6">
-							{/* Customer Info */}
-							<div className="text-center">
-								<p className="text-sm text-muted-foreground">Prepared for</p>
-								<p className="text-lg font-medium">
-									{quote.customer
-										? `${quote.customer.firstName} ${quote.customer.lastName}`
-										: 'Walk-in Customer'}
-								</p>
-								<p className="text-sm text-muted-foreground mt-2">
-									Date: {formatDate(quote.createdAt)}
-								</p>
-								{quote.validUntil && (
-									<p className="text-sm text-muted-foreground">
-										Valid Until: {formatDate(quote.validUntil)}
-									</p>
-								)}
-							</div>
+			{/* Customer View */}
+			{viewMode === 'customer' && <CustomerView pkg={pkg} formatCurrency={formatCurrency} formatDate={formatDate} />}
 
-							<hr />
-
-							{/* Service & Product Details */}
-							<div className="space-y-4">
-								{quote.service && (
-									<div>
-										<p className="text-sm text-muted-foreground">Service</p>
-										<p className="font-semibold text-lg">{quote.service.name}</p>
-									</div>
-								)}
-								{quote.product && (
-									<div>
-										<p className="text-sm text-muted-foreground">Product</p>
-										<p className="font-semibold text-lg">{quote.product.name}</p>
-									</div>
-								)}
-
-								{/* Components Summary */}
-								{quote.components.length > 0 && (
-									<div className="space-y-1">
-										{quote.components.map((comp) => (
-											<div key={comp.id} className="flex justify-between text-sm">
-												<span>
-													{formatComponentType(comp.componentType)}
-													{comp.height && comp.width && comp.depth && (
-														<span className="text-muted-foreground ml-2">
-															({comp.height}" × {comp.width}" × {comp.depth}")
-														</span>
-													)}
-													{comp.materialName && (
-														<span className="text-muted-foreground ml-1">
-															- {comp.materialName}
-														</span>
-													)}
-												</span>
-											</div>
-										))}
-									</div>
-								)}
-
-								{/* Flower Holes */}
-								{quote.flowerHoles && (
-									<p className="text-sm">
-										<span className="text-muted-foreground">Flower Holes: </span>
-										{quote.flowerHoles.replace(/_/g, ' ')}
-									</p>
-								)}
-
-								{/* Inscription & Lettering - unified section */}
-								{(quote.proposedInscription || quote.lettering.length > 0) && (
-									<div className="space-y-3">
-										<p className="text-sm font-medium">
-											{quote.proposedInscription && quote.lettering.length > 0
-												? 'Inscription & Lettering'
-												: quote.proposedInscription
-													? 'Proposed Inscription'
-													: 'Lettering'}
-										</p>
-
-										{/* Proposed Inscription */}
-										{quote.proposedInscription && (
-											<div className="space-y-1">
-												<p className="text-xs text-muted-foreground uppercase tracking-wide">
-													Proposed Text ({quote.proposedInscription.length} characters)
-												</p>
-												<p className="whitespace-pre-wrap bg-muted p-3 rounded font-mono text-sm">
-													{quote.proposedInscription}
-												</p>
-											</div>
-										)}
-
-										{/* Lettering Details */}
-										{quote.lettering.length > 0 && (
-											<div className="space-y-2">
-												{quote.proposedInscription && (
-													<p className="text-xs text-muted-foreground uppercase tracking-wide pt-2">
-														Lettering Details
-													</p>
-												)}
-												{quote.lettering.map((lett) => (
-													<div key={lett.id} className="text-sm">
-														<p className="italic">"{lett.text}"</p>
-														<p className="text-muted-foreground text-xs">
-															{lett.techniqueName}
-															{lett.colorName && ` with ${lett.colorName}`}
-															{' - '}{lett.letterCount} letters
-														</p>
-													</div>
-												))}
-											</div>
-										)}
-									</div>
-								)}
-
-								{/* Sundries */}
-								{quote.sundries.length > 0 && (
-									<div className="space-y-1">
-										<p className="text-sm font-medium">Additional Items:</p>
-										{quote.sundries.map((s) => (
-											<p key={s.id} className="text-sm text-muted-foreground">
-												{s.sundryName} × {s.quantity}
-											</p>
-										))}
-									</div>
-								)}
-
-								{/* Custom Line Items - Only show visible items to customer */}
-								{quote.lineItems && quote.lineItems.filter(item => item.visibleToCustomer).length > 0 && (
-									<div className="space-y-1">
-										<p className="text-sm font-medium">Other Charges:</p>
-										{quote.lineItems.filter(item => item.visibleToCustomer).map((item) => (
-											<div key={item.id} className="flex justify-between text-sm">
-												<span className="text-muted-foreground">
-													{item.description}
-													{item.vatExempt && <span className="text-xs ml-1">(VAT Exempt)</span>}
-												</span>
-												<span>{formatCurrency(item.price)}</span>
-											</div>
-										))}
-									</div>
-								)}
-
-							</div>
-
-							<hr />
-
-							{/* Pricing - Customer sees only totals */}
-							<div className="space-y-2 text-right">
-								<div className="flex justify-between">
-									<span>Subtotal</span>
-									<span>{formatCurrency(quote.subtotal)}</span>
-								</div>
-								<div className="flex justify-between text-muted-foreground">
-									<span>VAT ({(parseFloat(quote.vatRate) * 100).toFixed(0)}%)</span>
-									<span>{formatCurrency(quote.vatAmount)}</span>
-								</div>
-								<hr />
-								<div className="flex justify-between font-bold text-xl pt-2">
-									<span>Total</span>
-									<span>{formatCurrency(quote.total)}</span>
-								</div>
-							</div>
-
-							{/* Notes */}
-							{quote.notes && (
-								<>
-									<hr />
-									<div>
-										<p className="text-sm text-muted-foreground">{quote.notes}</p>
-									</div>
-								</>
-							)}
-						</CardContent>
-					</Card>
-				</div>
-			)}
-
-			{/* Internal View - Full details with pricing breakdown */}
+			{/* Internal View */}
 			{viewMode === 'internal' && (
-			<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-				{/* Main Content */}
-				<div className="lg:col-span-2 space-y-6">
-					{/* Quote Info Card */}
+				<div className="space-y-6">
+					{/* Shared Context Card */}
+					<SharedContextCard pkg={pkg} formatDate={formatDate} />
+
+					{/* Options Section */}
 					<Card>
-						<CardHeader>
-							<CardTitle>Quote Information</CardTitle>
-						</CardHeader>
-						<CardContent className="grid grid-cols-2 gap-4">
-							<div>
-								<p className="text-sm font-medium text-muted-foreground">Service</p>
-								<p>{quote.service?.name || 'No service selected'}</p>
-							</div>
-							<div>
-								<p className="text-sm font-medium text-muted-foreground">Customer</p>
-								<p>
-									{quote.customer
-										? `${quote.customer.firstName} ${quote.customer.lastName}`
-										: 'Walk-in Customer'}
-								</p>
-							</div>
-							{quote.quoteType && (
+						<CardHeader className="pb-3">
+							<div className="flex items-center justify-between">
 								<div>
-									<p className="text-sm font-medium text-muted-foreground">Quote Type</p>
-									<p>{QUOTE_TYPE_LABELS[quote.quoteType as QuoteType]}</p>
+									<CardTitle>Pricing Options</CardTitle>
+									<CardDescription>
+										{optionCount} option{optionCount !== 1 ? 's' : ''} for this quote
+									</CardDescription>
 								</div>
-							)}
-							{quote.product && (
-								<div>
-									<p className="text-sm font-medium text-muted-foreground">Product</p>
-									<p>{quote.product.name}</p>
-								</div>
-							)}
-							{quote.flowerHoles && (
-								<div>
-									<p className="text-sm font-medium text-muted-foreground">Flower Holes</p>
-									<p>{quote.flowerHoles.replace(/_/g, ' ')}</p>
-								</div>
-							)}
-							{quote.existingMemorialDescription && (
-								<div className="col-span-2">
-									<p className="text-sm font-medium text-muted-foreground">Existing Memorial Description</p>
-									<p className="whitespace-pre-wrap bg-muted p-3 rounded mt-1 text-sm">
-										{quote.existingMemorialDescription}
-									</p>
-								</div>
-							)}
-							{quote.relatedJobId && (
-								<div>
-									<p className="text-sm font-medium text-muted-foreground">Related Job</p>
-									<Link to={`/app/jobs/${quote.relatedJobId}`} className="text-primary hover:underline">
-										View Related Job →
-									</Link>
-								</div>
-							)}
-							{quote.validUntil && (
-								<div>
-									<p className="text-sm font-medium text-muted-foreground">Valid Until</p>
-									<p>{formatDate(quote.validUntil)}</p>
-								</div>
-							)}
-							{quote.notes && (
-								<div className="col-span-2">
-									<p className="text-sm font-medium text-muted-foreground">Notes</p>
-									<p className="whitespace-pre-wrap">{quote.notes}</p>
-								</div>
-							)}
-						</CardContent>
-					</Card>
-
-					{/* Components Card - Internal view shows supplier costs and markup */}
-					{quote.components.length > 0 && (
-						<Card>
-							<CardHeader>
-								<CardTitle>Stone Components</CardTitle>
-								<CardDescription>
-									{quote.components.length} component{quote.components.length !== 1 ? 's' : ''} - Internal pricing details
-								</CardDescription>
-							</CardHeader>
-							<CardContent>
-								<div className="border rounded-lg overflow-x-auto">
-									<Table>
-										<TableHeader>
-											<TableRow>
-												<TableHead>Type</TableHead>
-												<TableHead>Material</TableHead>
-												<TableHead>Dimensions</TableHead>
-												<TableHead className="text-center">Qty</TableHead>
-												<TableHead className="text-right text-orange-600">Supplier</TableHead>
-												<TableHead className="text-center">Markup</TableHead>
-												<TableHead className="text-right">Retail</TableHead>
-												<TableHead className="text-right">Total</TableHead>
-											</TableRow>
-										</TableHeader>
-										<TableBody>
-											{quote.components.map((comp) => (
-												<TableRow key={comp.id}>
-													<TableCell className="font-medium">
-														{formatComponentType(comp.componentType)}
-													</TableCell>
-													<TableCell>
-														{comp.materialName || '-'}
-														{comp.finishName && (
-															<span className="text-muted-foreground text-xs block">
-																{comp.finishName}
-															</span>
-														)}
-													</TableCell>
-													<TableCell className="text-sm">
-														{comp.height && comp.width && comp.depth
-															? `${comp.height}" × ${comp.width}" × ${comp.depth}"`
-															: '-'}
-													</TableCell>
-													<TableCell className="text-center">{comp.quantity}</TableCell>
-													<TableCell className="text-right text-orange-600">
-														<EditableNumber
-															value={parseFloat(comp.supplierCost)}
-															onSave={async (value) => {
-																await updateComponentPricing.mutateAsync({
-																	quoteId: quote.id,
-																	itemId: comp.id,
-																	supplierCost: value,
-																});
-															}}
-															disabled={!canEditPricing}
-															isCurrency
-														/>
-													</TableCell>
-													<TableCell className="text-center text-muted-foreground text-sm">
-														<EditableNumber
-															value={parseFloat(comp.markupPercent)}
-															onSave={async (value) => {
-																await updateComponentPricing.mutateAsync({
-																	quoteId: quote.id,
-																	itemId: comp.id,
-																	markupPercent: value,
-																});
-															}}
-															disabled={!canEditPricing}
-															min={0}
-															formatValue={(val) => `${val.toFixed(0)}%`}
-														/>
-													</TableCell>
-													<TableCell className="text-right">
-														{formatCurrency(comp.unitPrice)}
-													</TableCell>
-													<TableCell className="text-right font-medium">
-														{formatCurrency(comp.lineTotal)}
-													</TableCell>
-												</TableRow>
-											))}
-										</TableBody>
-									</Table>
-								</div>
-							</CardContent>
-						</Card>
-					)}
-
-					{/* Inscription & Lettering Card - unified */}
-					{(quote.proposedInscription || quote.lettering.length > 0) && (
-						<Card>
-							<CardHeader>
-								<CardTitle>
-									{quote.proposedInscription && quote.lettering.length > 0
-										? 'Inscription & Lettering'
-										: 'Lettering'}
-								</CardTitle>
-								<CardDescription>
-									{quote.proposedInscription && quote.lettering.length > 0
-										? `Proposed text and ${quote.lettering.length} lettering item${quote.lettering.length !== 1 ? 's' : ''}`
-										: `${quote.lettering.length} lettering item${quote.lettering.length !== 1 ? 's' : ''} - Internal pricing details`}
-								</CardDescription>
-							</CardHeader>
-							<CardContent className="space-y-6">
-								{/* Section: Proposed Inscription */}
-								{quote.proposedInscription && (
-									<div className="space-y-2">
-										<div className="flex items-center justify-between">
-											<span className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-												Proposed Inscription
-											</span>
-											<span className="text-sm text-muted-foreground">
-												{quote.proposedInscription.length} characters
-											</span>
-										</div>
-										<p className="whitespace-pre-wrap bg-muted p-3 rounded font-mono text-sm">
-											{quote.proposedInscription}
-										</p>
-									</div>
+								{canAddOptions && (
+									<Button variant="outline" onClick={handleCloneOption} disabled={cloneOptionMutation.isPending}>
+										<Plus className="h-4 w-4 mr-2" />
+										Add Option
+									</Button>
 								)}
-
-								{/* Divider - only when both sections are shown */}
-								{quote.proposedInscription && quote.lettering.length > 0 && (
-									<div className="border-t" />
-								)}
-
-								{/* Section: Lettering Details */}
-								{quote.lettering.length > 0 && (
-									<div className="space-y-3">
-										<span className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-											Lettering Details
-										</span>
-										<div className="border rounded-lg overflow-x-auto">
-											<Table>
-												<TableHeader>
-													<TableRow>
-														<TableHead>Technique</TableHead>
-														<TableHead>Color</TableHead>
-														<TableHead>Text</TableHead>
-														<TableHead className="text-center">Letters</TableHead>
-														<TableHead className="text-right text-orange-600">Cost/Letter</TableHead>
-														<TableHead className="text-center">Markup</TableHead>
-														<TableHead className="text-right">Retail</TableHead>
-														<TableHead className="text-right">Total</TableHead>
-													</TableRow>
-												</TableHeader>
-												<TableBody>
-													{quote.lettering.map((lett) => (
-														<TableRow key={lett.id}>
-															<TableCell className="font-medium">
-																{lett.techniqueName || '-'}
-															</TableCell>
-															<TableCell>{lett.colorName || '-'}</TableCell>
-															<TableCell className="max-w-[200px] truncate">
-																{lett.text || '-'}
-															</TableCell>
-															<TableCell className="text-center">{lett.letterCount}</TableCell>
-															<TableCell className="text-right text-orange-600">
-																<EditableNumber
-																	value={parseFloat(lett.supplierCost)}
-																	onSave={async (value) => {
-																		await updateLetteringPricing.mutateAsync({
-																			quoteId: quote.id,
-																			itemId: lett.id,
-																			supplierCost: value,
-																		});
-																	}}
-																	disabled={!canEditPricing}
-																	isCurrency
-																/>
-															</TableCell>
-															<TableCell className="text-center text-muted-foreground text-sm">
-																<EditableNumber
-																	value={parseFloat(lett.markupPercent)}
-																	onSave={async (value) => {
-																		await updateLetteringPricing.mutateAsync({
-																			quoteId: quote.id,
-																			itemId: lett.id,
-																			markupPercent: value,
-																		});
-																	}}
-																	disabled={!canEditPricing}
-																	min={0}
-																	formatValue={(val) => `${val.toFixed(0)}%`}
-																/>
-															</TableCell>
-															<TableCell className="text-right">
-																{formatCurrency(lett.unitPrice)}
-															</TableCell>
-															<TableCell className="text-right font-medium">
-																{formatCurrency(lett.lineTotal)}
-															</TableCell>
-														</TableRow>
-													))}
-												</TableBody>
-											</Table>
-										</div>
-									</div>
-								)}
-							</CardContent>
-						</Card>
-					)}
-
-					{/* Sundries Card */}
-					{quote.sundries.length > 0 && (
-						<Card>
-							<CardHeader>
-								<CardTitle>Sundries</CardTitle>
-								<CardDescription>
-									{quote.sundries.length} item{quote.sundries.length !== 1 ? 's' : ''} - Internal pricing details
-								</CardDescription>
-							</CardHeader>
-							<CardContent>
-								<div className="border rounded-lg overflow-x-auto">
-									<Table>
-										<TableHeader>
-											<TableRow>
-												<TableHead>Item</TableHead>
-												<TableHead className="text-center">Qty</TableHead>
-												<TableHead className="text-right text-orange-600">Supplier</TableHead>
-												<TableHead className="text-center">Markup</TableHead>
-												<TableHead className="text-right">Retail</TableHead>
-												<TableHead className="text-right">Total</TableHead>
-											</TableRow>
-										</TableHeader>
-										<TableBody>
-											{quote.sundries.map((sundry) => (
-												<TableRow key={sundry.id}>
-													<TableCell className="font-medium">
-														{sundry.sundryName || '-'}
-													</TableCell>
-													<TableCell className="text-center">{sundry.quantity}</TableCell>
-													<TableCell className="text-right text-orange-600">
-														<EditableNumber
-															value={parseFloat(sundry.supplierCost)}
-															onSave={async (value) => {
-																await updateSundryPricing.mutateAsync({
-																	quoteId: quote.id,
-																	itemId: sundry.id,
-																	supplierCost: value,
-																});
-															}}
-															disabled={!canEditPricing}
-															isCurrency
-														/>
-													</TableCell>
-													<TableCell className="text-center text-muted-foreground text-sm">
-														<EditableNumber
-															value={parseFloat(sundry.markupPercent)}
-															onSave={async (value) => {
-																await updateSundryPricing.mutateAsync({
-																	quoteId: quote.id,
-																	itemId: sundry.id,
-																	markupPercent: value,
-																});
-															}}
-															disabled={!canEditPricing}
-															min={0}
-															formatValue={(val) => `${val.toFixed(0)}%`}
-														/>
-													</TableCell>
-													<TableCell className="text-right">
-														{formatCurrency(sundry.unitPrice)}
-													</TableCell>
-													<TableCell className="text-right font-medium">
-														{formatCurrency(sundry.lineTotal)}
-													</TableCell>
-												</TableRow>
-											))}
-										</TableBody>
-									</Table>
-								</div>
-							</CardContent>
-						</Card>
-					)}
-
-					{/* Custom Line Items Card */}
-					<Card>
-						<CardHeader className="flex flex-row items-center justify-between">
-							<div>
-								<CardTitle>Custom Line Items</CardTitle>
-								<CardDescription>
-									Additional charges (labor, delivery, etc.)
-								</CardDescription>
 							</div>
 						</CardHeader>
 						<CardContent>
-							{quote.lineItems && quote.lineItems.length > 0 ? (
-								<div className="border rounded-lg overflow-x-auto">
-									<Table>
-										<TableHeader>
-											<TableRow>
-												<TableHead>Description</TableHead>
-												<TableHead className="text-right w-32">Price</TableHead>
-												<TableHead className="text-center w-24">VAT Exempt</TableHead>
-												<TableHead className="text-center w-20">Visible</TableHead>
-												{canEditPricing && <TableHead className="w-16"></TableHead>}
-											</TableRow>
-										</TableHeader>
-										<TableBody>
-											{quote.lineItems.map((item) => (
-												<TableRow key={item.id}>
-													<TableCell>
-														{canEditPricing ? (
-															<Input
-																defaultValue={item.description}
-																onBlur={async (e) => {
-																	if (e.target.value !== item.description) {
-																		await updateLineItem.mutateAsync({
-																			quoteId: quote.id,
-																			itemId: item.id,
-																			description: e.target.value,
-																		});
-																	}
-																}}
-																className="h-8"
-															/>
-														) : (
-															item.description
-														)}
-													</TableCell>
-													<TableCell className="text-right">
-														<EditableNumber
-															value={parseFloat(item.price)}
-															onSave={async (value) => {
-																await updateLineItem.mutateAsync({
-																	quoteId: quote.id,
-																	itemId: item.id,
-																	price: value,
-																});
-															}}
-															disabled={!canEditPricing}
-															isCurrency
-														/>
-													</TableCell>
-													<TableCell className="text-center">
-														<Checkbox
-															checked={item.vatExempt}
-															onCheckedChange={async (checked) => {
-																await updateLineItem.mutateAsync({
-																	quoteId: quote.id,
-																	itemId: item.id,
-																	vatExempt: checked === true,
-																});
-															}}
-															disabled={!canEditPricing}
-														/>
-													</TableCell>
-													<TableCell className="text-center">
-														{canEditPricing ? (
-															<Checkbox
-																checked={item.visibleToCustomer}
-																onCheckedChange={async (checked) => {
-																	await updateLineItem.mutateAsync({
-																		quoteId: quote.id,
-																		itemId: item.id,
-																		visibleToCustomer: checked === true,
-																	});
-																}}
-															/>
-														) : (
-															item.visibleToCustomer ? (
-																<Eye className="h-4 w-4 mx-auto text-muted-foreground" />
-															) : (
-																<EyeOff className="h-4 w-4 mx-auto text-muted-foreground" />
-															)
-														)}
-													</TableCell>
-													{canEditPricing && (
-														<TableCell>
-															<Button
-																variant="ghost"
-																size="icon"
-																className="h-8 w-8 text-destructive"
-																onClick={async () => {
-																	await deleteLineItem.mutateAsync({
-																		quoteId: quote.id,
-																		itemId: item.id,
-																	});
-																}}
-															>
-																<Trash2 className="h-4 w-4" />
-															</Button>
-														</TableCell>
-													)}
-												</TableRow>
-											))}
-										</TableBody>
-									</Table>
-								</div>
-							) : (
-								<p className="text-sm text-muted-foreground">No custom line items added.</p>
-							)}
-
-							{/* Add new line item form */}
-							{canEditPricing && (
-								<div className="mt-4 space-y-3">
-									<div className="flex items-end gap-2">
-										<div className="w-48">
-											<Label htmlFor="lineItemPreset" className="text-xs">Line Item</Label>
-											<Select
-												value={newLineItemPresetId}
-												onValueChange={handlePresetSelect}
+							{/* Option Tabs */}
+							{pkg.options && pkg.options.length > 0 && (
+								<div className="flex items-center gap-2 mb-6 border-b pb-4">
+									{pkg.options.map((option) => (
+										<div key={option.id} className="flex items-center">
+											<Button
+												variant={selectedOptionId === option.id ? 'default' : 'outline'}
+												size="sm"
+												onClick={() => setSelectedOptionId(option.id)}
+												className="gap-2"
 											>
-												<SelectTrigger id="lineItemPreset" className="h-9">
-													<SelectValue placeholder="Select a line item..." />
-												</SelectTrigger>
-												<SelectContent>
-													{activePresets.map((preset) => (
-														<SelectItem key={preset.id} value={preset.id}>
-															{preset.name} ({formatCurrency(preset.defaultPrice)})
-														</SelectItem>
-													))}
-													<SelectItem value="custom">Custom (free-form)</SelectItem>
-												</SelectContent>
-											</Select>
-										</div>
-										{newLineItemPresetId === 'custom' && (
-											<div className="flex-1">
-												<Label htmlFor="lineItemDesc" className="text-xs">Description</Label>
-												<Input
-													id="lineItemDesc"
-													placeholder="e.g., Labor, Delivery"
-													value={newLineItemDesc}
-													onChange={(e) => setNewLineItemDesc(e.target.value)}
-													className="h-9"
-												/>
-											</div>
-										)}
-										<div className="w-28">
-											<Label htmlFor="lineItemPrice" className="text-xs">Price</Label>
-											<Input
-												id="lineItemPrice"
-												type="number"
-												min="0"
-												step="0.01"
-												placeholder="0.00"
-												value={newLineItemPrice}
-												onChange={(e) => setNewLineItemPrice(e.target.value)}
-												className="h-9"
-											/>
-										</div>
-									</div>
-									<div className="flex items-center gap-4">
-										<div className="flex items-center gap-2">
-											<Checkbox
-												id="lineItemVatExempt"
-												checked={newLineItemVatExempt}
-												onCheckedChange={(checked) => setNewLineItemVatExempt(checked === true)}
-											/>
-											<Label htmlFor="lineItemVatExempt" className="text-xs whitespace-nowrap">VAT Exempt</Label>
-										</div>
-										<div className="flex items-center gap-2">
-											<Checkbox
-												id="lineItemVisibleToCustomer"
-												checked={newLineItemVisibleToCustomer}
-												onCheckedChange={(checked) => setNewLineItemVisibleToCustomer(checked === true)}
-											/>
-											<Label htmlFor="lineItemVisibleToCustomer" className="text-xs whitespace-nowrap">Visible to Customer</Label>
-										</div>
-										<div className="flex-1"></div>
-										<Button
-											size="sm"
-											className="h-9"
-											onClick={async () => {
-												if (!newLineItemDesc.trim() || !newLineItemPrice) return;
-												await addLineItem.mutateAsync({
-													quoteId: quote.id,
-													description: newLineItemDesc.trim(),
-													price: parseFloat(newLineItemPrice),
-													vatExempt: newLineItemVatExempt,
-													visibleToCustomer: newLineItemVisibleToCustomer,
-												});
-												setNewLineItemPresetId('');
-												setNewLineItemDesc('');
-												setNewLineItemPrice('');
-												setNewLineItemVatExempt(false);
-												setNewLineItemVisibleToCustomer(true);
-											}}
-											disabled={!newLineItemDesc.trim() || !newLineItemPrice || addLineItem.isPending}
-										>
-											<Plus className="h-4 w-4 mr-1" />
-											Add
-										</Button>
-									</div>
-								</div>
-							)}
-						</CardContent>
-					</Card>
-
-				</div>
-
-				{/* Sidebar */}
-				<div className="space-y-6">
-					{/* Pricing Summary Card - Internal View shows costs and margins */}
-					<Card>
-						<CardHeader>
-							<CardTitle>Pricing Summary</CardTitle>
-							<CardDescription>Internal pricing breakdown</CardDescription>
-						</CardHeader>
-						<CardContent className="space-y-3">
-							{/* Retail pricing */}
-							<div className="flex justify-between">
-								<span className="text-muted-foreground">Subtotal</span>
-								<span>{formatCurrency(quote.subtotal)}</span>
-							</div>
-							<div className="flex justify-between border-t pt-2">
-								<span className="text-muted-foreground">
-									VAT ({(parseFloat(quote.vatRate) * 100).toFixed(0)}%)
-								</span>
-								<span>{formatCurrency(quote.vatAmount)}</span>
-							</div>
-							<div className="border-t pt-3 flex justify-between font-bold text-lg">
-								<span>Total (Retail)</span>
-								<span>{formatCurrency(quote.total)}</span>
-							</div>
-
-							{/* Cost and margin info */}
-							<div className="border-t pt-4 mt-4 space-y-2">
-								<p className="text-sm font-medium text-muted-foreground">Internal Metrics</p>
-								<div className="flex justify-between text-sm">
-									<span className="text-muted-foreground">Total Cost</span>
-									<span className="text-orange-600">{formatCurrency(quote.totalCost)}</span>
-								</div>
-								<div className="flex justify-between text-sm">
-									<span className="text-muted-foreground">Gross Margin</span>
-									<span className="text-green-600">
-										{formatCurrency(
-											parseFloat(quote.total) -
-												parseFloat(quote.vatAmount) -
-												parseFloat(quote.totalCost)
-										)}
-									</span>
-								</div>
-								<div className="flex justify-between text-sm">
-									<span className="text-muted-foreground">Margin %</span>
-									<span className="text-green-600">
-										{(
-											((parseFloat(quote.total) -
-												parseFloat(quote.vatAmount) -
-												parseFloat(quote.totalCost)) /
-												(parseFloat(quote.total) - parseFloat(quote.vatAmount))) *
-											100
-										).toFixed(1)}
-										%
-									</span>
-								</div>
-							</div>
-						</CardContent>
-					</Card>
-
-					{/* Internal Notes Card */}
-					{quote.internalNotes && (
-						<Card className="border-orange-200 bg-orange-50">
-							<CardHeader className="pb-2">
-								<CardTitle className="text-sm">Internal Notes</CardTitle>
-							</CardHeader>
-							<CardContent>
-								<p className="text-sm whitespace-pre-wrap">{quote.internalNotes}</p>
-							</CardContent>
-						</Card>
-					)}
-
-					{/* Customer Feedback Card */}
-					{(quote.customerDecision || quote.customerFeedback) && (
-						<Card className="border-blue-200 bg-blue-50">
-							<CardHeader className="pb-2">
-								<CardTitle className="text-sm flex items-center gap-2">
-									<MessageSquare className="h-4 w-4" />
-									Customer Response
-								</CardTitle>
-							</CardHeader>
-							<CardContent className="space-y-3">
-								{quote.customerDecision && (
-									<div className="flex items-center gap-2">
-										{quote.customerDecision === 'accepted' ? (
-											<Badge className="bg-green-600">Accepted</Badge>
-										) : (
-											<Badge variant="destructive">Rejected</Badge>
-										)}
-										{quote.customerDecisionAt && (
-											<span className="text-xs text-muted-foreground">
-												on {formatDate(quote.customerDecisionAt)}
-											</span>
-										)}
-									</div>
-								)}
-								{quote.customerFeedback && (
-									<div className="bg-white p-3 rounded border">
-										<p className="text-xs text-muted-foreground mb-1">Customer feedback:</p>
-										<p className="text-sm whitespace-pre-wrap">"{quote.customerFeedback}"</p>
-									</div>
-								)}
-								{quote.emailSentAt && (
-									<div className="text-xs text-muted-foreground">
-										Quote emailed {quote.emailSentCount} time{quote.emailSentCount !== 1 ? 's' : ''}
-										{' - '}last sent {formatDate(quote.emailSentAt)}
-									</div>
-								)}
-							</CardContent>
-						</Card>
-					)}
-
-					{/* Version History Card */}
-					{quote.versions.length > 1 && (
-						<Card>
-							<CardHeader>
-								<CardTitle>Version History</CardTitle>
-								<CardDescription>All versions of this quote</CardDescription>
-							</CardHeader>
-							<CardContent>
-								<div className="space-y-2">
-									{quote.versions.map((version) => (
-										<div
-											key={version.id}
-											className={`flex items-center justify-between p-2 rounded ${
-												version.id === quote.id
-													? 'bg-muted'
-													: 'hover:bg-muted/50 cursor-pointer'
-											}`}
-											onClick={() => {
-												if (version.id !== quote.id) {
-													navigate(`/app/quotes/${version.id}`);
-												}
-											}}
-										>
-											<div>
-												<span className="font-medium">v{version.version}</span>
-												<span className="text-muted-foreground text-sm ml-2">
-													{formatDate(version.createdAt)}
-												</span>
-											</div>
-											<Badge variant={getQuoteStatusVariant(version.status as QuoteStatus)}>
-												{formatQuoteStatus(version.status as QuoteStatus)}
-											</Badge>
+												{option.quoteNumber}
+												{option.optionLabel && (
+													<span className="text-xs opacity-75">({option.optionLabel})</span>
+												)}
+												<span className="text-xs opacity-75">{formatCurrency(option.total)}</span>
+											</Button>
+											{selectedOptionId === option.id && canEditPricing && (
+												<DropdownMenu>
+													<DropdownMenuTrigger asChild>
+														<Button variant="ghost" size="sm" className="h-8 w-8 p-0 ml-1">
+															<ChevronDown className="h-4 w-4" />
+														</Button>
+													</DropdownMenuTrigger>
+													<DropdownMenuContent align="end">
+														<DropdownMenuItem onClick={handleCloneOption}>
+															<Copy className="h-4 w-4 mr-2" />
+															Clone Option
+														</DropdownMenuItem>
+														{pkg.options.length > 1 && (
+															<>
+																<DropdownMenuSeparator />
+																<DropdownMenuItem
+																	className="text-destructive"
+																	onClick={() => setDeleteOptionDialogOpen(true)}
+																>
+																	<Trash2 className="h-4 w-4 mr-2" />
+																	Delete Option
+																</DropdownMenuItem>
+															</>
+														)}
+													</DropdownMenuContent>
+												</DropdownMenu>
+											)}
 										</div>
 									))}
 								</div>
-							</CardContent>
-						</Card>
-					)}
+							)}
 
-					{/* Details Card */}
-					<Card>
-						<CardHeader>
-							<CardTitle>Details</CardTitle>
-						</CardHeader>
-						<CardContent className="space-y-4">
-							<div>
-								<p className="text-sm font-medium text-muted-foreground">Created</p>
-								<p>{formatDate(quote.createdAt)}</p>
-							</div>
-							<div>
-								<p className="text-sm font-medium text-muted-foreground">Updated</p>
-								<p>{formatDate(quote.updatedAt)}</p>
-							</div>
-							<div>
-								<p className="text-sm font-medium text-muted-foreground">Quote ID</p>
-								<p className="font-mono text-xs">{quote.id}</p>
-							</div>
+							{/* Option Content */}
+							{currentOption && (
+								<OptionContent
+									pkg={pkg}
+									option={currentOption}
+									canEditPricing={canEditPricing}
+									formatCurrency={formatCurrency}
+									updateComponentPricing={updateComponentPricing}
+									updateLetteringPricing={updateLetteringPricing}
+									updateSundryPricing={updateSundryPricing}
+									addLineItem={addLineItem}
+									updateLineItem={updateLineItem}
+									deleteLineItem={deleteLineItem}
+									activePresets={activePresets}
+									newLineItemPresetId={newLineItemPresetId}
+									setNewLineItemPresetId={setNewLineItemPresetId}
+									newLineItemDesc={newLineItemDesc}
+									setNewLineItemDesc={setNewLineItemDesc}
+									newLineItemPrice={newLineItemPrice}
+									setNewLineItemPrice={setNewLineItemPrice}
+									newLineItemVatExempt={newLineItemVatExempt}
+									setNewLineItemVatExempt={setNewLineItemVatExempt}
+									newLineItemVisibleToCustomer={newLineItemVisibleToCustomer}
+									setNewLineItemVisibleToCustomer={setNewLineItemVisibleToCustomer}
+									handlePresetSelect={handlePresetSelect}
+								/>
+							)}
 						</CardContent>
 					</Card>
+
+					{/* Sidebar Content */}
+					<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+						<div className="lg:col-span-2">
+							{/* Documents */}
+							<DocumentsCard
+								entityType="quote"
+								entityId={pkg.id}
+								title="Documents"
+								description="Files and documents for this quote"
+							/>
+						</div>
+						<div className="space-y-6">
+							{/* Internal Notes */}
+							{pkg.internalNotes && (
+								<Card className="border-orange-200 bg-orange-50">
+									<CardHeader className="pb-2">
+										<CardTitle className="text-sm">Internal Notes</CardTitle>
+									</CardHeader>
+									<CardContent>
+										<p className="text-sm whitespace-pre-wrap">{pkg.internalNotes}</p>
+									</CardContent>
+								</Card>
+							)}
+
+							{/* Customer Feedback */}
+							{(pkg.acceptedOptionId || pkg.customerFeedback) && (
+								<Card className="border-blue-200 bg-blue-50">
+									<CardHeader className="pb-2">
+										<CardTitle className="text-sm flex items-center gap-2">
+											<MessageSquare className="h-4 w-4" />
+											Customer Response
+										</CardTitle>
+									</CardHeader>
+									<CardContent className="space-y-3">
+										{pkg.acceptedOptionId && (
+											<div className="flex items-center gap-2">
+												<Badge className="bg-green-600">Accepted</Badge>
+												{pkg.customerDecisionAt && (
+													<span className="text-xs text-muted-foreground">
+														on {formatDate(pkg.customerDecisionAt)}
+													</span>
+												)}
+											</div>
+										)}
+										{pkg.customerFeedback && (
+											<div className="bg-white p-3 rounded border">
+												<p className="text-xs text-muted-foreground mb-1">Customer feedback:</p>
+												<p className="text-sm whitespace-pre-wrap">"{pkg.customerFeedback}"</p>
+											</div>
+										)}
+										{pkg.emailSentAt && (
+											<div className="text-xs text-muted-foreground">
+												Quote emailed {pkg.emailSentCount} time{pkg.emailSentCount !== 1 ? 's' : ''} - last
+												sent {formatDate(pkg.emailSentAt)}
+											</div>
+										)}
+									</CardContent>
+								</Card>
+							)}
+
+							{/* Details Card */}
+							<Card>
+								<CardHeader>
+									<CardTitle>Details</CardTitle>
+								</CardHeader>
+								<CardContent className="space-y-4">
+									<div>
+										<p className="text-sm font-medium text-muted-foreground">Created</p>
+										<p>{formatDate(pkg.createdAt)}</p>
+									</div>
+									<div>
+										<p className="text-sm font-medium text-muted-foreground">Updated</p>
+										<p>{formatDate(pkg.updatedAt)}</p>
+									</div>
+									<div>
+										<p className="text-sm font-medium text-muted-foreground">Package ID</p>
+										<p className="font-mono text-xs">{pkg.id}</p>
+									</div>
+								</CardContent>
+							</Card>
+						</div>
+					</div>
 				</div>
-			</div>
 			)}
 
-			{/* Documents */}
-			<div className="mt-6">
-				<DocumentsCard
-					entityType="quote"
-					entityId={quote.id}
-					title="Documents"
-					description="Files and documents for this quote"
-				/>
-			</div>
-
-			{/* Delete Confirmation Dialog */}
+			{/* Delete Package Confirmation Dialog */}
 			<DeleteConfirmDialog
 				open={deleteDialogOpen}
 				onOpenChange={setDeleteDialogOpen}
 				onConfirm={handleDelete}
 				title="Delete Quote"
-				description={`Are you sure you want to delete quote "${quote.quoteNumber}"? This action cannot be undone.`}
+				description={`Are you sure you want to delete this quote and all its options? This action cannot be undone.`}
 				isLoading={deleteMutation.isPending}
+			/>
+
+			{/* Delete Option Confirmation Dialog */}
+			<DeleteConfirmDialog
+				open={deleteOptionDialogOpen}
+				onOpenChange={setDeleteOptionDialogOpen}
+				onConfirm={handleDeleteOption}
+				title="Delete Option"
+				description={`Are you sure you want to delete option ${currentOption?.quoteNumber}? This action cannot be undone.`}
+				isLoading={deleteOptionMutation.isPending}
 			/>
 
 			{/* Send Email Dialog */}
@@ -1442,18 +797,14 @@ export function QuoteDetailPage() {
 					<DialogHeader>
 						<DialogTitle>Send Quote to Customer</DialogTitle>
 						<DialogDescription>
-							{quote.customer
-								? `Send quote ${quote.quoteNumber} to ${quote.customer.firstName} ${quote.customer.lastName}`
-								: 'Send quote to customer'}
+							Send all {optionCount} option{optionCount !== 1 ? 's' : ''} to {customerName}
 						</DialogDescription>
 					</DialogHeader>
 					<div className="space-y-4 py-4">
-						{quote.emailSentCount > 0 && (
+						{pkg.emailSentCount > 0 && (
 							<div className="text-sm text-muted-foreground bg-muted p-3 rounded">
-								This quote has been sent {quote.emailSentCount} time{quote.emailSentCount !== 1 ? 's' : ''} previously.
-								{quote.emailSentAt && (
-									<> Last sent on {formatDate(quote.emailSentAt)}.</>
-								)}
+								This quote has been sent {pkg.emailSentCount} time{pkg.emailSentCount !== 1 ? 's' : ''} previously.
+								{pkg.emailSentAt && <> Last sent on {formatDate(pkg.emailSentAt)}.</>}
 							</div>
 						)}
 						<div className="space-y-2">
@@ -1478,10 +829,7 @@ export function QuoteDetailPage() {
 						>
 							Cancel
 						</Button>
-						<Button
-							onClick={handleSendEmail}
-							disabled={sendEmailMutation.isPending}
-						>
+						<Button onClick={handleSendEmail} disabled={sendEmailMutation.isPending}>
 							{sendEmailMutation.isPending ? (
 								<>
 									<Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -1497,6 +845,835 @@ export function QuoteDetailPage() {
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>
+		</div>
+	);
+}
+
+// Shared Context Card - shows package-level information
+function SharedContextCard({
+	pkg,
+	formatDate,
+}: {
+	pkg: QuotePackageWithOptions;
+	formatDate: (dateString: string) => string;
+}) {
+	return (
+		<Card>
+			<CardHeader>
+				<CardTitle>Quote Context</CardTitle>
+				<CardDescription>Shared information across all options</CardDescription>
+			</CardHeader>
+			<CardContent>
+				<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+					<div>
+						<p className="text-sm font-medium text-muted-foreground">Customer</p>
+						<p>
+							{pkg.customer ? (
+								<Link to={`/app/contacts/${pkg.customerId}`} className="text-primary hover:underline">
+									{pkg.customer.firstName} {pkg.customer.lastName}
+								</Link>
+							) : (
+								'Walk-in Customer'
+							)}
+						</p>
+					</div>
+					<div>
+						<p className="text-sm font-medium text-muted-foreground">Service</p>
+						<p>{pkg.service?.name || 'No service selected'}</p>
+					</div>
+					{pkg.quoteType && (
+						<div>
+							<p className="text-sm font-medium text-muted-foreground">Quote Type</p>
+							<p>{QUOTE_TYPE_LABELS[pkg.quoteType as QuoteType]}</p>
+						</div>
+					)}
+					{pkg.validUntil && (
+						<div>
+							<p className="text-sm font-medium text-muted-foreground">Valid Until</p>
+							<p>{formatDate(pkg.validUntil)}</p>
+						</div>
+					)}
+					{pkg.funeralDirector && (
+						<div>
+							<p className="text-sm font-medium text-muted-foreground">Funeral Director</p>
+							<p>{pkg.funeralDirector.name}</p>
+						</div>
+					)}
+					{pkg.council && (
+						<div>
+							<p className="text-sm font-medium text-muted-foreground">Council</p>
+							<p>{pkg.council.name}</p>
+						</div>
+					)}
+					{pkg.memorialSite && (
+						<div>
+							<p className="text-sm font-medium text-muted-foreground">Memorial Site</p>
+							<p>{pkg.memorialSite.name}</p>
+						</div>
+					)}
+				</div>
+
+				{pkg.proposedInscription && (
+					<div className="mt-4 pt-4 border-t">
+						<p className="text-sm font-medium text-muted-foreground mb-2">
+							Proposed Inscription ({pkg.proposedInscription.length} characters)
+						</p>
+						<p className="whitespace-pre-wrap bg-muted p-3 rounded font-mono text-sm">{pkg.proposedInscription}</p>
+					</div>
+				)}
+
+				{pkg.existingMemorialDescription && (
+					<div className="mt-4 pt-4 border-t">
+						<p className="text-sm font-medium text-muted-foreground mb-2">Existing Memorial Description</p>
+						<p className="whitespace-pre-wrap bg-muted p-3 rounded text-sm">{pkg.existingMemorialDescription}</p>
+					</div>
+				)}
+
+				{pkg.notes && (
+					<div className="mt-4 pt-4 border-t">
+						<p className="text-sm font-medium text-muted-foreground mb-2">Notes</p>
+						<p className="whitespace-pre-wrap text-sm">{pkg.notes}</p>
+					</div>
+				)}
+			</CardContent>
+		</Card>
+	);
+}
+
+// Option Content - shows per-option line items and pricing
+function OptionContent({
+	pkg,
+	option,
+	canEditPricing,
+	formatCurrency,
+	updateComponentPricing,
+	updateLetteringPricing,
+	updateSundryPricing,
+	addLineItem,
+	updateLineItem,
+	deleteLineItem,
+	activePresets,
+	newLineItemPresetId,
+	setNewLineItemPresetId,
+	newLineItemDesc,
+	setNewLineItemDesc,
+	newLineItemPrice,
+	setNewLineItemPrice,
+	newLineItemVatExempt,
+	setNewLineItemVatExempt,
+	newLineItemVisibleToCustomer,
+	setNewLineItemVisibleToCustomer,
+	handlePresetSelect,
+}: {
+	pkg: QuotePackageWithOptions;
+	option: QuoteOption;
+	canEditPricing: boolean;
+	formatCurrency: (value: string | number) => string;
+	updateComponentPricing: ReturnType<typeof useUpdateComponentPricingMutation>;
+	updateLetteringPricing: ReturnType<typeof useUpdateLetteringPricingMutation>;
+	updateSundryPricing: ReturnType<typeof useUpdateSundryPricingMutation>;
+	addLineItem: ReturnType<typeof useAddLineItemMutation>;
+	updateLineItem: ReturnType<typeof useUpdateLineItemMutation>;
+	deleteLineItem: ReturnType<typeof useDeleteLineItemMutation>;
+	activePresets: { id: string; name: string; defaultPrice: string; vatExempt: boolean; visibleToCustomer: boolean }[];
+	newLineItemPresetId: string;
+	setNewLineItemPresetId: (value: string) => void;
+	newLineItemDesc: string;
+	setNewLineItemDesc: (value: string) => void;
+	newLineItemPrice: string;
+	setNewLineItemPrice: (value: string) => void;
+	newLineItemVatExempt: boolean;
+	setNewLineItemVatExempt: (value: boolean) => void;
+	newLineItemVisibleToCustomer: boolean;
+	setNewLineItemVisibleToCustomer: (value: boolean) => void;
+	handlePresetSelect: (presetId: string) => void;
+}) {
+	return (
+		<div className="space-y-6">
+			{/* Product Info */}
+			{option.product && (
+				<div className="flex items-center gap-4 p-4 bg-muted rounded-lg">
+					<div>
+						<p className="text-sm font-medium text-muted-foreground">Product</p>
+						<p className="font-semibold">{option.product.name}</p>
+					</div>
+					{option.flowerHoles && (
+						<div>
+							<p className="text-sm font-medium text-muted-foreground">Flower Holes</p>
+							<p>{option.flowerHoles.replace(/_/g, ' ')}</p>
+						</div>
+					)}
+				</div>
+			)}
+
+			{/* Components */}
+			{option.components.length > 0 && (
+				<div>
+					<h4 className="font-medium mb-3">
+						Stone Components ({option.components.length} item{option.components.length !== 1 ? 's' : ''})
+					</h4>
+					<div className="border rounded-lg overflow-x-auto">
+						<Table>
+							<TableHeader>
+								<TableRow>
+									<TableHead>Type</TableHead>
+									<TableHead>Material</TableHead>
+									<TableHead>Dimensions</TableHead>
+									<TableHead className="text-center">Qty</TableHead>
+									<TableHead className="text-right text-orange-600">Supplier</TableHead>
+									<TableHead className="text-center">Markup</TableHead>
+									<TableHead className="text-right">Retail</TableHead>
+									<TableHead className="text-right">Total</TableHead>
+								</TableRow>
+							</TableHeader>
+							<TableBody>
+								{option.components.map((comp) => (
+									<TableRow key={comp.id}>
+										<TableCell className="font-medium">{formatComponentType(comp.componentType)}</TableCell>
+										<TableCell>
+											{comp.materialName || '-'}
+											{comp.finishName && (
+												<span className="text-muted-foreground text-xs block">{comp.finishName}</span>
+											)}
+										</TableCell>
+										<TableCell className="text-sm">
+											{comp.height && comp.width && comp.depth
+												? `${comp.height}" × ${comp.width}" × ${comp.depth}"`
+												: '-'}
+										</TableCell>
+										<TableCell className="text-center">{comp.quantity}</TableCell>
+										<TableCell className="text-right text-orange-600">
+											<EditableNumber
+												value={parseFloat(comp.supplierCost)}
+												onSave={async (value) => {
+													await updateComponentPricing.mutateAsync({
+														packageId: pkg.id,
+														optionId: option.id,
+														itemId: comp.id,
+														supplierCost: value,
+													});
+												}}
+												disabled={!canEditPricing}
+												isCurrency
+											/>
+										</TableCell>
+										<TableCell className="text-center text-muted-foreground text-sm">
+											<EditableNumber
+												value={parseFloat(comp.markupPercent)}
+												onSave={async (value) => {
+													await updateComponentPricing.mutateAsync({
+														packageId: pkg.id,
+														optionId: option.id,
+														itemId: comp.id,
+														markupPercent: value,
+													});
+												}}
+												disabled={!canEditPricing}
+												min={0}
+												formatValue={(val) => `${val.toFixed(0)}%`}
+											/>
+										</TableCell>
+										<TableCell className="text-right">{formatCurrency(comp.unitPrice)}</TableCell>
+										<TableCell className="text-right font-medium">{formatCurrency(comp.lineTotal)}</TableCell>
+									</TableRow>
+								))}
+							</TableBody>
+						</Table>
+					</div>
+				</div>
+			)}
+
+			{/* Lettering */}
+			{option.lettering.length > 0 && (
+				<div>
+					<h4 className="font-medium mb-3">
+						Lettering ({option.lettering.length} item{option.lettering.length !== 1 ? 's' : ''})
+					</h4>
+					<div className="border rounded-lg overflow-x-auto">
+						<Table>
+							<TableHeader>
+								<TableRow>
+									<TableHead>Technique</TableHead>
+									<TableHead>Color</TableHead>
+									<TableHead>Text</TableHead>
+									<TableHead className="text-center">Letters</TableHead>
+									<TableHead className="text-right text-orange-600">Cost/Letter</TableHead>
+									<TableHead className="text-center">Markup</TableHead>
+									<TableHead className="text-right">Retail</TableHead>
+									<TableHead className="text-right">Total</TableHead>
+								</TableRow>
+							</TableHeader>
+							<TableBody>
+								{option.lettering.map((lett) => (
+									<TableRow key={lett.id}>
+										<TableCell className="font-medium">{lett.techniqueName || '-'}</TableCell>
+										<TableCell>{lett.colorName || '-'}</TableCell>
+										<TableCell className="max-w-[200px] truncate">{lett.text || '-'}</TableCell>
+										<TableCell className="text-center">{lett.letterCount}</TableCell>
+										<TableCell className="text-right text-orange-600">
+											<EditableNumber
+												value={parseFloat(lett.supplierCost)}
+												onSave={async (value) => {
+													await updateLetteringPricing.mutateAsync({
+														packageId: pkg.id,
+														optionId: option.id,
+														itemId: lett.id,
+														supplierCost: value,
+													});
+												}}
+												disabled={!canEditPricing}
+												isCurrency
+											/>
+										</TableCell>
+										<TableCell className="text-center text-muted-foreground text-sm">
+											<EditableNumber
+												value={parseFloat(lett.markupPercent)}
+												onSave={async (value) => {
+													await updateLetteringPricing.mutateAsync({
+														packageId: pkg.id,
+														optionId: option.id,
+														itemId: lett.id,
+														markupPercent: value,
+													});
+												}}
+												disabled={!canEditPricing}
+												min={0}
+												formatValue={(val) => `${val.toFixed(0)}%`}
+											/>
+										</TableCell>
+										<TableCell className="text-right">{formatCurrency(lett.unitPrice)}</TableCell>
+										<TableCell className="text-right font-medium">{formatCurrency(lett.lineTotal)}</TableCell>
+									</TableRow>
+								))}
+							</TableBody>
+						</Table>
+					</div>
+				</div>
+			)}
+
+			{/* Sundries */}
+			{option.sundries.length > 0 && (
+				<div>
+					<h4 className="font-medium mb-3">
+						Sundries ({option.sundries.length} item{option.sundries.length !== 1 ? 's' : ''})
+					</h4>
+					<div className="border rounded-lg overflow-x-auto">
+						<Table>
+							<TableHeader>
+								<TableRow>
+									<TableHead>Item</TableHead>
+									<TableHead className="text-center">Qty</TableHead>
+									<TableHead className="text-right text-orange-600">Supplier</TableHead>
+									<TableHead className="text-center">Markup</TableHead>
+									<TableHead className="text-right">Retail</TableHead>
+									<TableHead className="text-right">Total</TableHead>
+								</TableRow>
+							</TableHeader>
+							<TableBody>
+								{option.sundries.map((sundry) => (
+									<TableRow key={sundry.id}>
+										<TableCell className="font-medium">{sundry.sundryName || '-'}</TableCell>
+										<TableCell className="text-center">{sundry.quantity}</TableCell>
+										<TableCell className="text-right text-orange-600">
+											<EditableNumber
+												value={parseFloat(sundry.supplierCost)}
+												onSave={async (value) => {
+													await updateSundryPricing.mutateAsync({
+														packageId: pkg.id,
+														optionId: option.id,
+														itemId: sundry.id,
+														supplierCost: value,
+													});
+												}}
+												disabled={!canEditPricing}
+												isCurrency
+											/>
+										</TableCell>
+										<TableCell className="text-center text-muted-foreground text-sm">
+											<EditableNumber
+												value={parseFloat(sundry.markupPercent)}
+												onSave={async (value) => {
+													await updateSundryPricing.mutateAsync({
+														packageId: pkg.id,
+														optionId: option.id,
+														itemId: sundry.id,
+														markupPercent: value,
+													});
+												}}
+												disabled={!canEditPricing}
+												min={0}
+												formatValue={(val) => `${val.toFixed(0)}%`}
+											/>
+										</TableCell>
+										<TableCell className="text-right">{formatCurrency(sundry.unitPrice)}</TableCell>
+										<TableCell className="text-right font-medium">{formatCurrency(sundry.lineTotal)}</TableCell>
+									</TableRow>
+								))}
+							</TableBody>
+						</Table>
+					</div>
+				</div>
+			)}
+
+			{/* Custom Line Items */}
+			<div>
+				<h4 className="font-medium mb-3">Custom Line Items</h4>
+				{option.lineItems && option.lineItems.length > 0 ? (
+					<div className="border rounded-lg overflow-x-auto">
+						<Table>
+							<TableHeader>
+								<TableRow>
+									<TableHead>Description</TableHead>
+									<TableHead className="text-right w-32">Price</TableHead>
+									<TableHead className="text-center w-24">VAT Exempt</TableHead>
+									<TableHead className="text-center w-20">Visible</TableHead>
+									{canEditPricing && <TableHead className="w-16"></TableHead>}
+								</TableRow>
+							</TableHeader>
+							<TableBody>
+								{option.lineItems.map((item) => (
+									<TableRow key={item.id}>
+										<TableCell>
+											{canEditPricing ? (
+												<Input
+													defaultValue={item.description}
+													onBlur={async (e) => {
+														if (e.target.value !== item.description) {
+															await updateLineItem.mutateAsync({
+																packageId: pkg.id,
+																optionId: option.id,
+																itemId: item.id,
+																description: e.target.value,
+															});
+														}
+													}}
+													className="h-8"
+												/>
+											) : (
+												item.description
+											)}
+										</TableCell>
+										<TableCell className="text-right">
+											<EditableNumber
+												value={parseFloat(item.price)}
+												onSave={async (value) => {
+													await updateLineItem.mutateAsync({
+														packageId: pkg.id,
+														optionId: option.id,
+														itemId: item.id,
+														price: value,
+													});
+												}}
+												disabled={!canEditPricing}
+												isCurrency
+											/>
+										</TableCell>
+										<TableCell className="text-center">
+											<Checkbox
+												checked={item.vatExempt}
+												onCheckedChange={async (checked) => {
+													await updateLineItem.mutateAsync({
+														packageId: pkg.id,
+														optionId: option.id,
+														itemId: item.id,
+														vatExempt: checked === true,
+													});
+												}}
+												disabled={!canEditPricing}
+											/>
+										</TableCell>
+										<TableCell className="text-center">
+											{canEditPricing ? (
+												<Checkbox
+													checked={item.visibleToCustomer}
+													onCheckedChange={async (checked) => {
+														await updateLineItem.mutateAsync({
+															packageId: pkg.id,
+															optionId: option.id,
+															itemId: item.id,
+															visibleToCustomer: checked === true,
+														});
+													}}
+												/>
+											) : item.visibleToCustomer ? (
+												<Eye className="h-4 w-4 mx-auto text-muted-foreground" />
+											) : (
+												<EyeOff className="h-4 w-4 mx-auto text-muted-foreground" />
+											)}
+										</TableCell>
+										{canEditPricing && (
+											<TableCell>
+												<Button
+													variant="ghost"
+													size="icon"
+													className="h-8 w-8 text-destructive"
+													onClick={async () => {
+														await deleteLineItem.mutateAsync({
+															packageId: pkg.id,
+															optionId: option.id,
+															itemId: item.id,
+														});
+													}}
+												>
+													<Trash2 className="h-4 w-4" />
+												</Button>
+											</TableCell>
+										)}
+									</TableRow>
+								))}
+							</TableBody>
+						</Table>
+					</div>
+				) : (
+					<p className="text-sm text-muted-foreground">No custom line items added.</p>
+				)}
+
+				{/* Add new line item form */}
+				{canEditPricing && (
+					<div className="mt-4 space-y-3">
+						<div className="flex items-end gap-2">
+							<div className="w-48">
+								<Label htmlFor="lineItemPreset" className="text-xs">
+									Line Item
+								</Label>
+								<Select value={newLineItemPresetId} onValueChange={handlePresetSelect}>
+									<SelectTrigger id="lineItemPreset" className="h-9">
+										<SelectValue placeholder="Select a line item..." />
+									</SelectTrigger>
+									<SelectContent>
+										{activePresets.map((preset) => (
+											<SelectItem key={preset.id} value={preset.id}>
+												{preset.name} ({formatCurrency(preset.defaultPrice)})
+											</SelectItem>
+										))}
+										<SelectItem value="custom">Custom (free-form)</SelectItem>
+									</SelectContent>
+								</Select>
+							</div>
+							{newLineItemPresetId === 'custom' && (
+								<div className="flex-1">
+									<Label htmlFor="lineItemDesc" className="text-xs">
+										Description
+									</Label>
+									<Input
+										id="lineItemDesc"
+										placeholder="e.g., Labor, Delivery"
+										value={newLineItemDesc}
+										onChange={(e) => setNewLineItemDesc(e.target.value)}
+										className="h-9"
+									/>
+								</div>
+							)}
+							<div className="w-28">
+								<Label htmlFor="lineItemPrice" className="text-xs">
+									Price
+								</Label>
+								<Input
+									id="lineItemPrice"
+									type="number"
+									min="0"
+									step="0.01"
+									placeholder="0.00"
+									value={newLineItemPrice}
+									onChange={(e) => setNewLineItemPrice(e.target.value)}
+									className="h-9"
+								/>
+							</div>
+						</div>
+						<div className="flex items-center gap-4">
+							<div className="flex items-center gap-2">
+								<Checkbox
+									id="lineItemVatExempt"
+									checked={newLineItemVatExempt}
+									onCheckedChange={(checked) => setNewLineItemVatExempt(checked === true)}
+								/>
+								<Label htmlFor="lineItemVatExempt" className="text-xs whitespace-nowrap">
+									VAT Exempt
+								</Label>
+							</div>
+							<div className="flex items-center gap-2">
+								<Checkbox
+									id="lineItemVisibleToCustomer"
+									checked={newLineItemVisibleToCustomer}
+									onCheckedChange={(checked) => setNewLineItemVisibleToCustomer(checked === true)}
+								/>
+								<Label htmlFor="lineItemVisibleToCustomer" className="text-xs whitespace-nowrap">
+									Visible to Customer
+								</Label>
+							</div>
+							<div className="flex-1"></div>
+							<Button
+								size="sm"
+								className="h-9"
+								onClick={async () => {
+									if (!newLineItemDesc.trim() || !newLineItemPrice) return;
+									await addLineItem.mutateAsync({
+										packageId: pkg.id,
+										optionId: option.id,
+										description: newLineItemDesc.trim(),
+										price: parseFloat(newLineItemPrice),
+										vatExempt: newLineItemVatExempt,
+										visibleToCustomer: newLineItemVisibleToCustomer,
+									});
+									setNewLineItemPresetId('');
+									setNewLineItemDesc('');
+									setNewLineItemPrice('');
+									setNewLineItemVatExempt(false);
+									setNewLineItemVisibleToCustomer(true);
+								}}
+								disabled={!newLineItemDesc.trim() || !newLineItemPrice || addLineItem.isPending}
+							>
+								<Plus className="h-4 w-4 mr-1" />
+								Add
+							</Button>
+						</div>
+					</div>
+				)}
+			</div>
+
+			{/* Pricing Summary */}
+			<div className="border-t pt-6">
+				<div className="grid grid-cols-2 gap-6">
+					<div className="space-y-3">
+						<h4 className="font-medium">Pricing Summary</h4>
+						<div className="flex justify-between">
+							<span className="text-muted-foreground">Subtotal</span>
+							<span>{formatCurrency(option.subtotal)}</span>
+						</div>
+						<div className="flex justify-between">
+							<span className="text-muted-foreground">
+								VAT ({(parseFloat(option.vatRate) * 100).toFixed(0)}%)
+							</span>
+							<span>{formatCurrency(option.vatAmount)}</span>
+						</div>
+						<div className="border-t pt-2 flex justify-between font-bold text-lg">
+							<span>Total</span>
+							<span>{formatCurrency(option.total)}</span>
+						</div>
+					</div>
+					<div className="space-y-3">
+						<h4 className="font-medium">Internal Metrics</h4>
+						<div className="flex justify-between text-sm">
+							<span className="text-muted-foreground">Total Cost</span>
+							<span className="text-orange-600">{formatCurrency(option.totalCost)}</span>
+						</div>
+						<div className="flex justify-between text-sm">
+							<span className="text-muted-foreground">Gross Margin</span>
+							<span className="text-green-600">
+								{formatCurrency(
+									parseFloat(option.total) - parseFloat(option.vatAmount) - parseFloat(option.totalCost)
+								)}
+							</span>
+						</div>
+						<div className="flex justify-between text-sm">
+							<span className="text-muted-foreground">Margin %</span>
+							<span className="text-green-600">
+								{(
+									((parseFloat(option.total) - parseFloat(option.vatAmount) - parseFloat(option.totalCost)) /
+										(parseFloat(option.total) - parseFloat(option.vatAmount))) *
+									100
+								).toFixed(1)}
+								%
+							</span>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	);
+}
+
+// Customer View - clean presentation for customer
+function CustomerView({
+	pkg,
+	formatCurrency,
+	formatDate,
+}: {
+	pkg: QuotePackageWithOptions;
+	formatCurrency: (value: string | number) => string;
+	formatDate: (dateString: string) => string;
+}) {
+	const [selectedOptionId, setSelectedOptionId] = useState<string | null>(pkg.options?.[0]?.id || null);
+	const currentOption = pkg.options?.find((opt) => opt.id === selectedOptionId);
+
+	return (
+		<div className="max-w-3xl mx-auto">
+			<Card className="border-2">
+				<CardHeader className="text-center border-b pb-6">
+					<CardTitle className="text-2xl">Quotation</CardTitle>
+					<CardDescription className="text-base">
+						{pkg.options?.length > 1
+							? `${pkg.options.length} pricing options for your consideration`
+							: pkg.options?.[0]?.quoteNumber || 'Quote'}
+					</CardDescription>
+				</CardHeader>
+				<CardContent className="pt-6 space-y-6">
+					{/* Customer Info */}
+					<div className="text-center">
+						<p className="text-sm text-muted-foreground">Prepared for</p>
+						<p className="text-lg font-medium">
+							{pkg.customer ? `${pkg.customer.firstName} ${pkg.customer.lastName}` : 'Walk-in Customer'}
+						</p>
+						<p className="text-sm text-muted-foreground mt-2">Date: {formatDate(pkg.createdAt)}</p>
+						{pkg.validUntil && (
+							<p className="text-sm text-muted-foreground">Valid Until: {formatDate(pkg.validUntil)}</p>
+						)}
+					</div>
+
+					<hr />
+
+					{/* Option Selector (if multiple options) */}
+					{pkg.options && pkg.options.length > 1 && (
+						<div className="flex justify-center gap-2">
+							{pkg.options.map((option) => (
+								<Button
+									key={option.id}
+									variant={selectedOptionId === option.id ? 'default' : 'outline'}
+									onClick={() => setSelectedOptionId(option.id)}
+								>
+									{option.quoteNumber}
+									<span className="ml-2 opacity-75">{formatCurrency(option.total)}</span>
+								</Button>
+							))}
+						</div>
+					)}
+
+					{currentOption && (
+						<>
+							{/* Service & Product Details */}
+							<div className="space-y-4">
+								{pkg.service && (
+									<div>
+										<p className="text-sm text-muted-foreground">Service</p>
+										<p className="font-semibold text-lg">{pkg.service.name}</p>
+									</div>
+								)}
+								{currentOption.product && (
+									<div>
+										<p className="text-sm text-muted-foreground">Product</p>
+										<p className="font-semibold text-lg">{currentOption.product.name}</p>
+									</div>
+								)}
+
+								{/* Components Summary */}
+								{currentOption.components.length > 0 && (
+									<div className="space-y-1">
+										{currentOption.components.map((comp) => (
+											<div key={comp.id} className="flex justify-between text-sm">
+												<span>
+													{formatComponentType(comp.componentType)}
+													{comp.height && comp.width && comp.depth && (
+														<span className="text-muted-foreground ml-2">
+															({comp.height}" × {comp.width}" × {comp.depth}")
+														</span>
+													)}
+													{comp.materialName && (
+														<span className="text-muted-foreground ml-1">- {comp.materialName}</span>
+													)}
+												</span>
+											</div>
+										))}
+									</div>
+								)}
+
+								{/* Flower Holes */}
+								{currentOption.flowerHoles && (
+									<p className="text-sm">
+										<span className="text-muted-foreground">Flower Holes: </span>
+										{currentOption.flowerHoles.replace(/_/g, ' ')}
+									</p>
+								)}
+
+								{/* Inscription */}
+								{pkg.proposedInscription && (
+									<div className="space-y-1">
+										<p className="text-sm font-medium">Proposed Inscription</p>
+										<p className="whitespace-pre-wrap bg-muted p-3 rounded font-mono text-sm">
+											{pkg.proposedInscription}
+										</p>
+									</div>
+								)}
+
+								{/* Lettering */}
+								{currentOption.lettering.length > 0 && (
+									<div className="space-y-2">
+										<p className="text-sm font-medium">Lettering</p>
+										{currentOption.lettering.map((lett) => (
+											<div key={lett.id} className="text-sm">
+												<p className="italic">"{lett.text}"</p>
+												<p className="text-muted-foreground text-xs">
+													{lett.techniqueName}
+													{lett.colorName && ` with ${lett.colorName}`} - {lett.letterCount} letters
+												</p>
+											</div>
+										))}
+									</div>
+								)}
+
+								{/* Sundries */}
+								{currentOption.sundries.length > 0 && (
+									<div className="space-y-1">
+										<p className="text-sm font-medium">Additional Items:</p>
+										{currentOption.sundries.map((s) => (
+											<p key={s.id} className="text-sm text-muted-foreground">
+												{s.sundryName} × {s.quantity}
+											</p>
+										))}
+									</div>
+								)}
+
+								{/* Custom Line Items - Only visible ones */}
+								{currentOption.lineItems &&
+									currentOption.lineItems.filter((item) => item.visibleToCustomer).length > 0 && (
+										<div className="space-y-1">
+											<p className="text-sm font-medium">Other Charges:</p>
+											{currentOption.lineItems
+												.filter((item) => item.visibleToCustomer)
+												.map((item) => (
+													<div key={item.id} className="flex justify-between text-sm">
+														<span className="text-muted-foreground">
+															{item.description}
+															{item.vatExempt && <span className="text-xs ml-1">(VAT Exempt)</span>}
+														</span>
+														<span>{formatCurrency(item.price)}</span>
+													</div>
+												))}
+										</div>
+									)}
+							</div>
+
+							<hr />
+
+							{/* Pricing */}
+							<div className="space-y-2 text-right">
+								<div className="flex justify-between">
+									<span>Subtotal</span>
+									<span>{formatCurrency(currentOption.subtotal)}</span>
+								</div>
+								<div className="flex justify-between text-muted-foreground">
+									<span>VAT ({(parseFloat(currentOption.vatRate) * 100).toFixed(0)}%)</span>
+									<span>{formatCurrency(currentOption.vatAmount)}</span>
+								</div>
+								<hr />
+								<div className="flex justify-between font-bold text-xl pt-2">
+									<span>Total</span>
+									<span>{formatCurrency(currentOption.total)}</span>
+								</div>
+							</div>
+						</>
+					)}
+
+					{/* Notes */}
+					{pkg.notes && (
+						<>
+							<hr />
+							<div>
+								<p className="text-sm text-muted-foreground">{pkg.notes}</p>
+							</div>
+						</>
+					)}
+				</CardContent>
+			</Card>
 		</div>
 	);
 }

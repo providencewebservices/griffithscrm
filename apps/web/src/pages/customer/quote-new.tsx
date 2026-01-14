@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useNavigate, useSearchParams, Link } from 'react-router';
+import { useNavigate, Link } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -37,9 +37,7 @@ import {
 } from '@/components/ui/table';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import {
-	useQuoteQuery,
 	useCreateQuoteMutation,
-	useReviseQuoteMutation,
 	formatComponentType,
 	COMPONENT_TYPE_GROUPS,
 	FLOWER_HOLE_CHOICES,
@@ -65,11 +63,13 @@ import { useLetteringTechniquesQuery } from '@/hooks/use-lettering-techniques';
 import { useLetteringColorsQuery } from '@/hooks/use-lettering-colors';
 import { useSundriesQuery } from '@/hooks/use-sundries';
 import { useServicesQuery } from '@/hooks/use-services';
-import { useJobsQuery, type JobListItem } from '@/hooks/use-jobs';
+import { useJobsQuery } from '@/hooks/use-jobs';
+import { useFuneralDirectorsQuery } from '@/hooks/use-funeral-directors';
+import { useMemorialSitesQuery } from '@/hooks/use-memorial-sites';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import { COMPONENT_TYPES, ENQUIRY_SOURCES } from '@griffiths-crm/shared/db/schema';
-import { ArrowLeft, Plus, Trash2, User, Check, ChevronsUpDown, FileText, PlusCircle, RefreshCw, Flower, Package } from 'lucide-react';
+import { ENQUIRY_SOURCES } from '@griffiths-crm/shared/db/schema';
+import { ArrowLeft, Plus, Trash2, User, Check, ChevronsUpDown, FileText, PlusCircle, RefreshCw, Flower, Package, MapPin, Building2 } from 'lucide-react';
 import {
 	Command,
 	CommandEmpty,
@@ -108,18 +108,16 @@ const NONE_VALUE = '_none';
 
 export function QuoteNewPage() {
 	const navigate = useNavigate();
-	const [searchParams] = useSearchParams();
-	const reviseId = searchParams.get('revise');
 
-	// Form state
+	// Form state - Package-level (shared context)
 	const [quoteType, setQuoteType] = useState<QuoteType>('new_memorial');
 	const [serviceId, setServiceId] = useState<string>('');
 	const [customerId, setCustomerId] = useState<string>('');
 	const [customerComboOpen, setCustomerComboOpen] = useState(false);
-	const [productId, setProductId] = useState<string>('');
-	const [dimensionComboId, setDimensionComboId] = useState<string>('');
-	const [stoneColourMaterialId, setStoneColourMaterialId] = useState<string>('');
-	const [flowerHoles, setFlowerHoles] = useState<FlowerHoleChoice | ''>('');
+	const [funeralDirectorId, setFuneralDirectorId] = useState<string>('');
+	const [funeralDirectorComboOpen, setFuneralDirectorComboOpen] = useState(false);
+	const [memorialSiteId, setMemorialSiteId] = useState<string>('');
+	const [memorialSiteComboOpen, setMemorialSiteComboOpen] = useState(false);
 	const [source, setSource] = useState<EnquirySource | ''>('');
 	const [proposedInscription, setProposedInscription] = useState('');
 	const [existingMemorialDescription, setExistingMemorialDescription] = useState('');
@@ -128,6 +126,12 @@ export function QuoteNewPage() {
 	const [notes, setNotes] = useState('');
 	const [internalNotes, setInternalNotes] = useState('');
 	const [validUntil, setValidUntil] = useState('');
+
+	// Form state - First option fields
+	const [productId, setProductId] = useState<string>('');
+	const [dimensionComboId, setDimensionComboId] = useState<string>('');
+	const [stoneColourMaterialId, setStoneColourMaterialId] = useState<string>('');
+	const [flowerHoles, setFlowerHoles] = useState<FlowerHoleChoice | ''>('');
 
 	// Customer creation state (for new customers)
 	const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
@@ -169,20 +173,15 @@ export function QuoteNewPage() {
 	const { data: colors } = useLetteringColorsQuery();
 	const { data: sundryItems } = useSundriesQuery();
 	const { data: serviceItems } = useServicesQuery();
+	const { data: funeralDirectors } = useFuneralDirectorsQuery();
+	const { data: memorialSites } = useMemorialSitesQuery();
 	// Fetch completed jobs for related job selector (only when needed)
 	const sectionConfig = QUOTE_TYPE_SECTION_CONFIG[quoteType];
 	const { data: completedJobs } = useJobsQuery(
 		sectionConfig?.showRelatedJob ? { status: 'completed' } : undefined
 	);
 
-	// Fetch quote to revise if applicable
-	const { data: originalQuote, isLoading: isLoadingOriginal } = useQuoteQuery(reviseId || undefined);
-
 	const createMutation = useCreateQuoteMutation();
-	const reviseMutation = useReviseQuoteMutation();
-
-	const isRevising = !!reviseId;
-	const isLoading = isRevising && isLoadingOriginal;
 
 	// Helper to format dimension combo for display
 	const formatDimensionCombo = (combo: DimensionCombo): string => {
@@ -204,58 +203,6 @@ export function QuoteNewPage() {
 			}))
 			.filter((section) => section.materials.length > 0);
 	}, [materialSections, allMaterials]);
-
-	// Pre-fill form if revising
-	useEffect(() => {
-		if (originalQuote) {
-			setQuoteType(originalQuote.quoteType || 'new_memorial');
-			setServiceId(originalQuote.serviceId || '');
-			setCustomerId(originalQuote.customerId || '');
-			setProductId(originalQuote.productId || '');
-			setDimensionComboId(originalQuote.dimensionComboId || '');
-			setFlowerHoles(originalQuote.flowerHoles || '');
-			setSource((originalQuote.source as EnquirySource) || '');
-			setProposedInscription(originalQuote.proposedInscription || '');
-			setExistingMemorialDescription(originalQuote.existingMemorialDescription || '');
-			setRelatedJobId(originalQuote.relatedJobId || '');
-			setNotes(originalQuote.notes || '');
-			setInternalNotes(originalQuote.internalNotes || '');
-			setValidUntil(originalQuote.validUntil ? originalQuote.validUntil.split('T')[0] : '');
-
-			setComponents(
-				originalQuote.components.map((c) => ({
-					id: crypto.randomUUID(),
-					componentType: c.componentType as ComponentType,
-					materialId: c.materialId || '',
-					finishId: c.finishId || undefined,
-					height: c.height ? parseFloat(c.height) : undefined,
-					width: c.width ? parseFloat(c.width) : undefined,
-					depth: c.depth ? parseFloat(c.depth) : undefined,
-					quantity: c.quantity,
-					notes: c.notes || undefined,
-				}))
-			);
-
-			setLettering(
-				originalQuote.lettering.map((l) => ({
-					id: crypto.randomUUID(),
-					techniqueId: l.techniqueId || '',
-					colorId: l.colorId || undefined,
-					text: l.text || '',
-					notes: l.notes || undefined,
-				}))
-			);
-
-			setSundries(
-				originalQuote.sundries.map((s) => ({
-					id: crypto.randomUUID(),
-					sundryId: s.sundryId || '',
-					quantity: s.quantity,
-					notes: s.notes || undefined,
-				}))
-			);
-		}
-	}, [originalQuote]);
 
 	// Auto-populate components when dimension combo is selected
 	useEffect(() => {
@@ -418,12 +365,12 @@ export function QuoteNewPage() {
 		setMutationError(null);
 
 		const quoteData = {
+			// Package-level fields (shared context)
 			quoteType,
 			serviceId,
 			customerId: customerId || undefined,
-			productId: productId || undefined,
-			dimensionComboId: dimensionComboId || undefined,
-			flowerHoles: flowerHoles || undefined,
+			funeralDirectorId: funeralDirectorId || undefined,
+			memorialSiteId: memorialSiteId || undefined,
 			source: source || undefined,
 			proposedInscription: proposedInscription || undefined,
 			existingMemorialDescription: existingMemorialDescription || undefined,
@@ -431,6 +378,15 @@ export function QuoteNewPage() {
 			notes: notes || undefined,
 			internalNotes: internalNotes || undefined,
 			validUntil: validUntil ? new Date(validUntil).toISOString() : undefined,
+			// Include customer details if creating a new customer
+			customerDetails:
+				isCreatingCustomer && customerDetails.firstName && customerDetails.lastName
+					? customerDetails
+					: undefined,
+			// First option fields
+			productId: productId || undefined,
+			dimensionComboId: dimensionComboId || undefined,
+			flowerHoles: flowerHoles || undefined,
 			components: components.map(({ id, ...c }) => ({
 				...c,
 				quantity: c.quantity || 1,
@@ -440,38 +396,15 @@ export function QuoteNewPage() {
 				...s,
 				quantity: s.quantity || 1,
 			})),
-			// Include customer details if creating a new customer
-			customerDetails:
-				isCreatingCustomer && customerDetails.firstName && customerDetails.lastName
-					? customerDetails
-					: undefined,
 		};
 
 		try {
-			let result;
-			if (isRevising && reviseId) {
-				result = await reviseMutation.mutateAsync({ id: reviseId, ...quoteData });
-			} else {
-				result = await createMutation.mutateAsync(quoteData);
-			}
+			const result = await createMutation.mutateAsync(quoteData);
 			navigate(`/app/quotes/${result.id}`);
 		} catch (err) {
-			setMutationError(err instanceof Error ? err.message : 'Failed to save quote');
+			setMutationError(err instanceof Error ? err.message : 'Failed to create quote');
 		}
 	};
-
-	if (isLoading) {
-		return (
-			<div>
-				<div className="mb-6">
-					<h2 className="text-2xl font-bold">
-						{isRevising ? 'Revise Quote' : 'New Quote'}
-					</h2>
-				</div>
-				<div className="text-muted-foreground">Loading...</div>
-			</div>
-		);
-	}
 
 	return (
 		<div>
@@ -485,9 +418,7 @@ export function QuoteNewPage() {
 					</BreadcrumbItem>
 					<BreadcrumbSeparator />
 					<BreadcrumbItem>
-						<BreadcrumbPage>
-							{isRevising ? `Revise ${originalQuote?.quoteNumber}` : 'New Quote'}
-						</BreadcrumbPage>
+						<BreadcrumbPage>New Quote</BreadcrumbPage>
 					</BreadcrumbItem>
 				</BreadcrumbList>
 			</Breadcrumb>
@@ -501,13 +432,9 @@ export function QuoteNewPage() {
 						</Button>
 					</Link>
 					<div>
-						<h2 className="text-2xl font-bold">
-							{isRevising ? `Revise ${originalQuote?.quoteNumber}` : 'New Quote'}
-						</h2>
+						<h2 className="text-2xl font-bold">New Quote</h2>
 						<p className="text-muted-foreground mt-1">
-							{isRevising
-								? 'Create a new version of this quote'
-								: 'Create a new quote for a customer'}
+							Create a new quote for a customer
 						</p>
 					</div>
 				</div>
@@ -517,13 +444,9 @@ export function QuoteNewPage() {
 					</Link>
 					<Button
 						onClick={handleSubmit}
-						disabled={!canSubmit || createMutation.isPending || reviseMutation.isPending}
+						disabled={!canSubmit || createMutation.isPending}
 					>
-						{createMutation.isPending || reviseMutation.isPending
-							? 'Saving...'
-							: isRevising
-								? 'Create Revision'
-								: 'Create Quote'}
+						{createMutation.isPending ? 'Creating...' : 'Create Quote'}
 					</Button>
 				</div>
 			</div>
@@ -892,6 +815,152 @@ export function QuoteNewPage() {
 										</SelectContent>
 									</Select>
 								</Field>
+							</div>
+						</div>
+					</CardContent>
+				</Card>
+
+				{/* Memorial Context - Funeral Director and Memorial Site */}
+				<Card>
+					<CardHeader>
+						<CardTitle>Memorial Context</CardTitle>
+						<CardDescription>Location and associated contacts for this memorial</CardDescription>
+					</CardHeader>
+					<CardContent>
+						<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+							{/* Funeral Director */}
+							<div className="space-y-2">
+								<FieldLabel className="mb-0">Funeral Director</FieldLabel>
+								<Popover open={funeralDirectorComboOpen} onOpenChange={setFuneralDirectorComboOpen}>
+									<PopoverTrigger asChild>
+										<Button
+											variant="outline"
+											role="combobox"
+											aria-expanded={funeralDirectorComboOpen}
+											className="w-full justify-between font-normal"
+										>
+											{funeralDirectorId
+												? funeralDirectors?.find((fd) => fd.id === funeralDirectorId)?.businessName ||
+												  'Select funeral director...'
+												: 'Select funeral director (optional)...'}
+											<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+										</Button>
+									</PopoverTrigger>
+									<PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+										<Command>
+											<CommandInput placeholder="Search funeral directors..." />
+											<CommandList>
+												<CommandEmpty>No funeral directors found.</CommandEmpty>
+												<CommandGroup>
+													{funeralDirectorId && (
+														<CommandItem
+															value="_clear"
+															onSelect={() => {
+																setFuneralDirectorId('');
+																setFuneralDirectorComboOpen(false);
+															}}
+														>
+															<span className="text-muted-foreground">Clear selection</span>
+														</CommandItem>
+													)}
+													{funeralDirectors
+														?.filter((fd) => fd.isActive)
+														.map((fd) => (
+															<CommandItem
+																key={fd.id}
+																value={fd.businessName}
+																onSelect={() => {
+																	setFuneralDirectorId(fd.id);
+																	setFuneralDirectorComboOpen(false);
+																}}
+															>
+																<Check
+																	className={cn(
+																		'mr-2 h-4 w-4',
+																		funeralDirectorId === fd.id ? 'opacity-100' : 'opacity-0'
+																	)}
+																/>
+																<div className="flex items-center gap-2">
+																	<Building2 className="h-4 w-4 text-muted-foreground" />
+																	<span>{fd.businessName}</span>
+																	{fd.branchName && (
+																		<span className="text-muted-foreground">
+																			({fd.branchName})
+																		</span>
+																	)}
+																</div>
+															</CommandItem>
+														))}
+												</CommandGroup>
+											</CommandList>
+										</Command>
+									</PopoverContent>
+								</Popover>
+							</div>
+
+							{/* Memorial Site */}
+							<div className="space-y-2">
+								<FieldLabel className="mb-0">Memorial Site</FieldLabel>
+								<Popover open={memorialSiteComboOpen} onOpenChange={setMemorialSiteComboOpen}>
+									<PopoverTrigger asChild>
+										<Button
+											variant="outline"
+											role="combobox"
+											aria-expanded={memorialSiteComboOpen}
+											className="w-full justify-between font-normal"
+										>
+											{memorialSiteId
+												? memorialSites?.find((ms) => ms.id === memorialSiteId)?.name ||
+												  'Select memorial site...'
+												: 'Select memorial site (optional)...'}
+											<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+										</Button>
+									</PopoverTrigger>
+									<PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+										<Command>
+											<CommandInput placeholder="Search memorial sites..." />
+											<CommandList>
+												<CommandEmpty>No memorial sites found.</CommandEmpty>
+												<CommandGroup>
+													{memorialSiteId && (
+														<CommandItem
+															value="_clear"
+															onSelect={() => {
+																setMemorialSiteId('');
+																setMemorialSiteComboOpen(false);
+															}}
+														>
+															<span className="text-muted-foreground">Clear selection</span>
+														</CommandItem>
+													)}
+													{memorialSites
+														?.filter((ms) => ms.isActive)
+														.map((ms) => (
+															<CommandItem
+																key={ms.id}
+																value={ms.name}
+																onSelect={() => {
+																	setMemorialSiteId(ms.id);
+																	setMemorialSiteComboOpen(false);
+																}}
+															>
+																<Check
+																	className={cn(
+																		'mr-2 h-4 w-4',
+																		memorialSiteId === ms.id ? 'opacity-100' : 'opacity-0'
+																	)}
+																/>
+																<div className="flex items-center gap-2">
+																	<MapPin className="h-4 w-4 text-muted-foreground" />
+																	<span>{ms.name}</span>
+																</div>
+															</CommandItem>
+														))}
+												</CommandGroup>
+											</CommandList>
+										</Command>
+									</PopoverContent>
+								</Popover>
 							</div>
 						</div>
 					</CardContent>
@@ -1629,13 +1698,9 @@ export function QuoteNewPage() {
 					</Link>
 					<Button
 						onClick={handleSubmit}
-						disabled={!canSubmit || createMutation.isPending || reviseMutation.isPending}
+						disabled={!canSubmit || createMutation.isPending}
 					>
-						{createMutation.isPending || reviseMutation.isPending
-							? 'Saving...'
-							: isRevising
-								? 'Create Revision'
-								: 'Create Quote'}
+						{createMutation.isPending ? 'Creating...' : 'Create Quote'}
 					</Button>
 				</div>
 			</div>

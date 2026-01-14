@@ -36,7 +36,7 @@ import { SupplierDetailPage } from './pages/customer/supplier-detail';
 import { SupplierFormPage } from './pages/customer/supplier-form';
 import { DocumentsPage } from './pages/customer/documents';
 import { CalendarPage } from './pages/customer/calendar';
-import { PublicQuoteViewPage } from './pages/public/quote-view';
+import { PublicPackageViewPage } from './pages/public/package-view';
 import { ProtectedRoute } from './components/protected-route';
 import { RoleBasedRedirect } from './components/role-based-redirect';
 
@@ -49,7 +49,7 @@ function App() {
 				<Route path="/reset-password" element={<ResetPasswordPage />} />
 
 				{/* Public quote view (no auth required) */}
-				<Route path="/quote/:token" element={<PublicQuoteViewPage />} />
+				<Route path="/quote/:token" element={<PublicPackageViewPage />} />
 
 				{/* Role-based redirect from root */}
 				<Route path="/" element={<RoleBasedRedirect />} />

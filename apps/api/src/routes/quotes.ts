@@ -7,6 +7,7 @@ import { requireAuth, requireTenant } from '../middleware/auth';
 import { db } from '../lib/auth';
 import { sendEmail } from '../lib/email';
 import {
+	quotePackages,
 	quotes,
 	quoteComponents,
 	quoteLettering,
@@ -32,6 +33,9 @@ import {
 	tenants,
 	jobs,
 	jobPaymentScheduleItems,
+	funeralDirectors,
+	councils,
+	memorialSites,
 	QUOTE_STATUSES,
 	QUOTE_TYPES,
 	COMPONENT_TYPES,
@@ -280,6 +284,101 @@ async function getVersionHistory(quoteId: string, tenantId: string) {
 }
 
 // ============================================
+// PACKAGE HELPER FUNCTIONS
+// ============================================
+
+async function getPackageWithOptions(packageId: string, tenantId: string) {
+	// Get package
+	const [pkg] = await db
+		.select()
+		.from(quotePackages)
+		.where(and(eq(quotePackages.id, packageId), eq(quotePackages.tenantId, tenantId)))
+		.limit(1);
+
+	if (!pkg) return null;
+
+	// Get all quote options for this package with full line items
+	const optionRows = await db
+		.select()
+		.from(quotes)
+		.where(eq(quotes.packageId, packageId))
+		.orderBy(asc(quotes.optionOrder), asc(quotes.createdAt));
+
+	// Enrich each option with line items and product info
+	const options = await Promise.all(
+		optionRows.map(async (opt) => {
+			const [components, lettering, sundryItems, lineItems] = await Promise.all([
+				db.select().from(quoteComponents).where(eq(quoteComponents.quoteId, opt.id)).orderBy(asc(quoteComponents.sortOrder)),
+				db.select().from(quoteLettering).where(eq(quoteLettering.quoteId, opt.id)).orderBy(asc(quoteLettering.sortOrder)),
+				db.select().from(quoteSundries).where(eq(quoteSundries.quoteId, opt.id)).orderBy(asc(quoteSundries.sortOrder)),
+				db.select().from(quoteLineItems).where(eq(quoteLineItems.quoteId, opt.id)).orderBy(asc(quoteLineItems.sortOrder)),
+			]);
+
+			let product = null;
+			if (opt.productId) {
+				[product] = await db.select().from(products).where(eq(products.id, opt.productId)).limit(1);
+			}
+
+			return {
+				...opt,
+				product,
+				components,
+				lettering,
+				sundries: sundryItems,
+				lineItems,
+			};
+		})
+	);
+
+	// Get related entities
+	let customer = null;
+	if (pkg.customerId) {
+		[customer] = await db.select().from(customers).where(eq(customers.id, pkg.customerId)).limit(1);
+	}
+
+	let service = null;
+	if (pkg.serviceId) {
+		[service] = await db.select().from(services).where(eq(services.id, pkg.serviceId)).limit(1);
+	}
+
+	let funeralDirector = null;
+	if (pkg.funeralDirectorId) {
+		[funeralDirector] = await db.select().from(funeralDirectors).where(eq(funeralDirectors.id, pkg.funeralDirectorId)).limit(1);
+	}
+
+	let council = null;
+	if (pkg.councilId) {
+		[council] = await db.select().from(councils).where(eq(councils.id, pkg.councilId)).limit(1);
+	}
+
+	let memorialSite = null;
+	if (pkg.memorialSiteId) {
+		[memorialSite] = await db.select().from(memorialSites).where(eq(memorialSites.id, pkg.memorialSiteId)).limit(1);
+	}
+
+	return {
+		...pkg,
+		customer,
+		service,
+		funeralDirector,
+		council,
+		memorialSite,
+		options,
+	};
+}
+
+function calculatePriceRange(options: { total: string }[]) {
+	if (options.length === 0) {
+		return { minPrice: '0', maxPrice: '0' };
+	}
+	const totals = options.map((o) => parseFloat(o.total));
+	return {
+		minPrice: String(Math.min(...totals)),
+		maxPrice: String(Math.max(...totals)),
+	};
+}
+
+// ============================================
 // VALIDATION SCHEMAS
 // ============================================
 
@@ -327,26 +426,42 @@ const customerDetailsSchema = z.object({
 });
 
 const createQuoteSchema = z.object({
+	// Package-level fields (shared context)
 	quoteType: z.enum(QUOTE_TYPES).optional().default('new_memorial'),
 	serviceId: z.string().min(1), // Required: the service this quote is for
 	customerId: z.string().optional(),
-	productId: z.string().optional(),
-	dimensionComboId: z.string().optional(),
+	funeralDirectorId: z.string().optional(), // Memorial context
+	councilId: z.string().optional(),
+	memorialSiteId: z.string().optional(),
 	source: z.enum(ENQUIRY_SOURCES).optional(), // How the customer contacted us
-	flowerHoles: z.enum(FLOWER_HOLE_CHOICES).optional(),
-	proposedInscription: z.string().optional(), // Full text of desired inscription
+	proposedInscription: z.string().optional(), // Full text of desired inscription (shared)
 	notes: z.string().optional(), // Customer-visible notes
 	internalNotes: z.string().optional(), // Tenant-only notes
 	validUntil: z.string().datetime().optional(),
-	// For additional inscription / refurbishment quotes
-	existingMemorialDescription: z.string().optional(),
+	existingMemorialDescription: z.string().optional(), // For refurbishment quotes
 	relatedJobId: z.string().optional(),
-	// Line items
+	// For inline customer creation
+	customerDetails: customerDetailsSchema.optional(),
+	// First option fields (per-option)
+	productId: z.string().optional(),
+	dimensionComboId: z.string().optional(),
+	flowerHoles: z.enum(FLOWER_HOLE_CHOICES).optional(),
+	// First option line items
 	components: z.array(componentInputSchema).optional().default([]),
 	lettering: z.array(letteringInputSchema).optional().default([]),
 	sundries: z.array(sundryInputSchema).optional().default([]),
-	// For inline customer creation
-	customerDetails: customerDetailsSchema.optional(),
+});
+
+// Schema for adding a new option to an existing package
+const addOptionSchema = z.object({
+	optionLabel: z.string().optional(),
+	copyFromOptionId: z.string().optional(), // Clone from existing option
+	productId: z.string().optional(),
+	dimensionComboId: z.string().optional(),
+	flowerHoles: z.enum(FLOWER_HOLE_CHOICES).optional(),
+	components: z.array(componentInputSchema).optional().default([]),
+	lettering: z.array(letteringInputSchema).optional().default([]),
+	sundries: z.array(sundryInputSchema).optional().default([]),
 });
 
 const updateStatusSchema = z.object({
@@ -390,134 +505,109 @@ const quotesRoutes = new Hono()
 	.use('*', requireAuth)
 	.use('*', requireTenant)
 
-	// List quotes
+	// List packages (each package contains quote options)
 	.get('/', zValidator('query', listQuerySchema), async (c) => {
 		const currentUser = c.get('user');
 		const tenantId = currentUser.tenantId!;
-		const { status, quoteType, customerId, search, latestOnly } = c.req.valid('query');
+		const { status, quoteType, customerId, search } = c.req.valid('query');
 
-		// Base query with customer name join
-		let baseQuery = db
-			.select({
-				id: quotes.id,
-				tenantId: quotes.tenantId,
-				parentQuoteId: quotes.parentQuoteId,
-				version: quotes.version,
-				customerId: quotes.customerId,
-				productId: quotes.productId,
-				quoteNumber: quotes.quoteNumber,
-				quoteType: quotes.quoteType,
-				status: quotes.status,
-				subtotal: quotes.subtotal,
-				vatAmount: quotes.vatAmount,
-				total: quotes.total,
-				vatRate: quotes.vatRate,
-				notes: quotes.notes,
-				validUntil: quotes.validUntil,
-				createdAt: quotes.createdAt,
-				updatedAt: quotes.updatedAt,
-				customerFirstName: customers.firstName,
-				customerLastName: customers.lastName,
-			})
-			.from(quotes)
-			.leftJoin(customers, eq(quotes.customerId, customers.id))
-			.where(eq(quotes.tenantId, tenantId))
-			.$dynamic();
-
-		// Apply filters
-		const conditions = [eq(quotes.tenantId, tenantId)];
+		// Build filter conditions for packages
+		const conditions = [eq(quotePackages.tenantId, tenantId)];
 
 		if (status) {
-			conditions.push(eq(quotes.status, status));
+			conditions.push(eq(quotePackages.status, status));
 		}
 
 		if (quoteType) {
-			conditions.push(eq(quotes.quoteType, quoteType));
+			conditions.push(eq(quotePackages.quoteType, quoteType));
 		}
 
 		if (customerId) {
-			conditions.push(eq(quotes.customerId, customerId));
+			conditions.push(eq(quotePackages.customerId, customerId));
 		}
 
-		if (search) {
-			conditions.push(like(quotes.quoteNumber, `%${search}%`));
-		}
-
-		// For "latest only", filter out quotes that have a child version
-		if (latestOnly === 'true') {
-			// A quote is "latest" if no other quote references it as parentQuoteId
-			const quotesWithChildren = db
-				.select({ parentId: quotes.parentQuoteId })
-				.from(quotes)
-				.where(eq(quotes.tenantId, tenantId));
-
-			// This is complex in Drizzle, so we'll filter in memory for now
-			// In production, you'd want a proper subquery
-		}
-
-		const results = await db
+		// Get packages with customer info
+		const packages = await db
 			.select({
-				id: quotes.id,
-				tenantId: quotes.tenantId,
-				parentQuoteId: quotes.parentQuoteId,
-				version: quotes.version,
-				customerId: quotes.customerId,
-				productId: quotes.productId,
-				quoteNumber: quotes.quoteNumber,
-				status: quotes.status,
-				subtotal: quotes.subtotal,
-				vatAmount: quotes.vatAmount,
-				total: quotes.total,
-				vatRate: quotes.vatRate,
-				notes: quotes.notes,
-				validUntil: quotes.validUntil,
-				createdAt: quotes.createdAt,
-				updatedAt: quotes.updatedAt,
+				id: quotePackages.id,
+				tenantId: quotePackages.tenantId,
+				customerId: quotePackages.customerId,
+				quoteType: quotePackages.quoteType,
+				status: quotePackages.status,
+				notes: quotePackages.notes,
+				validUntil: quotePackages.validUntil,
+				createdAt: quotePackages.createdAt,
+				updatedAt: quotePackages.updatedAt,
 				customerFirstName: customers.firstName,
 				customerLastName: customers.lastName,
 			})
-			.from(quotes)
-			.leftJoin(customers, eq(quotes.customerId, customers.id))
+			.from(quotePackages)
+			.leftJoin(customers, eq(quotePackages.customerId, customers.id))
 			.where(and(...conditions))
-			.orderBy(desc(quotes.createdAt));
+			.orderBy(desc(quotePackages.createdAt));
 
-		// Filter to latest versions if requested
-		let filteredResults = results;
-		if (latestOnly === 'true') {
-			const parentIds = new Set(
-				results.filter((q) => q.parentQuoteId).map((q) => q.parentQuoteId)
+		// Get options for each package and calculate price ranges
+		const packagesWithOptions = await Promise.all(
+			packages.map(async (pkg) => {
+				// Get all options (quotes) for this package
+				const options = await db
+					.select({
+						id: quotes.id,
+						quoteNumber: quotes.quoteNumber,
+						total: quotes.total,
+						optionOrder: quotes.optionOrder,
+					})
+					.from(quotes)
+					.where(eq(quotes.packageId, pkg.id))
+					.orderBy(asc(quotes.optionOrder));
+
+				const optionCount = options.length;
+				const priceRange = calculatePriceRange(options);
+
+				// Get first quote number for display
+				const firstQuoteNumber = options[0]?.quoteNumber || null;
+
+				return {
+					...pkg,
+					customerName:
+						pkg.customerFirstName && pkg.customerLastName
+							? `${pkg.customerFirstName} ${pkg.customerLastName}`
+							: null,
+					optionCount,
+					firstQuoteNumber,
+					minPrice: priceRange.minPrice,
+					maxPrice: priceRange.maxPrice,
+				};
+			})
+		);
+
+		// Apply search filter (search by quote number)
+		let filteredPackages = packagesWithOptions;
+		if (search) {
+			filteredPackages = packagesWithOptions.filter((pkg) =>
+				pkg.firstQuoteNumber?.toLowerCase().includes(search.toLowerCase())
 			);
-			filteredResults = results.filter((q) => !parentIds.has(q.id));
 		}
 
-		// Format results
-		const formattedResults = filteredResults.map((q) => ({
-			...q,
-			customerName:
-				q.customerFirstName && q.customerLastName
-					? `${q.customerFirstName} ${q.customerLastName}`
-					: null,
-		}));
-
-		return c.json({ quotes: formattedResults });
+		return c.json({ packages: filteredPackages });
 	})
 
-	// Get single quote with all line items
+	// Get single package with all options and their line items
 	.get('/:id', async (c) => {
 		const currentUser = c.get('user');
 		const tenantId = currentUser.tenantId!;
 		const id = c.req.param('id');
 
-		const quote = await getQuoteWithLineItems(id, tenantId);
+		const pkg = await getPackageWithOptions(id, tenantId);
 
-		if (!quote) {
-			return c.json({ error: 'Quote not found' }, 404);
+		if (!pkg) {
+			return c.json({ error: 'Package not found' }, 404);
 		}
 
-		return c.json({ quote });
+		return c.json({ package: pkg });
 	})
 
-	// Create new quote
+	// Create new package with first option
 	.post('/', zValidator('json', createQuoteSchema), async (c) => {
 		const currentUser = c.get('user');
 		const tenantId = currentUser.tenantId!;
@@ -627,7 +717,7 @@ const quotesRoutes = new Hono()
 		// Get pricing settings
 		const pricingSettings = await getTenantPricingSettings(tenantId);
 
-		// Generate quote number
+		// Generate quote number for the first option
 		const quoteNumber = await generateQuoteNumber(tenantId);
 
 		// Process components and calculate prices
@@ -824,7 +914,7 @@ const quotesRoutes = new Hono()
 			})
 		);
 
-		// Calculate totals
+		// Calculate totals for the first option
 		const componentTotal = processedComponents.reduce(
 			(sum, c) => sum + parseFloat(c.lineTotal),
 			0
@@ -836,7 +926,7 @@ const quotesRoutes = new Hono()
 		const sundryTotal = processedSundries.reduce((sum, s) => sum + parseFloat(s.lineTotal), 0);
 		const subtotal = componentTotal + letteringTotal + sundryTotal;
 
-		// Calculate VAT and total (fixed amount is now per line item, not quote level)
+		// Calculate VAT and total
 		const vatAmount = subtotal * pricingSettings.vatRate;
 		const total = subtotal + vatAmount;
 
@@ -855,40 +945,60 @@ const quotesRoutes = new Hono()
 		);
 		const totalCost = componentCost + letteringCost + sundryCost;
 
-		// Create quote and line items in a transaction-like manner
+		// Step 1: Create the package (shared context)
+		const packageId = crypto.randomUUID();
+		await db.insert(quotePackages).values({
+			id: packageId,
+			tenantId,
+			customerId,
+			serviceId: data.serviceId,
+			quoteType: data.quoteType,
+			source: data.source || null,
+			status: 'draft',
+			notes: data.notes || null,
+			internalNotes: data.internalNotes || null,
+			validUntil: data.validUntil ? new Date(data.validUntil) : null,
+			proposedInscription: data.proposedInscription || null,
+			existingMemorialDescription: data.existingMemorialDescription || null,
+			relatedJobId: data.relatedJobId || null,
+			funeralDirectorId: data.funeralDirectorId || null,
+			councilId: data.councilId || null,
+			memorialSiteId: data.memorialSiteId || null,
+		});
+
+		// Step 2: Create the first quote option linked to the package
 		const quoteId = crypto.randomUUID();
+		await db.insert(quotes).values({
+			id: quoteId,
+			tenantId,
+			packageId,
+			optionOrder: 0,
+			optionLabel: 'Option A',
+			parentQuoteId: null,
+			version: 1,
+			quoteType: data.quoteType,
+			serviceId: data.serviceId,
+			customerId,
+			productId: data.productId || null,
+			dimensionComboId: data.dimensionComboId || null,
+			source: data.source || null,
+			quoteNumber,
+			status: 'draft',
+			subtotal: String(subtotal),
+			vatAmount: String(vatAmount),
+			total: String(total),
+			totalCost: String(totalCost),
+			vatRate: String(pricingSettings.vatRate),
+			notes: null, // Notes are at package level now
+			internalNotes: null,
+			flowerHoles: data.flowerHoles || null,
+			proposedInscription: null, // Shared at package level
+			existingMemorialDescription: null,
+			relatedJobId: null,
+			validUntil: null,
+		});
 
-		const [createdQuote] = await db
-			.insert(quotes)
-			.values({
-				id: quoteId,
-				tenantId,
-				parentQuoteId: null,
-				version: 1,
-				quoteType: data.quoteType,
-				serviceId: data.serviceId,
-				customerId,
-				productId: data.productId || null,
-				dimensionComboId: data.dimensionComboId || null,
-				source: data.source || null,
-				quoteNumber,
-				status: 'draft',
-				subtotal: String(subtotal),
-				vatAmount: String(vatAmount),
-				total: String(total),
-				totalCost: String(totalCost),
-				vatRate: String(pricingSettings.vatRate),
-				notes: data.notes || null,
-				internalNotes: data.internalNotes || null,
-				flowerHoles: data.flowerHoles || null,
-				proposedInscription: data.proposedInscription || null,
-				existingMemorialDescription: data.existingMemorialDescription || null,
-				relatedJobId: data.relatedJobId || null,
-				validUntil: data.validUntil ? new Date(data.validUntil) : null,
-			})
-			.returning();
-
-		// Insert line items
+		// Step 3: Insert line items for the first option
 		if (processedComponents.length > 0) {
 			await db.insert(quoteComponents).values(
 				processedComponents.map((c) => ({
@@ -916,9 +1026,9 @@ const quotesRoutes = new Hono()
 			);
 		}
 
-		// Return full quote with line items
-		const fullQuote = await getQuoteWithLineItems(quoteId, tenantId);
-		return c.json({ quote: fullQuote }, 201);
+		// Return full package with options
+		const fullPackage = await getPackageWithOptions(packageId, tenantId);
+		return c.json({ package: fullPackage }, 201);
 	})
 
 	// Create revision of existing quote
@@ -1276,128 +1386,79 @@ const quotesRoutes = new Hono()
 		return c.json({ quote: fullQuote }, 201);
 	})
 
-	// Update quote status
+	// Update package status (statuses are at package level)
 	.put('/:id/status', zValidator('json', updateStatusSchema), async (c) => {
 		const currentUser = c.get('user');
 		const tenantId = currentUser.tenantId!;
 		const id = c.req.param('id');
 		const { status: newStatus } = c.req.valid('json');
 
-		// Get current quote
-		const [quote] = await db
+		// Get current package
+		const [pkg] = await db
 			.select()
-			.from(quotes)
-			.where(and(eq(quotes.id, id), eq(quotes.tenantId, tenantId)))
+			.from(quotePackages)
+			.where(and(eq(quotePackages.id, id), eq(quotePackages.tenantId, tenantId)))
 			.limit(1);
 
-		if (!quote) {
-			return c.json({ error: 'Quote not found' }, 404);
+		if (!pkg) {
+			return c.json({ error: 'Package not found' }, 404);
 		}
 
 		// Validate status transition
-		const allowedTransitions = STATUS_TRANSITIONS[quote.status] || [];
+		const allowedTransitions = STATUS_TRANSITIONS[pkg.status] || [];
 		if (!allowedTransitions.includes(newStatus)) {
 			return c.json(
 				{
-					error: `Cannot transition from '${quote.status}' to '${newStatus}'. Allowed: ${allowedTransitions.join(', ') || 'none'}`,
+					error: `Cannot transition from '${pkg.status}' to '${newStatus}'. Allowed: ${allowedTransitions.join(', ') || 'none'}`,
 				},
 				400
 			);
 		}
 
-		// Update status
-		const [updated] = await db
+		// Update package status
+		await db
+			.update(quotePackages)
+			.set({ status: newStatus, updatedAt: new Date() })
+			.where(eq(quotePackages.id, id));
+
+		// Also update all options to match the package status
+		await db
 			.update(quotes)
 			.set({ status: newStatus, updatedAt: new Date() })
-			.where(eq(quotes.id, id))
-			.returning();
+			.where(eq(quotes.packageId, id));
 
-		// Auto-create job when quote is accepted
-		if (newStatus === 'accepted') {
-			const jobNumber = await generateJobNumber(tenantId);
-			const jobId = crypto.randomUUID();
-
-			// Create the job
-			await db.insert(jobs).values({
-				id: jobId,
-				tenantId,
-				quoteId: id,
-				jobNumber,
-				status: 'pending',
-			});
-
-			// Get tenant's deposit percentage setting
-			let depositPercent = 50; // Default 50%
-			const [pricingSettings] = await db
-				.select()
-				.from(tenantPricingSettings)
-				.where(eq(tenantPricingSettings.tenantId, tenantId))
-				.limit(1);
-
-			if (pricingSettings?.defaultDepositPercent) {
-				depositPercent = parseFloat(pricingSettings.defaultDepositPercent);
-			}
-
-			// Calculate deposit and balance amounts
-			const total = parseFloat(quote.total);
-			const depositAmount = (total * depositPercent) / 100;
-			const balanceAmount = total - depositAmount;
-
-			// Create payment schedule items
-			const now = new Date();
-
-			// Deposit - due immediately
-			await db.insert(jobPaymentScheduleItems).values({
-				id: crypto.randomUUID(),
-				tenantId,
-				jobId,
-				description: 'Deposit',
-				amount: depositAmount.toFixed(2),
-				dueDate: now,
-				paidAmount: '0',
-				sortOrder: 0,
-			});
-
-			// Balance - no due date (user sets later)
-			await db.insert(jobPaymentScheduleItems).values({
-				id: crypto.randomUUID(),
-				tenantId,
-				jobId,
-				description: 'Balance',
-				amount: balanceAmount.toFixed(2),
-				dueDate: null,
-				paidAmount: '0',
-				sortOrder: 1,
-			});
-		}
-
-		return c.json({ quote: updated });
+		// Return updated package
+		const fullPackage = await getPackageWithOptions(id, tenantId);
+		return c.json({ package: fullPackage });
 	})
 
-	// Delete quote (draft only)
+	// Delete package (draft only)
 	.delete('/:id', async (c) => {
 		const currentUser = c.get('user');
 		const tenantId = currentUser.tenantId!;
 		const id = c.req.param('id');
 
-		// Get quote
-		const [quote] = await db
+		// Get package
+		const [pkg] = await db
 			.select()
-			.from(quotes)
-			.where(and(eq(quotes.id, id), eq(quotes.tenantId, tenantId)))
+			.from(quotePackages)
+			.where(and(eq(quotePackages.id, id), eq(quotePackages.tenantId, tenantId)))
 			.limit(1);
 
-		if (!quote) {
-			return c.json({ error: 'Quote not found' }, 404);
+		if (!pkg) {
+			return c.json({ error: 'Package not found' }, 404);
 		}
 
-		// Only allow deleting draft quotes
-		if (quote.status !== 'draft') {
-			return c.json({ error: 'Can only delete draft quotes' }, 400);
+		// Only allow deleting draft packages
+		if (pkg.status !== 'draft') {
+			return c.json({ error: 'Can only delete draft packages' }, 400);
 		}
 
-		// Delete (cascades to line items via FK)
-		await db.delete(quotes).where(eq(quotes.id, id));
+		// Delete all options first (cascades to line items via FK)
+		await db.delete(quotes).where(eq(quotes.packageId, id));
+
+		// Delete the package
+		await db.delete(quotePackages).where(eq(quotePackages.id, id));
 
 		return c.json({ success: true });
 	})
@@ -1598,7 +1659,7 @@ const quotesRoutes = new Hono()
 		}
 	)
 
-	// Send quote email to customer
+	// Send package email to customer (with all options)
 	.post(
 		'/:id/send-email',
 		requireAuth,
@@ -1613,29 +1674,43 @@ const quotesRoutes = new Hono()
 		async (c) => {
 			const currentUser = c.get('user');
 			const tenantId = currentUser.tenantId!;
-			const quoteId = c.req.param('id');
+			const packageId = c.req.param('id');
 			const { recipientEmail, customMessage } = c.req.valid('json');
 
-			// Get quote
-			const [quote] = await db
+			// Get package
+			const [pkg] = await db
 				.select()
-				.from(quotes)
-				.where(and(eq(quotes.id, quoteId), eq(quotes.tenantId, tenantId)))
+				.from(quotePackages)
+				.where(and(eq(quotePackages.id, packageId), eq(quotePackages.tenantId, tenantId)))
 				.limit(1);
 
-			if (!quote) {
-				return c.json({ error: 'Quote not found' }, 404);
+			if (!pkg) {
+				return c.json({ error: 'Package not found' }, 404);
 			}
 
 			// Validate status - should be in a presentable state
-			if (!['ready', 'presented'].includes(quote.status)) {
+			if (!['ready', 'presented'].includes(pkg.status)) {
 				return c.json({ error: 'Quote must be in Ready or Presented status to send email' }, 400);
 			}
+
+			// Get options for price info
+			const options = await db
+				.select({ quoteNumber: quotes.quoteNumber, total: quotes.total })
+				.from(quotes)
+				.where(eq(quotes.packageId, packageId))
+				.orderBy(asc(quotes.optionOrder));
+
+			if (options.length === 0) {
+				return c.json({ error: 'No quote options found' }, 400);
+			}
+
+			const firstQuoteNumber = options[0].quoteNumber;
+			const priceRange = calculatePriceRange(options);
 
 			// Determine recipient email
 			let toEmail = recipientEmail;
 
-			if (!toEmail && quote.customerId) {
+			if (!toEmail && pkg.customerId) {
 				// Get customer's primary email from contactInfo
 				const primaryEmail = await db
 					.select({ value: contactInfo.value })
@@ -1643,7 +1718,7 @@ const quotesRoutes = new Hono()
 					.innerJoin(contactInfo, eq(contactInfo.id, customerContactInfo.contactInfoId))
 					.where(
 						and(
-							eq(customerContactInfo.customerId, quote.customerId),
+							eq(customerContactInfo.customerId, pkg.customerId),
 							eq(contactInfo.type, 'email'),
 							eq(contactInfo.isPrimary, true)
 						)
@@ -1665,11 +1740,11 @@ const quotesRoutes = new Hono()
 
 			// Get customer name
 			let customerName = 'Valued Customer';
-			if (quote.customerId) {
+			if (pkg.customerId) {
 				const [customer] = await db
 					.select()
 					.from(customers)
-					.where(eq(customers.id, quote.customerId))
+					.where(eq(customers.id, pkg.customerId))
 					.limit(1);
 				if (customer) {
 					customerName = `${customer.firstName} ${customer.lastName}`;
@@ -1681,19 +1756,22 @@ const quotesRoutes = new Hono()
 			const quoteUrl = `${baseUrl}/quote/${accessToken}`;
 
 			// Format validity date
-			const validUntilFormatted = quote.validUntil
-				? new Date(quote.validUntil).toLocaleDateString('en-GB', {
+			const validUntilFormatted = pkg.validUntil
+				? new Date(pkg.validUntil).toLocaleDateString('en-GB', {
 						day: 'numeric',
 						month: 'long',
 						year: 'numeric',
 					})
 				: null;
 
-			// Format total
-			const formattedTotal = new Intl.NumberFormat('en-GB', {
-				style: 'currency',
-				currency: 'GBP',
-			}).format(parseFloat(quote.total));
+			// Format price display (range if multiple options)
+			const formatCurrency = (val: string) =>
+				new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(parseFloat(val));
+			const priceDisplay =
+				options.length === 1
+					? formatCurrency(priceRange.minPrice)
+					: `${formatCurrency(priceRange.minPrice)} - ${formatCurrency(priceRange.maxPrice)}`;
+			const optionsText = options.length > 1 ? ` (${options.length} options)` : '';
 
 			const tenantName = tenant?.name || 'Our Company';
 
@@ -1709,21 +1787,21 @@ const quotesRoutes = new Hono()
 <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
   <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
     <h1 style="color: #1a1a1a; margin: 0 0 10px 0; font-size: 24px;">${tenantName}</h1>
-    <p style="color: #666; margin: 0;">Quote Reference: <strong>${quote.quoteNumber}</strong></p>
+    <p style="color: #666; margin: 0;">Quote Reference: <strong>${firstQuoteNumber}${optionsText}</strong></p>
   </div>
 
   <p>Dear ${customerName},</p>
 
   ${customMessage ? `<p>${customMessage}</p>` : ''}
 
-  <p>We are pleased to provide you with a quote for your consideration.</p>
+  <p>We are pleased to provide you with ${options.length > 1 ? 'quote options' : 'a quote'} for your consideration.</p>
 
   <div style="background-color: #f0f7ff; border-left: 4px solid #0066cc; padding: 15px; margin: 20px 0;">
-    <p style="margin: 0 0 10px 0;"><strong>Quote Total: ${formattedTotal}</strong></p>
+    <p style="margin: 0 0 10px 0;"><strong>Quote ${options.length > 1 ? 'Range' : 'Total'}: ${priceDisplay}</strong></p>
     ${validUntilFormatted ? `<p style="margin: 0; color: #666;">Valid until: ${validUntilFormatted}</p>` : ''}
   </div>
 
-  <p>To view the full details of your quote and respond, please click the button below:</p>
+  <p>To view the full details of your quote${options.length > 1 ? ' options' : ''} and respond, please click the button below:</p>
 
   <div style="text-align: center; margin: 30px 0;">
     <a href="${quoteUrl}" style="background-color: #0066cc; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">View Your Quote</a>
@@ -1744,16 +1822,16 @@ const quotesRoutes = new Hono()
 			// Build plain text email
 			const emailText = `
 ${tenantName}
-Quote Reference: ${quote.quoteNumber}
+Quote Reference: ${firstQuoteNumber}${optionsText}
 
 Dear ${customerName},
 
-${customMessage ? `${customMessage}\n\n` : ''}We are pleased to provide you with a quote for your consideration.
+${customMessage ? `${customMessage}\n\n` : ''}We are pleased to provide you with ${options.length > 1 ? 'quote options' : 'a quote'} for your consideration.
 
-Quote Total: ${formattedTotal}
+Quote ${options.length > 1 ? 'Range' : 'Total'}: ${priceDisplay}
 ${validUntilFormatted ? `Valid until: ${validUntilFormatted}` : ''}
 
-To view the full details of your quote and respond, please visit:
+To view the full details of your quote${options.length > 1 ? ' options' : ''} and respond, please visit:
 ${quoteUrl}
 
 If you have any questions, please don't hesitate to contact us.
@@ -1766,24 +1844,32 @@ ${tenantName}
 			try {
 				await sendEmail({
 					to: toEmail,
-					subject: `Your Quote ${quote.quoteNumber} from ${tenantName}`,
+					subject: `Your Quote ${firstQuoteNumber} from ${tenantName}`,
 					text: emailText,
 					html: emailHtml,
 				});
 
-				// Update quote with token and email sent timestamp
+				// Update package with token and email sent timestamp
 				const now = new Date();
 				await db
-					.update(quotes)
+					.update(quotePackages)
 					.set({
 						accessToken,
 						accessTokenCreatedAt: now,
 						emailSentAt: now,
-						emailSentCount: (quote.emailSentCount || 0) + 1,
-						status: quote.status === 'ready' ? 'presented' : quote.status, // Auto-advance to presented if ready
+						emailSentCount: (pkg.emailSentCount || 0) + 1,
+						status: pkg.status === 'ready' ? 'presented' : pkg.status, // Auto-advance to presented if ready
 						updatedAt: now,
 					})
-					.where(eq(quotes.id, quoteId));
+					.where(eq(quotePackages.id, packageId));
+
+				// Also update all options status
+				if (pkg.status === 'ready') {
+					await db
+						.update(quotes)
+						.set({ status: 'presented', updatedAt: now })
+						.where(eq(quotes.packageId, packageId));
+				}
 
 				return c.json({
 					success: true,
@@ -1953,6 +2039,611 @@ ${tenantName}
 		// Return updated quote
 		const fullQuote = await getQuoteWithLineItems(quoteId, tenantId);
 		return c.json({ quote: fullQuote });
+	})
+
+	// ============================================
+	// OPTION MANAGEMENT ENDPOINTS
+	// ============================================
+
+	// Add new option to a package
+	.post('/:id/options', zValidator('json', addOptionSchema), async (c) => {
+		const currentUser = c.get('user');
+		const tenantId = currentUser.tenantId!;
+		const packageId = c.req.param('id');
+		const data = c.req.valid('json');
+
+		// Get package
+		const [pkg] = await db
+			.select()
+			.from(quotePackages)
+			.where(and(eq(quotePackages.id, packageId), eq(quotePackages.tenantId, tenantId)))
+			.limit(1);
+
+		if (!pkg) {
+			return c.json({ error: 'Package not found' }, 404);
+		}
+
+		if (pkg.status !== 'draft') {
+			return c.json({ error: 'Can only add options to draft packages' }, 400);
+		}
+
+		// Get existing options to determine order and label
+		const existingOptions = await db
+			.select({ optionOrder: quotes.optionOrder })
+			.from(quotes)
+			.where(eq(quotes.packageId, packageId))
+			.orderBy(desc(quotes.optionOrder))
+			.limit(1);
+
+		const nextOrder = (existingOptions[0]?.optionOrder ?? -1) + 1;
+		const optionLabel = data.optionLabel || `Option ${String.fromCharCode(65 + nextOrder)}`; // A, B, C...
+
+		// Get pricing settings
+		const pricingSettings = await getTenantPricingSettings(tenantId);
+
+		// If cloning from existing option
+		let sourceOption = null;
+		if (data.copyFromOptionId) {
+			sourceOption = await getQuoteWithLineItems(data.copyFromOptionId, tenantId);
+			if (!sourceOption || sourceOption.packageId !== packageId) {
+				return c.json({ error: 'Source option not found in this package' }, 400);
+			}
+		}
+
+		// Generate quote number
+		const quoteNumber = await generateQuoteNumber(tenantId);
+
+		// Process components (from source or from data)
+		const componentsInput = sourceOption?.components?.map((c) => ({
+			componentType: c.componentType as (typeof COMPONENT_TYPES)[number],
+			materialId: c.materialId!,
+			finishId: c.finishId || undefined,
+			height: c.height ? parseFloat(c.height) : undefined,
+			width: c.width ? parseFloat(c.width) : undefined,
+			depth: c.depth ? parseFloat(c.depth) : undefined,
+			quantity: c.quantity,
+			notes: c.notes || undefined,
+		})) || data.components;
+
+		const processedComponents = await Promise.all(
+			componentsInput.map(async (comp, index) => {
+				const [material] = await db
+					.select()
+					.from(materials)
+					.where(and(eq(materials.id, comp.materialId), eq(materials.tenantId, tenantId)))
+					.limit(1);
+
+				if (!material) {
+					throw new Error(`Material not found: ${comp.materialId}`);
+				}
+
+				let finish = null;
+				if (comp.finishId) {
+					[finish] = await db
+						.select()
+						.from(finishes)
+						.where(and(eq(finishes.id, comp.finishId), eq(finishes.tenantId, tenantId)))
+						.limit(1);
+				}
+
+				const supplierCost = parseFloat(material.supplierCost);
+				const markupPercent = pricingSettings.defaultMarkupPercent;
+				const unitPrice = calculateRetailPrice(supplierCost, markupPercent);
+				const lineTotal = unitPrice * comp.quantity;
+
+				return {
+					id: crypto.randomUUID(),
+					componentType: comp.componentType,
+					materialId: comp.materialId,
+					finishId: comp.finishId || null,
+					height: comp.height ? String(comp.height) : null,
+					width: comp.width ? String(comp.width) : null,
+					depth: comp.depth ? String(comp.depth) : null,
+					quantity: comp.quantity,
+					supplierCost: String(supplierCost),
+					markupPercent: String(markupPercent),
+					unitPrice: String(unitPrice),
+					lineTotal: String(lineTotal),
+					materialName: material.name,
+					finishName: finish?.name || null,
+					notes: comp.notes || null,
+					sortOrder: index,
+				};
+			})
+		);
+
+		// Process lettering
+		const letteringInput = sourceOption?.lettering?.map((l) => ({
+			techniqueId: l.techniqueId!,
+			colorId: l.colorId || undefined,
+			text: l.text!,
+			appliesTo: (l.appliesTo as (typeof LETTERING_COST_APPLIES_TO)[number]) || 'new_memorial',
+			notes: l.notes || undefined,
+		})) || data.lettering;
+
+		const processedLettering = await Promise.all(
+			letteringInput.map(async (lett, index) => {
+				const [technique] = await db
+					.select()
+					.from(letteringTechniques)
+					.where(
+						and(eq(letteringTechniques.id, lett.techniqueId), eq(letteringTechniques.tenantId, tenantId))
+					)
+					.limit(1);
+
+				if (!technique) {
+					throw new Error(`Lettering technique not found: ${lett.techniqueId}`);
+				}
+
+				let color = null;
+				if (lett.colorId) {
+					[color] = await db
+						.select()
+						.from(letteringColors)
+						.where(and(eq(letteringColors.id, lett.colorId), eq(letteringColors.tenantId, tenantId)))
+						.limit(1);
+				}
+
+				// Find cost rule (simplified - use default)
+				const [activeCostRule] = await db
+					.select()
+					.from(letteringCosts)
+					.where(eq(letteringCosts.techniqueId, lett.techniqueId))
+					.limit(1);
+
+				const letterCount = lett.text.replace(/\s/g, '').length;
+				const freeLetters = activeCostRule?.freeLetters || 0;
+				const supplierCostPerLetter = parseFloat(activeCostRule?.pricePerLetter || '0');
+				const billableLetters = Math.max(0, letterCount - freeLetters);
+				const markupPercent = pricingSettings.defaultMarkupPercent;
+				const unitPrice = calculateRetailPrice(supplierCostPerLetter, markupPercent);
+				const lineTotal = billableLetters * unitPrice;
+
+				return {
+					id: crypto.randomUUID(),
+					techniqueId: lett.techniqueId,
+					colorId: lett.colorId || null,
+					text: lett.text,
+					letterCount,
+					appliesTo: lett.appliesTo,
+					supplierCost: String(supplierCostPerLetter),
+					markupPercent: String(markupPercent),
+					unitPrice: String(unitPrice),
+					lineTotal: String(lineTotal),
+					techniqueName: technique.name,
+					colorName: color?.name || null,
+					notes: lett.notes || null,
+					sortOrder: index,
+				};
+			})
+		);
+
+		// Process sundries
+		const sundriesInput = sourceOption?.sundries?.map((s) => ({
+			sundryId: s.sundryId!,
+			quantity: s.quantity,
+			notes: s.notes || undefined,
+		})) || data.sundries;
+
+		const processedSundries = await Promise.all(
+			sundriesInput.map(async (sund, index) => {
+				const [sundry] = await db
+					.select()
+					.from(sundries)
+					.where(and(eq(sundries.id, sund.sundryId), eq(sundries.tenantId, tenantId)))
+					.limit(1);
+
+				if (!sundry) {
+					throw new Error(`Sundry not found: ${sund.sundryId}`);
+				}
+
+				const supplierCost = parseFloat(sundry.price);
+				const markupPercent = pricingSettings.defaultMarkupPercent;
+				const unitPrice = calculateRetailPrice(supplierCost, markupPercent);
+				const lineTotal = unitPrice * sund.quantity;
+
+				return {
+					id: crypto.randomUUID(),
+					sundryId: sund.sundryId,
+					quantity: sund.quantity,
+					supplierCost: String(supplierCost),
+					markupPercent: String(markupPercent),
+					unitPrice: String(unitPrice),
+					lineTotal: String(lineTotal),
+					sundryName: sundry.name,
+					notes: sund.notes || null,
+					sortOrder: index,
+				};
+			})
+		);
+
+		// Calculate totals
+		const componentTotal = processedComponents.reduce((sum, c) => sum + parseFloat(c.lineTotal), 0);
+		const letteringTotal = processedLettering.reduce((sum, l) => sum + parseFloat(l.lineTotal), 0);
+		const sundryTotal = processedSundries.reduce((sum, s) => sum + parseFloat(s.lineTotal), 0);
+		const subtotal = componentTotal + letteringTotal + sundryTotal;
+		const vatAmount = subtotal * pricingSettings.vatRate;
+		const total = subtotal + vatAmount;
+
+		const componentCost = processedComponents.reduce((sum, c) => sum + parseFloat(c.supplierCost) * c.quantity, 0);
+		const letteringCost = processedLettering.reduce((sum, l) => sum + parseFloat(l.supplierCost) * l.letterCount, 0);
+		const sundryCost = processedSundries.reduce((sum, s) => sum + parseFloat(s.supplierCost) * s.quantity, 0);
+		const totalCost = componentCost + letteringCost + sundryCost;
+
+		// Create the new option
+		const quoteId = crypto.randomUUID();
+		await db.insert(quotes).values({
+			id: quoteId,
+			tenantId,
+			packageId,
+			optionOrder: nextOrder,
+			optionLabel,
+			parentQuoteId: null,
+			version: 1,
+			quoteType: pkg.quoteType,
+			serviceId: pkg.serviceId,
+			customerId: pkg.customerId,
+			productId: sourceOption?.productId || data.productId || null,
+			dimensionComboId: sourceOption?.dimensionComboId || data.dimensionComboId || null,
+			source: pkg.source,
+			quoteNumber,
+			status: 'draft',
+			subtotal: String(subtotal),
+			vatAmount: String(vatAmount),
+			total: String(total),
+			totalCost: String(totalCost),
+			vatRate: String(pricingSettings.vatRate),
+			notes: null,
+			internalNotes: null,
+			flowerHoles: sourceOption?.flowerHoles || data.flowerHoles || null,
+			proposedInscription: null,
+			existingMemorialDescription: null,
+			relatedJobId: null,
+			validUntil: null,
+		});
+
+		// Insert line items
+		if (processedComponents.length > 0) {
+			await db.insert(quoteComponents).values(
+				processedComponents.map((c) => ({ ...c, quoteId }))
+			);
+		}
+
+		if (processedLettering.length > 0) {
+			await db.insert(quoteLettering).values(
+				processedLettering.map((l) => ({ ...l, quoteId }))
+			);
+		}
+
+		if (processedSundries.length > 0) {
+			await db.insert(quoteSundries).values(
+				processedSundries.map((s) => ({ ...s, quoteId }))
+			);
+		}
+
+		// Return updated package
+		const fullPackage = await getPackageWithOptions(packageId, tenantId);
+		return c.json({ package: fullPackage }, 201);
+	})
+
+	// Clone an existing option
+	.post('/:id/options/:optionId/clone', async (c) => {
+		const currentUser = c.get('user');
+		const tenantId = currentUser.tenantId!;
+		const packageId = c.req.param('id');
+		const optionId = c.req.param('optionId');
+
+		// Forward to options endpoint with copyFromOptionId
+		const newRequest = new Request(c.req.url.replace(`/${optionId}/clone`, ''), {
+			method: 'POST',
+			headers: c.req.raw.headers,
+			body: JSON.stringify({ copyFromOptionId: optionId }),
+		});
+
+		// Re-use the add option logic
+		const [pkg] = await db
+			.select()
+			.from(quotePackages)
+			.where(and(eq(quotePackages.id, packageId), eq(quotePackages.tenantId, tenantId)))
+			.limit(1);
+
+		if (!pkg) {
+			return c.json({ error: 'Package not found' }, 404);
+		}
+
+		if (pkg.status !== 'draft') {
+			return c.json({ error: 'Can only clone options on draft packages' }, 400);
+		}
+
+		// Get source option
+		const sourceOption = await getQuoteWithLineItems(optionId, tenantId);
+		if (!sourceOption || sourceOption.packageId !== packageId) {
+			return c.json({ error: 'Option not found in this package' }, 400);
+		}
+
+		// Get existing options to determine order
+		const existingOptions = await db
+			.select({ optionOrder: quotes.optionOrder })
+			.from(quotes)
+			.where(eq(quotes.packageId, packageId))
+			.orderBy(desc(quotes.optionOrder))
+			.limit(1);
+
+		const nextOrder = (existingOptions[0]?.optionOrder ?? -1) + 1;
+		const optionLabel = `Option ${String.fromCharCode(65 + nextOrder)}`;
+
+		// Get pricing settings
+		const pricingSettings = await getTenantPricingSettings(tenantId);
+
+		// Generate new quote number
+		const quoteNumber = await generateQuoteNumber(tenantId);
+
+		// Clone components
+		const processedComponents = sourceOption.components.map((c, index) => ({
+			id: crypto.randomUUID(),
+			componentType: c.componentType,
+			materialId: c.materialId,
+			finishId: c.finishId,
+			height: c.height,
+			width: c.width,
+			depth: c.depth,
+			quantity: c.quantity,
+			supplierCost: c.supplierCost,
+			markupPercent: c.markupPercent,
+			unitPrice: c.unitPrice,
+			lineTotal: c.lineTotal,
+			materialName: c.materialName,
+			finishName: c.finishName,
+			notes: c.notes,
+			sortOrder: index,
+		}));
+
+		// Clone lettering
+		const processedLettering = sourceOption.lettering.map((l, index) => ({
+			id: crypto.randomUUID(),
+			techniqueId: l.techniqueId,
+			colorId: l.colorId,
+			text: l.text,
+			letterCount: l.letterCount,
+			appliesTo: l.appliesTo,
+			supplierCost: l.supplierCost,
+			markupPercent: l.markupPercent,
+			unitPrice: l.unitPrice,
+			lineTotal: l.lineTotal,
+			techniqueName: l.techniqueName,
+			colorName: l.colorName,
+			notes: l.notes,
+			sortOrder: index,
+		}));
+
+		// Clone sundries
+		const processedSundries = sourceOption.sundries.map((s, index) => ({
+			id: crypto.randomUUID(),
+			sundryId: s.sundryId,
+			quantity: s.quantity,
+			supplierCost: s.supplierCost,
+			markupPercent: s.markupPercent,
+			unitPrice: s.unitPrice,
+			lineTotal: s.lineTotal,
+			sundryName: s.sundryName,
+			notes: s.notes,
+			sortOrder: index,
+		}));
+
+		// Create new option
+		const quoteId = crypto.randomUUID();
+		await db.insert(quotes).values({
+			id: quoteId,
+			tenantId,
+			packageId,
+			optionOrder: nextOrder,
+			optionLabel,
+			parentQuoteId: null,
+			version: 1,
+			quoteType: sourceOption.quoteType,
+			serviceId: sourceOption.serviceId,
+			customerId: sourceOption.customerId,
+			productId: sourceOption.productId,
+			dimensionComboId: sourceOption.dimensionComboId,
+			source: sourceOption.source,
+			quoteNumber,
+			status: 'draft',
+			subtotal: sourceOption.subtotal,
+			vatAmount: sourceOption.vatAmount,
+			total: sourceOption.total,
+			totalCost: sourceOption.totalCost,
+			vatRate: sourceOption.vatRate,
+			notes: null,
+			internalNotes: null,
+			flowerHoles: sourceOption.flowerHoles,
+			proposedInscription: null,
+			existingMemorialDescription: null,
+			relatedJobId: null,
+			validUntil: null,
+		});
+
+		// Insert line items
+		if (processedComponents.length > 0) {
+			await db.insert(quoteComponents).values(
+				processedComponents.map((c) => ({ ...c, quoteId }))
+			);
+		}
+
+		if (processedLettering.length > 0) {
+			await db.insert(quoteLettering).values(
+				processedLettering.map((l) => ({ ...l, quoteId }))
+			);
+		}
+
+		if (processedSundries.length > 0) {
+			await db.insert(quoteSundries).values(
+				processedSundries.map((s) => ({ ...s, quoteId }))
+			);
+		}
+
+		// Return updated package
+		const fullPackage = await getPackageWithOptions(packageId, tenantId);
+		return c.json({ package: fullPackage }, 201);
+	})
+
+	// Delete an option (only if >1 option exists)
+	.delete('/:id/options/:optionId', async (c) => {
+		const currentUser = c.get('user');
+		const tenantId = currentUser.tenantId!;
+		const packageId = c.req.param('id');
+		const optionId = c.req.param('optionId');
+
+		// Get package
+		const [pkg] = await db
+			.select()
+			.from(quotePackages)
+			.where(and(eq(quotePackages.id, packageId), eq(quotePackages.tenantId, tenantId)))
+			.limit(1);
+
+		if (!pkg) {
+			return c.json({ error: 'Package not found' }, 404);
+		}
+
+		if (pkg.status !== 'draft') {
+			return c.json({ error: 'Can only delete options from draft packages' }, 400);
+		}
+
+		// Get option count
+		const optionCount = await db
+			.select({ count: sql<number>`COUNT(*)` })
+			.from(quotes)
+			.where(eq(quotes.packageId, packageId));
+
+		if (optionCount[0].count <= 1) {
+			return c.json({ error: 'Cannot delete the last option. Delete the package instead.' }, 400);
+		}
+
+		// Verify option exists and belongs to this package
+		const [option] = await db
+			.select()
+			.from(quotes)
+			.where(and(eq(quotes.id, optionId), eq(quotes.packageId, packageId)))
+			.limit(1);
+
+		if (!option) {
+			return c.json({ error: 'Option not found in this package' }, 404);
+		}
+
+		// Delete option (cascades to line items via FK)
+		await db.delete(quotes).where(eq(quotes.id, optionId));
+
+		// Return updated package
+		const fullPackage = await getPackageWithOptions(packageId, tenantId);
+		return c.json({ package: fullPackage });
+	})
+
+	// Accept a specific option (creates job, sets package status to accepted)
+	.post('/:id/accept/:optionId', async (c) => {
+		const currentUser = c.get('user');
+		const tenantId = currentUser.tenantId!;
+		const packageId = c.req.param('id');
+		const optionId = c.req.param('optionId');
+
+		// Get package
+		const [pkg] = await db
+			.select()
+			.from(quotePackages)
+			.where(and(eq(quotePackages.id, packageId), eq(quotePackages.tenantId, tenantId)))
+			.limit(1);
+
+		if (!pkg) {
+			return c.json({ error: 'Package not found' }, 404);
+		}
+
+		// Validate status - should be in presented state
+		if (pkg.status !== 'presented') {
+			return c.json({ error: 'Package must be in Presented status to accept' }, 400);
+		}
+
+		// Get the option being accepted
+		const [option] = await db
+			.select()
+			.from(quotes)
+			.where(and(eq(quotes.id, optionId), eq(quotes.packageId, packageId)))
+			.limit(1);
+
+		if (!option) {
+			return c.json({ error: 'Option not found in this package' }, 404);
+		}
+
+		// Update package status and record accepted option
+		const now = new Date();
+		await db
+			.update(quotePackages)
+			.set({
+				status: 'accepted',
+				acceptedOptionId: optionId,
+				customerDecisionAt: now,
+				updatedAt: now,
+			})
+			.where(eq(quotePackages.id, packageId));
+
+		// Update all options status to accepted
+		await db
+			.update(quotes)
+			.set({ status: 'accepted', updatedAt: now })
+			.where(eq(quotes.packageId, packageId));
+
+		// Create job from the accepted option
+		const jobNumber = await generateJobNumber(tenantId);
+		const jobId = crypto.randomUUID();
+
+		await db.insert(jobs).values({
+			id: jobId,
+			tenantId,
+			quoteId: optionId, // Link to the specific accepted option
+			jobNumber,
+			status: 'pending',
+		});
+
+		// Get tenant's deposit percentage setting
+		let depositPercent = 50; // Default 50%
+		const [pricingSettingsRow] = await db
+			.select()
+			.from(tenantPricingSettings)
+			.where(eq(tenantPricingSettings.tenantId, tenantId))
+			.limit(1);
+
+		if (pricingSettingsRow?.defaultDepositPercent) {
+			depositPercent = parseFloat(pricingSettingsRow.defaultDepositPercent);
+		}
+
+		// Calculate deposit and balance amounts
+		const total = parseFloat(option.total);
+		const depositAmount = (total * depositPercent) / 100;
+		const balanceAmount = total - depositAmount;
+
+		// Create payment schedule items
+		await db.insert(jobPaymentScheduleItems).values({
+			id: crypto.randomUUID(),
+			tenantId,
+			jobId,
+			description: 'Deposit',
+			amount: depositAmount.toFixed(2),
+			dueDate: now,
+			paidAmount: '0',
+			sortOrder: 0,
+		});
+
+		await db.insert(jobPaymentScheduleItems).values({
+			id: crypto.randomUUID(),
+			tenantId,
+			jobId,
+			description: 'Balance',
+			amount: balanceAmount.toFixed(2),
+			dueDate: null,
+			paidAmount: '0',
+			sortOrder: 1,
+		});
+
+		// Return updated package
+		const fullPackage = await getPackageWithOptions(packageId, tenantId);
+		return c.json({ package: fullPackage, jobId, jobNumber });
 	});
 
 export { quotesRoutes };

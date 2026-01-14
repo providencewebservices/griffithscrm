@@ -820,12 +820,72 @@ export const QUOTE_TYPES = [
 	'sundry_only', // Accessories only, no stonework
 ] as const;
 
+// Package statuses (same as quote statuses)
+export const PACKAGE_STATUSES = QUOTE_STATUSES;
+
+// Quote Packages table (groups multiple quote options for customer presentation)
+export const quotePackages = pgTable('quote_packages', {
+	id: text('id').primaryKey(),
+	tenantId: text('tenant_id')
+		.notNull()
+		.references(() => tenants.id, { onDelete: 'cascade' }),
+
+	// Package identification
+	packageNumber: text('package_number').notNull(), // "P-00001"
+
+	// SHARED CONTEXT (shared across all options in package)
+	customerId: text('customer_id').references(() => customers.id, { onDelete: 'set null' }),
+	serviceId: text('service_id').references(() => services.id, { onDelete: 'set null' }),
+
+	// Memorial context - shared across all options
+	funeralDirectorId: text('funeral_director_id').references(() => funeralDirectors.id, {
+		onDelete: 'set null',
+	}),
+	councilId: text('council_id').references(() => councils.id, { onDelete: 'set null' }),
+	memorialSiteId: text('memorial_site_id').references(() => memorialSites.id, { onDelete: 'set null' }),
+
+	// Quote type context - shared
+	quoteType: text('quote_type').notNull().default('new_memorial'), // From QUOTE_TYPES
+	source: text('source'), // From ENQUIRY_SOURCES
+	existingMemorialDescription: text('existing_memorial_description'),
+	relatedJobId: text('related_job_id'), // No FK to avoid circular dependency
+	proposedInscription: text('proposed_inscription'),
+
+	// Package-level fields
+	status: text('status').notNull().default('draft'), // From PACKAGE_STATUSES
+	notes: text('notes'), // Customer-visible notes
+	internalNotes: text('internal_notes'), // Tenant-only notes
+	validUntil: timestamp('valid_until'),
+
+	// Customer email/access (at package level)
+	accessToken: text('access_token').unique(),
+	accessTokenCreatedAt: timestamp('access_token_created_at'),
+	emailSentAt: timestamp('email_sent_at'),
+	emailSentCount: integer('email_sent_count').notNull().default(0),
+
+	// Customer response (at package level)
+	customerFeedback: text('customer_feedback'),
+	customerFeedbackAt: timestamp('customer_feedback_at'),
+	acceptedOptionId: text('accepted_option_id'), // Which quote was selected
+	customerDecisionAt: timestamp('customer_decision_at'),
+
+	// Audit
+	createdAt: timestamp('created_at').notNull().defaultNow(),
+	updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
 // Quotes table (immutable with versioning)
 export const quotes = pgTable('quotes', {
 	id: text('id').primaryKey(),
 	tenantId: text('tenant_id')
 		.notNull()
 		.references(() => tenants.id, { onDelete: 'cascade' }),
+
+	// Package relationship (nullable for standalone quotes / backward compatibility)
+	packageId: text('package_id').references(() => quotePackages.id, { onDelete: 'cascade' }),
+	optionLabel: text('option_label'), // "Option A", "Premium", "Budget", etc.
+	optionOrder: integer('option_order').notNull().default(0), // Display order within package
+
 	parentQuoteId: text('parent_quote_id'), // Self-reference for versioning (no FK constraint to avoid circular)
 	version: integer('version').notNull().default(1),
 	serviceId: text('service_id').references(() => services.id, { onDelete: 'set null' }), // Primary service this quote is for

@@ -36,7 +36,7 @@ import {
 	type CustomerWithRelations,
 	type CreateCustomerInput,
 } from '@/hooks/use-customers';
-import { useQuotesQuery } from '@/hooks/use-quotes';
+import { useQuotesQuery, formatPriceRange, formatQuoteNumberWithOptions } from '@/hooks/use-quotes';
 import { useTenantSettingsQuery } from '@/hooks/use-tenant-settings';
 import {
 	Mail,
@@ -61,7 +61,7 @@ export function CustomerDetailPage() {
 	const { data: customer, isLoading, error } = useCustomerQuery(id || '');
 	const { data: tenantSettings } = useTenantSettingsQuery();
 	const { data: customerQuotes, isLoading: quotesLoading } = useQuotesQuery(
-		id ? { customerId: id, latestOnly: true } : undefined
+		id ? { customerId: id } : undefined
 	);
 	const updateMutation = useUpdateCustomerMutation();
 	const archiveMutation = useArchiveCustomerMutation();
@@ -440,10 +440,10 @@ export function CustomerDetailPage() {
 								{customerQuotes.map((quote) => (
 									<TableRow key={quote.id}>
 										<TableCell className="font-medium">
-											{quote.quoteNumber}
+											{formatQuoteNumberWithOptions(quote.firstQuoteNumber, quote.optionCount)}
 										</TableCell>
 										<TableCell>{formatDate(quote.createdAt)}</TableCell>
-										<TableCell>-</TableCell>
+										<TableCell>{quote.serviceName || '-'}</TableCell>
 										<TableCell>
 											<Badge variant={getStatusVariant(quote.status)}>
 												{quote.status.charAt(0).toUpperCase() +
@@ -451,7 +451,7 @@ export function CustomerDetailPage() {
 											</Badge>
 										</TableCell>
 										<TableCell className="text-right">
-											{formatCurrency(quote.total)}
+											{formatPriceRange(quote.priceRange)}
 										</TableCell>
 										<TableCell>
 											<Link to={`/app/quotes/${quote.id}`}>

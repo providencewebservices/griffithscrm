@@ -29,14 +29,16 @@ import {
 	useQuotesQuery,
 	formatQuoteStatus,
 	getQuoteStatusVariant,
+	formatPriceRange,
+	formatQuoteNumberWithOptions,
 	QUOTE_TYPE_LABELS,
 	QUOTE_TYPES,
 	type QuoteStatus,
 	type QuoteType,
-	type QuoteListItem,
+	type QuotePackageListItem,
 } from '@/hooks/use-quotes';
 import { QUOTE_STATUSES } from '@griffiths-crm/shared/db/schema';
-import { Search, Plus, List, LayoutGrid, Calendar, User } from 'lucide-react';
+import { Search, Plus, List, LayoutGrid, Calendar, User, Layers } from 'lucide-react';
 
 type DisplayMode = 'table' | 'cards';
 
@@ -55,19 +57,11 @@ export function QuotesPage() {
 		return () => clearTimeout(timer);
 	}, [searchQuery]);
 
-	const { data: quotes, isLoading, error } = useQuotesQuery({
+	const { data: packages, isLoading, error } = useQuotesQuery({
 		search: debouncedSearch || undefined,
 		status: statusFilter !== 'all' ? statusFilter : undefined,
 		quoteType: typeFilter !== 'all' ? typeFilter : undefined,
-		latestOnly: true,
 	});
-
-	const formatCurrency = (value: string) => {
-		return new Intl.NumberFormat('en-GB', {
-			style: 'currency',
-			currency: 'GBP',
-		}).format(parseFloat(value));
-	};
 
 	const formatDate = (dateString: string) => {
 		return new Date(dateString).toLocaleDateString('en-US', {
@@ -75,6 +69,15 @@ export function QuotesPage() {
 			day: 'numeric',
 			year: 'numeric',
 		});
+	};
+
+	const getCustomerName = (pkg: QuotePackageListItem) => {
+		if (pkg.customerFirstName && pkg.customerLastName) {
+			return `${pkg.customerFirstName} ${pkg.customerLastName}`;
+		}
+		if (pkg.customerFirstName) return pkg.customerFirstName;
+		if (pkg.customerLastName) return pkg.customerLastName;
+		return null;
 	};
 
 	if (isLoading) {
@@ -121,7 +124,7 @@ export function QuotesPage() {
 					<div className="relative flex-1 max-w-md">
 						<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
 						<Input
-							placeholder="Search by quote number..."
+							placeholder="Search by quote number or customer..."
 							value={searchQuery}
 							onChange={(e) => setSearchQuery(e.target.value)}
 							className="pl-9"
@@ -188,7 +191,7 @@ export function QuotesPage() {
 				</div>
 			</div>
 
-			{quotes && quotes.length === 0 ? (
+			{packages && packages.length === 0 ? (
 				<div className="text-center py-8 text-muted-foreground border rounded-lg">
 					{searchQuery || statusFilter !== 'all' || typeFilter !== 'all'
 						? 'No quotes found matching your filters.'
@@ -203,49 +206,49 @@ export function QuotesPage() {
 								<TableHead>Customer</TableHead>
 								<TableHead>Type</TableHead>
 								<TableHead>Status</TableHead>
-								<TableHead className="text-right">Total</TableHead>
+								<TableHead className="text-right">Price</TableHead>
 								<TableHead>Created</TableHead>
 								<TableHead className="w-[100px]">Actions</TableHead>
 							</TableRow>
 						</TableHeader>
 						<TableBody>
-							{quotes?.map((quote) => (
-								<TableRow key={quote.id}>
+							{packages?.map((pkg) => (
+								<TableRow key={pkg.id}>
 									<TableCell className="font-medium">
-										{quote.quoteNumber}
-										{quote.version > 1 && (
-											<span className="text-muted-foreground ml-1">
-												(v{quote.version})
-											</span>
-										)}
+										<div className="flex items-center gap-2">
+											{formatQuoteNumberWithOptions(pkg.firstQuoteNumber, pkg.optionCount)}
+											{pkg.optionCount > 1 && (
+												<Layers className="h-3.5 w-3.5 text-muted-foreground" />
+											)}
+										</div>
 									</TableCell>
 									<TableCell>
-										{quote.customerName || (
+										{getCustomerName(pkg) || (
 											<span className="text-muted-foreground">Walk-in</span>
 										)}
 									</TableCell>
 									<TableCell>
-										{quote.quoteType && quote.quoteType !== 'new_memorial' ? (
+										{pkg.quoteType && pkg.quoteType !== 'new_memorial' ? (
 											<Badge variant="outline">
-												{QUOTE_TYPE_LABELS[quote.quoteType as QuoteType]}
+												{QUOTE_TYPE_LABELS[pkg.quoteType]}
 											</Badge>
 										) : (
 											<span className="text-muted-foreground text-sm">New Memorial</span>
 										)}
 									</TableCell>
 									<TableCell>
-										<Badge variant={getQuoteStatusVariant(quote.status)}>
-											{formatQuoteStatus(quote.status)}
+										<Badge variant={getQuoteStatusVariant(pkg.status)}>
+											{formatQuoteStatus(pkg.status)}
 										</Badge>
 									</TableCell>
 									<TableCell className="text-right font-medium">
-										{formatCurrency(quote.total)}
+										{formatPriceRange(pkg.priceRange)}
 									</TableCell>
 									<TableCell className="text-muted-foreground">
-										{formatDate(quote.createdAt)}
+										{formatDate(pkg.createdAt)}
 									</TableCell>
 									<TableCell>
-										<Link to={`/app/quotes/${quote.id}`}>
+										<Link to={`/app/quotes/${pkg.id}`}>
 											<Button variant="ghost" size="sm">
 												View
 											</Button>
@@ -258,12 +261,12 @@ export function QuotesPage() {
 				</div>
 			) : (
 				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-					{quotes?.map((quote) => (
+					{packages?.map((pkg) => (
 						<QuoteCard
-							key={quote.id}
-							quote={quote}
-							formatCurrency={formatCurrency}
+							key={pkg.id}
+							pkg={pkg}
 							formatDate={formatDate}
+							getCustomerName={getCustomerName}
 						/>
 					))}
 				</div>
@@ -273,39 +276,37 @@ export function QuotesPage() {
 }
 
 function QuoteCard({
-	quote,
-	formatCurrency,
+	pkg,
 	formatDate,
+	getCustomerName,
 }: {
-	quote: QuoteListItem;
-	formatCurrency: (value: string) => string;
+	pkg: QuotePackageListItem;
 	formatDate: (dateString: string) => string;
+	getCustomerName: (pkg: QuotePackageListItem) => string | null;
 }) {
 	return (
 		<Card className="hover:shadow-md transition-shadow">
 			<CardHeader className="pb-3">
 				<div className="flex items-start justify-between">
 					<div className="space-y-1">
-						<CardTitle className="text-base">
-							{quote.quoteNumber}
-							{quote.version > 1 && (
-								<span className="text-muted-foreground font-normal ml-1">
-									(v{quote.version})
-								</span>
+						<CardTitle className="text-base flex items-center gap-2">
+							{formatQuoteNumberWithOptions(pkg.firstQuoteNumber, pkg.optionCount)}
+							{pkg.optionCount > 1 && (
+								<Layers className="h-3.5 w-3.5 text-muted-foreground" />
 							)}
 						</CardTitle>
 						<CardDescription className="flex items-center gap-1.5">
 							<User className="h-3.5 w-3.5" />
-							{quote.customerName || 'Walk-in'}
+							{getCustomerName(pkg) || 'Walk-in'}
 						</CardDescription>
 					</div>
 					<div className="flex flex-col items-end gap-1">
-						<Badge variant={getQuoteStatusVariant(quote.status)}>
-							{formatQuoteStatus(quote.status)}
+						<Badge variant={getQuoteStatusVariant(pkg.status)}>
+							{formatQuoteStatus(pkg.status)}
 						</Badge>
-						{quote.quoteType && quote.quoteType !== 'new_memorial' && (
+						{pkg.quoteType && pkg.quoteType !== 'new_memorial' && (
 							<Badge variant="outline" className="text-xs">
-								{QUOTE_TYPE_LABELS[quote.quoteType as QuoteType]}
+								{QUOTE_TYPE_LABELS[pkg.quoteType]}
 							</Badge>
 						)}
 					</div>
@@ -314,17 +315,23 @@ function QuoteCard({
 			<CardContent className="space-y-3">
 				<div className="flex items-center justify-between">
 					<span className="text-2xl font-bold">
-						{formatCurrency(quote.total)}
+						{formatPriceRange(pkg.priceRange)}
 					</span>
 				</div>
 
+				{pkg.optionCount > 1 && (
+					<div className="text-sm text-muted-foreground">
+						{pkg.optionCount} pricing options
+					</div>
+				)}
+
 				<div className="flex items-center gap-1.5 text-sm text-muted-foreground">
 					<Calendar className="h-3.5 w-3.5" />
-					<span>{formatDate(quote.createdAt)}</span>
+					<span>{formatDate(pkg.createdAt)}</span>
 				</div>
 
 				<div className="pt-2">
-					<Link to={`/app/quotes/${quote.id}`}>
+					<Link to={`/app/quotes/${pkg.id}`}>
 						<Button variant="outline" size="sm" className="w-full">
 							View Details
 						</Button>
