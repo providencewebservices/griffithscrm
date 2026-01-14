@@ -326,19 +326,46 @@ export function PublicQuoteViewPage() {
 							</div>
 						)}
 
-						{/* Lettering */}
-						{lettering.length > 0 && (
-							<div className="space-y-2">
-								<p className="font-medium text-sm text-muted-foreground">Lettering</p>
-								{lettering.map((lett, idx) => (
-									<div key={idx} className="flex justify-between text-sm">
-										<span>
-											{lett.techniqueName} - {lett.letterCount} letters
-											{lett.colorName && ` (${lett.colorName})`}
-										</span>
-										<span>{formatCurrency(lett.lineTotal)}</span>
+						{/* Inscription & Lettering - unified section */}
+						{(quote.proposedInscription || lettering.length > 0) && (
+							<div className="space-y-3">
+								<p className="font-medium text-sm text-muted-foreground">
+									{quote.proposedInscription && lettering.length > 0
+										? 'Inscription & Lettering'
+										: quote.proposedInscription
+											? 'Proposed Inscription'
+											: 'Lettering'}
+								</p>
+
+								{/* Proposed Inscription */}
+								{quote.proposedInscription && (
+									<div className="space-y-1">
+										<p className="text-xs text-muted-foreground">
+											Proposed text ({quote.proposedInscription.length} characters)
+										</p>
+										<p className="whitespace-pre-wrap bg-gray-100 p-3 rounded font-mono text-sm">
+											{quote.proposedInscription}
+										</p>
 									</div>
-								))}
+								)}
+
+								{/* Lettering pricing */}
+								{lettering.length > 0 && (
+									<div className="space-y-1">
+										{quote.proposedInscription && (
+											<p className="text-xs text-muted-foreground pt-2">Lettering details</p>
+										)}
+										{lettering.map((lett, idx) => (
+											<div key={idx} className="flex justify-between text-sm">
+												<span>
+													{lett.techniqueName} - {lett.letterCount} letters
+													{lett.colorName && ` (${lett.colorName})`}
+												</span>
+												<span>{formatCurrency(lett.lineTotal)}</span>
+											</div>
+										))}
+									</div>
+								)}
 							</div>
 						)}
 
@@ -393,18 +420,6 @@ export function PublicQuoteViewPage() {
 							<div className="text-sm">
 								<span className="text-muted-foreground">Flower Holes: </span>
 								{quote.flowerHoles.replace(/_/g, ' ')}
-							</div>
-						)}
-
-						{/* Proposed Inscription */}
-						{quote.proposedInscription && (
-							<div className="space-y-1">
-								<p className="text-sm font-medium">
-									Proposed Inscription ({quote.proposedInscription.length} characters):
-								</p>
-								<p className="whitespace-pre-wrap bg-gray-100 p-3 rounded font-mono text-sm">
-									{quote.proposedInscription}
-								</p>
 							</div>
 						)}
 

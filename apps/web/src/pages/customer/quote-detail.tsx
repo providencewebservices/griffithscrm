@@ -569,32 +569,49 @@ export function QuoteDetailPage() {
 									</p>
 								)}
 
-								{/* Proposed Inscription */}
-								{quote.proposedInscription && (
-									<div className="space-y-1">
+								{/* Inscription & Lettering - unified section */}
+								{(quote.proposedInscription || quote.lettering.length > 0) && (
+									<div className="space-y-3">
 										<p className="text-sm font-medium">
-											Proposed Inscription ({quote.proposedInscription.length} characters):
+											{quote.proposedInscription && quote.lettering.length > 0
+												? 'Inscription & Lettering'
+												: quote.proposedInscription
+													? 'Proposed Inscription'
+													: 'Lettering'}
 										</p>
-										<p className="whitespace-pre-wrap bg-muted p-3 rounded font-mono text-sm">
-											{quote.proposedInscription}
-										</p>
-									</div>
-								)}
 
-								{/* Lettering Summary */}
-								{quote.lettering.length > 0 && (
-									<div className="space-y-2">
-										<p className="text-sm font-medium">Inscription:</p>
-										{quote.lettering.map((lett) => (
-											<div key={lett.id} className="text-sm">
-												<p className="italic">"{lett.text}"</p>
-												<p className="text-muted-foreground text-xs">
-													{lett.techniqueName}
-													{lett.colorName && ` with ${lett.colorName}`}
-													{' - '}{lett.letterCount} letters
+										{/* Proposed Inscription */}
+										{quote.proposedInscription && (
+											<div className="space-y-1">
+												<p className="text-xs text-muted-foreground uppercase tracking-wide">
+													Proposed Text ({quote.proposedInscription.length} characters)
+												</p>
+												<p className="whitespace-pre-wrap bg-muted p-3 rounded font-mono text-sm">
+													{quote.proposedInscription}
 												</p>
 											</div>
-										))}
+										)}
+
+										{/* Lettering Details */}
+										{quote.lettering.length > 0 && (
+											<div className="space-y-2">
+												{quote.proposedInscription && (
+													<p className="text-xs text-muted-foreground uppercase tracking-wide pt-2">
+														Lettering Details
+													</p>
+												)}
+												{quote.lettering.map((lett) => (
+													<div key={lett.id} className="text-sm">
+														<p className="italic">"{lett.text}"</p>
+														<p className="text-muted-foreground text-xs">
+															{lett.techniqueName}
+															{lett.colorName && ` with ${lett.colorName}`}
+															{' - '}{lett.letterCount} letters
+														</p>
+													</div>
+												))}
+											</div>
+										)}
 									</div>
 								)}
 
@@ -718,16 +735,6 @@ export function QuoteDetailPage() {
 									</Link>
 								</div>
 							)}
-							{quote.proposedInscription && (
-								<div className="col-span-2">
-									<p className="text-sm font-medium text-muted-foreground">
-										Proposed Inscription ({quote.proposedInscription.length} characters)
-									</p>
-									<p className="whitespace-pre-wrap bg-muted p-3 rounded mt-1 font-mono text-sm">
-										{quote.proposedInscription}
-									</p>
-								</div>
-							)}
 							{quote.validUntil && (
 								<div>
 									<p className="text-sm font-medium text-muted-foreground">Valid Until</p>
@@ -831,81 +838,117 @@ export function QuoteDetailPage() {
 						</Card>
 					)}
 
-					{/* Lettering Card */}
-					{quote.lettering.length > 0 && (
+					{/* Inscription & Lettering Card - unified */}
+					{(quote.proposedInscription || quote.lettering.length > 0) && (
 						<Card>
 							<CardHeader>
-								<CardTitle>Lettering</CardTitle>
+								<CardTitle>
+									{quote.proposedInscription && quote.lettering.length > 0
+										? 'Inscription & Lettering'
+										: 'Lettering'}
+								</CardTitle>
 								<CardDescription>
-									{quote.lettering.length} inscription{quote.lettering.length !== 1 ? 's' : ''} - Internal pricing details
+									{quote.proposedInscription && quote.lettering.length > 0
+										? `Proposed text and ${quote.lettering.length} lettering item${quote.lettering.length !== 1 ? 's' : ''}`
+										: `${quote.lettering.length} lettering item${quote.lettering.length !== 1 ? 's' : ''} - Internal pricing details`}
 								</CardDescription>
 							</CardHeader>
-							<CardContent>
-								<div className="border rounded-lg overflow-x-auto">
-									<Table>
-										<TableHeader>
-											<TableRow>
-												<TableHead>Technique</TableHead>
-												<TableHead>Color</TableHead>
-												<TableHead>Text</TableHead>
-												<TableHead className="text-center">Letters</TableHead>
-												<TableHead className="text-right text-orange-600">Cost/Letter</TableHead>
-												<TableHead className="text-center">Markup</TableHead>
-												<TableHead className="text-right">Retail</TableHead>
-												<TableHead className="text-right">Total</TableHead>
-											</TableRow>
-										</TableHeader>
-										<TableBody>
-											{quote.lettering.map((lett) => (
-												<TableRow key={lett.id}>
-													<TableCell className="font-medium">
-														{lett.techniqueName || '-'}
-													</TableCell>
-													<TableCell>{lett.colorName || '-'}</TableCell>
-													<TableCell className="max-w-[200px] truncate">
-														{lett.text || '-'}
-													</TableCell>
-													<TableCell className="text-center">{lett.letterCount}</TableCell>
-													<TableCell className="text-right text-orange-600">
-														<EditableNumber
-															value={parseFloat(lett.supplierCost)}
-															onSave={async (value) => {
-																await updateLetteringPricing.mutateAsync({
-																	quoteId: quote.id,
-																	itemId: lett.id,
-																	supplierCost: value,
-																});
-															}}
-															disabled={!canEditPricing}
-															isCurrency
-														/>
-													</TableCell>
-													<TableCell className="text-center text-muted-foreground text-sm">
-														<EditableNumber
-															value={parseFloat(lett.markupPercent)}
-															onSave={async (value) => {
-																await updateLetteringPricing.mutateAsync({
-																	quoteId: quote.id,
-																	itemId: lett.id,
-																	markupPercent: value,
-																});
-															}}
-															disabled={!canEditPricing}
-															min={0}
-															formatValue={(val) => `${val.toFixed(0)}%`}
-														/>
-													</TableCell>
-													<TableCell className="text-right">
-														{formatCurrency(lett.unitPrice)}
-													</TableCell>
-													<TableCell className="text-right font-medium">
-														{formatCurrency(lett.lineTotal)}
-													</TableCell>
-												</TableRow>
-											))}
-										</TableBody>
-									</Table>
-								</div>
+							<CardContent className="space-y-6">
+								{/* Section: Proposed Inscription */}
+								{quote.proposedInscription && (
+									<div className="space-y-2">
+										<div className="flex items-center justify-between">
+											<span className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+												Proposed Inscription
+											</span>
+											<span className="text-sm text-muted-foreground">
+												{quote.proposedInscription.length} characters
+											</span>
+										</div>
+										<p className="whitespace-pre-wrap bg-muted p-3 rounded font-mono text-sm">
+											{quote.proposedInscription}
+										</p>
+									</div>
+								)}
+
+								{/* Divider - only when both sections are shown */}
+								{quote.proposedInscription && quote.lettering.length > 0 && (
+									<div className="border-t" />
+								)}
+
+								{/* Section: Lettering Details */}
+								{quote.lettering.length > 0 && (
+									<div className="space-y-3">
+										<span className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+											Lettering Details
+										</span>
+										<div className="border rounded-lg overflow-x-auto">
+											<Table>
+												<TableHeader>
+													<TableRow>
+														<TableHead>Technique</TableHead>
+														<TableHead>Color</TableHead>
+														<TableHead>Text</TableHead>
+														<TableHead className="text-center">Letters</TableHead>
+														<TableHead className="text-right text-orange-600">Cost/Letter</TableHead>
+														<TableHead className="text-center">Markup</TableHead>
+														<TableHead className="text-right">Retail</TableHead>
+														<TableHead className="text-right">Total</TableHead>
+													</TableRow>
+												</TableHeader>
+												<TableBody>
+													{quote.lettering.map((lett) => (
+														<TableRow key={lett.id}>
+															<TableCell className="font-medium">
+																{lett.techniqueName || '-'}
+															</TableCell>
+															<TableCell>{lett.colorName || '-'}</TableCell>
+															<TableCell className="max-w-[200px] truncate">
+																{lett.text || '-'}
+															</TableCell>
+															<TableCell className="text-center">{lett.letterCount}</TableCell>
+															<TableCell className="text-right text-orange-600">
+																<EditableNumber
+																	value={parseFloat(lett.supplierCost)}
+																	onSave={async (value) => {
+																		await updateLetteringPricing.mutateAsync({
+																			quoteId: quote.id,
+																			itemId: lett.id,
+																			supplierCost: value,
+																		});
+																	}}
+																	disabled={!canEditPricing}
+																	isCurrency
+																/>
+															</TableCell>
+															<TableCell className="text-center text-muted-foreground text-sm">
+																<EditableNumber
+																	value={parseFloat(lett.markupPercent)}
+																	onSave={async (value) => {
+																		await updateLetteringPricing.mutateAsync({
+																			quoteId: quote.id,
+																			itemId: lett.id,
+																			markupPercent: value,
+																		});
+																	}}
+																	disabled={!canEditPricing}
+																	min={0}
+																	formatValue={(val) => `${val.toFixed(0)}%`}
+																/>
+															</TableCell>
+															<TableCell className="text-right">
+																{formatCurrency(lett.unitPrice)}
+															</TableCell>
+															<TableCell className="text-right font-medium">
+																{formatCurrency(lett.lineTotal)}
+															</TableCell>
+														</TableRow>
+													))}
+												</TableBody>
+											</Table>
+										</div>
+									</div>
+								)}
 							</CardContent>
 						</Card>
 					)}
