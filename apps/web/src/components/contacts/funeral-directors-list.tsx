@@ -11,14 +11,22 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useFuneralDirectorsQuery } from '@/hooks/use-funeral-directors';
-import { Search } from 'lucide-react';
+import {
+	Card,
+	CardContent,
+	CardHeader,
+	CardTitle,
+} from '@/components/ui/card';
+import { useFuneralDirectorsQuery, type FuneralDirectorListItem } from '@/hooks/use-funeral-directors';
+import { Search, List, LayoutGrid, Mail, Phone, MapPin, Building } from 'lucide-react';
 
 type ViewMode = 'active' | 'archived';
+type DisplayMode = 'table' | 'cards';
 
 export function FuneralDirectorsList() {
 	const [searchQuery, setSearchQuery] = useState('');
 	const [viewMode, setViewMode] = useState<ViewMode>('active');
+	const [displayMode, setDisplayMode] = useState<DisplayMode>('table');
 	const [debouncedSearch, setDebouncedSearch] = useState('');
 
 	// Debounce search
@@ -66,9 +74,29 @@ export function FuneralDirectorsList() {
 						/>
 					</div>
 				</div>
-				<Link to="/app/funeral-directors/new">
-					<Button>Add Funeral Director</Button>
-				</Link>
+				<div className="flex items-center gap-2">
+					<div className="flex items-center border rounded-md">
+						<Button
+							variant={displayMode === 'table' ? 'secondary' : 'ghost'}
+							size="sm"
+							className="rounded-r-none"
+							onClick={() => setDisplayMode('table')}
+						>
+							<List className="h-4 w-4" />
+						</Button>
+						<Button
+							variant={displayMode === 'cards' ? 'secondary' : 'ghost'}
+							size="sm"
+							className="rounded-l-none"
+							onClick={() => setDisplayMode('cards')}
+						>
+							<LayoutGrid className="h-4 w-4" />
+						</Button>
+					</div>
+					<Link to="/app/funeral-directors/new">
+						<Button>Add Funeral Director</Button>
+					</Link>
+				</div>
 			</div>
 
 			{funeralDirectors && funeralDirectors.length === 0 ? (
@@ -79,7 +107,7 @@ export function FuneralDirectorsList() {
 							? 'No archived funeral directors.'
 							: 'No funeral directors yet. Add your first funeral director to get started.'}
 				</div>
-			) : (
+			) : displayMode === 'table' ? (
 				<div className="border rounded-lg">
 					<Table>
 						<TableHeader>
@@ -136,7 +164,68 @@ export function FuneralDirectorsList() {
 						</TableBody>
 					</Table>
 				</div>
+			) : (
+				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+					{funeralDirectors?.map((fd) => (
+						<FuneralDirectorCard key={fd.id} funeralDirector={fd} />
+					))}
+				</div>
 			)}
 		</div>
+	);
+}
+
+function FuneralDirectorCard({ funeralDirector: fd }: { funeralDirector: FuneralDirectorListItem }) {
+	const displayName = fd.tradingName || fd.businessName;
+
+	return (
+		<Card className="hover:shadow-md transition-shadow">
+			<CardHeader className="pb-3">
+				<CardTitle className="text-base">{displayName}</CardTitle>
+				{fd.branchName && (
+					<p className="text-sm text-muted-foreground">{fd.branchName}</p>
+				)}
+			</CardHeader>
+			<CardContent className="space-y-3">
+				<div className="flex flex-col gap-1.5 text-sm text-muted-foreground">
+					{fd.primaryEmail?.value && (
+						<div className="flex items-center gap-2">
+							<Mail className="h-3.5 w-3.5" />
+							<span className="truncate">{fd.primaryEmail.value}</span>
+						</div>
+					)}
+					{fd.primaryPhone?.value && (
+						<div className="flex items-center gap-2">
+							<Phone className="h-3.5 w-3.5" />
+							<span>{fd.primaryPhone.value}</span>
+						</div>
+					)}
+					{fd.primaryAddress && (
+						<div className="flex items-center gap-2">
+							<MapPin className="h-3.5 w-3.5" />
+							<span>
+								{fd.primaryAddress.locality}
+								{fd.primaryAddress.administrativeAreaLevel1 &&
+									`, ${fd.primaryAddress.administrativeAreaLevel1}`}
+							</span>
+						</div>
+					)}
+					{!fd.primaryEmail?.value && !fd.primaryPhone?.value && !fd.primaryAddress && (
+						<div className="flex items-center gap-2">
+							<Building className="h-3.5 w-3.5" />
+							<span>No contact info</span>
+						</div>
+					)}
+				</div>
+
+				<div className="pt-2">
+					<Link to={`/app/funeral-directors/${fd.id}`}>
+						<Button variant="outline" size="sm" className="w-full">
+							View Details
+						</Button>
+					</Link>
+				</div>
+			</CardContent>
+		</Card>
 	);
 }
