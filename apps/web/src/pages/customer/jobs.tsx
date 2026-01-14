@@ -4,6 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import {
+	Card,
+	CardContent,
+	CardHeader,
+	CardTitle,
+} from '@/components/ui/card';
+import {
 	Select,
 	SelectContent,
 	SelectItem,
@@ -26,13 +32,16 @@ import {
 	type JobStatus,
 	type JobListItem,
 } from '@/hooks/use-jobs';
-import { Search, AlertCircle } from 'lucide-react';
+import { Search, AlertCircle, List, LayoutGrid, User, Wrench, Calendar, PoundSterling } from 'lucide-react';
+
+type DisplayMode = 'table' | 'cards';
 
 const ALL_STATUS_VALUE = '_all';
 
 export function JobsPage() {
 	const [search, setSearch] = useState('');
 	const [statusFilter, setStatusFilter] = useState<JobStatus | ''>('');
+	const [displayMode, setDisplayMode] = useState<DisplayMode>('table');
 
 	// Debounce search
 	const debouncedSearch = useMemo(() => {
@@ -107,6 +116,24 @@ export function JobsPage() {
 						))}
 					</SelectContent>
 				</Select>
+				<div className="flex items-center border rounded-md">
+					<Button
+						variant={displayMode === 'table' ? 'secondary' : 'ghost'}
+						size="sm"
+						className="rounded-r-none"
+						onClick={() => setDisplayMode('table')}
+					>
+						<List className="h-4 w-4" />
+					</Button>
+					<Button
+						variant={displayMode === 'cards' ? 'secondary' : 'ghost'}
+						size="sm"
+						className="rounded-l-none"
+						onClick={() => setDisplayMode('cards')}
+					>
+						<LayoutGrid className="h-4 w-4" />
+					</Button>
+				</div>
 			</div>
 
 			{/* Error state */}
@@ -135,84 +162,177 @@ export function JobsPage() {
 				</div>
 			)}
 
-			{/* Jobs table */}
+			{/* Jobs list */}
 			{!isLoading && jobs && jobs.length > 0 && (
-				<div className="border rounded-lg">
-					<Table>
-						<TableHeader>
-							<TableRow>
-								<TableHead>Job #</TableHead>
-								<TableHead>Customer</TableHead>
-								<TableHead>Service</TableHead>
-								<TableHead className="text-right">Total</TableHead>
-								<TableHead>Payment</TableHead>
-								<TableHead>Status</TableHead>
-								<TableHead>Created</TableHead>
-								<TableHead className="w-[100px]"></TableHead>
-							</TableRow>
-						</TableHeader>
-						<TableBody>
-							{jobs.map((job) => {
-								const paymentStatus = getPaymentStatus(job);
-								return (
-									<TableRow key={job.id}>
-										<TableCell className="font-medium">
-											{job.jobNumber}
-										</TableCell>
-										<TableCell>
-											{job.customerFirstName && job.customerLastName
-												? `${job.customerFirstName} ${job.customerLastName}`
-												: 'Walk-in'}
-										</TableCell>
-										<TableCell>{job.serviceName || '-'}</TableCell>
-										<TableCell className="text-right">
-											{formatCurrency(job.total)}
-										</TableCell>
-										<TableCell>
-											{paymentStatus ? (
-												<div className="flex items-center gap-1.5">
-													{paymentStatus.isPaid ? (
-														<Badge variant="default" className="bg-green-600">
-															Paid
-														</Badge>
-													) : (
-														<>
-															<span className="text-sm">
-																{formatCurrency(paymentStatus.paidAmount)} of {formatCurrency(paymentStatus.totalAmount)}
-															</span>
-															{paymentStatus.hasOverdue && (
-																<Badge variant="destructive" className="h-5 text-xs px-1.5">
-																	<AlertCircle className="h-3 w-3 mr-0.5" />
-																	Late
-																</Badge>
-															)}
-														</>
-													)}
-												</div>
-											) : (
-												<span className="text-muted-foreground">-</span>
-											)}
-										</TableCell>
-										<TableCell>
-											<Badge variant={getJobStatusVariant(job.status)}>
-												{formatJobStatus(job.status)}
-											</Badge>
-										</TableCell>
-										<TableCell>{formatDate(job.createdAt)}</TableCell>
-										<TableCell>
-											<Link to={`/app/jobs/${job.id}`}>
-												<Button variant="ghost" size="sm">
-													View
-												</Button>
-											</Link>
-										</TableCell>
-									</TableRow>
-								);
-							})}
-						</TableBody>
-					</Table>
-				</div>
+				displayMode === 'table' ? (
+					<div className="border rounded-lg">
+						<Table>
+							<TableHeader>
+								<TableRow>
+									<TableHead>Job #</TableHead>
+									<TableHead>Customer</TableHead>
+									<TableHead>Service</TableHead>
+									<TableHead className="text-right">Total</TableHead>
+									<TableHead>Payment</TableHead>
+									<TableHead>Status</TableHead>
+									<TableHead>Created</TableHead>
+									<TableHead className="w-[100px]"></TableHead>
+								</TableRow>
+							</TableHeader>
+							<TableBody>
+								{jobs.map((job) => {
+									const paymentStatus = getPaymentStatus(job);
+									return (
+										<TableRow key={job.id}>
+											<TableCell className="font-medium">
+												{job.jobNumber}
+											</TableCell>
+											<TableCell>
+												{job.customerFirstName && job.customerLastName
+													? `${job.customerFirstName} ${job.customerLastName}`
+													: 'Walk-in'}
+											</TableCell>
+											<TableCell>{job.serviceName || '-'}</TableCell>
+											<TableCell className="text-right">
+												{formatCurrency(job.total)}
+											</TableCell>
+											<TableCell>
+												{paymentStatus ? (
+													<div className="flex items-center gap-1.5">
+														{paymentStatus.isPaid ? (
+															<Badge variant="default" className="bg-green-600">
+																Paid
+															</Badge>
+														) : (
+															<>
+																<span className="text-sm">
+																	{formatCurrency(paymentStatus.paidAmount)} of {formatCurrency(paymentStatus.totalAmount)}
+																</span>
+																{paymentStatus.hasOverdue && (
+																	<Badge variant="destructive" className="h-5 text-xs px-1.5">
+																		<AlertCircle className="h-3 w-3 mr-0.5" />
+																		Late
+																	</Badge>
+																)}
+															</>
+														)}
+													</div>
+												) : (
+													<span className="text-muted-foreground">-</span>
+												)}
+											</TableCell>
+											<TableCell>
+												<Badge variant={getJobStatusVariant(job.status)}>
+													{formatJobStatus(job.status)}
+												</Badge>
+											</TableCell>
+											<TableCell>{formatDate(job.createdAt)}</TableCell>
+											<TableCell>
+												<Link to={`/app/jobs/${job.id}`}>
+													<Button variant="ghost" size="sm">
+														View
+													</Button>
+												</Link>
+											</TableCell>
+										</TableRow>
+									);
+								})}
+							</TableBody>
+						</Table>
+					</div>
+				) : (
+					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+						{jobs.map((job) => (
+							<JobCard
+								key={job.id}
+								job={job}
+								formatCurrency={formatCurrency}
+								formatDate={formatDate}
+								getPaymentStatus={getPaymentStatus}
+							/>
+						))}
+					</div>
+				)
 			)}
 		</div>
+	);
+}
+
+interface JobCardProps {
+	job: JobListItem;
+	formatCurrency: (value: string | number) => string;
+	formatDate: (dateString: string) => string;
+	getPaymentStatus: (job: JobListItem) => { paidAmount: number; totalAmount: number; isPaid: boolean; hasOverdue: boolean } | null;
+}
+
+function JobCard({ job, formatCurrency, formatDate, getPaymentStatus }: JobCardProps) {
+	const customerName = job.customerFirstName && job.customerLastName
+		? `${job.customerFirstName} ${job.customerLastName}`
+		: 'Walk-in';
+	const paymentStatus = getPaymentStatus(job);
+
+	return (
+		<Card className="hover:shadow-md transition-shadow">
+			<CardHeader className="pb-3">
+				<div className="flex items-center justify-between">
+					<CardTitle className="text-base font-semibold">{job.jobNumber}</CardTitle>
+					<Badge variant={getJobStatusVariant(job.status)}>
+						{formatJobStatus(job.status)}
+					</Badge>
+				</div>
+			</CardHeader>
+			<CardContent className="space-y-3">
+				<div className="flex flex-col gap-1.5 text-sm text-muted-foreground">
+					<div className="flex items-center gap-2">
+						<User className="h-3.5 w-3.5" />
+						<span>{customerName}</span>
+					</div>
+					{job.serviceName && (
+						<div className="flex items-center gap-2">
+							<Wrench className="h-3.5 w-3.5" />
+							<span>{job.serviceName}</span>
+						</div>
+					)}
+					<div className="flex items-center gap-2">
+						<PoundSterling className="h-3.5 w-3.5" />
+						<span className="font-medium text-foreground">{formatCurrency(job.total)}</span>
+					</div>
+					<div className="flex items-center gap-2">
+						<Calendar className="h-3.5 w-3.5" />
+						<span>{formatDate(job.createdAt)}</span>
+					</div>
+				</div>
+
+				{paymentStatus && (
+					<div className="flex items-center gap-1.5">
+						{paymentStatus.isPaid ? (
+							<Badge variant="default" className="bg-green-600">
+								Paid
+							</Badge>
+						) : (
+							<>
+								<span className="text-sm text-muted-foreground">
+									{formatCurrency(paymentStatus.paidAmount)} of {formatCurrency(paymentStatus.totalAmount)}
+								</span>
+								{paymentStatus.hasOverdue && (
+									<Badge variant="destructive" className="h-5 text-xs px-1.5">
+										<AlertCircle className="h-3 w-3 mr-0.5" />
+										Late
+									</Badge>
+								)}
+							</>
+						)}
+					</div>
+				)}
+
+				<div className="pt-2">
+					<Link to={`/app/jobs/${job.id}`}>
+						<Button variant="outline" size="sm" className="w-full">
+							View Details
+						</Button>
+					</Link>
+				</div>
+			</CardContent>
+		</Card>
 	);
 }
