@@ -556,8 +556,7 @@ const quotesRoutes = new Hono()
 							: null,
 					optionCount,
 					firstQuoteNumber,
-					minPrice: priceRange.minPrice,
-					maxPrice: priceRange.maxPrice,
+					priceRange,
 				};
 			})
 		);

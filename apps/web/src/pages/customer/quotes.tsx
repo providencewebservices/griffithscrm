@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router';
 import {
 	Table,
@@ -50,7 +50,7 @@ export function QuotesPage() {
 	const [debouncedSearch, setDebouncedSearch] = useState('');
 
 	// Debounce search
-	useMemo(() => {
+	useEffect(() => {
 		const timer = setTimeout(() => {
 			setDebouncedSearch(searchQuery);
 		}, 300);
