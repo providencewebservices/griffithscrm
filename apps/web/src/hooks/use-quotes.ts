@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
 	QUOTE_STATUSES,
+	QUOTE_TYPES,
 	COMPONENT_TYPES,
 	FLOWER_HOLE_CHOICES,
 } from '@griffiths-crm/shared/db/schema';
@@ -9,6 +10,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 // Types
 export type QuoteStatus = (typeof QUOTE_STATUSES)[number];
+export type QuoteType = (typeof QUOTE_TYPES)[number];
 export type ComponentType = (typeof COMPONENT_TYPES)[number];
 export type FlowerHoleChoice = (typeof FLOWER_HOLE_CHOICES)[number];
 
@@ -114,6 +116,7 @@ export type Quote = {
 	tenantId: string;
 	parentQuoteId: string | null;
 	version: number;
+	quoteType: QuoteType;
 	serviceId: string | null;
 	customerId: string | null;
 	productId: string | null;
@@ -130,6 +133,9 @@ export type Quote = {
 	internalNotes: string | null;
 	flowerHoles: FlowerHoleChoice | null;
 	proposedInscription: string | null;
+	// For additional inscription / refurbishment quotes
+	existingMemorialDescription: string | null;
+	relatedJobId: string | null;
 	validUntil: string | null;
 	createdAt: string;
 	updatedAt: string;
@@ -203,6 +209,7 @@ export type CustomerDetailsInput = {
 };
 
 export type CreateQuoteInput = {
+	quoteType?: QuoteType;
 	serviceId: string;
 	customerId?: string;
 	productId?: string;
@@ -210,6 +217,9 @@ export type CreateQuoteInput = {
 	flowerHoles?: FlowerHoleChoice;
 	source?: string;
 	proposedInscription?: string;
+	// For additional inscription / refurbishment quotes
+	existingMemorialDescription?: string;
+	relatedJobId?: string;
 	notes?: string;
 	internalNotes?: string;
 	validUntil?: string;
@@ -221,6 +231,7 @@ export type CreateQuoteInput = {
 
 export type QuoteSearchParams = {
 	status?: QuoteStatus;
+	quoteType?: QuoteType;
 	customerId?: string;
 	search?: string;
 	latestOnly?: boolean;
@@ -239,6 +250,7 @@ type QuoteResponse = {
 async function fetchQuotes(params?: QuoteSearchParams): Promise<QuoteListItem[]> {
 	const searchParams = new URLSearchParams();
 	if (params?.status) searchParams.set('status', params.status);
+	if (params?.quoteType) searchParams.set('quoteType', params.quoteType);
 	if (params?.customerId) searchParams.set('customerId', params.customerId);
 	if (params?.search) searchParams.set('search', params.search);
 	if (params?.latestOnly !== undefined) {
@@ -742,5 +754,108 @@ export function getQuoteStatusVariant(
 	}
 }
 
+// Quote type labels and helpers
+export const QUOTE_TYPE_LABELS: Record<QuoteType, string> = {
+	new_memorial: 'New Memorial',
+	additional_inscription: 'Additional Inscription',
+	refurbishment: 'Refurbishment',
+	ashes: 'Ashes',
+	sundry_only: 'Sundry Only',
+};
+
+export const QUOTE_TYPE_DESCRIPTIONS: Record<QuoteType, string> = {
+	new_memorial: 'Full memorial installation',
+	additional_inscription: 'Add text to existing memorial',
+	refurbishment: 'Clean or restore existing memorial',
+	ashes: 'Ashes interment with marker',
+	sundry_only: 'Accessories only',
+};
+
+export function formatQuoteType(type: QuoteType): string {
+	return QUOTE_TYPE_LABELS[type] || type;
+}
+
+export function getQuoteTypeVariant(
+	type: QuoteType
+): 'default' | 'secondary' | 'destructive' | 'outline' {
+	switch (type) {
+		case 'new_memorial':
+			return 'default';
+		case 'additional_inscription':
+			return 'secondary';
+		case 'refurbishment':
+			return 'outline';
+		case 'ashes':
+			return 'secondary';
+		case 'sundry_only':
+			return 'outline';
+		default:
+			return 'secondary';
+	}
+}
+
+// Section visibility configuration based on quote type
+export const QUOTE_TYPE_SECTION_CONFIG: Record<QuoteType, {
+	showProductSelection: boolean;
+	showComponents: boolean;
+	showFlowerHoles: boolean;
+	showProposedInscription: boolean;
+	showLettering: boolean;
+	showSundries: boolean;
+	showExistingMemorial: boolean;
+	showRelatedJob: boolean;
+}> = {
+	new_memorial: {
+		showProductSelection: true,
+		showComponents: true,
+		showFlowerHoles: true,
+		showProposedInscription: true,
+		showLettering: true,
+		showSundries: true,
+		showExistingMemorial: false,
+		showRelatedJob: false,
+	},
+	additional_inscription: {
+		showProductSelection: false,
+		showComponents: false,
+		showFlowerHoles: false,
+		showProposedInscription: true,
+		showLettering: true,
+		showSundries: true,
+		showExistingMemorial: true,
+		showRelatedJob: true,
+	},
+	refurbishment: {
+		showProductSelection: false,
+		showComponents: false,
+		showFlowerHoles: false,
+		showProposedInscription: false,
+		showLettering: true,
+		showSundries: true,
+		showExistingMemorial: true,
+		showRelatedJob: true,
+	},
+	ashes: {
+		showProductSelection: true,
+		showComponents: true,
+		showFlowerHoles: false,
+		showProposedInscription: true,
+		showLettering: true,
+		showSundries: true,
+		showExistingMemorial: false,
+		showRelatedJob: false,
+	},
+	sundry_only: {
+		showProductSelection: false,
+		showComponents: false,
+		showFlowerHoles: false,
+		showProposedInscription: false,
+		showLettering: false,
+		showSundries: true,
+		showExistingMemorial: false,
+		showRelatedJob: false,
+	},
+};
+
 // Re-export for convenience
-export { FLOWER_HOLE_CHOICES };
+export { FLOWER_HOLE_CHOICES, QUOTE_TYPES };

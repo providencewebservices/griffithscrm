@@ -43,11 +43,16 @@ import {
 	formatComponentType,
 	COMPONENT_TYPE_GROUPS,
 	FLOWER_HOLE_CHOICES,
+	QUOTE_TYPES,
+	QUOTE_TYPE_LABELS,
+	QUOTE_TYPE_DESCRIPTIONS,
+	QUOTE_TYPE_SECTION_CONFIG,
 	type ComponentInput,
 	type LetteringInput,
 	type SundryInput,
 	type ComponentType,
 	type FlowerHoleChoice,
+	type QuoteType,
 	type CustomerDetailsInput,
 } from '@/hooks/use-quotes';
 import { useCustomersQuery } from '@/hooks/use-customers';
@@ -60,8 +65,11 @@ import { useLetteringTechniquesQuery } from '@/hooks/use-lettering-techniques';
 import { useLetteringColorsQuery } from '@/hooks/use-lettering-colors';
 import { useSundriesQuery } from '@/hooks/use-sundries';
 import { useServicesQuery } from '@/hooks/use-services';
+import { useJobsQuery, type JobListItem } from '@/hooks/use-jobs';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 import { COMPONENT_TYPES, ENQUIRY_SOURCES } from '@griffiths-crm/shared/db/schema';
-import { ArrowLeft, Plus, Trash2, User, Check, ChevronsUpDown } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, User, Check, ChevronsUpDown, FileText, PlusCircle, RefreshCw, Flower, Package } from 'lucide-react';
 import {
 	Command,
 	CommandEmpty,
@@ -104,6 +112,7 @@ export function QuoteNewPage() {
 	const reviseId = searchParams.get('revise');
 
 	// Form state
+	const [quoteType, setQuoteType] = useState<QuoteType>('new_memorial');
 	const [serviceId, setServiceId] = useState<string>('');
 	const [customerId, setCustomerId] = useState<string>('');
 	const [customerComboOpen, setCustomerComboOpen] = useState(false);
@@ -113,6 +122,9 @@ export function QuoteNewPage() {
 	const [flowerHoles, setFlowerHoles] = useState<FlowerHoleChoice | ''>('');
 	const [source, setSource] = useState<EnquirySource | ''>('');
 	const [proposedInscription, setProposedInscription] = useState('');
+	const [existingMemorialDescription, setExistingMemorialDescription] = useState('');
+	const [relatedJobId, setRelatedJobId] = useState<string>('');
+	const [relatedJobComboOpen, setRelatedJobComboOpen] = useState(false);
 	const [notes, setNotes] = useState('');
 	const [internalNotes, setInternalNotes] = useState('');
 	const [validUntil, setValidUntil] = useState('');
@@ -157,6 +169,11 @@ export function QuoteNewPage() {
 	const { data: colors } = useLetteringColorsQuery();
 	const { data: sundryItems } = useSundriesQuery();
 	const { data: serviceItems } = useServicesQuery();
+	// Fetch completed jobs for related job selector (only when needed)
+	const sectionConfig = QUOTE_TYPE_SECTION_CONFIG[quoteType];
+	const { data: completedJobs } = useJobsQuery(
+		sectionConfig?.showRelatedJob ? { status: 'completed' } : undefined
+	);
 
 	// Fetch quote to revise if applicable
 	const { data: originalQuote, isLoading: isLoadingOriginal } = useQuoteQuery(reviseId || undefined);
@@ -191,6 +208,7 @@ export function QuoteNewPage() {
 	// Pre-fill form if revising
 	useEffect(() => {
 		if (originalQuote) {
+			setQuoteType(originalQuote.quoteType || 'new_memorial');
 			setServiceId(originalQuote.serviceId || '');
 			setCustomerId(originalQuote.customerId || '');
 			setProductId(originalQuote.productId || '');
@@ -198,6 +216,8 @@ export function QuoteNewPage() {
 			setFlowerHoles(originalQuote.flowerHoles || '');
 			setSource((originalQuote.source as EnquirySource) || '');
 			setProposedInscription(originalQuote.proposedInscription || '');
+			setExistingMemorialDescription(originalQuote.existingMemorialDescription || '');
+			setRelatedJobId(originalQuote.relatedJobId || '');
 			setNotes(originalQuote.notes || '');
 			setInternalNotes(originalQuote.internalNotes || '');
 			setValidUntil(originalQuote.validUntil ? originalQuote.validUntil.split('T')[0] : '');
@@ -353,18 +373,14 @@ export function QuoteNewPage() {
 		}));
 	}, [materialSections]);
 
-	// Validate form
+	// Validate form based on quote type
 	const canSubmit = useMemo(() => {
 		// Must have a service selected
 		if (!serviceId) return false;
 
-		// Must have at least one line item
-		const hasLineItems =
-			components.length > 0 ||
-			lettering.length > 0 ||
-			sundries.length > 0;
+		const config = QUOTE_TYPE_SECTION_CONFIG[quoteType];
 
-		// All components must have materialId
+		// All components must have materialId (if components section is shown)
 		const componentsValid = components.every((c) => c.materialId);
 
 		// All lettering must have techniqueId and text
@@ -373,13 +389,36 @@ export function QuoteNewPage() {
 		// All sundries must have sundryId
 		const sundriesValid = sundries.every((s) => s.sundryId);
 
-		return hasLineItems && componentsValid && letteringValid && sundriesValid;
-	}, [serviceId, components, lettering, sundries]);
+		// Type-specific validation
+		switch (quoteType) {
+			case 'sundry_only':
+				// Must have at least one sundry
+				return sundries.length > 0 && sundriesValid;
+
+			case 'additional_inscription':
+				// Must have lettering
+				return lettering.length > 0 && letteringValid && sundriesValid;
+
+			case 'refurbishment':
+				// Must have at least lettering, sundries, or line items
+				return (lettering.length > 0 || sundries.length > 0) && letteringValid && sundriesValid;
+
+			default:
+				// Must have at least one line item
+				const hasLineItems =
+					components.length > 0 ||
+					lettering.length > 0 ||
+					sundries.length > 0;
+
+				return hasLineItems && componentsValid && letteringValid && sundriesValid;
+		}
+	}, [serviceId, quoteType, components, lettering, sundries]);
 
 	const handleSubmit = async () => {
 		setMutationError(null);
 
 		const quoteData = {
+			quoteType,
 			serviceId,
 			customerId: customerId || undefined,
 			productId: productId || undefined,
@@ -387,6 +426,8 @@ export function QuoteNewPage() {
 			flowerHoles: flowerHoles || undefined,
 			source: source || undefined,
 			proposedInscription: proposedInscription || undefined,
+			existingMemorialDescription: existingMemorialDescription || undefined,
+			relatedJobId: relatedJobId || undefined,
 			notes: notes || undefined,
 			internalNotes: internalNotes || undefined,
 			validUntil: validUntil ? new Date(validUntil).toISOString() : undefined,
@@ -494,7 +535,62 @@ export function QuoteNewPage() {
 			)}
 
 			<div className="space-y-6">
-				{/* Card 1: Service & Customer */}
+				{/* Quote Type Selector */}
+				<Card>
+					<CardHeader>
+						<CardTitle>Quote Type</CardTitle>
+						<CardDescription>Select the type of work for this quote</CardDescription>
+					</CardHeader>
+					<CardContent>
+						<RadioGroup
+							value={quoteType}
+							onValueChange={(v) => setQuoteType(v as QuoteType)}
+							className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"
+						>
+							{QUOTE_TYPES.map((type) => {
+								const icons: Record<QuoteType, typeof FileText> = {
+									new_memorial: FileText,
+									additional_inscription: PlusCircle,
+									refurbishment: RefreshCw,
+									ashes: Flower,
+									sundry_only: Package,
+								};
+								const Icon = icons[type];
+								const isSelected = quoteType === type;
+								return (
+									<div key={type}>
+										<RadioGroupItem
+											value={type}
+											id={`quote-type-${type}`}
+											className="sr-only"
+										/>
+										<Label
+											htmlFor={`quote-type-${type}`}
+											className={cn(
+												'flex items-start gap-3 p-4 border rounded-lg cursor-pointer transition-colors',
+												isSelected
+													? 'border-primary bg-primary/5 ring-1 ring-primary'
+													: 'hover:bg-muted/50'
+											)}
+										>
+											<Icon className={cn('h-5 w-5 mt-0.5 shrink-0', isSelected ? 'text-primary' : 'text-muted-foreground')} />
+											<div>
+												<div className={cn('font-medium', isSelected && 'text-primary')}>
+													{QUOTE_TYPE_LABELS[type]}
+												</div>
+												<div className="text-sm text-muted-foreground">
+													{QUOTE_TYPE_DESCRIPTIONS[type]}
+												</div>
+											</div>
+										</Label>
+									</div>
+								);
+							})}
+						</RadioGroup>
+					</CardContent>
+				</Card>
+
+				{/* Service & Customer */}
 				<Card>
 					<CardHeader>
 						<CardTitle>Service & Customer</CardTitle>
@@ -801,12 +897,113 @@ export function QuoteNewPage() {
 					</CardContent>
 				</Card>
 
-				{/* Card 2: Memorial Details */}
-				<Card>
-					<CardHeader>
-						<CardTitle>Memorial Details</CardTitle>
-						<CardDescription>Product selection and specifications</CardDescription>
-					</CardHeader>
+				{/* Existing Memorial & Related Job - shown for additional inscription and refurbishment */}
+				{sectionConfig?.showExistingMemorial && (
+					<Card>
+						<CardHeader>
+							<CardTitle>Existing Memorial</CardTitle>
+							<CardDescription>
+								Details about the memorial being worked on
+							</CardDescription>
+						</CardHeader>
+						<CardContent className="space-y-6">
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+								{/* Existing Memorial Description */}
+								<Field className="md:col-span-2">
+									<FieldLabel>Memorial Description</FieldLabel>
+									<Textarea
+										value={existingMemorialDescription}
+										onChange={(e) => setExistingMemorialDescription(e.target.value)}
+										placeholder="Describe the existing memorial (e.g., Black granite headstone with white lettering, located in Row B, Plot 15)"
+										rows={3}
+									/>
+								</Field>
+
+								{/* Related Job Selector */}
+								{sectionConfig?.showRelatedJob && (
+									<Field className="md:col-span-2">
+										<FieldLabel>Related Previous Job</FieldLabel>
+										<Popover open={relatedJobComboOpen} onOpenChange={setRelatedJobComboOpen}>
+											<PopoverTrigger asChild>
+												<Button
+													variant="outline"
+													role="combobox"
+													aria-expanded={relatedJobComboOpen}
+													className="w-full justify-between font-normal"
+												>
+													{relatedJobId
+														? (() => {
+															const job = completedJobs?.find((j) => j.id === relatedJobId);
+															return job
+																? `${job.jobNumber} - ${job.customerFirstName} ${job.customerLastName}`
+																: 'Select a previous job...';
+														})()
+														: 'Select a previous job (optional)...'}
+													<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+												</Button>
+											</PopoverTrigger>
+											<PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+												<Command>
+													<CommandInput placeholder="Search by job number or customer..." />
+													<CommandList>
+														<CommandEmpty>No completed jobs found.</CommandEmpty>
+														<CommandGroup>
+															{relatedJobId && (
+																<CommandItem
+																	value="_clear"
+																	onSelect={() => {
+																		setRelatedJobId('');
+																		setRelatedJobComboOpen(false);
+																	}}
+																>
+																	<span className="text-muted-foreground">Clear selection</span>
+																</CommandItem>
+															)}
+															{completedJobs?.map((job) => (
+																<CommandItem
+																	key={job.id}
+																	value={`${job.jobNumber} ${job.customerFirstName} ${job.customerLastName}`}
+																	onSelect={() => {
+																		setRelatedJobId(job.id);
+																		setRelatedJobComboOpen(false);
+																	}}
+																>
+																	<Check
+																		className={cn(
+																			'mr-2 h-4 w-4',
+																			relatedJobId === job.id ? 'opacity-100' : 'opacity-0'
+																		)}
+																	/>
+																	<div>
+																		<span className="font-medium">{job.jobNumber}</span>
+																		<span className="text-muted-foreground ml-2">
+																			{job.customerFirstName} {job.customerLastName}
+																		</span>
+																	</div>
+																</CommandItem>
+															))}
+														</CommandGroup>
+													</CommandList>
+												</Command>
+											</PopoverContent>
+										</Popover>
+										<p className="text-sm text-muted-foreground mt-1">
+											Link this quote to a previous job if this work relates to one
+										</p>
+									</Field>
+								)}
+							</div>
+						</CardContent>
+					</Card>
+				)}
+
+				{/* Memorial Details - shown for new memorial and ashes */}
+				{sectionConfig?.showProductSelection && (
+					<Card>
+						<CardHeader>
+							<CardTitle>Memorial Details</CardTitle>
+							<CardDescription>Product selection and specifications</CardDescription>
+						</CardHeader>
 					<CardContent>
 						<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 							{/* Product Reference */}
@@ -889,30 +1086,34 @@ export function QuoteNewPage() {
 								</Field>
 							)}
 
-							{/* Flower Holes */}
-							<Field>
-								<FieldLabel>Flower Holes</FieldLabel>
-								<Select
-									value={flowerHoles}
-									onValueChange={(v) => setFlowerHoles(v as FlowerHoleChoice | '')}
-								>
-									<SelectTrigger>
-										<SelectValue placeholder="Select option" />
-									</SelectTrigger>
-									<SelectContent>
-										{FLOWER_HOLE_CHOICES.map((choice) => (
-											<SelectItem key={choice} value={choice}>
-												{choice}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-							</Field>
+							{/* Flower Holes - only for new memorial */}
+							{sectionConfig?.showFlowerHoles && (
+								<Field>
+									<FieldLabel>Flower Holes</FieldLabel>
+									<Select
+										value={flowerHoles}
+										onValueChange={(v) => setFlowerHoles(v as FlowerHoleChoice | '')}
+									>
+										<SelectTrigger>
+											<SelectValue placeholder="Select option" />
+										</SelectTrigger>
+										<SelectContent>
+											{FLOWER_HOLE_CHOICES.map((choice) => (
+												<SelectItem key={choice} value={choice}>
+													{choice}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+								</Field>
+							)}
 						</div>
 					</CardContent>
 				</Card>
+				)}
 
-				{/* Card 3: Inscription */}
+				{/* Proposed Inscription - shown for types that need inscription */}
+				{sectionConfig?.showProposedInscription && (
 				<Card>
 					<CardHeader>
 						<CardTitle>Proposed Inscription</CardTitle>
@@ -935,8 +1136,10 @@ export function QuoteNewPage() {
 						</div>
 					</CardContent>
 				</Card>
+				)}
 
-				{/* Stone Components Card */}
+				{/* Stone Components Card - shown for types that need components */}
+				{sectionConfig?.showComponents && (
 				<Card>
 					<CardHeader>
 						<div className="flex items-center justify-between">
@@ -1165,8 +1368,10 @@ export function QuoteNewPage() {
 						)}
 					</CardContent>
 				</Card>
+				)}
 
-				{/* Lettering Card */}
+				{/* Lettering Card - shown for types that need lettering */}
+				{sectionConfig?.showLettering && (
 				<Card>
 					<CardHeader>
 						<div className="flex items-center justify-between">
@@ -1264,8 +1469,10 @@ export function QuoteNewPage() {
 						)}
 					</CardContent>
 				</Card>
+				)}
 
-				{/* Sundries Card */}
+				{/* Sundries Card - shown for all types, required for sundry_only */}
+				{sectionConfig?.showSundries && (
 				<Card>
 					<CardHeader>
 						<div className="flex items-center justify-between">
@@ -1348,6 +1555,7 @@ export function QuoteNewPage() {
 						)}
 					</CardContent>
 				</Card>
+				)}
 
 				{/* Card: Additional Information */}
 				<Card>

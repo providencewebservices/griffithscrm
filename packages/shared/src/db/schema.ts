@@ -811,6 +811,15 @@ export const ENQUIRY_SOURCES = [
 	'other', // Other source
 ] as const;
 
+// Quote types
+export const QUOTE_TYPES = [
+	'new_memorial', // Full memorial installation
+	'additional_inscription', // Adding new text to existing memorial
+	'refurbishment', // Cleaning, re-cutting, re-gilding existing memorial
+	'ashes', // Ashes interment with marker/plaque
+	'sundry_only', // Accessories only, no stonework
+] as const;
+
 // Quotes table (immutable with versioning)
 export const quotes = pgTable('quotes', {
 	id: text('id').primaryKey(),
@@ -832,8 +841,12 @@ export const quotes = pgTable('quotes', {
 	councilId: text('council_id').references(() => councils.id, { onDelete: 'set null' }),
 	memorialSiteId: text('memorial_site_id').references(() => memorialSites.id, { onDelete: 'set null' }),
 	quoteNumber: text('quote_number').notNull(), // Tenant-unique: "Q-00001"
+	quoteType: text('quote_type').notNull().default('new_memorial'), // From QUOTE_TYPES
 	status: text('status').notNull().default('draft'), // From QUOTE_STATUSES
 	source: text('source'), // From ENQUIRY_SOURCES - how the customer contacted us
+	// For additional inscription / refurbishment quotes
+	existingMemorialDescription: text('existing_memorial_description'), // Description of existing memorial being worked on
+	relatedJobId: text('related_job_id'), // Link to previous job on this memorial (no FK to avoid circular)
 	subtotal: numeric('subtotal', { precision: 10, scale: 2 }).notNull().default('0'),
 	vatAmount: numeric('vat_amount', { precision: 10, scale: 2 }).notNull().default('0'),
 	total: numeric('total', { precision: 10, scale: 2 }).notNull().default('0'),

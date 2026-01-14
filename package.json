@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-ses": "^3.965.0",
+    "@radix-ui/react-radio-group": "^1.3.8",
     "drizzle-orm": "latest",
     "nodemailer": "^7.0.12",
     "postgres": "^3.4.5"

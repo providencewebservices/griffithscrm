@@ -29,7 +29,10 @@ import {
 	useQuotesQuery,
 	formatQuoteStatus,
 	getQuoteStatusVariant,
+	QUOTE_TYPE_LABELS,
+	QUOTE_TYPES,
 	type QuoteStatus,
+	type QuoteType,
 	type QuoteListItem,
 } from '@/hooks/use-quotes';
 import { QUOTE_STATUSES } from '@griffiths-crm/shared/db/schema';
@@ -40,6 +43,7 @@ type DisplayMode = 'table' | 'cards';
 export function QuotesPage() {
 	const [searchQuery, setSearchQuery] = useState('');
 	const [statusFilter, setStatusFilter] = useState<QuoteStatus | 'all'>('all');
+	const [typeFilter, setTypeFilter] = useState<QuoteType | 'all'>('all');
 	const [displayMode, setDisplayMode] = useState<DisplayMode>('table');
 	const [debouncedSearch, setDebouncedSearch] = useState('');
 
@@ -54,6 +58,7 @@ export function QuotesPage() {
 	const { data: quotes, isLoading, error } = useQuotesQuery({
 		search: debouncedSearch || undefined,
 		status: statusFilter !== 'all' ? statusFilter : undefined,
+		quoteType: typeFilter !== 'all' ? typeFilter : undefined,
 		latestOnly: true,
 	});
 
@@ -138,6 +143,22 @@ export function QuotesPage() {
 							))}
 						</SelectContent>
 					</Select>
+					<Select
+						value={typeFilter}
+						onValueChange={(value) => setTypeFilter(value as QuoteType | 'all')}
+					>
+						<SelectTrigger className="w-[180px]">
+							<SelectValue placeholder="All types" />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value="all">All Types</SelectItem>
+							{QUOTE_TYPES.map((type) => (
+								<SelectItem key={type} value={type}>
+									{QUOTE_TYPE_LABELS[type]}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
 				</div>
 				<div className="flex items-center gap-2">
 					<div className="flex items-center border rounded-md">
@@ -169,7 +190,7 @@ export function QuotesPage() {
 
 			{quotes && quotes.length === 0 ? (
 				<div className="text-center py-8 text-muted-foreground border rounded-lg">
-					{searchQuery || statusFilter !== 'all'
+					{searchQuery || statusFilter !== 'all' || typeFilter !== 'all'
 						? 'No quotes found matching your filters.'
 						: 'No quotes yet. Create your first quote to get started.'}
 				</div>
@@ -180,6 +201,7 @@ export function QuotesPage() {
 							<TableRow>
 								<TableHead>Quote #</TableHead>
 								<TableHead>Customer</TableHead>
+								<TableHead>Type</TableHead>
 								<TableHead>Status</TableHead>
 								<TableHead className="text-right">Total</TableHead>
 								<TableHead>Created</TableHead>
@@ -200,6 +222,15 @@ export function QuotesPage() {
 									<TableCell>
 										{quote.customerName || (
 											<span className="text-muted-foreground">Walk-in</span>
+										)}
+									</TableCell>
+									<TableCell>
+										{quote.quoteType && quote.quoteType !== 'new_memorial' ? (
+											<Badge variant="outline">
+												{QUOTE_TYPE_LABELS[quote.quoteType as QuoteType]}
+											</Badge>
+										) : (
+											<span className="text-muted-foreground text-sm">New Memorial</span>
 										)}
 									</TableCell>
 									<TableCell>
@@ -268,9 +299,16 @@ function QuoteCard({
 							{quote.customerName || 'Walk-in'}
 						</CardDescription>
 					</div>
-					<Badge variant={getQuoteStatusVariant(quote.status)}>
-						{formatQuoteStatus(quote.status)}
-					</Badge>
+					<div className="flex flex-col items-end gap-1">
+						<Badge variant={getQuoteStatusVariant(quote.status)}>
+							{formatQuoteStatus(quote.status)}
+						</Badge>
+						{quote.quoteType && quote.quoteType !== 'new_memorial' && (
+							<Badge variant="outline" className="text-xs">
+								{QUOTE_TYPE_LABELS[quote.quoteType as QuoteType]}
+							</Badge>
+						)}
+					</div>
 				</div>
 			</CardHeader>
 			<CardContent className="space-y-3">

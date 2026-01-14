@@ -59,7 +59,9 @@ import {
 	formatQuoteStatus,
 	getQuoteStatusVariant,
 	formatComponentType,
+	QUOTE_TYPE_LABELS,
 	type QuoteStatus,
+	type QuoteType,
 } from '@/hooks/use-quotes';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowLeft, Send, Check, X, Clock, FileEdit, Trash2, Eye, EyeOff, Loader2, Mail, MessageSquare, Plus } from 'lucide-react';
@@ -370,6 +372,11 @@ export function QuoteDetailPage() {
 							<Badge variant={getQuoteStatusVariant(quote.status)}>
 								{formatQuoteStatus(quote.status)}
 							</Badge>
+							{quote.quoteType && quote.quoteType !== 'new_memorial' && (
+								<Badge variant="outline">
+									{QUOTE_TYPE_LABELS[quote.quoteType as QuoteType]}
+								</Badge>
+							)}
 						</div>
 						<p className="text-muted-foreground mt-1">
 							Created {formatDate(quote.createdAt)}
@@ -677,14 +684,38 @@ export function QuoteDetailPage() {
 										: 'Walk-in Customer'}
 								</p>
 							</div>
-							<div>
-								<p className="text-sm font-medium text-muted-foreground">Product</p>
-								<p>{quote.product?.name || 'No product selected'}</p>
-							</div>
+							{quote.quoteType && (
+								<div>
+									<p className="text-sm font-medium text-muted-foreground">Quote Type</p>
+									<p>{QUOTE_TYPE_LABELS[quote.quoteType as QuoteType]}</p>
+								</div>
+							)}
+							{quote.product && (
+								<div>
+									<p className="text-sm font-medium text-muted-foreground">Product</p>
+									<p>{quote.product.name}</p>
+								</div>
+							)}
 							{quote.flowerHoles && (
 								<div>
 									<p className="text-sm font-medium text-muted-foreground">Flower Holes</p>
 									<p>{quote.flowerHoles.replace(/_/g, ' ')}</p>
+								</div>
+							)}
+							{quote.existingMemorialDescription && (
+								<div className="col-span-2">
+									<p className="text-sm font-medium text-muted-foreground">Existing Memorial Description</p>
+									<p className="whitespace-pre-wrap bg-muted p-3 rounded mt-1 text-sm">
+										{quote.existingMemorialDescription}
+									</p>
+								</div>
+							)}
+							{quote.relatedJobId && (
+								<div>
+									<p className="text-sm font-medium text-muted-foreground">Related Job</p>
+									<Link to={`/app/jobs/${quote.relatedJobId}`} className="text-primary hover:underline">
+										View Related Job →
+									</Link>
 								</div>
 							)}
 							{quote.proposedInscription && (

@@ -33,6 +33,7 @@ import {
 	jobs,
 	jobPaymentScheduleItems,
 	QUOTE_STATUSES,
+	QUOTE_TYPES,
 	COMPONENT_TYPES,
 	LETTERING_COST_APPLIES_TO,
 	FLOWER_HOLE_CHOICES,
@@ -326,6 +327,7 @@ const customerDetailsSchema = z.object({
 });
 
 const createQuoteSchema = z.object({
+	quoteType: z.enum(QUOTE_TYPES).optional().default('new_memorial'),
 	serviceId: z.string().min(1), // Required: the service this quote is for
 	customerId: z.string().optional(),
 	productId: z.string().optional(),
@@ -336,6 +338,10 @@ const createQuoteSchema = z.object({
 	notes: z.string().optional(), // Customer-visible notes
 	internalNotes: z.string().optional(), // Tenant-only notes
 	validUntil: z.string().datetime().optional(),
+	// For additional inscription / refurbishment quotes
+	existingMemorialDescription: z.string().optional(),
+	relatedJobId: z.string().optional(),
+	// Line items
 	components: z.array(componentInputSchema).optional().default([]),
 	lettering: z.array(letteringInputSchema).optional().default([]),
 	sundries: z.array(sundryInputSchema).optional().default([]),
@@ -370,6 +376,7 @@ const updateLineItemSchema = z.object({
 
 const listQuerySchema = z.object({
 	status: z.enum(QUOTE_STATUSES).optional(),
+	quoteType: z.enum(QUOTE_TYPES).optional(),
 	customerId: z.string().optional(),
 	search: z.string().optional(),
 	latestOnly: z.enum(['true', 'false']).optional().default('true'),
@@ -387,7 +394,7 @@ const quotesRoutes = new Hono()
 	.get('/', zValidator('query', listQuerySchema), async (c) => {
 		const currentUser = c.get('user');
 		const tenantId = currentUser.tenantId!;
-		const { status, customerId, search, latestOnly } = c.req.valid('query');
+		const { status, quoteType, customerId, search, latestOnly } = c.req.valid('query');
 
 		// Base query with customer name join
 		let baseQuery = db
@@ -399,6 +406,7 @@ const quotesRoutes = new Hono()
 				customerId: quotes.customerId,
 				productId: quotes.productId,
 				quoteNumber: quotes.quoteNumber,
+				quoteType: quotes.quoteType,
 				status: quotes.status,
 				subtotal: quotes.subtotal,
 				vatAmount: quotes.vatAmount,
@@ -421,6 +429,10 @@ const quotesRoutes = new Hono()
 
 		if (status) {
 			conditions.push(eq(quotes.status, status));
+		}
+
+		if (quoteType) {
+			conditions.push(eq(quotes.quoteType, quoteType));
 		}
 
 		if (customerId) {
@@ -853,6 +865,7 @@ const quotesRoutes = new Hono()
 				tenantId,
 				parentQuoteId: null,
 				version: 1,
+				quoteType: data.quoteType,
 				serviceId: data.serviceId,
 				customerId,
 				productId: data.productId || null,
@@ -869,6 +882,8 @@ const quotesRoutes = new Hono()
 				internalNotes: data.internalNotes || null,
 				flowerHoles: data.flowerHoles || null,
 				proposedInscription: data.proposedInscription || null,
+				existingMemorialDescription: data.existingMemorialDescription || null,
+				relatedJobId: data.relatedJobId || null,
 				validUntil: data.validUntil ? new Date(data.validUntil) : null,
 			})
 			.returning();
@@ -1207,6 +1222,7 @@ const quotesRoutes = new Hono()
 			tenantId,
 			parentQuoteId: originalId,
 			version,
+			quoteType: data.quoteType ?? original.quoteType ?? 'new_memorial',
 			serviceId: mergedData.serviceId,
 			customerId: mergedData.customerId || null,
 			productId: mergedData.productId || null,
@@ -1223,6 +1239,8 @@ const quotesRoutes = new Hono()
 			internalNotes: data.internalNotes ?? original.internalNotes ?? null,
 			flowerHoles: data.flowerHoles ?? original.flowerHoles ?? null,
 			proposedInscription: data.proposedInscription ?? original.proposedInscription ?? null,
+			existingMemorialDescription: data.existingMemorialDescription ?? original.existingMemorialDescription ?? null,
+			relatedJobId: data.relatedJobId ?? original.relatedJobId ?? null,
 			validUntil: mergedData.validUntil ? new Date(mergedData.validUntil) : null,
 		});
 
