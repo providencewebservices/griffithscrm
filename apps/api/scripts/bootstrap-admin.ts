@@ -87,6 +87,12 @@ async function main() {
 		throw new Error('Failed to create admin user');
 	}
 
+	// Mark admin as email verified (bootstrap users don't need to verify)
+	await db
+		.update(users)
+		.set({ emailVerified: true })
+		.where(eq(users.email, ADMIN_EMAIL));
+
 	console.log('\n' + '='.repeat(50));
 	console.log('Bootstrap admin created!');
 	console.log('='.repeat(50));

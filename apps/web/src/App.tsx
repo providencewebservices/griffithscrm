@@ -11,6 +11,7 @@ import { CustomerDashboard } from './pages/customer';
 import { TeamPage } from './pages/customer/team';
 import { TeamMemberDetailPage } from './pages/customer/team-member-detail';
 import { CustomersPage } from './pages/customer/customers';
+import { ContactsPage } from './pages/customer/contacts';
 import { CustomerDetailPage } from './pages/customer/customer-detail';
 import { ProductsPage } from './pages/customer/products';
 import { ProductDetailPage } from './pages/customer/product-detail';
@@ -86,6 +87,7 @@ function App() {
 					<Route path="team/:id" element={<TeamMemberDetailPage />} />
 					<Route path="products" element={<ProductsPage />} />
 					<Route path="products/:id" element={<ProductDetailPage />} />
+					<Route path="contacts" element={<ContactsPage />} />
 					<Route path="customers" element={<CustomersPage />} />
 					<Route path="customers/:id" element={<CustomerDetailPage />} />
 					<Route path="settings" element={<SettingsPage />} />

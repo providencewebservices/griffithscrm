@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
 	Table,
 	TableBody,
@@ -26,34 +27,40 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
-import { MoreHorizontal, Plus } from 'lucide-react';
+import { MoreHorizontal, Plus, Eye, EyeOff } from 'lucide-react';
 import {
-	useLetteringColorsQuery,
-	useCreateLetteringColorMutation,
-	useUpdateLetteringColorMutation,
-	useDeleteLetteringColorMutation,
-	type LetteringColor,
-	type CreateLetteringColorInput,
-} from '@/hooks/use-lettering-colors';
+	useLineItemPresetsQuery,
+	useCreateLineItemPresetMutation,
+	useUpdateLineItemPresetMutation,
+	useDeleteLineItemPresetMutation,
+	type LineItemPreset,
+	type CreateLineItemPresetInput,
+} from '@/hooks/use-line-item-presets';
 
-export function LetteringColorsTab() {
-	const { data: colors, isLoading, error } = useLetteringColorsQuery();
-	const createMutation = useCreateLetteringColorMutation();
-	const updateMutation = useUpdateLetteringColorMutation();
-	const deleteMutation = useDeleteLetteringColorMutation();
+export function LineItemsTab() {
+	const { data: presets, isLoading, error } = useLineItemPresetsQuery();
+	const createMutation = useCreateLineItemPresetMutation();
+	const updateMutation = useUpdateLineItemPresetMutation();
+	const deleteMutation = useDeleteLineItemPresetMutation();
 
 	const [formDialogOpen, setFormDialogOpen] = useState(false);
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-	const [selectedItem, setSelectedItem] = useState<LetteringColor | null>(null);
+	const [selectedItem, setSelectedItem] = useState<LineItemPreset | null>(null);
 	const [mutationError, setMutationError] = useState<string | null>(null);
 
 	// Form state
 	const [formName, setFormName] = useState('');
+	const [formPrice, setFormPrice] = useState('0');
+	const [formVatExempt, setFormVatExempt] = useState(false);
+	const [formVisibleToCustomer, setFormVisibleToCustomer] = useState(true);
 
 	const isEditing = !!selectedItem;
 
 	const resetForm = () => {
 		setFormName('');
+		setFormPrice('0');
+		setFormVatExempt(false);
+		setFormVisibleToCustomer(true);
 		setMutationError(null);
 	};
 
@@ -63,19 +70,22 @@ export function LetteringColorsTab() {
 		setFormDialogOpen(true);
 	};
 
-	const handleEdit = (item: LetteringColor) => {
+	const handleEdit = (item: LineItemPreset) => {
 		setSelectedItem(item);
 		setFormName(item.name);
+		setFormPrice(item.defaultPrice);
+		setFormVatExempt(item.vatExempt);
+		setFormVisibleToCustomer(item.visibleToCustomer);
 		setMutationError(null);
 		setFormDialogOpen(true);
 	};
 
-	const handleDelete = (item: LetteringColor) => {
+	const handleDelete = (item: LineItemPreset) => {
 		setSelectedItem(item);
 		setDeleteDialogOpen(true);
 	};
 
-	const handleToggleActive = async (item: LetteringColor) => {
+	const handleToggleActive = async (item: LineItemPreset) => {
 		try {
 			await updateMutation.mutateAsync({
 				id: item.id,
@@ -88,8 +98,11 @@ export function LetteringColorsTab() {
 
 	const handleFormSubmit = async () => {
 		setMutationError(null);
-		const data: CreateLetteringColorInput = {
+		const data: CreateLineItemPresetInput = {
 			name: formName,
+			defaultPrice: parseFloat(formPrice) || 0,
+			vatExempt: formVatExempt,
+			visibleToCustomer: formVisibleToCustomer,
 		};
 
 		try {
@@ -117,13 +130,13 @@ export function LetteringColorsTab() {
 	};
 
 	if (isLoading) {
-		return <div className="text-muted-foreground">Loading lettering colors...</div>;
+		return <div className="text-muted-foreground">Loading line items...</div>;
 	}
 
 	if (error) {
 		return (
 			<div className="text-destructive">
-				Error loading lettering colors: {error.message}
+				Error loading line items: {error.message}
 			</div>
 		);
 	}
@@ -132,20 +145,20 @@ export function LetteringColorsTab() {
 		<div className="space-y-4">
 			<div className="flex justify-between items-center">
 				<div>
-					<h3 className="text-lg font-semibold">Lettering Colors</h3>
+					<h3 className="text-lg font-semibold">Common Line Items</h3>
 					<p className="text-sm text-muted-foreground">
-						Manage paint finishes for lettering. Prices are set per technique/color combination.
+						Reusable line items for quotes (delivery, installation, permits, etc.)
 					</p>
 				</div>
 				<Button onClick={handleCreate}>
 					<Plus className="h-4 w-4 mr-2" />
-					Add Color
+					Add Line Item
 				</Button>
 			</div>
 
-			{colors && colors.length === 0 ? (
+			{presets && presets.length === 0 ? (
 				<div className="text-center py-8 text-muted-foreground border rounded-lg">
-					No lettering colors yet. Add your first color to get started.
+					No line items yet. Add your first line item to get started.
 				</div>
 			) : (
 				<div className="border rounded-lg">
@@ -153,14 +166,32 @@ export function LetteringColorsTab() {
 						<TableHeader>
 							<TableRow>
 								<TableHead>Name</TableHead>
+								<TableHead>Default Price</TableHead>
+								<TableHead>VAT Exempt</TableHead>
+								<TableHead>Visible</TableHead>
 								<TableHead>Status</TableHead>
 								<TableHead className="w-[70px]"></TableHead>
 							</TableRow>
 						</TableHeader>
 						<TableBody>
-							{colors?.map((item) => (
+							{presets?.map((item) => (
 								<TableRow key={item.id}>
 									<TableCell className="font-medium">{item.name}</TableCell>
+									<TableCell>£{item.defaultPrice}</TableCell>
+									<TableCell>
+										{item.vatExempt ? (
+											<Badge variant="outline">Yes</Badge>
+										) : (
+											<span className="text-muted-foreground">No</span>
+										)}
+									</TableCell>
+									<TableCell>
+										{item.visibleToCustomer ? (
+											<Eye className="h-4 w-4 text-muted-foreground" />
+										) : (
+											<EyeOff className="h-4 w-4 text-muted-foreground" />
+										)}
+									</TableCell>
 									<TableCell>
 										<Badge variant={item.isActive ? 'default' : 'secondary'}>
 											{item.isActive ? 'Active' : 'Inactive'}
@@ -201,12 +232,12 @@ export function LetteringColorsTab() {
 				<DialogContent>
 					<DialogHeader>
 						<DialogTitle>
-							{isEditing ? 'Edit Lettering Color' : 'Add Lettering Color'}
+							{isEditing ? 'Edit Line Item' : 'Add Line Item'}
 						</DialogTitle>
 						<DialogDescription>
 							{isEditing
-								? 'Update the lettering color name.'
-								: 'Add a new lettering color. Prices are set per technique/color combination.'}
+								? 'Update the line item details.'
+								: 'Add a reusable line item for quotes.'}
 						</DialogDescription>
 					</DialogHeader>
 
@@ -223,8 +254,47 @@ export function LetteringColorsTab() {
 								id="name"
 								value={formName}
 								onChange={(e) => setFormName(e.target.value)}
-								placeholder="e.g., Gold Leaf, White Paint, Silvered Paint"
+								placeholder="e.g., Delivery, Installation, Church Permit"
 							/>
+						</Field>
+
+						<Field>
+							<FieldLabel htmlFor="price">Default Price (£)</FieldLabel>
+							<Input
+								id="price"
+								type="number"
+								min="0"
+								step="0.01"
+								value={formPrice}
+								onChange={(e) => setFormPrice(e.target.value)}
+								placeholder="0.00"
+							/>
+						</Field>
+
+						<Field>
+							<div className="flex items-center space-x-2">
+								<Checkbox
+									id="vatExempt"
+									checked={formVatExempt}
+									onCheckedChange={(checked) => setFormVatExempt(checked === true)}
+								/>
+								<FieldLabel htmlFor="vatExempt" className="!mb-0 cursor-pointer">
+									VAT Exempt (e.g., church fees, permits)
+								</FieldLabel>
+							</div>
+						</Field>
+
+						<Field>
+							<div className="flex items-center space-x-2">
+								<Checkbox
+									id="visibleToCustomer"
+									checked={formVisibleToCustomer}
+									onCheckedChange={(checked) => setFormVisibleToCustomer(checked === true)}
+								/>
+								<FieldLabel htmlFor="visibleToCustomer" className="!mb-0 cursor-pointer">
+									Visible to customer on quote
+								</FieldLabel>
+							</div>
 						</Field>
 					</FieldGroup>
 
@@ -251,7 +321,7 @@ export function LetteringColorsTab() {
 				open={deleteDialogOpen}
 				onOpenChange={setDeleteDialogOpen}
 				onConfirm={handleDeleteConfirm}
-				title="Delete Lettering Color"
+				title="Delete Line Item"
 				description={`Are you sure you want to delete "${selectedItem?.name}"? This action cannot be undone.`}
 				isLoading={deleteMutation.isPending}
 			/>

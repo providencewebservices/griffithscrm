@@ -21,10 +21,12 @@
   "dependencies": {
     "@aws-sdk/client-ses": "^3.965.0",
     "drizzle-orm": "latest",
+    "nodemailer": "^7.0.12",
     "postgres": "^3.4.5"
   },
   "devDependencies": {
     "@biomejs/biome": "latest",
+    "@types/nodemailer": "^7.0.5",
     "dotenv": "^16.4.7",
     "shadcn": "^3.5.1",
     "typescript": "^5.7.2"

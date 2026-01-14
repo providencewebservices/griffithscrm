@@ -35,6 +35,13 @@ import {
 	TableHeader,
 	TableRow,
 } from '@/components/ui/table';
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
@@ -57,6 +64,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowLeft, Send, Check, X, Clock, FileEdit, Trash2, Eye, EyeOff, Loader2, Mail, MessageSquare, Plus } from 'lucide-react';
 import { DocumentsCard } from '@/components/documents';
+import { useLineItemPresetsQuery } from '@/hooks/use-line-item-presets';
 
 // Editable number component for inline editing
 function EditableNumber({
@@ -195,10 +203,36 @@ export function QuoteDetailPage() {
 	const updateLineItem = useUpdateLineItemMutation();
 	const deleteLineItem = useDeleteLineItemMutation();
 
+	// Line item presets for dropdown
+	const { data: lineItemPresets } = useLineItemPresetsQuery();
+	const activePresets = lineItemPresets?.filter(p => p.isActive) || [];
+
 	// State for new line item input
+	const [newLineItemPresetId, setNewLineItemPresetId] = useState<string>('');
 	const [newLineItemDesc, setNewLineItemDesc] = useState('');
 	const [newLineItemPrice, setNewLineItemPrice] = useState('');
 	const [newLineItemVatExempt, setNewLineItemVatExempt] = useState(false);
+	const [newLineItemVisibleToCustomer, setNewLineItemVisibleToCustomer] = useState(true);
+
+	// Handle preset selection - auto-fill fields
+	const handlePresetSelect = (presetId: string) => {
+		setNewLineItemPresetId(presetId);
+		if (presetId === 'custom') {
+			// Reset to defaults for custom entry
+			setNewLineItemDesc('');
+			setNewLineItemPrice('');
+			setNewLineItemVatExempt(false);
+			setNewLineItemVisibleToCustomer(true);
+		} else {
+			const preset = activePresets.find(p => p.id === presetId);
+			if (preset) {
+				setNewLineItemDesc(preset.name);
+				setNewLineItemPrice(preset.defaultPrice);
+				setNewLineItemVatExempt(preset.vatExempt);
+				setNewLineItemVisibleToCustomer(preset.visibleToCustomer);
+			}
+		}
+	};
 
 	// Can only edit pricing on draft quotes
 	const canEditPricing = quote?.status === 'draft';
@@ -569,11 +603,11 @@ export function QuoteDetailPage() {
 									</div>
 								)}
 
-								{/* Custom Line Items */}
-								{quote.lineItems && quote.lineItems.length > 0 && (
+								{/* Custom Line Items - Only show visible items to customer */}
+								{quote.lineItems && quote.lineItems.filter(item => item.visibleToCustomer).length > 0 && (
 									<div className="space-y-1">
 										<p className="text-sm font-medium">Other Charges:</p>
-										{quote.lineItems.map((item) => (
+										{quote.lineItems.filter(item => item.visibleToCustomer).map((item) => (
 											<div key={item.id} className="flex justify-between text-sm">
 												<span className="text-muted-foreground">
 													{item.description}
@@ -937,6 +971,7 @@ export function QuoteDetailPage() {
 												<TableHead>Description</TableHead>
 												<TableHead className="text-right w-32">Price</TableHead>
 												<TableHead className="text-center w-24">VAT Exempt</TableHead>
+												<TableHead className="text-center w-20">Visible</TableHead>
 												{canEditPricing && <TableHead className="w-16"></TableHead>}
 											</TableRow>
 										</TableHeader>
@@ -989,6 +1024,26 @@ export function QuoteDetailPage() {
 															disabled={!canEditPricing}
 														/>
 													</TableCell>
+													<TableCell className="text-center">
+														{canEditPricing ? (
+															<Checkbox
+																checked={item.visibleToCustomer}
+																onCheckedChange={async (checked) => {
+																	await updateLineItem.mutateAsync({
+																		quoteId: quote.id,
+																		itemId: item.id,
+																		visibleToCustomer: checked === true,
+																	});
+																}}
+															/>
+														) : (
+															item.visibleToCustomer ? (
+																<Eye className="h-4 w-4 mx-auto text-muted-foreground" />
+															) : (
+																<EyeOff className="h-4 w-4 mx-auto text-muted-foreground" />
+															)
+														)}
+													</TableCell>
 													{canEditPricing && (
 														<TableCell>
 															<Button
@@ -1017,58 +1072,95 @@ export function QuoteDetailPage() {
 
 							{/* Add new line item form */}
 							{canEditPricing && (
-								<div className="mt-4 flex items-end gap-2">
-									<div className="flex-1">
-										<Label htmlFor="lineItemDesc" className="text-xs">Description</Label>
-										<Input
-											id="lineItemDesc"
-											placeholder="e.g., Labor, Delivery"
-											value={newLineItemDesc}
-											onChange={(e) => setNewLineItemDesc(e.target.value)}
+								<div className="mt-4 space-y-3">
+									<div className="flex items-end gap-2">
+										<div className="w-48">
+											<Label htmlFor="lineItemPreset" className="text-xs">Line Item</Label>
+											<Select
+												value={newLineItemPresetId}
+												onValueChange={handlePresetSelect}
+											>
+												<SelectTrigger id="lineItemPreset" className="h-9">
+													<SelectValue placeholder="Select a line item..." />
+												</SelectTrigger>
+												<SelectContent>
+													{activePresets.map((preset) => (
+														<SelectItem key={preset.id} value={preset.id}>
+															{preset.name} ({formatCurrency(preset.defaultPrice)})
+														</SelectItem>
+													))}
+													<SelectItem value="custom">Custom (free-form)</SelectItem>
+												</SelectContent>
+											</Select>
+										</div>
+										{newLineItemPresetId === 'custom' && (
+											<div className="flex-1">
+												<Label htmlFor="lineItemDesc" className="text-xs">Description</Label>
+												<Input
+													id="lineItemDesc"
+													placeholder="e.g., Labor, Delivery"
+													value={newLineItemDesc}
+													onChange={(e) => setNewLineItemDesc(e.target.value)}
+													className="h-9"
+												/>
+											</div>
+										)}
+										<div className="w-28">
+											<Label htmlFor="lineItemPrice" className="text-xs">Price</Label>
+											<Input
+												id="lineItemPrice"
+												type="number"
+												min="0"
+												step="0.01"
+												placeholder="0.00"
+												value={newLineItemPrice}
+												onChange={(e) => setNewLineItemPrice(e.target.value)}
+												className="h-9"
+											/>
+										</div>
+									</div>
+									<div className="flex items-center gap-4">
+										<div className="flex items-center gap-2">
+											<Checkbox
+												id="lineItemVatExempt"
+												checked={newLineItemVatExempt}
+												onCheckedChange={(checked) => setNewLineItemVatExempt(checked === true)}
+											/>
+											<Label htmlFor="lineItemVatExempt" className="text-xs whitespace-nowrap">VAT Exempt</Label>
+										</div>
+										<div className="flex items-center gap-2">
+											<Checkbox
+												id="lineItemVisibleToCustomer"
+												checked={newLineItemVisibleToCustomer}
+												onCheckedChange={(checked) => setNewLineItemVisibleToCustomer(checked === true)}
+											/>
+											<Label htmlFor="lineItemVisibleToCustomer" className="text-xs whitespace-nowrap">Visible to Customer</Label>
+										</div>
+										<div className="flex-1"></div>
+										<Button
+											size="sm"
 											className="h-9"
-										/>
+											onClick={async () => {
+												if (!newLineItemDesc.trim() || !newLineItemPrice) return;
+												await addLineItem.mutateAsync({
+													quoteId: quote.id,
+													description: newLineItemDesc.trim(),
+													price: parseFloat(newLineItemPrice),
+													vatExempt: newLineItemVatExempt,
+													visibleToCustomer: newLineItemVisibleToCustomer,
+												});
+												setNewLineItemPresetId('');
+												setNewLineItemDesc('');
+												setNewLineItemPrice('');
+												setNewLineItemVatExempt(false);
+												setNewLineItemVisibleToCustomer(true);
+											}}
+											disabled={!newLineItemDesc.trim() || !newLineItemPrice || addLineItem.isPending}
+										>
+											<Plus className="h-4 w-4 mr-1" />
+											Add
+										</Button>
 									</div>
-									<div className="w-28">
-										<Label htmlFor="lineItemPrice" className="text-xs">Price</Label>
-										<Input
-											id="lineItemPrice"
-											type="number"
-											min="0"
-											step="0.01"
-											placeholder="0.00"
-											value={newLineItemPrice}
-											onChange={(e) => setNewLineItemPrice(e.target.value)}
-											className="h-9"
-										/>
-									</div>
-									<div className="flex items-center gap-2 pb-1">
-										<Checkbox
-											id="lineItemVatExempt"
-											checked={newLineItemVatExempt}
-											onCheckedChange={(checked) => setNewLineItemVatExempt(checked === true)}
-										/>
-										<Label htmlFor="lineItemVatExempt" className="text-xs whitespace-nowrap">VAT Exempt</Label>
-									</div>
-									<Button
-										size="sm"
-										className="h-9"
-										onClick={async () => {
-											if (!newLineItemDesc.trim() || !newLineItemPrice) return;
-											await addLineItem.mutateAsync({
-												quoteId: quote.id,
-												description: newLineItemDesc.trim(),
-												price: parseFloat(newLineItemPrice),
-												vatExempt: newLineItemVatExempt,
-											});
-											setNewLineItemDesc('');
-											setNewLineItemPrice('');
-											setNewLineItemVatExempt(false);
-										}}
-										disabled={!newLineItemDesc.trim() || !newLineItemPrice || addLineItem.isPending}
-									>
-										<Plus className="h-4 w-4 mr-1" />
-										Add
-									</Button>
 								</div>
 							)}
 						</CardContent>

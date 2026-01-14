@@ -671,6 +671,22 @@ export const services = pgTable('services', {
 	updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
+// Line item presets - reusable line items for quotes (tenant-scoped)
+export const lineItemPresets = pgTable('line_item_presets', {
+	id: text('id').primaryKey(),
+	tenantId: text('tenant_id')
+		.notNull()
+		.references(() => tenants.id, { onDelete: 'cascade' }),
+	name: text('name').notNull(), // e.g., "Delivery", "Installation", "Church Permit"
+	defaultPrice: numeric('default_price', { precision: 10, scale: 2 }).notNull().default('0'),
+	vatExempt: boolean('vat_exempt').notNull().default(false),
+	visibleToCustomer: boolean('visible_to_customer').notNull().default(true),
+	isActive: boolean('is_active').notNull().default(true),
+	sortOrder: integer('sort_order').notNull().default(0),
+	createdAt: timestamp('created_at').notNull().defaultNow(),
+	updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
 // ============================================
 // MATERIALS & PRICING TABLES
 // ============================================
@@ -947,6 +963,7 @@ export const quoteLineItems = pgTable('quote_line_items', {
 	description: text('description').notNull(), // e.g., "Installation Labor"
 	price: numeric('price', { precision: 10, scale: 2 }).notNull().default('0'), // Flat price (no markup)
 	vatExempt: boolean('vat_exempt').notNull().default(false), // True for items like church fees that are not subject to VAT
+	visibleToCustomer: boolean('visible_to_customer').notNull().default(true), // False for internal-only charges
 	sortOrder: integer('sort_order').notNull().default(0),
 	createdAt: timestamp('created_at').notNull().defaultNow(),
 	updatedAt: timestamp('updated_at').notNull().defaultNow(),

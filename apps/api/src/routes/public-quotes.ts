@@ -139,7 +139,8 @@ const publicQuotesRoutes = new Hono()
 				lineTotal: s.lineTotal,
 				serviceName: s.serviceName,
 			})),
-			lineItems: lineItems.map((li) => ({
+			// Only show line items marked as visible to customer
+			lineItems: lineItems.filter(li => li.visibleToCustomer).map((li) => ({
 				description: li.description,
 				price: li.price,
 				vatExempt: li.vatExempt,

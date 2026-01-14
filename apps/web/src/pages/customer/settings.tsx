@@ -1,10 +1,10 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BusinessTab } from '@/components/customer/settings/business-tab';
 import { PricingTab } from '@/components/customer/settings/pricing-tab';
-import { LetteringTechniquesTab } from '@/components/customer/settings/lettering-techniques-tab';
-import { LetteringColorsTab } from '@/components/customer/settings/lettering-colors-tab';
+import { LetteringTab } from '@/components/customer/settings/lettering-tab';
 import { SundriesTab } from '@/components/customer/settings/sundries-tab';
 import { ServicesTab } from '@/components/customer/settings/services-tab';
+import { LineItemsTab } from '@/components/customer/settings/line-items-tab';
 import { ProductCategoriesTab } from '@/components/customer/settings/product-categories-tab';
 import { MaterialSectionsTab } from '@/components/customer/settings/material-sections-tab';
 import { FinishesTab } from '@/components/customer/settings/finishes-tab';
@@ -26,10 +26,10 @@ export function SettingsPage() {
 					<TabsTrigger value="categories">Categories</TabsTrigger>
 					<TabsTrigger value="materials">Materials</TabsTrigger>
 					<TabsTrigger value="finishes">Finishes</TabsTrigger>
-					<TabsTrigger value="lettering-techniques">Lettering</TabsTrigger>
-					<TabsTrigger value="lettering-colors">Colors</TabsTrigger>
+					<TabsTrigger value="lettering">Lettering</TabsTrigger>
 					<TabsTrigger value="sundries">Sundries</TabsTrigger>
 					<TabsTrigger value="services">Services</TabsTrigger>
+					<TabsTrigger value="line-items">Line Items</TabsTrigger>
 				</TabsList>
 
 				<TabsContent value="business">
@@ -52,12 +52,8 @@ export function SettingsPage() {
 					<FinishesTab />
 				</TabsContent>
 
-				<TabsContent value="lettering-techniques">
-					<LetteringTechniquesTab />
-				</TabsContent>
-
-				<TabsContent value="lettering-colors">
-					<LetteringColorsTab />
+				<TabsContent value="lettering">
+					<LetteringTab />
 				</TabsContent>
 
 				<TabsContent value="sundries">
@@ -66,6 +62,10 @@ export function SettingsPage() {
 
 				<TabsContent value="services">
 					<ServicesTab />
+				</TabsContent>
+
+				<TabsContent value="line-items">
+					<LineItemsTab />
 				</TabsContent>
 			</Tabs>
 		</div>

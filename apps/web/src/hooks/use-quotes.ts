@@ -76,6 +76,7 @@ export type QuoteLineItem = {
 	description: string;
 	price: string;
 	vatExempt: boolean;
+	visibleToCustomer: boolean;
 	sortOrder: number;
 	createdAt: string;
 	updatedAt: string;
@@ -465,6 +466,8 @@ type UpdateLineItemPricingInput = {
 export type LineItemInput = {
 	description: string;
 	price: number;
+	vatExempt?: boolean;
+	visibleToCustomer?: boolean;
 };
 
 export type AddLineItemInput = {
@@ -472,6 +475,7 @@ export type AddLineItemInput = {
 	description: string;
 	price: number;
 	vatExempt?: boolean;
+	visibleToCustomer?: boolean;
 };
 
 export type UpdateLineItemInput = {
@@ -480,6 +484,7 @@ export type UpdateLineItemInput = {
 	description?: string;
 	price?: number;
 	vatExempt?: boolean;
+	visibleToCustomer?: boolean;
 };
 
 export type DeleteLineItemInput = {
@@ -594,12 +599,13 @@ async function addLineItem({
 	description,
 	price,
 	vatExempt,
+	visibleToCustomer,
 }: AddLineItemInput): Promise<QuoteWithLineItems> {
 	const response = await fetch(`${API_URL}/api/quotes/${quoteId}/line-items`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		credentials: 'include',
-		body: JSON.stringify({ description, price, vatExempt }),
+		body: JSON.stringify({ description, price, vatExempt, visibleToCustomer }),
 	});
 
 	if (!response.ok) {
@@ -617,12 +623,13 @@ async function updateLineItem({
 	description,
 	price,
 	vatExempt,
+	visibleToCustomer,
 }: UpdateLineItemInput): Promise<QuoteWithLineItems> {
 	const response = await fetch(`${API_URL}/api/quotes/${quoteId}/line-items/${itemId}`, {
 		method: 'PUT',
 		headers: { 'Content-Type': 'application/json' },
 		credentials: 'include',
-		body: JSON.stringify({ description, price, vatExempt }),
+		body: JSON.stringify({ description, price, vatExempt, visibleToCustomer }),
 	});
 
 	if (!response.ok) {

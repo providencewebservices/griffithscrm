@@ -12,6 +12,7 @@ import { letteringCostsRoutes } from './routes/lettering-costs';
 import { letteringColorsRoutes } from './routes/lettering-colors';
 import { sundriesRoutes } from './routes/sundries';
 import { servicesRoutes } from './routes/services';
+import { lineItemPresetsRoutes } from './routes/line-item-presets';
 import { productCategoriesRoutes } from './routes/product-categories';
 import { productsRoutes } from './routes/products';
 import { productOptionsRoutes } from './routes/product-options';
@@ -99,6 +100,7 @@ app.route('/api/tenant/lettering-costs', letteringCostsRoutes);
 app.route('/api/tenant/lettering-colors', letteringColorsRoutes);
 app.route('/api/tenant/sundries', sundriesRoutes);
 app.route('/api/tenant/services', servicesRoutes);
+app.route('/api/tenant/line-item-presets', lineItemPresetsRoutes);
 
 // Product catalog routes (for tenant users)
 app.route('/api/tenant/product-categories', productCategoriesRoutes);

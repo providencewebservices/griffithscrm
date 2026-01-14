@@ -358,12 +358,14 @@ const lineItemInputSchema = z.object({
 	description: z.string().min(1),
 	price: z.number().min(0),
 	vatExempt: z.boolean().optional().default(false),
+	visibleToCustomer: z.boolean().optional().default(true),
 });
 
 const updateLineItemSchema = z.object({
 	description: z.string().min(1).optional(),
 	price: z.number().min(0).optional(),
 	vatExempt: z.boolean().optional(),
+	visibleToCustomer: z.boolean().optional(),
 });
 
 const listQuerySchema = z.object({
@@ -1819,6 +1821,7 @@ ${tenantName}
 					description: data.description,
 					price: String(data.price),
 					vatExempt: data.vatExempt ?? false,
+					visibleToCustomer: data.visibleToCustomer ?? true,
 					sortOrder,
 				})
 				.returning();
@@ -1874,6 +1877,7 @@ ${tenantName}
 			if (data.description !== undefined) updateData.description = data.description;
 			if (data.price !== undefined) updateData.price = String(data.price);
 			if (data.vatExempt !== undefined) updateData.vatExempt = data.vatExempt;
+			if (data.visibleToCustomer !== undefined) updateData.visibleToCustomer = data.visibleToCustomer;
 
 			await db
 				.update(quoteLineItems)
