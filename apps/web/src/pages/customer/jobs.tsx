@@ -32,7 +32,7 @@ import {
 	type JobStatus,
 	type JobListItem,
 } from '@/hooks/use-jobs';
-import { Search, AlertCircle, List, LayoutGrid, User, Wrench, Calendar, PoundSterling } from 'lucide-react';
+import { Search, AlertCircle, List, LayoutGrid, User, Calendar, PoundSterling } from 'lucide-react';
 
 type DisplayMode = 'table' | 'cards';
 
@@ -171,7 +171,6 @@ export function JobsPage() {
 								<TableRow>
 									<TableHead>Job #</TableHead>
 									<TableHead>Customer</TableHead>
-									<TableHead>Service</TableHead>
 									<TableHead className="text-right">Total</TableHead>
 									<TableHead>Payment</TableHead>
 									<TableHead>Status</TableHead>
@@ -192,7 +191,6 @@ export function JobsPage() {
 													? `${job.customerFirstName} ${job.customerLastName}`
 													: 'Walk-in'}
 											</TableCell>
-											<TableCell>{job.serviceName || '-'}</TableCell>
 											<TableCell className="text-right">
 												{formatCurrency(job.total)}
 											</TableCell>
@@ -287,12 +285,6 @@ function JobCard({ job, formatCurrency, formatDate, getPaymentStatus }: JobCardP
 						<User className="h-3.5 w-3.5" />
 						<span>{customerName}</span>
 					</div>
-					{job.serviceName && (
-						<div className="flex items-center gap-2">
-							<Wrench className="h-3.5 w-3.5" />
-							<span>{job.serviceName}</span>
-						</div>
-					)}
 					<div className="flex items-center gap-2">
 						<PoundSterling className="h-3.5 w-3.5" />
 						<span className="font-medium text-foreground">{formatCurrency(job.total)}</span>

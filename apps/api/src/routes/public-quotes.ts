@@ -13,7 +13,6 @@ import {
 	quoteLineItems,
 	customers,
 	products,
-	services,
 	tenants,
 	jobs,
 	jobPaymentScheduleItems,
@@ -135,17 +134,6 @@ const publicQuotesRoutes = new Hono()
 			.where(eq(tenants.id, pkg.tenantId))
 			.limit(1);
 
-		// Get service name
-		let service = null;
-		if (pkg.serviceId) {
-			const [serviceResult] = await db
-				.select({ name: services.name })
-				.from(services)
-				.where(eq(services.id, pkg.serviceId))
-				.limit(1);
-			service = serviceResult || null;
-		}
-
 		// Get customer name
 		let customer = null;
 		if (pkg.customerId) {
@@ -174,7 +162,6 @@ const publicQuotesRoutes = new Hono()
 			},
 			options,
 			customer,
-			service,
 			tenant: tenant ? { name: tenant.name } : null,
 		});
 	})

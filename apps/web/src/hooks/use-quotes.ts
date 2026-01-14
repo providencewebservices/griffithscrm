@@ -84,13 +84,6 @@ export type QuoteLineItem = {
 	updatedAt: string;
 };
 
-export type QuoteServiceInfo = {
-	id: string;
-	name: string;
-	description: string | null;
-	pricingType: string;
-};
-
 export type QuoteCustomer = {
 	id: string;
 	firstName: string;
@@ -148,7 +141,6 @@ export type QuotePackage = {
 	tenantId: string;
 	status: QuoteStatus;
 	quoteType: QuoteType;
-	serviceId: string | null;
 	customerId: string | null;
 	funeralDirectorId: string | null;
 	councilId: string | null;
@@ -181,8 +173,6 @@ export type QuotePackageListItem = {
 	customerId: string | null;
 	customerFirstName: string | null;
 	customerLastName: string | null;
-	serviceId: string | null;
-	serviceName: string | null;
 	notes: string | null;
 	validUntil: string | null;
 	createdAt: string;
@@ -199,7 +189,6 @@ export type QuotePackageListItem = {
 // Full package with all options and related data
 export type QuotePackageWithOptions = QuotePackage & {
 	customer: QuoteCustomer | null;
-	service: QuoteServiceInfo | null;
 	funeralDirector: QuoteFuneralDirector | null;
 	council: QuoteCouncil | null;
 	memorialSite: QuoteMemorialSite | null;
@@ -251,7 +240,6 @@ export type CustomerDetailsInput = {
 export type CreateQuoteInput = {
 	// Package-level fields (shared context)
 	quoteType?: QuoteType;
-	serviceId: string;
 	customerId?: string;
 	funeralDirectorId?: string;
 	councilId?: string;
@@ -1039,7 +1027,10 @@ export const QUOTE_TYPE_SECTION_CONFIG: Record<
 };
 
 // Helper to format price range for display
-export function formatPriceRange(priceRange: { minPrice: string; maxPrice: string }): string {
+export function formatPriceRange(priceRange: { minPrice: string; maxPrice: string } | undefined | null): string {
+	if (!priceRange) {
+		return '£0.00';
+	}
 	const min = parseFloat(priceRange.minPrice);
 	const max = parseFloat(priceRange.maxPrice);
 

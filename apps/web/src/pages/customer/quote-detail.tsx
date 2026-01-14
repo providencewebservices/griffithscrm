@@ -96,6 +96,7 @@ import {
 } from 'lucide-react';
 import { DocumentsCard } from '@/components/documents';
 import { useLineItemPresetsQuery } from '@/hooks/use-line-item-presets';
+import { AddOptionDialog } from '@/components/quote/add-option-dialog';
 
 // Editable number component for inline editing
 function EditableNumber({
@@ -220,6 +221,7 @@ export function QuoteDetailPage() {
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 	const [deleteOptionDialogOpen, setDeleteOptionDialogOpen] = useState(false);
 	const [sendEmailDialogOpen, setSendEmailDialogOpen] = useState(false);
+	const [addOptionDialogOpen, setAddOptionDialogOpen] = useState(false);
 	const [customMessage, setCustomMessage] = useState('');
 	const [mutationError, setMutationError] = useState<string | null>(null);
 	const [viewMode, setViewMode] = useState<ViewMode>('internal');
@@ -599,7 +601,7 @@ export function QuoteDetailPage() {
 									</CardDescription>
 								</div>
 								{canAddOptions && (
-									<Button variant="outline" onClick={handleCloneOption} disabled={cloneOptionMutation.isPending}>
+									<Button variant="outline" onClick={() => setAddOptionDialogOpen(true)}>
 										<Plus className="h-4 w-4 mr-2" />
 										Add Option
 									</Button>
@@ -845,6 +847,16 @@ export function QuoteDetailPage() {
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>
+
+			{/* Add Option Dialog */}
+			{pkg.options && (
+				<AddOptionDialog
+					open={addOptionDialogOpen}
+					onOpenChange={setAddOptionDialogOpen}
+					packageId={pkg.id}
+					existingOptions={pkg.options}
+				/>
+			)}
 		</div>
 	);
 }
@@ -876,10 +888,6 @@ function SharedContextCard({
 								'Walk-in Customer'
 							)}
 						</p>
-					</div>
-					<div>
-						<p className="text-sm font-medium text-muted-foreground">Service</p>
-						<p>{pkg.service?.name || 'No service selected'}</p>
 					</div>
 					{pkg.quoteType && (
 						<div>
@@ -1540,14 +1548,8 @@ function CustomerView({
 
 					{currentOption && (
 						<>
-							{/* Service & Product Details */}
+							{/* Product Details */}
 							<div className="space-y-4">
-								{pkg.service && (
-									<div>
-										<p className="text-sm text-muted-foreground">Service</p>
-										<p className="font-semibold text-lg">{pkg.service.name}</p>
-									</div>
-								)}
 								{currentOption.product && (
 									<div>
 										<p className="text-sm text-muted-foreground">Product</p>

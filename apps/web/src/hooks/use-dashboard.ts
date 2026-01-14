@@ -12,7 +12,6 @@ export type RecentQuote = {
 	status: QuoteStatus;
 	total: string;
 	customerName: string;
-	serviceName: string | null;
 	updatedAt: string;
 };
 

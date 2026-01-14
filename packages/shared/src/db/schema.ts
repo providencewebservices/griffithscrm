@@ -835,7 +835,6 @@ export const quotePackages = pgTable('quote_packages', {
 
 	// SHARED CONTEXT (shared across all options in package)
 	customerId: text('customer_id').references(() => customers.id, { onDelete: 'set null' }),
-	serviceId: text('service_id').references(() => services.id, { onDelete: 'set null' }),
 
 	// Memorial context - shared across all options
 	funeralDirectorId: text('funeral_director_id').references(() => funeralDirectors.id, {
@@ -888,7 +887,6 @@ export const quotes = pgTable('quotes', {
 
 	parentQuoteId: text('parent_quote_id'), // Self-reference for versioning (no FK constraint to avoid circular)
 	version: integer('version').notNull().default(1),
-	serviceId: text('service_id').references(() => services.id, { onDelete: 'set null' }), // Primary service this quote is for
 	customerId: text('customer_id').references(() => customers.id, { onDelete: 'set null' }),
 	productId: text('product_id').references(() => products.id, { onDelete: 'set null' }),
 	dimensionComboId: text('dimension_combo_id').references(() => dimensionCombos.id, {

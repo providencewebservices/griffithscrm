@@ -430,7 +430,6 @@ export function CustomerDetailPage() {
 								<TableRow>
 									<TableHead>Quote #</TableHead>
 									<TableHead>Date</TableHead>
-									<TableHead>Service</TableHead>
 									<TableHead>Status</TableHead>
 									<TableHead className="text-right">Total</TableHead>
 									<TableHead></TableHead>
@@ -443,7 +442,6 @@ export function CustomerDetailPage() {
 											{formatQuoteNumberWithOptions(quote.firstQuoteNumber, quote.optionCount)}
 										</TableCell>
 										<TableCell>{formatDate(quote.createdAt)}</TableCell>
-										<TableCell>{quote.serviceName || '-'}</TableCell>
 										<TableCell>
 											<Badge variant={getStatusVariant(quote.status)}>
 												{quote.status.charAt(0).toUpperCase() +

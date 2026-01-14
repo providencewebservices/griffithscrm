@@ -85,7 +85,6 @@ export type JobPaymentSummary = {
 export type JobListItem = Job & {
 	customerFirstName: string | null;
 	customerLastName: string | null;
-	serviceName: string | null;
 	total: string;
 	paymentSummary: JobPaymentSummary | null;
 };

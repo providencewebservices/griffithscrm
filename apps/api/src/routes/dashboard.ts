@@ -6,7 +6,6 @@ import {
 	quotes,
 	jobs,
 	customers,
-	services,
 	jobPaymentScheduleItems,
 	QUOTE_STATUSES,
 	JOB_STATUSES,
@@ -122,7 +121,6 @@ export const dashboardRoutes = new Hono()
 				status: quotes.status,
 				total: quotes.total,
 				customerId: quotes.customerId,
-				serviceId: quotes.serviceId,
 				createdAt: quotes.createdAt,
 				updatedAt: quotes.updatedAt,
 			})
@@ -146,25 +144,12 @@ export const dashboardRoutes = new Hono()
 					}
 				}
 
-				let serviceName = null;
-				if (quote.serviceId) {
-					const [service] = await db
-						.select({ name: services.name })
-						.from(services)
-						.where(eq(services.id, quote.serviceId))
-						.limit(1);
-					if (service) {
-						serviceName = service.name;
-					}
-				}
-
 				return {
 					id: quote.id,
 					quoteNumber: quote.quoteNumber,
 					status: quote.status,
 					total: quote.total,
 					customerName,
-					serviceName,
 					updatedAt: quote.updatedAt,
 				};
 			})

@@ -21,7 +21,6 @@ import {
 	letteringColors,
 	letteringCosts,
 	sundries,
-	services,
 	tenantPricingSettings,
 	dimensionCombos,
 	dimensionComboValues,
@@ -158,16 +157,6 @@ async function getQuoteWithLineItems(quoteId: string, tenantId: string) {
 			.limit(1);
 	}
 
-	// Get service if exists
-	let service = null;
-	if (quote.serviceId) {
-		[service] = await db
-			.select()
-			.from(services)
-			.where(eq(services.id, quote.serviceId))
-			.limit(1);
-	}
-
 	// Get version history (walk up the chain)
 	const versions = await getVersionHistory(quoteId, tenantId);
 
@@ -175,7 +164,6 @@ async function getQuoteWithLineItems(quoteId: string, tenantId: string) {
 		...quote,
 		customer,
 		product,
-		service,
 		components,
 		lettering,
 		sundries: sundryItems,
@@ -336,11 +324,6 @@ async function getPackageWithOptions(packageId: string, tenantId: string) {
 		[customer] = await db.select().from(customers).where(eq(customers.id, pkg.customerId)).limit(1);
 	}
 
-	let service = null;
-	if (pkg.serviceId) {
-		[service] = await db.select().from(services).where(eq(services.id, pkg.serviceId)).limit(1);
-	}
-
 	let funeralDirector = null;
 	if (pkg.funeralDirectorId) {
 		[funeralDirector] = await db.select().from(funeralDirectors).where(eq(funeralDirectors.id, pkg.funeralDirectorId)).limit(1);
@@ -359,7 +342,6 @@ async function getPackageWithOptions(packageId: string, tenantId: string) {
 	return {
 		...pkg,
 		customer,
-		service,
 		funeralDirector,
 		council,
 		memorialSite,
@@ -428,7 +410,6 @@ const customerDetailsSchema = z.object({
 const createQuoteSchema = z.object({
 	// Package-level fields (shared context)
 	quoteType: z.enum(QUOTE_TYPES).optional().default('new_memorial'),
-	serviceId: z.string().min(1), // Required: the service this quote is for
 	customerId: z.string().optional(),
 	funeralDirectorId: z.string().optional(), // Memorial context
 	councilId: z.string().optional(),
@@ -703,17 +684,6 @@ const quotesRoutes = new Hono()
 			}
 		}
 
-		// Validate service (required)
-		const [service] = await db
-			.select()
-			.from(services)
-			.where(and(eq(services.id, data.serviceId), eq(services.tenantId, tenantId)))
-			.limit(1);
-
-		if (!service) {
-			return c.json({ error: 'Service not found' }, 400);
-		}
-
 		// Get pricing settings
 		const pricingSettings = await getTenantPricingSettings(tenantId);
 
@@ -950,8 +920,8 @@ const quotesRoutes = new Hono()
 		await db.insert(quotePackages).values({
 			id: packageId,
 			tenantId,
+			packageNumber: quoteNumber, // Use first quote number as package identifier
 			customerId,
-			serviceId: data.serviceId,
 			quoteType: data.quoteType,
 			source: data.source || null,
 			status: 'draft',
@@ -977,7 +947,6 @@ const quotesRoutes = new Hono()
 			parentQuoteId: null,
 			version: 1,
 			quoteType: data.quoteType,
-			serviceId: data.serviceId,
 			customerId,
 			productId: data.productId || null,
 			dimensionComboId: data.dimensionComboId || null,
@@ -1051,20 +1020,8 @@ const quotesRoutes = new Hono()
 		const quoteNumber = original.quoteNumber;
 		const version = original.version + 1;
 
-		// Validate service (required)
-		const [service] = await db
-			.select()
-			.from(services)
-			.where(and(eq(services.id, data.serviceId), eq(services.tenantId, tenantId)))
-			.limit(1);
-
-		if (!service) {
-			return c.json({ error: 'Service not found' }, 400);
-		}
-
 		// Merge data: use provided or fall back to original
 		const mergedData = {
-			serviceId: data.serviceId,
 			customerId: data.customerId ?? original.customerId,
 			productId: data.productId ?? original.productId,
 			notes: data.notes ?? original.notes,
@@ -1333,7 +1290,6 @@ const quotesRoutes = new Hono()
 			parentQuoteId: originalId,
 			version,
 			quoteType: data.quoteType ?? original.quoteType ?? 'new_memorial',
-			serviceId: mergedData.serviceId,
 			customerId: mergedData.customerId || null,
 			productId: mergedData.productId || null,
 			dimensionComboId: data.dimensionComboId ?? original.dimensionComboId ?? null,
@@ -2281,7 +2237,6 @@ ${tenantName}
 			parentQuoteId: null,
 			version: 1,
 			quoteType: pkg.quoteType,
-			serviceId: pkg.serviceId,
 			customerId: pkg.customerId,
 			productId: sourceOption?.productId || data.productId || null,
 			dimensionComboId: sourceOption?.dimensionComboId || data.dimensionComboId || null,
@@ -2441,7 +2396,6 @@ ${tenantName}
 			parentQuoteId: null,
 			version: 1,
 			quoteType: sourceOption.quoteType,
-			serviceId: sourceOption.serviceId,
 			customerId: sourceOption.customerId,
 			productId: sourceOption.productId,
 			dimensionComboId: sourceOption.dimensionComboId,

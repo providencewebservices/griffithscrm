@@ -10,7 +10,6 @@ import {
 	quotes,
 	customers,
 	products,
-	services,
 	quoteComponents,
 	quoteLettering,
 	quoteSundries,
@@ -112,7 +111,7 @@ async function getJobWithQuoteSummary(jobId: string, tenantId: string) {
 	if (!quote) return null;
 
 	// Get all quote details in parallel
-	const [customer, product, service, components, lettering, sundries, lineItems] =
+	const [customer, product, components, lettering, sundries, lineItems] =
 		await Promise.all([
 			// Customer
 			quote.customerId
@@ -129,15 +128,6 @@ async function getJobWithQuoteSummary(jobId: string, tenantId: string) {
 						.select()
 						.from(products)
 						.where(eq(products.id, quote.productId))
-						.limit(1)
-						.then((r) => r[0] || null)
-				: Promise.resolve(null),
-			// Service
-			quote.serviceId
-				? db
-						.select()
-						.from(services)
-						.where(eq(services.id, quote.serviceId))
 						.limit(1)
 						.then((r) => r[0] || null)
 				: Promise.resolve(null),
@@ -163,7 +153,6 @@ async function getJobWithQuoteSummary(jobId: string, tenantId: string) {
 				? { id: customer.id, firstName: customer.firstName, lastName: customer.lastName }
 				: null,
 			product: product ? { id: product.id, name: product.name } : null,
-			service: service ? { id: service.id, name: service.name } : null,
 			// Include full details for job execution (no pricing - that's on quote page)
 			components: components.map((c) => ({
 				id: c.id,
@@ -262,7 +251,6 @@ export const jobsRouter = new Hono()
 						...job,
 						customerFirstName: null,
 						customerLastName: null,
-						serviceName: null,
 						total: '0',
 						paymentSummary: null,
 					};
@@ -279,18 +267,6 @@ export const jobsRouter = new Hono()
 					if (customer) {
 						customerFirstName = customer.firstName;
 						customerLastName = customer.lastName;
-					}
-				}
-
-				let serviceName = null;
-				if (quote.serviceId) {
-					const [service] = await db
-						.select({ name: services.name })
-						.from(services)
-						.where(eq(services.id, quote.serviceId))
-						.limit(1);
-					if (service) {
-						serviceName = service.name;
 					}
 				}
 
@@ -322,7 +298,6 @@ export const jobsRouter = new Hono()
 					...job,
 					customerFirstName,
 					customerLastName,
-					serviceName,
 					total: quote.total,
 					paymentSummary,
 				};

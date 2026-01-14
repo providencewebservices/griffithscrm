@@ -62,7 +62,6 @@ import { useFinishesQuery } from '@/hooks/use-finishes';
 import { useLetteringTechniquesQuery } from '@/hooks/use-lettering-techniques';
 import { useLetteringColorsQuery } from '@/hooks/use-lettering-colors';
 import { useSundriesQuery } from '@/hooks/use-sundries';
-import { useServicesQuery } from '@/hooks/use-services';
 import { useJobsQuery } from '@/hooks/use-jobs';
 import { useFuneralDirectorsQuery } from '@/hooks/use-funeral-directors';
 import { useMemorialSitesQuery } from '@/hooks/use-memorial-sites';
@@ -111,7 +110,6 @@ export function QuoteNewPage() {
 
 	// Form state - Package-level (shared context)
 	const [quoteType, setQuoteType] = useState<QuoteType>('new_memorial');
-	const [serviceId, setServiceId] = useState<string>('');
 	const [customerId, setCustomerId] = useState<string>('');
 	const [customerComboOpen, setCustomerComboOpen] = useState(false);
 	const [funeralDirectorId, setFuneralDirectorId] = useState<string>('');
@@ -172,7 +170,6 @@ export function QuoteNewPage() {
 	const { data: techniques } = useLetteringTechniquesQuery();
 	const { data: colors } = useLetteringColorsQuery();
 	const { data: sundryItems } = useSundriesQuery();
-	const { data: serviceItems } = useServicesQuery();
 	const { data: funeralDirectors } = useFuneralDirectorsQuery();
 	const { data: memorialSites } = useMemorialSitesQuery();
 	// Fetch completed jobs for related job selector (only when needed)
@@ -322,44 +319,18 @@ export function QuoteNewPage() {
 
 	// Validate form based on quote type
 	const canSubmit = useMemo(() => {
-		// Must have a service selected
-		if (!serviceId) return false;
-
-		const config = QUOTE_TYPE_SECTION_CONFIG[quoteType];
-
-		// All components must have materialId (if components section is shown)
+		// All components must have materialId (if any added)
 		const componentsValid = components.every((c) => c.materialId);
 
-		// All lettering must have techniqueId and text
+		// All lettering must have techniqueId and text (if any added)
 		const letteringValid = lettering.every((l) => l.techniqueId && l.text);
 
-		// All sundries must have sundryId
+		// All sundries must have sundryId (if any added)
 		const sundriesValid = sundries.every((s) => s.sundryId);
 
-		// Type-specific validation
-		switch (quoteType) {
-			case 'sundry_only':
-				// Must have at least one sundry
-				return sundries.length > 0 && sundriesValid;
-
-			case 'additional_inscription':
-				// Must have lettering
-				return lettering.length > 0 && letteringValid && sundriesValid;
-
-			case 'refurbishment':
-				// Must have at least lettering, sundries, or line items
-				return (lettering.length > 0 || sundries.length > 0) && letteringValid && sundriesValid;
-
-			default:
-				// Must have at least one line item
-				const hasLineItems =
-					components.length > 0 ||
-					lettering.length > 0 ||
-					sundries.length > 0;
-
-				return hasLineItems && componentsValid && letteringValid && sundriesValid;
-		}
-	}, [serviceId, quoteType, components, lettering, sundries]);
+		// Line items are optional, but if added they must be complete
+		return componentsValid && letteringValid && sundriesValid;
+	}, [components, lettering, sundries]);
 
 	const handleSubmit = async () => {
 		setMutationError(null);
@@ -367,7 +338,6 @@ export function QuoteNewPage() {
 		const quoteData = {
 			// Package-level fields (shared context)
 			quoteType,
-			serviceId,
 			customerId: customerId || undefined,
 			funeralDirectorId: funeralDirectorId || undefined,
 			memorialSiteId: memorialSiteId || undefined,
@@ -513,41 +483,14 @@ export function QuoteNewPage() {
 					</CardContent>
 				</Card>
 
-				{/* Service & Customer */}
+				{/* Customer */}
 				<Card>
 					<CardHeader>
-						<CardTitle>Service & Customer</CardTitle>
-						<CardDescription>Select the service type and assign a customer to this quote</CardDescription>
+						<CardTitle>Customer</CardTitle>
+						<CardDescription>Assign a customer to this quote</CardDescription>
 					</CardHeader>
 					<CardContent className="space-y-6">
-						{/* Primary fields - Service & Customer side by side */}
-						<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-							{/* Service Selection */}
-							<div className="space-y-2">
-								<div className="flex items-center justify-between h-7">
-									<FieldLabel className="mb-0">Service *</FieldLabel>
-								</div>
-								<Select
-									value={serviceId || NONE_VALUE}
-									onValueChange={(v) => setServiceId(v === NONE_VALUE ? '' : v)}
-								>
-									<SelectTrigger className="w-full">
-										<SelectValue placeholder="Select service type" />
-									</SelectTrigger>
-									<SelectContent>
-										<SelectItem value={NONE_VALUE}>Select service type</SelectItem>
-										{serviceItems
-											?.filter((s) => s.isActive)
-											.map((item) => (
-												<SelectItem key={item.id} value={item.id}>
-													{item.name}
-												</SelectItem>
-											))}
-									</SelectContent>
-								</Select>
-							</div>
-
-							{/* Customer Selection */}
+						{/* Customer Selection */}
 							<div className="space-y-2">
 								<div className="flex items-center justify-between h-7">
 									<FieldLabel className="mb-0">Customer</FieldLabel>
@@ -630,7 +573,6 @@ export function QuoteNewPage() {
 									</Popover>
 								)}
 							</div>
-						</div>
 
 						{/* New Customer Form - expands below when creating */}
 						{isCreatingCustomer && (
