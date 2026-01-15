@@ -43,6 +43,13 @@
       "when": 1768398540208,
       "tag": "0005_red_paladin",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1768438573749,
+      "tag": "0006_flat_silver_sable",
+      "breakpoints": true
     }
   ]
 }

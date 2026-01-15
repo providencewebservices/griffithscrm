@@ -65,7 +65,7 @@ import { useSundriesQuery } from '@/hooks/use-sundries';
 import { useJobsQuery } from '@/hooks/use-jobs';
 import { useFuneralDirectorsQuery } from '@/hooks/use-funeral-directors';
 import { useMemorialSitesQuery } from '@/hooks/use-memorial-sites';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { useTenantPricingSettingsQuery } from '@/hooks/use-tenant-pricing-settings';
 import { Label } from '@/components/ui/label';
 import { ENQUIRY_SOURCES } from '@griffiths-crm/shared/db/schema';
 import { ArrowLeft, Plus, Trash2, User, Check, ChevronsUpDown, FileText, PlusCircle, RefreshCw, Flower, Package, MapPin, Building2 } from 'lucide-react';
@@ -172,6 +172,7 @@ export function QuoteNewPage() {
 	const { data: sundryItems } = useSundriesQuery();
 	const { data: funeralDirectors } = useFuneralDirectorsQuery();
 	const { data: memorialSites } = useMemorialSitesQuery();
+	const { data: pricingSettings } = useTenantPricingSettingsQuery();
 	// Fetch completed jobs for related job selector (only when needed)
 	const sectionConfig = QUOTE_TYPE_SECTION_CONFIG[quoteType];
 	const { data: completedJobs } = useJobsQuery(
@@ -179,6 +180,15 @@ export function QuoteNewPage() {
 	);
 
 	const createMutation = useCreateQuoteMutation();
+
+	// Set default validUntil date based on tenant settings
+	useEffect(() => {
+		if (pricingSettings?.quoteValidityDays && !validUntil) {
+			const defaultDate = new Date();
+			defaultDate.setDate(defaultDate.getDate() + pricingSettings.quoteValidityDays);
+			setValidUntil(defaultDate.toISOString().split('T')[0]);
+		}
+	}, [pricingSettings?.quoteValidityDays]);
 
 	// Helper to format dimension combo for display
 	const formatDimensionCombo = (combo: DimensionCombo): string => {
@@ -427,7 +437,9 @@ export function QuoteNewPage() {
 				</div>
 			)}
 
-			<div className="space-y-6">
+			<div className="flex gap-6">
+			{/* Main Content - Left Column */}
+			<div className="flex-1 min-w-0 space-y-6">
 				{/* Quote Type Selector */}
 				<Card>
 					<CardHeader>
@@ -435,148 +447,63 @@ export function QuoteNewPage() {
 						<CardDescription>Select the type of work for this quote</CardDescription>
 					</CardHeader>
 					<CardContent>
-						<RadioGroup
-							value={quoteType}
-							onValueChange={(v) => setQuoteType(v as QuoteType)}
-							className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"
-						>
-							{QUOTE_TYPES.map((type) => {
-								const icons: Record<QuoteType, typeof FileText> = {
-									new_memorial: FileText,
-									additional_inscription: PlusCircle,
-									refurbishment: RefreshCw,
-									ashes: Flower,
-									sundry_only: Package,
-								};
-								const Icon = icons[type];
-								const isSelected = quoteType === type;
-								return (
-									<div key={type}>
-										<RadioGroupItem
-											value={type}
-											id={`quote-type-${type}`}
-											className="sr-only"
-										/>
-										<Label
-											htmlFor={`quote-type-${type}`}
-											className={cn(
-												'flex items-start gap-3 p-4 border rounded-lg cursor-pointer transition-colors',
-												isSelected
-													? 'border-primary bg-primary/5 ring-1 ring-primary'
-													: 'hover:bg-muted/50'
-											)}
-										>
-											<Icon className={cn('h-5 w-5 mt-0.5 shrink-0', isSelected ? 'text-primary' : 'text-muted-foreground')} />
-											<div>
-												<div className={cn('font-medium', isSelected && 'text-primary')}>
-													{QUOTE_TYPE_LABELS[type]}
-												</div>
-												<div className="text-sm text-muted-foreground">
-													{QUOTE_TYPE_DESCRIPTIONS[type]}
+						<Select value={quoteType} onValueChange={(v) => setQuoteType(v as QuoteType)}>
+							<SelectTrigger className="w-full">
+								<SelectValue>
+									{(() => {
+										const icons: Record<QuoteType, typeof FileText> = {
+											new_memorial: FileText,
+											additional_inscription: PlusCircle,
+											refurbishment: RefreshCw,
+											ashes: Flower,
+											sundry_only: Package,
+										};
+										const Icon = icons[quoteType];
+										return (
+											<div className="flex items-center gap-2">
+												<Icon className="h-4 w-4 text-muted-foreground" />
+												<span>{QUOTE_TYPE_LABELS[quoteType]}</span>
+											</div>
+										);
+									})()}
+								</SelectValue>
+							</SelectTrigger>
+							<SelectContent>
+								{QUOTE_TYPES.map((type) => {
+									const icons: Record<QuoteType, typeof FileText> = {
+										new_memorial: FileText,
+										additional_inscription: PlusCircle,
+										refurbishment: RefreshCw,
+										ashes: Flower,
+										sundry_only: Package,
+									};
+									const Icon = icons[type];
+									return (
+										<SelectItem key={type} value={type}>
+											<div className="flex items-start gap-2">
+												<Icon className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
+												<div>
+													<div className="font-medium">{QUOTE_TYPE_LABELS[type]}</div>
+													<div className="text-xs text-muted-foreground">{QUOTE_TYPE_DESCRIPTIONS[type]}</div>
 												</div>
 											</div>
-										</Label>
-									</div>
-								);
-							})}
-						</RadioGroup>
+										</SelectItem>
+									);
+								})}
+							</SelectContent>
+						</Select>
 					</CardContent>
 				</Card>
 
-				{/* Customer */}
+				{/* New Customer Form - shows when creating new customer from sidebar */}
+				{isCreatingCustomer && (
 				<Card>
 					<CardHeader>
-						<CardTitle>Customer</CardTitle>
-						<CardDescription>Assign a customer to this quote</CardDescription>
+						<CardTitle>New Customer</CardTitle>
+						<CardDescription>Enter the customer's details</CardDescription>
 					</CardHeader>
-					<CardContent className="space-y-6">
-						{/* Customer Selection */}
-							<div className="space-y-2">
-								<div className="flex items-center justify-between h-7">
-									<FieldLabel className="mb-0">Customer</FieldLabel>
-									<Button
-										type="button"
-										variant="outline"
-										size="sm"
-										className="h-7 text-xs"
-										onClick={() => {
-											setIsCreatingCustomer(!isCreatingCustomer);
-											if (!isCreatingCustomer) {
-												setCustomerId('');
-											}
-										}}
-									>
-										<User className="h-3 w-3 mr-1" />
-										{isCreatingCustomer ? 'Select Existing' : 'New Customer'}
-									</Button>
-								</div>
-								{!isCreatingCustomer && (
-									<Popover open={customerComboOpen} onOpenChange={setCustomerComboOpen}>
-										<PopoverTrigger asChild>
-											<Button
-												variant="outline"
-												role="combobox"
-												aria-expanded={customerComboOpen}
-												className="w-full justify-between font-normal"
-											>
-												{customerId
-													? customers?.find((c) => c.id === customerId)
-														? `${customers.find((c) => c.id === customerId)?.firstName} ${customers.find((c) => c.id === customerId)?.lastName}`
-														: 'Search or select customer...'
-													: 'Search or select customer...'}
-												<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-											</Button>
-										</PopoverTrigger>
-										<PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-											<Command>
-												<CommandInput placeholder="Search customers..." />
-												<CommandList>
-													<CommandEmpty>
-														<div className="py-2 text-center">
-															<p className="text-sm text-muted-foreground mb-2">No customer found.</p>
-															<Button
-																variant="outline"
-																size="sm"
-																onClick={() => {
-																	setIsCreatingCustomer(true);
-																	setCustomerComboOpen(false);
-																}}
-															>
-																<User className="h-4 w-4 mr-2" />
-																Create New Customer
-															</Button>
-														</div>
-													</CommandEmpty>
-													<CommandGroup>
-														{customers?.map((customer) => (
-															<CommandItem
-																key={customer.id}
-																value={`${customer.firstName} ${customer.lastName}`}
-																onSelect={() => {
-																	setCustomerId(customer.id);
-																	setCustomerComboOpen(false);
-																}}
-															>
-																<Check
-																	className={cn(
-																		'mr-2 h-4 w-4',
-																		customerId === customer.id ? 'opacity-100' : 'opacity-0'
-																	)}
-																/>
-																{customer.firstName} {customer.lastName}
-															</CommandItem>
-														))}
-													</CommandGroup>
-												</CommandList>
-											</Command>
-										</PopoverContent>
-									</Popover>
-								)}
-							</div>
-
-						{/* New Customer Form - expands below when creating */}
-						{isCreatingCustomer && (
-							<div className="border rounded-lg p-4 space-y-4 bg-muted/30">
+					<CardContent>
+						<div className="space-y-4">
 								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 									<Field>
 										<FieldLabel>First Name *</FieldLabel>
@@ -729,184 +656,10 @@ export function QuoteNewPage() {
 										</Field>
 									</div>
 								</div>
-							</div>
-						)}
-
-						{/* Secondary field - Enquiry Source (aligned to Customer column) */}
-						<div className="pt-4 border-t">
-							<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-								<div>{/* Empty left column for alignment */}</div>
-								<Field>
-									<FieldLabel className="text-muted-foreground text-sm">
-										How did they contact us?
-									</FieldLabel>
-									<Select
-										value={source || NONE_VALUE}
-										onValueChange={(v) => setSource(v === NONE_VALUE ? '' : (v as EnquirySource))}
-									>
-										<SelectTrigger className="bg-muted/30">
-											<SelectValue placeholder="Select enquiry source" />
-										</SelectTrigger>
-										<SelectContent>
-											<SelectItem value={NONE_VALUE}>Not specified</SelectItem>
-											{ENQUIRY_SOURCES.map((src) => (
-												<SelectItem key={src} value={src}>
-													{ENQUIRY_SOURCE_LABELS[src]}
-												</SelectItem>
-											))}
-										</SelectContent>
-									</Select>
-								</Field>
-							</div>
 						</div>
 					</CardContent>
 				</Card>
-
-				{/* Memorial Context - Funeral Director and Memorial Site */}
-				<Card>
-					<CardHeader>
-						<CardTitle>Memorial Context</CardTitle>
-						<CardDescription>Location and associated contacts for this memorial</CardDescription>
-					</CardHeader>
-					<CardContent>
-						<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-							{/* Funeral Director */}
-							<div className="space-y-2">
-								<FieldLabel className="mb-0">Funeral Director</FieldLabel>
-								<Popover open={funeralDirectorComboOpen} onOpenChange={setFuneralDirectorComboOpen}>
-									<PopoverTrigger asChild>
-										<Button
-											variant="outline"
-											role="combobox"
-											aria-expanded={funeralDirectorComboOpen}
-											className="w-full justify-between font-normal"
-										>
-											{funeralDirectorId
-												? funeralDirectors?.find((fd) => fd.id === funeralDirectorId)?.businessName ||
-												  'Select funeral director...'
-												: 'Select funeral director (optional)...'}
-											<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-										</Button>
-									</PopoverTrigger>
-									<PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-										<Command>
-											<CommandInput placeholder="Search funeral directors..." />
-											<CommandList>
-												<CommandEmpty>No funeral directors found.</CommandEmpty>
-												<CommandGroup>
-													{funeralDirectorId && (
-														<CommandItem
-															value="_clear"
-															onSelect={() => {
-																setFuneralDirectorId('');
-																setFuneralDirectorComboOpen(false);
-															}}
-														>
-															<span className="text-muted-foreground">Clear selection</span>
-														</CommandItem>
-													)}
-													{funeralDirectors
-														?.filter((fd) => fd.isActive)
-														.map((fd) => (
-															<CommandItem
-																key={fd.id}
-																value={fd.businessName}
-																onSelect={() => {
-																	setFuneralDirectorId(fd.id);
-																	setFuneralDirectorComboOpen(false);
-																}}
-															>
-																<Check
-																	className={cn(
-																		'mr-2 h-4 w-4',
-																		funeralDirectorId === fd.id ? 'opacity-100' : 'opacity-0'
-																	)}
-																/>
-																<div className="flex items-center gap-2">
-																	<Building2 className="h-4 w-4 text-muted-foreground" />
-																	<span>{fd.businessName}</span>
-																	{fd.branchName && (
-																		<span className="text-muted-foreground">
-																			({fd.branchName})
-																		</span>
-																	)}
-																</div>
-															</CommandItem>
-														))}
-												</CommandGroup>
-											</CommandList>
-										</Command>
-									</PopoverContent>
-								</Popover>
-							</div>
-
-							{/* Memorial Site */}
-							<div className="space-y-2">
-								<FieldLabel className="mb-0">Memorial Site</FieldLabel>
-								<Popover open={memorialSiteComboOpen} onOpenChange={setMemorialSiteComboOpen}>
-									<PopoverTrigger asChild>
-										<Button
-											variant="outline"
-											role="combobox"
-											aria-expanded={memorialSiteComboOpen}
-											className="w-full justify-between font-normal"
-										>
-											{memorialSiteId
-												? memorialSites?.find((ms) => ms.id === memorialSiteId)?.name ||
-												  'Select memorial site...'
-												: 'Select memorial site (optional)...'}
-											<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-										</Button>
-									</PopoverTrigger>
-									<PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-										<Command>
-											<CommandInput placeholder="Search memorial sites..." />
-											<CommandList>
-												<CommandEmpty>No memorial sites found.</CommandEmpty>
-												<CommandGroup>
-													{memorialSiteId && (
-														<CommandItem
-															value="_clear"
-															onSelect={() => {
-																setMemorialSiteId('');
-																setMemorialSiteComboOpen(false);
-															}}
-														>
-															<span className="text-muted-foreground">Clear selection</span>
-														</CommandItem>
-													)}
-													{memorialSites
-														?.filter((ms) => ms.isActive)
-														.map((ms) => (
-															<CommandItem
-																key={ms.id}
-																value={ms.name}
-																onSelect={() => {
-																	setMemorialSiteId(ms.id);
-																	setMemorialSiteComboOpen(false);
-																}}
-															>
-																<Check
-																	className={cn(
-																		'mr-2 h-4 w-4',
-																		memorialSiteId === ms.id ? 'opacity-100' : 'opacity-0'
-																	)}
-																/>
-																<div className="flex items-center gap-2">
-																	<MapPin className="h-4 w-4 text-muted-foreground" />
-																	<span>{ms.name}</span>
-																</div>
-															</CommandItem>
-														))}
-												</CommandGroup>
-											</CommandList>
-										</Command>
-									</PopoverContent>
-								</Popover>
-							</div>
-						</div>
-					</CardContent>
-				</Card>
+				)}
 
 				{/* Existing Memorial & Related Job - shown for additional inscription and refurbishment */}
 				{sectionConfig?.showExistingMemorial && (
@@ -1586,65 +1339,300 @@ export function QuoteNewPage() {
 				</Card>
 				)}
 
-				{/* Card: Additional Information */}
+				{/* Card: Notes */}
 				<Card>
 					<CardHeader>
-						<CardTitle>Additional Information</CardTitle>
-						<CardDescription>Notes and quote validity</CardDescription>
+						<CardTitle>Notes</CardTitle>
 					</CardHeader>
 					<CardContent>
-						<div className="space-y-6">
-							{/* Valid Until - standalone at top */}
-							<div className="max-w-xs">
-								<Field>
-									<FieldLabel>Valid Until</FieldLabel>
-									<Input
-										type="date"
-										value={validUntil}
-										onChange={(e) => setValidUntil(e.target.value)}
-									/>
-								</Field>
-							</div>
+						<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+							<Field>
+								<FieldLabel>Notes for Customer</FieldLabel>
+								<Textarea
+									value={notes}
+									onChange={(e) => setNotes(e.target.value)}
+									placeholder="Any special instructions or notes visible to the customer..."
+									rows={3}
+								/>
+							</Field>
 
-							{/* Notes side by side */}
-							<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-								<Field>
-									<FieldLabel>Notes for Customer</FieldLabel>
-									<Textarea
-										value={notes}
-										onChange={(e) => setNotes(e.target.value)}
-										placeholder="Any special instructions or notes visible to the customer..."
-										rows={3}
-									/>
-								</Field>
-
-								<Field>
-									<FieldLabel>Internal Notes</FieldLabel>
-									<Textarea
-										value={internalNotes}
-										onChange={(e) => setInternalNotes(e.target.value)}
-										placeholder="Internal notes - not shown to customer..."
-										rows={3}
-										className="bg-orange-50/50 border-orange-200"
-									/>
-								</Field>
-							</div>
+							<Field>
+								<FieldLabel>Internal Notes</FieldLabel>
+								<Textarea
+									value={internalNotes}
+									onChange={(e) => setInternalNotes(e.target.value)}
+									placeholder="Internal notes - not shown to customer..."
+									rows={3}
+									className="bg-orange-50/50 border-orange-200"
+								/>
+							</Field>
 						</div>
 					</CardContent>
 				</Card>
+			</div>
 
-				{/* Submit Actions */}
-				<div className="flex justify-end gap-2">
-					<Link to="/app/quotes">
-						<Button variant="outline">Cancel</Button>
-					</Link>
-					<Button
-						onClick={handleSubmit}
-						disabled={!canSubmit || createMutation.isPending}
-					>
-						{createMutation.isPending ? 'Creating...' : 'Create Quote'}
-					</Button>
+			{/* Sidebar - Right Column */}
+			<div className="hidden lg:block w-80 shrink-0">
+				<div className="sticky top-6 space-y-4">
+					{/* Customer */}
+					<div className="space-y-2">
+						<div className="flex items-center justify-between">
+							<FieldLabel className="text-sm font-medium">Customer</FieldLabel>
+							<Button
+								type="button"
+								variant="ghost"
+								size="sm"
+								className="h-6 text-xs px-2"
+								onClick={() => {
+									setIsCreatingCustomer(!isCreatingCustomer);
+									if (!isCreatingCustomer) {
+										setCustomerId('');
+									}
+								}}
+							>
+								<User className="h-3 w-3 mr-1" />
+								{isCreatingCustomer ? 'Select' : 'New'}
+							</Button>
+						</div>
+						{!isCreatingCustomer ? (
+							<Popover open={customerComboOpen} onOpenChange={setCustomerComboOpen}>
+								<PopoverTrigger asChild>
+									<Button
+										variant="outline"
+										role="combobox"
+										aria-expanded={customerComboOpen}
+										className="w-full justify-between font-normal h-9 text-sm"
+									>
+										{customerId
+											? customers?.find((c) => c.id === customerId)
+												? `${customers.find((c) => c.id === customerId)?.firstName} ${customers.find((c) => c.id === customerId)?.lastName}`
+												: 'Select customer...'
+											: 'Select customer...'}
+										<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+									</Button>
+								</PopoverTrigger>
+								<PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+									<Command>
+										<CommandInput placeholder="Search customers..." />
+										<CommandList>
+											<CommandEmpty>
+												<div className="py-2 text-center">
+													<p className="text-sm text-muted-foreground mb-2">No customer found.</p>
+													<Button
+														variant="outline"
+														size="sm"
+														onClick={() => {
+															setIsCreatingCustomer(true);
+															setCustomerComboOpen(false);
+														}}
+													>
+														<User className="h-4 w-4 mr-2" />
+														Create New
+													</Button>
+												</div>
+											</CommandEmpty>
+											<CommandGroup>
+												{customers?.map((customer) => (
+													<CommandItem
+														key={customer.id}
+														value={`${customer.firstName} ${customer.lastName}`}
+														onSelect={() => {
+															setCustomerId(customer.id);
+															setCustomerComboOpen(false);
+														}}
+													>
+														<Check
+															className={cn(
+																'mr-2 h-4 w-4',
+																customerId === customer.id ? 'opacity-100' : 'opacity-0'
+															)}
+														/>
+														{customer.firstName} {customer.lastName}
+													</CommandItem>
+												))}
+											</CommandGroup>
+										</CommandList>
+									</Command>
+								</PopoverContent>
+							</Popover>
+						) : (
+							<div className="text-sm text-muted-foreground italic">
+								Creating new customer below...
+							</div>
+						)}
+					</div>
+
+					{/* Enquiry Source */}
+					<div className="space-y-2">
+						<FieldLabel className="text-sm font-medium">How did they contact us?</FieldLabel>
+						<Select
+							value={source || NONE_VALUE}
+							onValueChange={(v) => setSource(v === NONE_VALUE ? '' : (v as EnquirySource))}
+						>
+							<SelectTrigger className="h-9 text-sm">
+								<SelectValue placeholder="Select source" />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value={NONE_VALUE}>Not specified</SelectItem>
+								{ENQUIRY_SOURCES.map((src) => (
+									<SelectItem key={src} value={src}>
+										{ENQUIRY_SOURCE_LABELS[src]}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+					</div>
+
+					<div className="border-t pt-4 space-y-4">
+						{/* Funeral Director */}
+						<div className="space-y-2">
+							<FieldLabel className="text-sm font-medium">Funeral Director</FieldLabel>
+							<Popover open={funeralDirectorComboOpen} onOpenChange={setFuneralDirectorComboOpen}>
+								<PopoverTrigger asChild>
+									<Button
+										variant="outline"
+										role="combobox"
+										aria-expanded={funeralDirectorComboOpen}
+										className="w-full justify-between font-normal h-9 text-sm"
+									>
+										<span className="truncate">
+											{funeralDirectorId
+												? funeralDirectors?.find((fd) => fd.id === funeralDirectorId)?.businessName ||
+												  'Select...'
+												: 'Optional'}
+										</span>
+										<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+									</Button>
+								</PopoverTrigger>
+								<PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+									<Command>
+										<CommandInput placeholder="Search..." />
+										<CommandList>
+											<CommandEmpty>No funeral directors found.</CommandEmpty>
+											<CommandGroup>
+												{funeralDirectorId && (
+													<CommandItem
+														value="_clear"
+														onSelect={() => {
+															setFuneralDirectorId('');
+															setFuneralDirectorComboOpen(false);
+														}}
+													>
+														<span className="text-muted-foreground">Clear selection</span>
+													</CommandItem>
+												)}
+												{funeralDirectors
+													?.filter((fd) => fd.isActive)
+													.map((fd) => (
+														<CommandItem
+															key={fd.id}
+															value={fd.businessName}
+															onSelect={() => {
+																setFuneralDirectorId(fd.id);
+																setFuneralDirectorComboOpen(false);
+															}}
+														>
+															<Check
+																className={cn(
+																	'mr-2 h-4 w-4',
+																	funeralDirectorId === fd.id ? 'opacity-100' : 'opacity-0'
+																)}
+															/>
+															<div className="flex items-center gap-2 truncate">
+																<Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
+																<span className="truncate">{fd.businessName}</span>
+															</div>
+														</CommandItem>
+													))}
+											</CommandGroup>
+										</CommandList>
+									</Command>
+								</PopoverContent>
+							</Popover>
+						</div>
+
+						{/* Memorial Site */}
+						<div className="space-y-2">
+							<FieldLabel className="text-sm font-medium">Memorial Site</FieldLabel>
+							<Popover open={memorialSiteComboOpen} onOpenChange={setMemorialSiteComboOpen}>
+								<PopoverTrigger asChild>
+									<Button
+										variant="outline"
+										role="combobox"
+										aria-expanded={memorialSiteComboOpen}
+										className="w-full justify-between font-normal h-9 text-sm"
+									>
+										<span className="truncate">
+											{memorialSiteId
+												? memorialSites?.find((ms) => ms.id === memorialSiteId)?.name ||
+												  'Select...'
+												: 'Optional'}
+										</span>
+										<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+									</Button>
+								</PopoverTrigger>
+								<PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+									<Command>
+										<CommandInput placeholder="Search..." />
+										<CommandList>
+											<CommandEmpty>No memorial sites found.</CommandEmpty>
+											<CommandGroup>
+												{memorialSiteId && (
+													<CommandItem
+														value="_clear"
+														onSelect={() => {
+															setMemorialSiteId('');
+															setMemorialSiteComboOpen(false);
+														}}
+													>
+														<span className="text-muted-foreground">Clear selection</span>
+													</CommandItem>
+												)}
+												{memorialSites
+													?.filter((ms) => ms.isActive)
+													.map((ms) => (
+														<CommandItem
+															key={ms.id}
+															value={ms.name}
+															onSelect={() => {
+																setMemorialSiteId(ms.id);
+																setMemorialSiteComboOpen(false);
+															}}
+														>
+															<Check
+																className={cn(
+																	'mr-2 h-4 w-4',
+																	memorialSiteId === ms.id ? 'opacity-100' : 'opacity-0'
+																)}
+															/>
+															<div className="flex items-center gap-2 truncate">
+																<MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
+																<span className="truncate">{ms.name}</span>
+															</div>
+														</CommandItem>
+													))}
+											</CommandGroup>
+										</CommandList>
+									</Command>
+								</PopoverContent>
+							</Popover>
+						</div>
+					</div>
+
+					{/* Valid Until */}
+					<div className="border-t pt-4">
+						<div className="space-y-2">
+							<FieldLabel className="text-sm font-medium">Valid Until</FieldLabel>
+							<Input
+								type="date"
+								value={validUntil}
+								onChange={(e) => setValidUntil(e.target.value)}
+								className="h-9 text-sm"
+							/>
+						</div>
+					</div>
 				</div>
+			</div>
 			</div>
 		</div>
 	);

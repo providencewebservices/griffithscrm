@@ -11,6 +11,7 @@ const updateSchema = z.object({
 	defaultMarkupPercent: z.number().min(0).optional(), // 100 = 100% markup = 2x multiplier
 	vatRate: z.number().min(0).max(1).optional(), // 0.20 = 20%
 	defaultDepositPercent: z.number().min(0).max(100).optional(), // 50 = 50% deposit
+	quoteValidityDays: z.number().int().min(1).max(365).optional(), // 1-365 days
 });
 
 // Create tenant pricing settings routes
@@ -39,6 +40,7 @@ const tenantPricingSettingsRoutes = new Hono()
 					defaultMarkupPercent: '100', // 100% markup = 2x multiplier
 					vatRate: '0',
 					defaultDepositPercent: '50', // 50% deposit
+					quoteValidityDays: 30, // 30 days default
 				})
 				.returning();
 		}
@@ -71,6 +73,7 @@ const tenantPricingSettingsRoutes = new Hono()
 					vatRate: data.vatRate !== undefined ? String(data.vatRate) : '0',
 					defaultDepositPercent:
 						data.defaultDepositPercent !== undefined ? String(data.defaultDepositPercent) : '50',
+					quoteValidityDays: data.quoteValidityDays ?? 30,
 				})
 				.returning();
 
@@ -84,6 +87,8 @@ const tenantPricingSettingsRoutes = new Hono()
 		if (data.vatRate !== undefined) updateData.vatRate = String(data.vatRate);
 		if (data.defaultDepositPercent !== undefined)
 			updateData.defaultDepositPercent = String(data.defaultDepositPercent);
+		if (data.quoteValidityDays !== undefined)
+			updateData.quoteValidityDays = data.quoteValidityDays;
 
 		const [updated] = await db
 			.update(tenantPricingSettings)

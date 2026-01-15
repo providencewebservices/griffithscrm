@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Field, FieldGroup, FieldLabel, FieldDescription } from '@/components/ui/field';
@@ -14,8 +15,7 @@ export function PricingTab() {
 	const [defaultMarkupPercent, setDefaultMarkupPercent] = useState('100');
 	const [vatRate, setVatRate] = useState('0');
 	const [defaultDepositPercent, setDefaultDepositPercent] = useState('50');
-	const [saveError, setSaveError] = useState<string | null>(null);
-	const [saveSuccess, setSaveSuccess] = useState(false);
+	const [quoteValidityDays, setQuoteValidityDays] = useState('30');
 
 	// Load settings into form
 	useEffect(() => {
@@ -25,30 +25,34 @@ export function PricingTab() {
 			const vatPercent = parseFloat(settings.vatRate) * 100;
 			setVatRate(String(vatPercent));
 			setDefaultDepositPercent(settings.defaultDepositPercent);
+			setQuoteValidityDays(String(settings.quoteValidityDays ?? 30));
 		}
 	}, [settings]);
 
 	const handleSave = async () => {
-		setSaveError(null);
-		setSaveSuccess(false);
-
 		try {
 			const markupNum = parseFloat(defaultMarkupPercent);
 			const vatNum = parseFloat(vatRate) / 100; // Convert percentage back to decimal
 			const depositNum = parseFloat(defaultDepositPercent);
 
 			if (isNaN(markupNum) || markupNum < 0) {
-				setSaveError('Markup percentage must be a valid number 0 or greater');
+				toast.error('Markup percentage must be a valid number 0 or greater');
 				return;
 			}
 
 			if (isNaN(vatNum) || vatNum < 0 || vatNum > 1) {
-				setSaveError('VAT rate must be between 0 and 100%');
+				toast.error('VAT rate must be between 0 and 100%');
 				return;
 			}
 
 			if (isNaN(depositNum) || depositNum < 0 || depositNum > 100) {
-				setSaveError('Deposit percentage must be between 0 and 100%');
+				toast.error('Deposit percentage must be between 0 and 100%');
+				return;
+			}
+
+			const validityNum = parseInt(quoteValidityDays);
+			if (isNaN(validityNum) || validityNum < 1 || validityNum > 365) {
+				toast.error('Quote validity must be between 1 and 365 days');
 				return;
 			}
 
@@ -56,12 +60,12 @@ export function PricingTab() {
 				defaultMarkupPercent: markupNum,
 				vatRate: vatNum,
 				defaultDepositPercent: depositNum,
+				quoteValidityDays: validityNum,
 			});
 
-			setSaveSuccess(true);
-			setTimeout(() => setSaveSuccess(false), 3000);
+			toast.success('Pricing settings saved');
 		} catch (err) {
-			setSaveError(err instanceof Error ? err.message : 'Failed to save settings');
+			toast.error(err instanceof Error ? err.message : 'Failed to save settings');
 		}
 	};
 
@@ -85,18 +89,6 @@ export function PricingTab() {
 
 	return (
 		<div className="max-w-2xl space-y-8">
-			{saveError && (
-				<div className="bg-destructive/10 text-destructive px-4 py-2 rounded">
-					{saveError}
-				</div>
-			)}
-
-			{saveSuccess && (
-				<div className="bg-green-500/10 text-green-600 px-4 py-2 rounded">
-					Pricing settings saved successfully!
-				</div>
-			)}
-
 			{/* Default Markup */}
 			<div className="border rounded-lg p-6">
 				<h3 className="text-lg font-semibold mb-4">Default Markup</h3>
@@ -191,6 +183,32 @@ export function PricingTab() {
 						<li>• Balance: {'\u00A3'}{(1000 * (1 - parseFloat(defaultDepositPercent || '0') / 100)).toFixed(2)}</li>
 					</ul>
 				</div>
+			</div>
+
+			{/* Quote Settings */}
+			<div className="border rounded-lg p-6">
+				<h3 className="text-lg font-semibold mb-4">Quote Settings</h3>
+				<FieldGroup>
+					<Field>
+						<FieldLabel htmlFor="quoteValidity">Default Quote Validity</FieldLabel>
+						<FieldDescription>
+							How many days a quote remains valid by default. This will be used to automatically set the "Valid Until" date when creating new quotes.
+						</FieldDescription>
+						<div className="flex items-center gap-2 mt-2">
+							<Input
+								id="quoteValidity"
+								type="number"
+								min="1"
+								max="365"
+								step="1"
+								value={quoteValidityDays}
+								onChange={(e) => setQuoteValidityDays(e.target.value)}
+								className="w-24"
+							/>
+							<span className="text-muted-foreground">days</span>
+						</div>
+					</Field>
+				</FieldGroup>
 			</div>
 
 			{/* Save Button */}

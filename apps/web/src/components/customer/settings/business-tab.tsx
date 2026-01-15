@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -47,8 +48,6 @@ export function BusinessTab() {
 		formattedAddress: '',
 	});
 	const [hasAddress, setHasAddress] = useState(false);
-	const [saveError, setSaveError] = useState<string | null>(null);
-	const [saveSuccess, setSaveSuccess] = useState(false);
 
 	// Load settings into form
 	useEffect(() => {
@@ -99,9 +98,6 @@ export function BusinessTab() {
 	};
 
 	const handleSave = async () => {
-		setSaveError(null);
-		setSaveSuccess(false);
-
 		try {
 			const payload: { name?: string; address?: AddressInput | null } = {};
 
@@ -116,10 +112,9 @@ export function BusinessTab() {
 			}
 
 			await updateMutation.mutateAsync(payload);
-			setSaveSuccess(true);
-			setTimeout(() => setSaveSuccess(false), 3000);
+			toast.success('Business settings saved');
 		} catch (err) {
-			setSaveError(err instanceof Error ? err.message : 'Failed to save settings');
+			toast.error(err instanceof Error ? err.message : 'Failed to save settings');
 		}
 	};
 
@@ -140,18 +135,6 @@ export function BusinessTab() {
 
 	return (
 		<div className="max-w-2xl space-y-8">
-			{saveError && (
-				<div className="bg-destructive/10 text-destructive px-4 py-2 rounded">
-					{saveError}
-				</div>
-			)}
-
-			{saveSuccess && (
-				<div className="bg-green-500/10 text-green-600 px-4 py-2 rounded">
-					Settings saved successfully!
-				</div>
-			)}
-
 			{/* Business Name */}
 			<div className="border rounded-lg p-6">
 				<h3 className="text-lg font-semibold mb-4">Business Information</h3>

@@ -705,6 +705,7 @@ export const tenantPricingSettings = pgTable('tenant_pricing_settings', {
 	defaultDepositPercent: numeric('default_deposit_percent', { precision: 5, scale: 2 })
 		.notNull()
 		.default('50'), // 50 = 50% deposit
+	quoteValidityDays: integer('quote_validity_days').notNull().default(30), // Default quote valid for 30 days
 	createdAt: timestamp('created_at').notNull().defaultNow(),
 	updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
