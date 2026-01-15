@@ -12,10 +12,9 @@ import type {
 	letteringTechniques,
 	letteringColors,
 	sundries,
-	services,
 } from '../db/schema';
 
-import { PRODUCT_OPTION_TYPES, SERVICE_PRICING_TYPES } from '../db/schema';
+import { PRODUCT_OPTION_TYPES } from '../db/schema';
 
 // Role types
 export const USER_ROLES = ['app_admin', 'manager', 'tenant_user'] as const;
@@ -60,13 +59,10 @@ export type CustomerListItem = Customer & {
 // ============================================
 
 // Re-export constants for use in other packages
-export { PRODUCT_OPTION_TYPES, SERVICE_PRICING_TYPES };
+export { PRODUCT_OPTION_TYPES };
 
 // Product option type enum
 export type ProductOptionType = (typeof PRODUCT_OPTION_TYPES)[number];
-
-// Service pricing type enum
-export type ServicePricingType = (typeof SERVICE_PRICING_TYPES)[number];
 
 // Database model types for products
 export type ProductCategory = InferSelectModel<typeof productCategories>;
@@ -78,7 +74,6 @@ export type OptionChoice = InferSelectModel<typeof optionChoices>;
 export type LetteringTechnique = InferSelectModel<typeof letteringTechniques>;
 export type LetteringColor = InferSelectModel<typeof letteringColors>;
 export type Sundry = InferSelectModel<typeof sundries>;
-export type Service = InferSelectModel<typeof services>;
 
 // Helper type for product with category
 export type ProductWithCategory = Product & {

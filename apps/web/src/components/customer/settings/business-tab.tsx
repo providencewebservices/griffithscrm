@@ -134,127 +134,129 @@ export function BusinessTab() {
 	}
 
 	return (
-		<div className="max-w-2xl space-y-8">
-			{/* Business Name */}
-			<div className="border rounded-lg p-6">
-				<h3 className="text-lg font-semibold mb-4">Business Information</h3>
-				<FieldGroup>
-					<Field>
-						<FieldLabel htmlFor="businessName">Business Name</FieldLabel>
-						<Input
-							id="businessName"
-							value={name}
-							onChange={(e) => setName(e.target.value)}
-							placeholder="Your Business Name"
-						/>
-					</Field>
-				</FieldGroup>
-			</div>
-
-			{/* Business Address */}
-			<div className="border rounded-lg p-6">
-				<div className="flex justify-between items-center mb-4">
-					<h3 className="text-lg font-semibold">Business Address</h3>
-					{!hasAddress && (
-						<Button
-							type="button"
-							variant="outline"
-							size="sm"
-							onClick={() => setHasAddress(true)}
-						>
-							Add Address
-						</Button>
-					)}
+		<div className="space-y-8">
+			<div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+				{/* Business Name */}
+				<div className="border rounded-lg p-6">
+					<h3 className="text-lg font-semibold mb-4">Business Information</h3>
+					<FieldGroup>
+						<Field>
+							<FieldLabel htmlFor="businessName">Business Name</FieldLabel>
+							<Input
+								id="businessName"
+								value={name}
+								onChange={(e) => setName(e.target.value)}
+								placeholder="Your Business Name"
+							/>
+						</Field>
+					</FieldGroup>
 				</div>
 
-				{hasAddress ? (
-					<div className="space-y-4">
-						<Select
-							value={address.country}
-							onValueChange={(value) => updateAddressField('country', value)}
-						>
-							<SelectTrigger className="w-full">
-								<SelectValue>
-									{countryData && `${countryData.flag} ${countryData.label}`}
-								</SelectValue>
-							</SelectTrigger>
-							<SelectContent>
-								{COUNTRIES.map((country) => (
-									<SelectItem key={country.value} value={country.value}>
-										{country.flag} {country.label}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
-
-						<div className="flex gap-2">
-							<Input
-								placeholder={labels.streetNumber}
-								value={address.streetNumber || ''}
-								onChange={(e) => updateAddressField('streetNumber', e.target.value)}
-								className="w-28"
-							/>
-							<Input
-								placeholder="Street Name"
-								value={address.route || ''}
-								onChange={(e) => updateAddressField('route', e.target.value)}
-								className="flex-1"
-							/>
-						</div>
-
-						<div className="flex gap-2">
-							<Input
-								placeholder={labels.locality}
-								value={address.locality || ''}
-								onChange={(e) => updateAddressField('locality', e.target.value)}
-								className="flex-1"
-							/>
-							<Input
-								placeholder={labels.region}
-								value={address.administrativeAreaLevel1 || ''}
-								onChange={(e) => updateAddressField('administrativeAreaLevel1', e.target.value)}
-								className="w-24"
-							/>
-							<Input
-								placeholder={labels.postal}
-								value={address.postalCode || ''}
-								onChange={(e) => updateAddressField('postalCode', e.target.value)}
-								className="w-28"
-							/>
-						</div>
-
-						{address.formattedAddress && (
-							<p className="text-sm text-muted-foreground pt-2 border-t">
-								{address.formattedAddress}
-							</p>
+				{/* Business Address */}
+				<div className="border rounded-lg p-6">
+					<div className="flex justify-between items-center mb-4">
+						<h3 className="text-lg font-semibold">Business Address</h3>
+						{!hasAddress && (
+							<Button
+								type="button"
+								variant="outline"
+								size="sm"
+								onClick={() => setHasAddress(true)}
+							>
+								Add Address
+							</Button>
 						)}
-
-						<Button
-							type="button"
-							variant="ghost"
-							size="sm"
-							className="text-destructive"
-							onClick={() => {
-								setHasAddress(false);
-								setAddress({
-									streetNumber: '',
-									route: '',
-									locality: '',
-									administrativeAreaLevel1: '',
-									postalCode: '',
-									country: 'US',
-									formattedAddress: '',
-								});
-							}}
-						>
-							Remove Address
-						</Button>
 					</div>
-				) : (
-					<p className="text-sm text-muted-foreground">
-						No business address set. Add one to set the default country for customer addresses.
-					</p>
-				)}
+
+					{hasAddress ? (
+						<div className="space-y-4">
+							<Select
+								value={address.country}
+								onValueChange={(value) => updateAddressField('country', value)}
+							>
+								<SelectTrigger className="w-full">
+									<SelectValue>
+										{countryData && `${countryData.flag} ${countryData.label}`}
+									</SelectValue>
+								</SelectTrigger>
+								<SelectContent>
+									{COUNTRIES.map((country) => (
+										<SelectItem key={country.value} value={country.value}>
+											{country.flag} {country.label}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+
+							<div className="flex gap-2">
+								<Input
+									placeholder={labels.streetNumber}
+									value={address.streetNumber || ''}
+									onChange={(e) => updateAddressField('streetNumber', e.target.value)}
+									className="w-28"
+								/>
+								<Input
+									placeholder="Street Name"
+									value={address.route || ''}
+									onChange={(e) => updateAddressField('route', e.target.value)}
+									className="flex-1"
+								/>
+							</div>
+
+							<div className="flex gap-2">
+								<Input
+									placeholder={labels.locality}
+									value={address.locality || ''}
+									onChange={(e) => updateAddressField('locality', e.target.value)}
+									className="flex-1"
+								/>
+								<Input
+									placeholder={labels.region}
+									value={address.administrativeAreaLevel1 || ''}
+									onChange={(e) => updateAddressField('administrativeAreaLevel1', e.target.value)}
+									className="w-24"
+								/>
+								<Input
+									placeholder={labels.postal}
+									value={address.postalCode || ''}
+									onChange={(e) => updateAddressField('postalCode', e.target.value)}
+									className="w-28"
+								/>
+							</div>
+
+							{address.formattedAddress && (
+								<p className="text-sm text-muted-foreground pt-2 border-t">
+									{address.formattedAddress}
+								</p>
+							)}
+
+							<Button
+								type="button"
+								variant="ghost"
+								size="sm"
+								className="text-destructive"
+								onClick={() => {
+									setHasAddress(false);
+									setAddress({
+										streetNumber: '',
+										route: '',
+										locality: '',
+										administrativeAreaLevel1: '',
+										postalCode: '',
+										country: 'US',
+										formattedAddress: '',
+									});
+								}}
+							>
+								Remove Address
+							</Button>
+						</div>
+					) : (
+						<p className="text-sm text-muted-foreground">
+							No business address set. Add one to set the default country for customer addresses.
+						</p>
+					)}
+				</div>
 			</div>
 
 			{/* Save Button */}
