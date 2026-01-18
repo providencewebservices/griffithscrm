@@ -226,7 +226,7 @@ export function CustomerDashboard() {
 				<Card>
 					<CardHeader className="pb-3">
 						<div className="flex items-center justify-between">
-							<CardTitle className="text-lg flex items-center gap-2">
+							<CardTitle className="text-lg font-display font-bold flex items-center gap-2">
 								<FileText className="h-5 w-5" />
 								Quote Pipeline
 							</CardTitle>
@@ -273,7 +273,7 @@ export function CustomerDashboard() {
 				<Card>
 					<CardHeader className="pb-3">
 						<div className="flex items-center justify-between">
-							<CardTitle className="text-lg flex items-center gap-2">
+							<CardTitle className="text-lg font-display font-bold flex items-center gap-2">
 								<Briefcase className="h-5 w-5" />
 								Job Pipeline
 							</CardTitle>
@@ -321,7 +321,7 @@ export function CustomerDashboard() {
 				<Card>
 					<CardHeader className="pb-3">
 						<div className="flex items-center justify-between">
-							<CardTitle className="text-lg">Recent Quotes</CardTitle>
+							<CardTitle className="text-lg font-display font-bold">Recent Quotes</CardTitle>
 							<Link to="/app/quotes">
 								<Button variant="ghost" size="sm">
 									View All
@@ -356,7 +356,7 @@ export function CustomerDashboard() {
 													{quote.quoteNumber}
 												</Link>
 											</TableCell>
-											<TableCell className="truncate max-w-[120px]">
+											<TableCell className="truncate max-w-[120px] font-display">
 												{quote.customerName}
 											</TableCell>
 											<TableCell>{formatCurrency(quote.total)}</TableCell>
@@ -384,7 +384,7 @@ export function CustomerDashboard() {
 				<Card>
 					<CardHeader className="pb-3">
 						<div className="flex items-center justify-between">
-							<CardTitle className="text-lg">Recent Jobs</CardTitle>
+							<CardTitle className="text-lg font-display font-bold">Recent Jobs</CardTitle>
 							<Link to="/app/jobs">
 								<Button variant="ghost" size="sm">
 									View All
@@ -425,7 +425,7 @@ export function CustomerDashboard() {
 														{job.jobNumber}
 													</Link>
 												</TableCell>
-												<TableCell className="truncate max-w-[120px]">
+												<TableCell className="truncate max-w-[120px] font-display">
 													{job.customerName}
 												</TableCell>
 												<TableCell>

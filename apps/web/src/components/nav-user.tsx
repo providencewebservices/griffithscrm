@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router'
 import { ChevronsUpDown, LogOut } from "lucide-react"
 
 import { signOut, useSession } from '@/lib/auth'
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -16,6 +17,16 @@ import {
 	SidebarMenuItem,
 	useSidebar,
 } from "@/components/ui/sidebar"
+
+function getInitials(name: string | undefined): string {
+	if (!name) return "?"
+	return name
+		.split(" ")
+		.map((part) => part[0])
+		.join("")
+		.toUpperCase()
+		.slice(0, 2)
+}
 
 export function NavUser() {
 	const navigate = useNavigate()
@@ -36,13 +47,21 @@ export function NavUser() {
 					<DropdownMenuTrigger asChild>
 						<SidebarMenuButton
 							size="lg"
-							className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+							className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground group-data-[collapsible=icon]:justify-center"
 						>
-							<div className="grid flex-1 text-left text-sm leading-tight">
+							{/* Avatar: hidden when expanded, visible when collapsed */}
+							<Avatar className="h-8 w-8 rounded-lg hidden group-data-[collapsible=icon]:flex">
+								<AvatarFallback className="rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+									{getInitials(user?.name)}
+								</AvatarFallback>
+							</Avatar>
+							{/* Name/Email: visible when expanded, hidden when collapsed */}
+							<div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
 								<span className="truncate font-medium">{user?.name}</span>
 								<span className="truncate text-xs">{user?.email}</span>
 							</div>
-							<ChevronsUpDown className="ml-auto size-4" />
+							{/* Chevron: hidden when collapsed */}
+							<ChevronsUpDown className="ml-auto size-4 group-data-[collapsible=icon]:hidden" />
 						</SidebarMenuButton>
 					</DropdownMenuTrigger>
 					<DropdownMenuContent
