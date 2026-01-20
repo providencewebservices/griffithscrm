@@ -46,7 +46,7 @@ export function QuotesPage() {
 	const [searchQuery, setSearchQuery] = useState('');
 	const [statusFilter, setStatusFilter] = useState<QuoteStatus | 'all'>('all');
 	const [typeFilter, setTypeFilter] = useState<QuoteType | 'all'>('all');
-	const [displayMode, setDisplayMode] = useState<DisplayMode>('table');
+	const [displayMode, setDisplayMode] = useState<DisplayMode>('cards');
 	const [debouncedSearch, setDebouncedSearch] = useState('');
 
 	// Debounce search
@@ -222,9 +222,9 @@ export function QuotesPage() {
 											)}
 										</div>
 									</TableCell>
-									<TableCell>
+									<TableCell className="font-display">
 										{getCustomerName(pkg) || (
-											<span className="text-muted-foreground">Walk-in</span>
+											<span className="text-muted-foreground font-sans">Walk-in</span>
 										)}
 									</TableCell>
 									<TableCell>
@@ -297,7 +297,9 @@ function QuoteCard({
 						</CardTitle>
 						<CardDescription className="flex items-center gap-1.5">
 							<User className="h-3.5 w-3.5" />
-							{getCustomerName(pkg) || 'Walk-in'}
+							<span className={getCustomerName(pkg) ? 'font-display' : ''}>
+								{getCustomerName(pkg) || 'Walk-in'}
+							</span>
 						</CardDescription>
 					</div>
 					<div className="flex flex-col items-end gap-1">

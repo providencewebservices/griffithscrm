@@ -41,7 +41,7 @@ const ALL_STATUS_VALUE = '_all';
 export function JobsPage() {
 	const [search, setSearch] = useState('');
 	const [statusFilter, setStatusFilter] = useState<JobStatus | ''>('');
-	const [displayMode, setDisplayMode] = useState<DisplayMode>('table');
+	const [displayMode, setDisplayMode] = useState<DisplayMode>('cards');
 
 	// Debounce search
 	const debouncedSearch = useMemo(() => {
@@ -186,7 +186,7 @@ export function JobsPage() {
 											<TableCell className="font-medium">
 												{job.jobNumber}
 											</TableCell>
-											<TableCell>
+											<TableCell className={job.customerFirstName && job.customerLastName ? 'font-display' : ''}>
 												{job.customerFirstName && job.customerLastName
 													? `${job.customerFirstName} ${job.customerLastName}`
 													: 'Walk-in'}
@@ -283,7 +283,7 @@ function JobCard({ job, formatCurrency, formatDate, getPaymentStatus }: JobCardP
 				<div className="flex flex-col gap-1.5 text-sm text-muted-foreground">
 					<div className="flex items-center gap-2">
 						<User className="h-3.5 w-3.5" />
-						<span>{customerName}</span>
+						<span className={customerName !== 'Walk-in' ? 'font-display' : ''}>{customerName}</span>
 					</div>
 					<div className="flex items-center gap-2">
 						<PoundSterling className="h-3.5 w-3.5" />

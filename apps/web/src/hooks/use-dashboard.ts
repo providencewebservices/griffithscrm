@@ -30,10 +30,12 @@ export type DashboardStats = {
 	quotes: {
 		byStatus: Record<QuoteStatus, number>;
 		awaitingDecision: number;
+		expiringSoon: number;
 	};
 	jobs: {
 		byStatus: Record<JobStatus, number>;
 		stalled: number;
+		upcomingInstallations: number;
 	};
 	payments: {
 		overdueCount: number;

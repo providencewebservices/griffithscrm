@@ -33,7 +33,7 @@ type DisplayMode = 'table' | 'cards';
 export function CustomersList() {
 	const [searchQuery, setSearchQuery] = useState('');
 	const [viewMode, setViewMode] = useState<ViewMode>('active');
-	const [displayMode, setDisplayMode] = useState<DisplayMode>('table');
+	const [displayMode, setDisplayMode] = useState<DisplayMode>('cards');
 	const [debouncedSearch, setDebouncedSearch] = useState('');
 	const [formDialogOpen, setFormDialogOpen] = useState(false);
 	const [mutationError, setMutationError] = useState<string | null>(null);

@@ -2,10 +2,7 @@ import { useNavigate } from 'react-router'
 import { ChevronsUpDown, LogOut } from "lucide-react"
 
 import { signOut, useSession } from '@/lib/auth'
-import {
-	Avatar,
-	AvatarFallback,
-} from "@/components/ui/avatar"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -21,13 +18,22 @@ import {
 	useSidebar,
 } from "@/components/ui/sidebar"
 
+function getInitials(name: string | undefined): string {
+	if (!name) return "?"
+	return name
+		.split(" ")
+		.map((part) => part[0])
+		.join("")
+		.toUpperCase()
+		.slice(0, 2)
+}
+
 export function NavUser() {
 	const navigate = useNavigate()
 	const { isMobile } = useSidebar()
 	const { data: session } = useSession()
 
 	const user = session?.user
-	const initials = user?.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'
 
 	const handleSignOut = async () => {
 		await signOut()
@@ -43,13 +49,18 @@ export function NavUser() {
 							size="lg"
 							className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground group-data-[collapsible=icon]:justify-center"
 						>
-							<Avatar className="h-8 w-8 shrink-0 rounded-lg">
-								<AvatarFallback className="rounded-lg">{initials}</AvatarFallback>
+							{/* Avatar: hidden when expanded, visible when collapsed */}
+							<Avatar className="h-8 w-8 rounded-lg hidden group-data-[collapsible=icon]:flex">
+								<AvatarFallback className="rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+									{getInitials(user?.name)}
+								</AvatarFallback>
 							</Avatar>
+							{/* Name/Email: visible when expanded, hidden when collapsed */}
 							<div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
 								<span className="truncate font-medium">{user?.name}</span>
 								<span className="truncate text-xs">{user?.email}</span>
 							</div>
+							{/* Chevron: hidden when collapsed */}
 							<ChevronsUpDown className="ml-auto size-4 group-data-[collapsible=icon]:hidden" />
 						</SidebarMenuButton>
 					</DropdownMenuTrigger>
@@ -61,9 +72,6 @@ export function NavUser() {
 					>
 						<DropdownMenuLabel className="p-0 font-normal">
 							<div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-								<Avatar className="h-8 w-8 shrink-0 rounded-lg">
-									<AvatarFallback className="rounded-lg">{initials}</AvatarFallback>
-								</Avatar>
 								<div className="grid flex-1 text-left text-sm leading-tight">
 									<span className="truncate font-medium">{user?.name}</span>
 									<span className="truncate text-xs">{user?.email}</span>

@@ -8,6 +8,7 @@ export type TenantPricingSettings = {
 	defaultMarkupPercent: string;
 	vatRate: string;
 	defaultDepositPercent: string;
+	quoteValidityDays: number;
 	createdAt: string;
 	updatedAt: string;
 };
@@ -16,6 +17,7 @@ export type UpdateTenantPricingSettingsInput = {
 	defaultMarkupPercent?: number;
 	vatRate?: number;
 	defaultDepositPercent?: number;
+	quoteValidityDays?: number;
 };
 
 type TenantPricingSettingsResponse = {

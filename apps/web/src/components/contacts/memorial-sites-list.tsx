@@ -40,7 +40,7 @@ type DisplayMode = 'table' | 'cards';
 export function MemorialSitesList() {
 	const [searchQuery, setSearchQuery] = useState('');
 	const [viewMode, setViewMode] = useState<ViewMode>('active');
-	const [displayMode, setDisplayMode] = useState<DisplayMode>('table');
+	const [displayMode, setDisplayMode] = useState<DisplayMode>('cards');
 	const [siteTypeFilter, setSiteTypeFilter] = useState<MemorialSiteType | 'all'>('all');
 	const [debouncedSearch, setDebouncedSearch] = useState('');
 

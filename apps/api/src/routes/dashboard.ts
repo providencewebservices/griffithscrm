@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { eq, and, sql, desc, lt } from 'drizzle-orm';
+import { eq, and, sql, desc, lt, gte, lte } from 'drizzle-orm';
 import { requireAuth, requireTenant } from '../middleware/auth';
 import { db } from '../lib/auth';
 import {
@@ -27,6 +27,12 @@ export const dashboardRoutes = new Hono()
 
 		const fourteenDaysAgo = new Date();
 		fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+
+		const sevenDaysFromNow = new Date();
+		sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+
+		const fourteenDaysFromNow = new Date();
+		fourteenDaysFromNow.setDate(fourteenDaysFromNow.getDate() + 14);
 
 		// Get quote counts by status
 		const quoteCounts = await db
@@ -112,6 +118,37 @@ export const dashboardRoutes = new Hono()
 
 		const overdueCount = overduePayments[0]?.count || 0;
 		const overdueAmount = overduePayments[0]?.totalOutstanding || '0';
+
+		// Get upcoming installations (next 7 days, not yet installed/completed)
+		const [upcomingInstallationsResult] = await db
+			.select({ count: sql<number>`count(*)::int` })
+			.from(jobs)
+			.where(
+				and(
+					eq(jobs.tenantId, tenantId),
+					sql`${jobs.installationDate} IS NOT NULL`,
+					gte(jobs.installationDate, now),
+					lte(jobs.installationDate, sevenDaysFromNow),
+					sql`${jobs.status} NOT IN ('installed', 'completed')`
+				)
+			);
+		const upcomingInstallations = upcomingInstallationsResult?.count || 0;
+
+		// Get expiring quotes (validUntil in next 14 days, ready/presented, no decision)
+		const [expiringQuotesResult] = await db
+			.select({ count: sql<number>`count(*)::int` })
+			.from(quotes)
+			.where(
+				and(
+					eq(quotes.tenantId, tenantId),
+					sql`${quotes.validUntil} IS NOT NULL`,
+					gte(quotes.validUntil, now),
+					lte(quotes.validUntil, fourteenDaysFromNow),
+					sql`${quotes.status} IN ('ready', 'presented')`,
+					sql`${quotes.customerDecision} IS NULL`
+				)
+			);
+		const expiringQuotes = expiringQuotesResult?.count || 0;
 
 		// Get recent quotes (last 5)
 		const recentQuotesData = await db
@@ -224,10 +261,12 @@ export const dashboardRoutes = new Hono()
 			quotes: {
 				byStatus: quotesByStatus,
 				awaitingDecision,
+				expiringSoon: expiringQuotes,
 			},
 			jobs: {
 				byStatus: jobsByStatus,
 				stalled: stalledJobs,
+				upcomingInstallations,
 			},
 			payments: {
 				overdueCount,

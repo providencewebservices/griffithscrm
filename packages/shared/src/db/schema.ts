@@ -652,25 +652,6 @@ export const sundries = pgTable('sundries', {
 	updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
-// Service pricing types
-export const SERVICE_PRICING_TYPES = ['fixed', 'quoted', 'hourly'] as const;
-
-// Services - labor services like cleaning, installation (tenant-scoped)
-export const services = pgTable('services', {
-	id: text('id').primaryKey(),
-	tenantId: text('tenant_id')
-		.notNull()
-		.references(() => tenants.id, { onDelete: 'cascade' }),
-	name: text('name').notNull(),
-	description: text('description'),
-	basePrice: numeric('base_price', { precision: 10, scale: 2 }),
-	pricingType: text('pricing_type').notNull().default('fixed'), // 'fixed' | 'quoted' | 'hourly'
-	isActive: boolean('is_active').notNull().default(true),
-	sortOrder: integer('sort_order').notNull().default(0),
-	createdAt: timestamp('created_at').notNull().defaultNow(),
-	updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
-
 // Line item presets - reusable line items for quotes (tenant-scoped)
 export const lineItemPresets = pgTable('line_item_presets', {
 	id: text('id').primaryKey(),
@@ -705,6 +686,7 @@ export const tenantPricingSettings = pgTable('tenant_pricing_settings', {
 	defaultDepositPercent: numeric('default_deposit_percent', { precision: 5, scale: 2 })
 		.notNull()
 		.default('50'), // 50 = 50% deposit
+	quoteValidityDays: integer('quote_validity_days').notNull().default(30), // Default quote valid for 30 days
 	createdAt: timestamp('created_at').notNull().defaultNow(),
 	updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
@@ -998,27 +980,6 @@ export const quoteSundries = pgTable('quote_sundries', {
 	lineTotal: numeric('line_total', { precision: 10, scale: 2 }).notNull().default('0'), // unitPrice × quantity
 	// Descriptive snapshot
 	sundryName: text('sundry_name'),
-	notes: text('notes'),
-	sortOrder: integer('sort_order').notNull().default(0),
-	createdAt: timestamp('created_at').notNull().defaultNow(),
-	updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
-
-// Quote services (labor)
-export const quoteServices = pgTable('quote_services', {
-	id: text('id').primaryKey(),
-	quoteId: text('quote_id')
-		.notNull()
-		.references(() => quotes.id, { onDelete: 'cascade' }),
-	serviceId: text('service_id').references(() => services.id, { onDelete: 'set null' }),
-	quantity: integer('quantity').notNull().default(1),
-	// Price snapshots
-	supplierCost: numeric('supplier_cost', { precision: 10, scale: 2 }).notNull().default('0'), // Cost per unit (labor cost)
-	markupPercent: numeric('markup_percent', { precision: 10, scale: 2 }).notNull().default('100'), // 100 = 100% markup
-	unitPrice: numeric('unit_price', { precision: 10, scale: 2 }).notNull().default('0'), // supplierCost × (1 + markupPercent/100)
-	lineTotal: numeric('line_total', { precision: 10, scale: 2 }).notNull().default('0'), // unitPrice × quantity
-	// Descriptive snapshot
-	serviceName: text('service_name'),
 	notes: text('notes'),
 	sortOrder: integer('sort_order').notNull().default(0),
 	createdAt: timestamp('created_at').notNull().defaultNow(),
