@@ -36,6 +36,7 @@ import { SupplierDetailPage } from './pages/customer/supplier-detail';
 import { SupplierFormPage } from './pages/customer/supplier-form';
 import { DocumentsPage } from './pages/customer/documents';
 import { CalendarPage } from './pages/customer/calendar';
+import { InboxPage } from './pages/customer/inbox';
 import { PublicPackageViewPage } from './pages/public/package-view';
 import { ProtectedRoute } from './components/protected-route';
 import { RoleBasedRedirect } from './components/role-based-redirect';
@@ -109,6 +110,7 @@ function App() {
 					<Route path="suppliers/:id/edit" element={<SupplierFormPage />} />
 					<Route path="documents" element={<DocumentsPage />} />
 					<Route path="calendar" element={<CalendarPage />} />
+					<Route path="inbox" element={<InboxPage />} />
 				</Route>
 			</Routes>
 		</BrowserRouter>

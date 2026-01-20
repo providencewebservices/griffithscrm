@@ -26,6 +26,7 @@ import { quotesRoutes } from './routes/quotes';
 import { publicQuotesRoutes } from './routes/public-quotes';
 import { jobsRouter } from './routes/jobs';
 import { dashboardRoutes } from './routes/dashboard';
+import { pipelineRoutes } from './routes/pipeline';
 import { funeralDirectorsRoutes } from './routes/funeral-directors';
 import { memorialSitesRoutes } from './routes/memorial-sites';
 import { suppliersRoutes } from './routes/suppliers';
@@ -122,6 +123,7 @@ app.route('/api/jobs', jobsRouter);
 
 // Dashboard routes (for tenant users)
 app.route('/api/dashboard', dashboardRoutes);
+app.route('/api/dashboard/pipeline', pipelineRoutes);
 
 // Linked records routes (for tenant users)
 app.route('/api/funeral-directors', funeralDirectorsRoutes);

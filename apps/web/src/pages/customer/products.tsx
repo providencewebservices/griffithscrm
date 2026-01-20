@@ -56,7 +56,7 @@ export function ProductsPage() {
 	const [statusFilter, setStatusFilter] = useState<StatusFilter>('true');
 	const [includeArchived, setIncludeArchived] = useState(false);
 	const [page, setPage] = useState(1);
-	const [displayMode, setDisplayMode] = useState<DisplayMode>('table');
+	const [displayMode, setDisplayMode] = useState<DisplayMode>('cards');
 	const [formDialogOpen, setFormDialogOpen] = useState(false);
 	const [mutationError, setMutationError] = useState<string | null>(null);
 
@@ -395,7 +395,6 @@ export function ProductsPage() {
 							<ProductCard
 								key={product.id}
 								product={product}
-								formatPrice={formatPrice}
 							/>
 						))}
 					</div>
@@ -450,10 +449,8 @@ export function ProductsPage() {
 
 function ProductCard({
 	product,
-	formatPrice,
 }: {
 	product: Product;
-	formatPrice: (price: string | null) => string;
 }) {
 	return (
 		<Card
@@ -473,8 +470,7 @@ function ProductCard({
 				</div>
 			</CardHeader>
 			<CardContent className="space-y-3">
-				<div className="flex items-center justify-between">
-					<span className="text-2xl font-bold">{formatPrice(product.basePrice)}</span>
+				<div className="flex items-center">
 					{product.archivedAt ? (
 						<Badge variant="outline">Archived</Badge>
 					) : product.isActive ? (

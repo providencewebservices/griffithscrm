@@ -65,6 +65,118 @@ const ENTITY_ROUTES: Record<DocumentEntityType, string> = {
 	product: '/app/products',
 };
 
+// Demo documents to show email attachment integration
+const DEMO_DOCUMENTS: Document[] = [
+	{
+		id: 'demo-1',
+		tenantId: 'demo',
+		entityType: 'quote',
+		entityId: 'demo-quote-247',
+		name: 'Quote #247 - Thompson',
+		tags: 'email-attachment',
+		notes: 'Attached from email: RE: Quote #247 - Gold lettering question',
+		filename: 'Quote_247_Thompson.pdf',
+		s3Key: 'demo/Quote_247_Thompson.pdf',
+		contentType: 'application/pdf',
+		size: 250880,
+		uploadedBy: null,
+		uploaderName: 'Email Import',
+		publicUrl: null,
+		createdAt: new Date().toISOString(),
+		updatedAt: new Date().toISOString(),
+	},
+	{
+		id: 'demo-2',
+		tenantId: 'demo',
+		entityType: 'supplier',
+		entityId: 'demo-supplier-1',
+		name: 'Order SS-4521 Invoice',
+		tags: 'email-attachment,invoice',
+		notes: 'Attached from email: Marble delivery delayed to next week',
+		filename: 'Order_SS-4521_Invoice.pdf',
+		s3Key: 'demo/Order_SS-4521_Invoice.pdf',
+		contentType: 'application/pdf',
+		size: 131072,
+		uploadedBy: null,
+		uploaderName: 'Email Import',
+		publicUrl: null,
+		createdAt: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000).toISOString(),
+		updatedAt: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000).toISOString(),
+	},
+	{
+		id: 'demo-3',
+		tenantId: 'demo',
+		entityType: 'supplier',
+		entityId: 'demo-supplier-1',
+		name: 'Delivery Schedule - January 2025',
+		tags: 'email-attachment,schedule',
+		notes: 'Attached from email: Marble delivery delayed to next week',
+		filename: 'Delivery_Schedule_Jan2025.xlsx',
+		s3Key: 'demo/Delivery_Schedule_Jan2025.xlsx',
+		contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+		size: 43008,
+		uploadedBy: null,
+		uploaderName: 'Email Import',
+		publicUrl: null,
+		createdAt: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000).toISOString(),
+		updatedAt: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000).toISOString(),
+	},
+	{
+		id: 'demo-4',
+		tenantId: 'demo',
+		entityType: 'quote',
+		entityId: 'demo-quote-243',
+		name: 'Richardson Inscription Draft',
+		tags: 'email-attachment,inscription',
+		notes: 'Attached from email: Approved inscription wording',
+		filename: 'Richardson_Inscription_Draft.pdf',
+		s3Key: 'demo/Richardson_Inscription_Draft.pdf',
+		contentType: 'application/pdf',
+		size: 319488,
+		uploadedBy: null,
+		uploaderName: 'Email Import',
+		publicUrl: null,
+		createdAt: new Date(Date.now() - 11 * 24 * 60 * 60 * 1000).toISOString(),
+		updatedAt: new Date(Date.now() - 11 * 24 * 60 * 60 * 1000).toISOString(),
+	},
+	{
+		id: 'demo-5',
+		tenantId: 'demo',
+		entityType: 'quote',
+		entityId: 'demo-quote-243',
+		name: 'Headstone Design Preview',
+		tags: 'email-attachment,design',
+		notes: 'Attached from email: Approved inscription wording',
+		filename: 'Headstone_Design_Preview.jpg',
+		s3Key: 'demo/Headstone_Design_Preview.jpg',
+		contentType: 'image/jpeg',
+		size: 1258291,
+		uploadedBy: null,
+		uploaderName: 'Email Import',
+		publicUrl: null,
+		createdAt: new Date(Date.now() - 11 * 24 * 60 * 60 * 1000).toISOString(),
+		updatedAt: new Date(Date.now() - 11 * 24 * 60 * 60 * 1000).toISOString(),
+	},
+	{
+		id: 'demo-6',
+		tenantId: 'demo',
+		entityType: 'quote',
+		entityId: 'demo-quote-243',
+		name: 'Quote #243 - Richardson',
+		tags: 'email-attachment',
+		notes: 'Attached from email: Approved inscription wording',
+		filename: 'Quote_243_Richardson.pdf',
+		s3Key: 'demo/Quote_243_Richardson.pdf',
+		contentType: 'application/pdf',
+		size: 202752,
+		uploadedBy: null,
+		uploaderName: 'Email Import',
+		publicUrl: null,
+		createdAt: new Date(Date.now() - 11 * 24 * 60 * 60 * 1000).toISOString(),
+		updatedAt: new Date(Date.now() - 11 * 24 * 60 * 60 * 1000).toISOString(),
+	},
+];
+
 export function DocumentsPage() {
 	const navigate = useNavigate();
 	const [searchQuery, setSearchQuery] = useState('');
@@ -172,7 +284,28 @@ export function DocumentsPage() {
 		);
 	}
 
-	const documents = data?.documents || [];
+	// Merge demo documents with real documents
+	const apiDocuments = data?.documents || [];
+
+	// Apply filters to demo documents manually (API handles its own filtering)
+	const filteredDemoDocuments = DEMO_DOCUMENTS.filter((doc) => {
+		if (debouncedSearch) {
+			const search = debouncedSearch.toLowerCase();
+			if (!doc.name.toLowerCase().includes(search) && !doc.filename.toLowerCase().includes(search)) {
+				return false;
+			}
+		}
+		if (entityTypeFilter !== 'all' && doc.entityType !== entityTypeFilter) {
+			return false;
+		}
+		if (tagsFilter && !doc.tags?.toLowerCase().includes(tagsFilter.toLowerCase())) {
+			return false;
+		}
+		return true;
+	});
+
+	// Combine filtered demo docs with API results
+	const documents = page === 0 ? [...filteredDemoDocuments, ...apiDocuments] : apiDocuments;
 	const pagination = data?.pagination;
 
 	return (

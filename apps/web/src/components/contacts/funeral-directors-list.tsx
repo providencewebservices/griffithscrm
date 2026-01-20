@@ -26,7 +26,7 @@ type DisplayMode = 'table' | 'cards';
 export function FuneralDirectorsList() {
 	const [searchQuery, setSearchQuery] = useState('');
 	const [viewMode, setViewMode] = useState<ViewMode>('active');
-	const [displayMode, setDisplayMode] = useState<DisplayMode>('table');
+	const [displayMode, setDisplayMode] = useState<DisplayMode>('cards');
 	const [debouncedSearch, setDebouncedSearch] = useState('');
 
 	// Debounce search

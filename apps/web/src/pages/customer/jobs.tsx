@@ -41,7 +41,7 @@ const ALL_STATUS_VALUE = '_all';
 export function JobsPage() {
 	const [search, setSearch] = useState('');
 	const [statusFilter, setStatusFilter] = useState<JobStatus | ''>('');
-	const [displayMode, setDisplayMode] = useState<DisplayMode>('table');
+	const [displayMode, setDisplayMode] = useState<DisplayMode>('cards');
 
 	// Debounce search
 	const debouncedSearch = useMemo(() => {

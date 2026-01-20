@@ -46,7 +46,7 @@ export function QuotesPage() {
 	const [searchQuery, setSearchQuery] = useState('');
 	const [statusFilter, setStatusFilter] = useState<QuoteStatus | 'all'>('all');
 	const [typeFilter, setTypeFilter] = useState<QuoteType | 'all'>('all');
-	const [displayMode, setDisplayMode] = useState<DisplayMode>('table');
+	const [displayMode, setDisplayMode] = useState<DisplayMode>('cards');
 	const [debouncedSearch, setDebouncedSearch] = useState('');
 
 	// Debounce search
