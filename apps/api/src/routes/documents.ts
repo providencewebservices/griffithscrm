@@ -24,17 +24,17 @@ const entityTypeSchema = z.enum([
 	'product',
 ]);
 
-// Validation schemas
+// Validation schemas - entityType and entityId are optional to support orphan documents
 const presignRequestSchema = z.object({
-	entityType: entityTypeSchema,
-	entityId: z.string().min(1, 'Entity ID is required'),
+	entityType: entityTypeSchema.optional(),
+	entityId: z.string().min(1).optional(),
 	filename: z.string().min(1, 'Filename is required'),
 	contentType: z.string().min(1, 'Content type is required'),
 });
 
 const createDocumentSchema = z.object({
-	entityType: entityTypeSchema,
-	entityId: z.string().min(1),
+	entityType: entityTypeSchema.optional(),
+	entityId: z.string().min(1).optional(),
 	name: z.string().min(1).max(255),
 	tags: z.string().optional(),
 	notes: z.string().optional(),
@@ -50,9 +50,22 @@ const updateDocumentSchema = z.object({
 	notes: z.string().optional().nullable(),
 });
 
+// Extended entity type schema that includes 'unassigned' for filtering orphan documents
+const searchEntityTypeSchema = z.enum([
+	'customer',
+	'quote',
+	'job',
+	'funeral_director',
+	'supplier',
+	'council',
+	'memorial_site',
+	'product',
+	'unassigned', // Special filter for orphan documents
+]);
+
 const searchQuerySchema = z.object({
 	search: z.string().optional(),
-	entityType: entityTypeSchema.optional(),
+	entityType: searchEntityTypeSchema.optional(),
 	tags: z.string().optional(),
 	limit: z.coerce.number().min(1).max(100).optional().default(50),
 	offset: z.coerce.number().min(0).optional().default(0),
@@ -81,8 +94,10 @@ const documentsRoutes = new Hono()
 		// Build conditions
 		const conditions: ReturnType<typeof eq>[] = [eq(documents.tenantId, tenantId)];
 
-		// Filter by entity type
-		if (entityType) {
+		// Filter by entity type - 'unassigned' filters for orphan documents
+		if (entityType === 'unassigned') {
+			conditions.push(sql`${documents.entityType} IS NULL`);
+		} else if (entityType) {
 			conditions.push(eq(documents.entityType, entityType));
 		}
 
@@ -269,12 +284,20 @@ const documentsRoutes = new Hono()
 			// Generate unique key with UUID prefix to avoid collisions
 			const uuid = crypto.randomUUID();
 			const sanitizedFilename = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
-			const key = `${tenantId}/documents/${entityType}/${entityId}/${uuid}-${sanitizedFilename}`;
+
+			// Use different path for orphan documents vs entity-linked documents
+			const key =
+				entityType && entityId
+					? `${tenantId}/documents/${entityType}/${entityId}/${uuid}-${sanitizedFilename}`
+					: `${tenantId}/documents/unassigned/${uuid}-${sanitizedFilename}`;
 
 			const { uploadUrl, publicUrl } = await generatePresignedUploadUrl({
 				tenantId,
 				category: 'documents',
-				entityId: `${entityType}/${entityId}/${uuid}`,
+				entityId:
+					entityType && entityId
+						? `${entityType}/${entityId}/${uuid}`
+						: `unassigned/${uuid}`,
 				filename: sanitizedFilename,
 				contentType,
 			});
@@ -302,8 +325,8 @@ const documentsRoutes = new Hono()
 			.values({
 				id: crypto.randomUUID(),
 				tenantId,
-				entityType: data.entityType,
-				entityId: data.entityId,
+				entityType: data.entityType || null, // Allow null for orphan documents
+				entityId: data.entityId || null, // Allow null for orphan documents
 				name: data.name,
 				tags: data.tags || null,
 				notes: data.notes || null,

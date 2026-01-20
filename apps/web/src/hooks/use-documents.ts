@@ -13,6 +13,9 @@ export type DocumentEntityType =
 	| 'memorial_site'
 	| 'product';
 
+// Extended type that includes 'unassigned' for filtering
+export type DocumentEntityTypeFilter = DocumentEntityType | 'unassigned';
+
 export const DOCUMENT_ENTITY_LABELS: Record<DocumentEntityType, string> = {
 	customer: 'Customer',
 	quote: 'Quote',
@@ -24,12 +27,18 @@ export const DOCUMENT_ENTITY_LABELS: Record<DocumentEntityType, string> = {
 	product: 'Product',
 };
 
+// Labels including unassigned for filter dropdowns
+export const DOCUMENT_ENTITY_FILTER_LABELS: Record<DocumentEntityTypeFilter, string> = {
+	...DOCUMENT_ENTITY_LABELS,
+	unassigned: 'Unassigned',
+};
+
 // Document type
 export type Document = {
 	id: string;
 	tenantId: string;
-	entityType: DocumentEntityType;
-	entityId: string;
+	entityType: DocumentEntityType | null; // Nullable for unassigned documents
+	entityId: string | null; // Nullable for unassigned documents
 	name: string;
 	tags: string | null;
 	notes: string | null;
@@ -46,8 +55,8 @@ export type Document = {
 
 // Input types
 export type CreateDocumentInput = {
-	entityType: DocumentEntityType;
-	entityId: string;
+	entityType?: DocumentEntityType; // Optional for unassigned documents
+	entityId?: string; // Optional for unassigned documents
 	name: string;
 	tags?: string;
 	notes?: string;
@@ -65,7 +74,7 @@ export type UpdateDocumentInput = {
 
 export type DocumentSearchParams = {
 	search?: string;
-	entityType?: DocumentEntityType;
+	entityType?: DocumentEntityTypeFilter; // Includes 'unassigned' option
 	tags?: string;
 	limit?: number;
 	offset?: number;
@@ -88,8 +97,8 @@ export type PresignResponse = {
 };
 
 export type DocumentUploadInput = {
-	entityType: DocumentEntityType;
-	entityId: string;
+	entityType?: DocumentEntityType; // Optional for unassigned documents
+	entityId?: string; // Optional for unassigned documents
 	file: File;
 	name: string;
 	tags?: string;
@@ -142,8 +151,8 @@ async function fetchDocument(id: string): Promise<Document> {
 }
 
 async function presignDocument(input: {
-	entityType: DocumentEntityType;
-	entityId: string;
+	entityType?: DocumentEntityType; // Optional for unassigned documents
+	entityId?: string; // Optional for unassigned documents
 	filename: string;
 	contentType: string;
 }): Promise<PresignResponse> {

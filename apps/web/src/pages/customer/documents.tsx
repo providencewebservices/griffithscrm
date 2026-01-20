@@ -26,10 +26,13 @@ import {
 	useUpdateDocumentMutation,
 	useDeleteDocumentMutation,
 	DOCUMENT_ENTITY_LABELS,
+	DOCUMENT_ENTITY_FILTER_LABELS,
 	type DocumentEntityType,
+	type DocumentEntityTypeFilter,
 	type Document,
 	type UpdateDocumentInput,
 } from '@/hooks/use-documents';
+import { GlobalDocumentUploadDialog } from '@/components/documents/global-document-upload-dialog';
 import {
 	formatFileSize,
 	parseTags,
@@ -45,6 +48,7 @@ import {
 	Trash2,
 	ChevronLeft,
 	ChevronRight,
+	Upload,
 } from 'lucide-react';
 import {
 	DropdownMenu,
@@ -181,13 +185,14 @@ export function DocumentsPage() {
 	const navigate = useNavigate();
 	const [searchQuery, setSearchQuery] = useState('');
 	const [debouncedSearch, setDebouncedSearch] = useState('');
-	const [entityTypeFilter, setEntityTypeFilter] = useState<DocumentEntityType | 'all'>('all');
+	const [entityTypeFilter, setEntityTypeFilter] = useState<DocumentEntityTypeFilter | 'all'>('all');
 	const [tagsFilter, setTagsFilter] = useState('');
 	const [page, setPage] = useState(0);
 	const limit = 25;
 
 	const [editingDocument, setEditingDocument] = useState<Document | null>(null);
 	const [deletingDocument, setDeletingDocument] = useState<Document | null>(null);
+	const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
 
 	const updateMutation = useUpdateDocumentMutation();
 	const deleteMutation = useDeleteDocumentMutation();
@@ -248,6 +253,7 @@ export function DocumentsPage() {
 	};
 
 	const navigateToEntity = (doc: Document) => {
+		if (!doc.entityType || !doc.entityId) return;
 		const baseRoute = ENTITY_ROUTES[doc.entityType];
 		if (baseRoute) {
 			navigate(`${baseRoute}/${doc.entityId}`);
@@ -330,7 +336,7 @@ export function DocumentsPage() {
 				<Select
 					value={entityTypeFilter}
 					onValueChange={(v) => {
-						setEntityTypeFilter(v as DocumentEntityType | 'all');
+						setEntityTypeFilter(v as DocumentEntityTypeFilter | 'all');
 						setPage(0);
 					}}
 				>
@@ -339,7 +345,7 @@ export function DocumentsPage() {
 					</SelectTrigger>
 					<SelectContent>
 						<SelectItem value="all">All Types</SelectItem>
-						{Object.entries(DOCUMENT_ENTITY_LABELS).map(([value, label]) => (
+						{Object.entries(DOCUMENT_ENTITY_FILTER_LABELS).map(([value, label]) => (
 							<SelectItem key={value} value={value}>
 								{label}
 							</SelectItem>
@@ -355,6 +361,10 @@ export function DocumentsPage() {
 					}}
 					className="w-[180px]"
 				/>
+				<Button onClick={() => setUploadDialogOpen(true)}>
+					<Upload className="h-4 w-4 mr-2" />
+					Upload
+				</Button>
 			</div>
 
 			{documents.length === 0 ? (
@@ -408,12 +418,16 @@ export function DocumentsPage() {
 												)}
 											</TableCell>
 											<TableCell>
-												<button
-													onClick={() => navigateToEntity(doc)}
-													className="text-primary hover:underline"
-												>
-													{DOCUMENT_ENTITY_LABELS[doc.entityType]}
-												</button>
+												{doc.entityType && doc.entityId ? (
+													<button
+														onClick={() => navigateToEntity(doc)}
+														className="text-primary hover:underline"
+													>
+														{DOCUMENT_ENTITY_LABELS[doc.entityType]}
+													</button>
+												) : (
+													<span className="text-muted-foreground">Unassigned</span>
+												)}
 											</TableCell>
 											<TableCell>
 												{tags.length > 0 ? (
@@ -535,6 +549,12 @@ export function DocumentsPage() {
 					isLoading={deleteMutation.isPending}
 				/>
 			)}
+
+			{/* Upload Dialog */}
+			<GlobalDocumentUploadDialog
+				open={uploadDialogOpen}
+				onOpenChange={setUploadDialogOpen}
+			/>
 		</div>
 	);
 }

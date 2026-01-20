@@ -1098,9 +1098,9 @@ export const documents = pgTable('documents', {
 	tenantId: text('tenant_id')
 		.notNull()
 		.references(() => tenants.id, { onDelete: 'cascade' }),
-	// Polymorphic relationship
-	entityType: text('entity_type').notNull(), // From DOCUMENT_ENTITY_TYPES
-	entityId: text('entity_id').notNull(),
+	// Polymorphic relationship (nullable to allow orphan/unassigned documents)
+	entityType: text('entity_type'), // From DOCUMENT_ENTITY_TYPES (nullable)
+	entityId: text('entity_id'), // Nullable for unassigned documents
 	// User-controlled metadata
 	name: text('name').notNull(), // User-defined document name
 	tags: text('tags'), // Comma-separated freeform tags
