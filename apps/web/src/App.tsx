@@ -35,6 +35,7 @@ import { SuppliersPage } from './pages/customer/suppliers';
 import { SupplierDetailPage } from './pages/customer/supplier-detail';
 import { SupplierFormPage } from './pages/customer/supplier-form';
 import { DocumentsPage } from './pages/customer/documents';
+import { DocumentViewerPage } from './pages/customer/document-viewer';
 import { CalendarPage } from './pages/customer/calendar';
 import { InboxPage } from './pages/customer/inbox';
 import { PublicPackageViewPage } from './pages/public/package-view';
@@ -109,6 +110,7 @@ function App() {
 					<Route path="suppliers/:id" element={<SupplierDetailPage />} />
 					<Route path="suppliers/:id/edit" element={<SupplierFormPage />} />
 					<Route path="documents" element={<DocumentsPage />} />
+					<Route path="documents/:id" element={<DocumentViewerPage />} />
 					<Route path="calendar" element={<CalendarPage />} />
 					<Route path="inbox" element={<InboxPage />} />
 				</Route>

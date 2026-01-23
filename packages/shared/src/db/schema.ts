@@ -1092,12 +1092,30 @@ export const DOCUMENT_ENTITY_TYPES = [
 	'product',
 ] as const;
 
+// Document Folders table (hierarchical folder structure using materialized path)
+export const documentFolders = pgTable('document_folders', {
+	id: text('id').primaryKey(),
+	tenantId: text('tenant_id')
+		.notNull()
+		.references(() => tenants.id, { onDelete: 'cascade' }),
+	name: text('name').notNull(), // Max 100 chars enforced at API level
+	path: text('path').notNull(), // Materialized path: '/parentId/thisId'
+	depth: integer('depth').notNull().default(0), // Depth in hierarchy (0 = root)
+	parentId: text('parent_id'), // Direct parent folder (null = root level)
+	color: text('color'), // Optional UI color (hex)
+	sortOrder: integer('sort_order').notNull().default(0),
+	createdAt: timestamp('created_at').notNull().defaultNow(),
+	updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
 // Documents table (unified, polymorphic document storage)
 export const documents = pgTable('documents', {
 	id: text('id').primaryKey(),
 	tenantId: text('tenant_id')
 		.notNull()
 		.references(() => tenants.id, { onDelete: 'cascade' }),
+	// Folder relationship (independent of entity association)
+	folderId: text('folder_id').references(() => documentFolders.id, { onDelete: 'set null' }),
 	// Polymorphic relationship (nullable to allow orphan/unassigned documents)
 	entityType: text('entity_type'), // From DOCUMENT_ENTITY_TYPES (nullable)
 	entityId: text('entity_id'), // Nullable for unassigned documents

@@ -83,6 +83,26 @@ export async function generatePresignedUploadUrl(
 }
 
 /**
+ * Generate a presigned URL for uploading to a specific S3 key
+ * Use this when you need full control over the key structure
+ */
+export async function generatePresignedUploadUrlForKey(
+	key: string,
+	contentType: string
+): Promise<{ uploadUrl: string; publicUrl: string }> {
+	const command = new PutObjectCommand({
+		Bucket: s3Config.bucket,
+		Key: key,
+		ContentType: contentType,
+	});
+
+	const uploadUrl = await getSignedUrl(s3Client, command, { expiresIn: 300 });
+	const publicUrl = getPublicUrl(key);
+
+	return { uploadUrl, publicUrl };
+}
+
+/**
  * Check if S3 is properly configured
  * In production with ECS task roles, we only need the bucket name
  * In local dev with LocalStack, we need endpoint + credentials
@@ -141,6 +161,25 @@ export async function generateSignedReadUrl(
 	const command = new GetObjectCommand({
 		Bucket: s3Config.bucket,
 		Key: key,
+	});
+
+	return getSignedUrl(s3Client, command, { expiresIn });
+}
+
+/**
+ * Generate a signed URL for downloading an S3 object
+ * Includes Content-Disposition header to force download instead of browser preview
+ * URLs expire in 1 hour by default
+ */
+export async function generateSignedDownloadUrl(
+	key: string,
+	filename: string,
+	expiresIn = 3600
+): Promise<string> {
+	const command = new GetObjectCommand({
+		Bucket: s3Config.bucket,
+		Key: key,
+		ResponseContentDisposition: `attachment; filename="${filename}"`,
 	});
 
 	return getSignedUrl(s3Client, command, { expiresIn });

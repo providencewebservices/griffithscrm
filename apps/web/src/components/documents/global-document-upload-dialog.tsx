@@ -33,6 +33,8 @@ import {
 	Check,
 	ChevronsUpDown,
 	Clock,
+	Folder,
+	Home,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCustomersQuery } from '@/hooks/use-customers';
@@ -44,6 +46,7 @@ import { useMemorialSitesQuery } from '@/hooks/use-memorial-sites';
 import { useProductsQuery } from '@/hooks/use-products';
 import { useUploadDocumentMutation, type DocumentEntityType } from '@/hooks/use-documents';
 import { useRecentEntities, type RecentEntity } from '@/hooks/use-recent-entities';
+import { useAllFoldersQuery, type DocumentFolder } from '@/hooks/use-document-folders';
 
 // Entity categories with their types
 type EntityCategory = 'contacts' | 'work' | 'sites' | 'items';
@@ -115,6 +118,8 @@ interface GlobalDocumentUploadDialogProps {
 	defaultEntityType?: DocumentEntityType;
 	defaultEntityId?: string;
 	defaultEntityLabel?: string;
+	defaultFolderId?: string | null;
+	defaultFiles?: File[];
 }
 
 export function GlobalDocumentUploadDialog({
@@ -124,6 +129,8 @@ export function GlobalDocumentUploadDialog({
 	defaultEntityType,
 	defaultEntityId,
 	defaultEntityLabel,
+	defaultFolderId,
+	defaultFiles,
 }: GlobalDocumentUploadDialogProps) {
 	const [files, setFiles] = useState<FileItem[]>([]);
 	const [tags, setTags] = useState('');
@@ -138,9 +145,14 @@ export function GlobalDocumentUploadDialog({
 	const [entitySearchOpen, setEntitySearchOpen] = useState(false);
 	const [entitySearch, setEntitySearch] = useState('');
 
+	// Folder selection state
+	const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+	const [folderSearchOpen, setFolderSearchOpen] = useState(false);
+
 	// Hooks
 	const uploadMutation = useUploadDocumentMutation();
 	const { recentEntities, addRecentEntity } = useRecentEntities();
+	const { data: allFolders } = useAllFoldersQuery();
 
 	// Entity queries - fetch all for selection
 	const { data: customers } = useCustomersQuery();
@@ -154,12 +166,27 @@ export function GlobalDocumentUploadDialog({
 	// Reset state when dialog opens
 	useEffect(() => {
 		if (open) {
-			setFiles([]);
 			setTags('');
 			setUploadProgress(0);
 			setUploadError(null);
 			setEntitySearch('');
 			setEntitySearchOpen(false);
+			setFolderSearchOpen(false);
+
+			// Set default folder if provided
+			setSelectedFolderId(defaultFolderId ?? null);
+
+			// Set default files if provided
+			if (defaultFiles && defaultFiles.length > 0) {
+				const initialFiles: FileItem[] = defaultFiles.map((file) => {
+					const ext = getFileExtension(file.name);
+					const nameWithoutExt = file.name.replace(`.${ext}`, '');
+					return { file, name: nameWithoutExt };
+				});
+				setFiles(initialFiles);
+			} else {
+				setFiles([]);
+			}
 
 			// Set default entity if provided
 			if (defaultEntityType && defaultEntityId && defaultEntityLabel) {
@@ -179,7 +206,7 @@ export function GlobalDocumentUploadDialog({
 				setSelectedEntity(null);
 			}
 		}
-	}, [open, defaultEntityType, defaultEntityId, defaultEntityLabel]);
+	}, [open, defaultEntityType, defaultEntityId, defaultEntityLabel, defaultFolderId, defaultFiles]);
 
 	// Build entity options for the current category
 	const entityOptions = useMemo<EntityOption[]>(() => {
@@ -372,6 +399,7 @@ export function GlobalDocumentUploadDialog({
 				await uploadMutation.mutateAsync({
 					entityType: selectedEntity?.type,
 					entityId: selectedEntity?.id,
+					folderId: selectedFolderId,
 					file: fileItem.file,
 					name: fileItem.name.trim(),
 					tags: tags.trim() || undefined,
@@ -392,6 +420,13 @@ export function GlobalDocumentUploadDialog({
 			);
 		}
 	};
+
+	// Get selected folder name for display
+	const selectedFolderName = useMemo(() => {
+		if (!selectedFolderId) return 'Unfiled (Root)';
+		const folder = allFolders?.find((f) => f.id === selectedFolderId);
+		return folder?.name || 'Unknown folder';
+	}, [selectedFolderId, allFolders]);
 
 	const isValid = files.length > 0 && files.every((f) => f.name.trim().length > 0);
 	const isUploading = uploadMutation.isPending;
@@ -539,6 +574,84 @@ export function GlobalDocumentUploadDialog({
 						)}
 						<FieldDescription>
 							Documents can be uploaded without association
+						</FieldDescription>
+					</Field>
+
+					{/* Folder Selection */}
+					<Field>
+						<FieldLabel>Upload to folder</FieldLabel>
+						<Popover open={folderSearchOpen} onOpenChange={setFolderSearchOpen}>
+							<PopoverTrigger asChild>
+								<Button
+									variant="outline"
+									role="combobox"
+									aria-expanded={folderSearchOpen}
+									className="w-full justify-between"
+								>
+									<div className="flex items-center gap-2">
+										{selectedFolderId ? (
+											<Folder className="h-4 w-4" />
+										) : (
+											<Home className="h-4 w-4" />
+										)}
+										<span>{selectedFolderName}</span>
+									</div>
+									<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+								</Button>
+							</PopoverTrigger>
+							<PopoverContent className="w-[300px] p-0" align="start">
+								<Command>
+									<CommandInput placeholder="Search folders..." />
+									<CommandList>
+										<CommandEmpty>No folders found.</CommandEmpty>
+										<CommandGroup>
+											<CommandItem
+												value="unfiled"
+												onSelect={() => {
+													setSelectedFolderId(null);
+													setFolderSearchOpen(false);
+												}}
+											>
+												<Check
+													className={cn(
+														'mr-2 h-4 w-4',
+														selectedFolderId === null ? 'opacity-100' : 'opacity-0'
+													)}
+												/>
+												<Home className="mr-2 h-4 w-4" />
+												Unfiled (Root)
+											</CommandItem>
+											{allFolders?.map((folder) => (
+												<CommandItem
+													key={folder.id}
+													value={folder.name}
+													onSelect={() => {
+														setSelectedFolderId(folder.id);
+														setFolderSearchOpen(false);
+													}}
+												>
+													<Check
+														className={cn(
+															'mr-2 h-4 w-4',
+															selectedFolderId === folder.id ? 'opacity-100' : 'opacity-0'
+														)}
+													/>
+													<Folder
+														className="mr-2 h-4 w-4"
+														style={{ color: folder.color || undefined }}
+													/>
+													<span style={{ paddingLeft: `${folder.depth * 12}px` }}>
+														{folder.name}
+													</span>
+												</CommandItem>
+											))}
+										</CommandGroup>
+									</CommandList>
+								</Command>
+							</PopoverContent>
+						</Popover>
+						<FieldDescription>
+							Organize documents into folders
 						</FieldDescription>
 					</Field>
 

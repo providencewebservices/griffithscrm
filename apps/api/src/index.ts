@@ -33,6 +33,7 @@ import { suppliersRoutes } from './routes/suppliers';
 import { calendarRoutes } from './routes/calendar';
 import { timeOffRoutes } from './routes/time-off';
 import { documentsRoutes } from './routes/documents';
+import { documentFoldersRoutes } from './routes/document-folders';
 
 const app = new Hono();
 
@@ -136,6 +137,7 @@ app.route('/api/time-off', timeOffRoutes);
 
 // Documents routes (for tenant users)
 app.route('/api/documents', documentsRoutes);
+app.route('/api/document-folders', documentFoldersRoutes);
 
 // Export type for RPC client
 export type AppType = typeof api;

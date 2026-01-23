@@ -37,6 +37,7 @@ export const DOCUMENT_ENTITY_FILTER_LABELS: Record<DocumentEntityTypeFilter, str
 export type Document = {
 	id: string;
 	tenantId: string;
+	folderId: string | null; // Folder for organization (independent of entity)
 	entityType: DocumentEntityType | null; // Nullable for unassigned documents
 	entityId: string | null; // Nullable for unassigned documents
 	name: string;
@@ -57,6 +58,7 @@ export type Document = {
 export type CreateDocumentInput = {
 	entityType?: DocumentEntityType; // Optional for unassigned documents
 	entityId?: string; // Optional for unassigned documents
+	folderId?: string | null; // Optional folder assignment
 	name: string;
 	tags?: string;
 	notes?: string;
@@ -70,11 +72,13 @@ export type UpdateDocumentInput = {
 	name?: string;
 	tags?: string | null;
 	notes?: string | null;
+	folderId?: string | null;
 };
 
 export type DocumentSearchParams = {
 	search?: string;
 	entityType?: DocumentEntityTypeFilter; // Includes 'unassigned' option
+	folderId?: string; // 'root' for unfiled, 'all' for all folders, or specific folder ID
 	tags?: string;
 	limit?: number;
 	offset?: number;
@@ -99,6 +103,7 @@ export type PresignResponse = {
 export type DocumentUploadInput = {
 	entityType?: DocumentEntityType; // Optional for unassigned documents
 	entityId?: string; // Optional for unassigned documents
+	folderId?: string | null; // Optional folder assignment
 	file: File;
 	name: string;
 	tags?: string;
@@ -110,6 +115,7 @@ async function fetchDocuments(params?: DocumentSearchParams): Promise<DocumentsR
 	const url = new URL(`${API_URL}/api/documents`);
 	if (params?.search) url.searchParams.set('search', params.search);
 	if (params?.entityType) url.searchParams.set('entityType', params.entityType);
+	if (params?.folderId) url.searchParams.set('folderId', params.folderId);
 	if (params?.tags) url.searchParams.set('tags', params.tags);
 	if (params?.limit) url.searchParams.set('limit', params.limit.toString());
 	if (params?.offset) url.searchParams.set('offset', params.offset.toString());
@@ -214,7 +220,7 @@ async function deleteDocument(id: string): Promise<void> {
 }
 
 async function uploadDocument(input: DocumentUploadInput): Promise<Document> {
-	const { entityType, entityId, file, name, tags, notes } = input;
+	const { entityType, entityId, folderId, file, name, tags, notes } = input;
 
 	// Step 1: Get presigned URL
 	const presignResult = await presignDocument({
@@ -240,6 +246,7 @@ async function uploadDocument(input: DocumentUploadInput): Promise<Document> {
 	return createDocument({
 		entityType,
 		entityId,
+		folderId,
 		name,
 		tags,
 		notes,
@@ -309,6 +316,7 @@ export function useDeleteDocumentMutation() {
 		mutationFn: deleteDocument,
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ['documents'] });
+			queryClient.invalidateQueries({ queryKey: ['document-folder-contents'] });
 		},
 	});
 }
@@ -319,6 +327,25 @@ export function useUploadDocumentMutation() {
 		mutationFn: uploadDocument,
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ['documents'] });
+			queryClient.invalidateQueries({ queryKey: ['document-folder-contents'] });
 		},
+	});
+}
+
+async function getDownloadUrl(id: string): Promise<string> {
+	const response = await fetch(`${API_URL}/api/documents/${id}/download`, {
+		credentials: 'include',
+	});
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.error || 'Failed to get download URL');
+	}
+	const data = await response.json();
+	return data.downloadUrl;
+}
+
+export function useDownloadUrl() {
+	return useMutation({
+		mutationFn: getDownloadUrl,
 	});
 }

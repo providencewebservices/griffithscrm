@@ -1,16 +1,17 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
-import { eq, and, desc, count, sql } from 'drizzle-orm';
+import { eq, and, desc, count, sql, isNull, inArray } from 'drizzle-orm';
 import { requireAuth, requireTenant } from '../middleware/auth';
 import { db } from '../lib/auth';
 import {
-	generatePresignedUploadUrl,
+	generatePresignedUploadUrlForKey,
 	isS3Configured,
 	getSignedImageUrl,
 	deleteObject,
+	generateSignedDownloadUrl,
 } from '../lib/s3';
-import { documents, users } from '@griffiths-crm/shared/db/schema';
+import { documents, users, documentFolders } from '@griffiths-crm/shared/db/schema';
 
 // Entity types that can have documents attached
 const entityTypeSchema = z.enum([
@@ -35,6 +36,7 @@ const presignRequestSchema = z.object({
 const createDocumentSchema = z.object({
 	entityType: entityTypeSchema.optional(),
 	entityId: z.string().min(1).optional(),
+	folderId: z.string().min(1).optional().nullable(),
 	name: z.string().min(1).max(255),
 	tags: z.string().optional(),
 	notes: z.string().optional(),
@@ -48,6 +50,16 @@ const updateDocumentSchema = z.object({
 	name: z.string().min(1).max(255).optional(),
 	tags: z.string().optional().nullable(),
 	notes: z.string().optional().nullable(),
+	folderId: z.string().min(1).optional().nullable(),
+});
+
+const moveDocumentSchema = z.object({
+	folderId: z.string().nullable(),
+});
+
+const bulkMoveDocumentsSchema = z.object({
+	documentIds: z.array(z.string().min(1)).min(1),
+	folderId: z.string().nullable(),
 });
 
 // Extended entity type schema that includes 'unassigned' for filtering orphan documents
@@ -66,6 +78,7 @@ const searchEntityTypeSchema = z.enum([
 const searchQuerySchema = z.object({
 	search: z.string().optional(),
 	entityType: searchEntityTypeSchema.optional(),
+	folderId: z.string().optional(), // 'root' for unfiled, 'all' for all folders, or specific folder ID
 	tags: z.string().optional(),
 	limit: z.coerce.number().min(1).max(100).optional().default(50),
 	offset: z.coerce.number().min(0).optional().default(0),
@@ -89,7 +102,7 @@ const documentsRoutes = new Hono()
 	.get('/', zValidator('query', searchQuerySchema), async (c) => {
 		const currentUser = c.get('user');
 		const tenantId = currentUser.tenantId!;
-		const { search, entityType, tags, limit, offset } = c.req.valid('query');
+		const { search, entityType, folderId, tags, limit, offset } = c.req.valid('query');
 
 		// Build conditions
 		const conditions: ReturnType<typeof eq>[] = [eq(documents.tenantId, tenantId)];
@@ -100,6 +113,16 @@ const documentsRoutes = new Hono()
 		} else if (entityType) {
 			conditions.push(eq(documents.entityType, entityType));
 		}
+
+		// Filter by folder
+		if (folderId === 'root') {
+			// Documents not in any folder (unfiled)
+			conditions.push(isNull(documents.folderId));
+		} else if (folderId && folderId !== 'all') {
+			// Documents in specific folder
+			conditions.push(eq(documents.folderId, folderId));
+		}
+		// folderId === 'all' or undefined means no folder filtering
 
 		// Search by name
 		if (search && search.trim()) {
@@ -125,6 +148,7 @@ const documentsRoutes = new Hono()
 			.select({
 				id: documents.id,
 				tenantId: documents.tenantId,
+				folderId: documents.folderId,
 				entityType: documents.entityType,
 				entityId: documents.entityId,
 				name: documents.name,
@@ -191,6 +215,7 @@ const documentsRoutes = new Hono()
 			.select({
 				id: documents.id,
 				tenantId: documents.tenantId,
+				folderId: documents.folderId,
 				entityType: documents.entityType,
 				entityId: documents.entityId,
 				name: documents.name,
@@ -237,6 +262,7 @@ const documentsRoutes = new Hono()
 			.select({
 				id: documents.id,
 				tenantId: documents.tenantId,
+				folderId: documents.folderId,
 				entityType: documents.entityType,
 				entityId: documents.entityId,
 				name: documents.name,
@@ -262,6 +288,26 @@ const documentsRoutes = new Hono()
 
 		const publicUrl = await getSignedImageUrl(doc.s3Key);
 		return c.json({ document: { ...doc, publicUrl } });
+	})
+
+	// Get download URL for a document (forces download instead of browser preview)
+	.get('/:id/download', async (c) => {
+		const currentUser = c.get('user');
+		const tenantId = currentUser.tenantId!;
+		const documentId = c.req.param('id');
+
+		const [doc] = await db
+			.select()
+			.from(documents)
+			.where(and(eq(documents.id, documentId), eq(documents.tenantId, tenantId)))
+			.limit(1);
+
+		if (!doc) {
+			return c.json({ error: 'Document not found' }, 404);
+		}
+
+		const downloadUrl = await generateSignedDownloadUrl(doc.s3Key, doc.filename);
+		return c.json({ downloadUrl });
 	})
 
 	// Generate presigned URL for upload
@@ -291,16 +337,11 @@ const documentsRoutes = new Hono()
 					? `${tenantId}/documents/${entityType}/${entityId}/${uuid}-${sanitizedFilename}`
 					: `${tenantId}/documents/unassigned/${uuid}-${sanitizedFilename}`;
 
-			const { uploadUrl, publicUrl } = await generatePresignedUploadUrl({
-				tenantId,
-				category: 'documents',
-				entityId:
-					entityType && entityId
-						? `${entityType}/${entityId}/${uuid}`
-						: `unassigned/${uuid}`,
-				filename: sanitizedFilename,
-				contentType,
-			});
+			// Generate presigned URL using the exact key that will be stored in database
+			const { uploadUrl, publicUrl } = await generatePresignedUploadUrlForKey(
+				key,
+				contentType
+			);
 
 			return c.json({
 				uploadUrl,
@@ -320,11 +361,25 @@ const documentsRoutes = new Hono()
 		const userId = currentUser.id;
 		const data = c.req.valid('json');
 
+		// Validate folder belongs to tenant if provided
+		if (data.folderId) {
+			const [folder] = await db
+				.select({ id: documentFolders.id })
+				.from(documentFolders)
+				.where(and(eq(documentFolders.id, data.folderId), eq(documentFolders.tenantId, tenantId)))
+				.limit(1);
+
+			if (!folder) {
+				return c.json({ error: 'Folder not found' }, 404);
+			}
+		}
+
 		const [created] = await db
 			.insert(documents)
 			.values({
 				id: crypto.randomUUID(),
 				tenantId,
+				folderId: data.folderId || null, // Optional folder assignment
 				entityType: data.entityType || null, // Allow null for orphan documents
 				entityId: data.entityId || null, // Allow null for orphan documents
 				name: data.name,
@@ -360,10 +415,24 @@ const documentsRoutes = new Hono()
 			return c.json({ error: 'Document not found' }, 404);
 		}
 
+		// Validate folder belongs to tenant if provided
+		if (data.folderId) {
+			const [folder] = await db
+				.select({ id: documentFolders.id })
+				.from(documentFolders)
+				.where(and(eq(documentFolders.id, data.folderId), eq(documentFolders.tenantId, tenantId)))
+				.limit(1);
+
+			if (!folder) {
+				return c.json({ error: 'Folder not found' }, 404);
+			}
+		}
+
 		const updateData: Record<string, unknown> = { updatedAt: new Date() };
 		if (data.name !== undefined) updateData.name = data.name;
 		if (data.tags !== undefined) updateData.tags = data.tags;
 		if (data.notes !== undefined) updateData.notes = data.notes;
+		if (data.folderId !== undefined) updateData.folderId = data.folderId;
 
 		const [updated] = await db
 			.update(documents)
@@ -373,6 +442,85 @@ const documentsRoutes = new Hono()
 
 		const publicUrl = await getSignedImageUrl(updated.s3Key);
 		return c.json({ document: { ...updated, publicUrl } });
+	})
+
+	// Move document to different folder
+	.put('/:id/move', zValidator('json', moveDocumentSchema), async (c) => {
+		const currentUser = c.get('user');
+		const tenantId = currentUser.tenantId!;
+		const documentId = c.req.param('id');
+		const { folderId } = c.req.valid('json');
+
+		// Verify document belongs to tenant
+		const [existing] = await db
+			.select()
+			.from(documents)
+			.where(and(eq(documents.id, documentId), eq(documents.tenantId, tenantId)))
+			.limit(1);
+
+		if (!existing) {
+			return c.json({ error: 'Document not found' }, 404);
+		}
+
+		// Validate target folder if not moving to root (unfiled)
+		if (folderId) {
+			const [folder] = await db
+				.select({ id: documentFolders.id })
+				.from(documentFolders)
+				.where(and(eq(documentFolders.id, folderId), eq(documentFolders.tenantId, tenantId)))
+				.limit(1);
+
+			if (!folder) {
+				return c.json({ error: 'Target folder not found' }, 404);
+			}
+		}
+
+		const [updated] = await db
+			.update(documents)
+			.set({ folderId, updatedAt: new Date() })
+			.where(eq(documents.id, documentId))
+			.returning();
+
+		const publicUrl = await getSignedImageUrl(updated.s3Key);
+		return c.json({ document: { ...updated, publicUrl } });
+	})
+
+	// Bulk move documents to folder
+	.put('/bulk-move', zValidator('json', bulkMoveDocumentsSchema), async (c) => {
+		const currentUser = c.get('user');
+		const tenantId = currentUser.tenantId!;
+		const { documentIds, folderId } = c.req.valid('json');
+
+		// Validate target folder if not moving to root (unfiled)
+		if (folderId) {
+			const [folder] = await db
+				.select({ id: documentFolders.id })
+				.from(documentFolders)
+				.where(and(eq(documentFolders.id, folderId), eq(documentFolders.tenantId, tenantId)))
+				.limit(1);
+
+			if (!folder) {
+				return c.json({ error: 'Target folder not found' }, 404);
+			}
+		}
+
+		// Update all documents at once (only those belonging to tenant)
+		const updated = await db
+			.update(documents)
+			.set({ folderId, updatedAt: new Date() })
+			.where(
+				and(
+					eq(documents.tenantId, tenantId),
+					inArray(documents.id, documentIds)
+				)
+			)
+			.returning({ id: documents.id });
+
+		return c.json({
+			success: true,
+			movedCount: updated.length,
+			movedIds: updated.map((d) => d.id),
+		});
 	})
 
 	// Delete document
