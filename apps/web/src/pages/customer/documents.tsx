@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router';
 import {
 	Table,
@@ -67,6 +67,9 @@ import {
 	ArrowRightLeft,
 	PanelLeft,
 	PanelLeftClose,
+	ArrowUpDown,
+	ArrowUp,
+	ArrowDown,
 } from 'lucide-react';
 import {
 	DropdownMenu,
@@ -102,6 +105,12 @@ export function DocumentsPage() {
 	const [tagsFilter, setTagsFilter] = useState('');
 	const [page, setPage] = useState(0);
 	const limit = 25;
+
+	// Sorting state
+	type SortColumn = 'name' | 'entity' | 'type' | 'size' | 'date';
+	type SortDirection = 'asc' | 'desc';
+	const [sortColumn, setSortColumn] = useState<SortColumn>('date');
+	const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
 	// Dialog state
 	const [editingDocument, setEditingDocument] = useState<Document | null>(null);
@@ -171,6 +180,57 @@ export function DocumentsPage() {
 		? folderContentsQuery.data?.breadcrumb || []
 		: [];
 	const pagination = isSearching || isViewingAllDocuments ? documentsQuery.data?.pagination : null;
+
+	// Sort toggle handler
+	const handleSort = useCallback((column: SortColumn) => {
+		if (sortColumn === column) {
+			setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+		} else {
+			setSortColumn(column);
+			setSortDirection('asc');
+		}
+	}, [sortColumn]);
+
+	// Sorted documents
+	const sortedDocuments = useMemo(() => {
+		if (!documents.length) return documents;
+
+		return [...documents].sort((a, b) => {
+			let comparison = 0;
+
+			switch (sortColumn) {
+				case 'name':
+					comparison = a.name.localeCompare(b.name);
+					break;
+				case 'entity':
+					const entityA = a.entityType || '';
+					const entityB = b.entityType || '';
+					comparison = entityA.localeCompare(entityB);
+					break;
+				case 'type':
+					comparison = a.contentType.localeCompare(b.contentType);
+					break;
+				case 'size':
+					comparison = (a.size || 0) - (b.size || 0);
+					break;
+				case 'date':
+					comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+					break;
+			}
+
+			return sortDirection === 'asc' ? comparison : -comparison;
+		});
+	}, [documents, sortColumn, sortDirection]);
+
+	// Sort icon helper
+	const SortIcon = ({ column }: { column: SortColumn }) => {
+		if (sortColumn !== column) {
+			return <ArrowUpDown className="h-4 w-4 ml-1 opacity-50" />;
+		}
+		return sortDirection === 'asc'
+			? <ArrowUp className="h-4 w-4 ml-1" />
+			: <ArrowDown className="h-4 w-4 ml-1" />;
+	};
 
 	const formatDate = (dateString: string) => {
 		return new Date(dateString).toLocaleDateString('en-US', {
@@ -501,17 +561,57 @@ export function DocumentsPage() {
 											<TableHeader>
 												<TableRow>
 													<TableHead className="w-[50px]"></TableHead>
-													<TableHead>Name</TableHead>
-													<TableHead>Entity</TableHead>
+													<TableHead>
+														<button
+															className="flex items-center hover:text-foreground"
+															onClick={() => handleSort('name')}
+														>
+															Name
+															<SortIcon column="name" />
+														</button>
+													</TableHead>
+													<TableHead>
+														<button
+															className="flex items-center hover:text-foreground"
+															onClick={() => handleSort('entity')}
+														>
+															Entity
+															<SortIcon column="entity" />
+														</button>
+													</TableHead>
 													<TableHead>Tags</TableHead>
-													<TableHead>Type</TableHead>
-													<TableHead>Size</TableHead>
-													<TableHead>Date</TableHead>
+													<TableHead>
+														<button
+															className="flex items-center hover:text-foreground"
+															onClick={() => handleSort('type')}
+														>
+															Type
+															<SortIcon column="type" />
+														</button>
+													</TableHead>
+													<TableHead>
+														<button
+															className="flex items-center hover:text-foreground"
+															onClick={() => handleSort('size')}
+														>
+															Size
+															<SortIcon column="size" />
+														</button>
+													</TableHead>
+													<TableHead>
+														<button
+															className="flex items-center hover:text-foreground"
+															onClick={() => handleSort('date')}
+														>
+															Date
+															<SortIcon column="date" />
+														</button>
+													</TableHead>
 													<TableHead className="w-[100px]">Actions</TableHead>
 												</TableRow>
 											</TableHeader>
 											<TableBody>
-												{documents.map((doc) => {
+												{sortedDocuments.map((doc) => {
 													const tags = parseTags(doc.tags);
 
 													return (

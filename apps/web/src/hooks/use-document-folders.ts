@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import type { Document } from './use-documents';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -227,6 +227,7 @@ export function useFolderContentsQuery(folderId: string | null) {
 	return useQuery({
 		queryKey: ['document-folder-contents', queryFolderId],
 		queryFn: () => fetchFolderContents(queryFolderId),
+		placeholderData: keepPreviousData,
 	});
 }
 
