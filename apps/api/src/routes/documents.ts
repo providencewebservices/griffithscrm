@@ -540,8 +540,13 @@ const documentsRoutes = new Hono()
 			return c.json({ error: 'Document not found' }, 404);
 		}
 
-		// Delete from S3 (continue even if this fails)
-		await deleteObject(existing.s3Key);
+		// Delete from S3 (continue even if this fails - S3 object becomes orphaned but DB is source of truth)
+		try {
+			await deleteObject(existing.s3Key);
+		} catch (error) {
+			console.error('Failed to delete S3 object:', existing.s3Key, error);
+			// Continue with database deletion anyway
+		}
 
 		// Delete from database
 		await db.delete(documents).where(eq(documents.id, documentId));
