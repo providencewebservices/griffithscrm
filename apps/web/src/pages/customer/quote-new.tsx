@@ -41,6 +41,7 @@ import {
 	formatComponentType,
 	COMPONENT_TYPE_GROUPS,
 	FLOWER_HOLE_CHOICES,
+	FLOWER_TOP_COLOR_CHOICES,
 	QUOTE_TYPES,
 	QUOTE_TYPE_LABELS,
 	QUOTE_TYPE_DESCRIPTIONS,
@@ -50,6 +51,7 @@ import {
 	type SundryInput,
 	type ComponentType,
 	type FlowerHoleChoice,
+	type FlowerTopColorChoice,
 	type QuoteType,
 	type CustomerDetailsInput,
 } from '@/hooks/use-quotes';
@@ -64,7 +66,7 @@ import { useLetteringColorsQuery } from '@/hooks/use-lettering-colors';
 import { useSundriesQuery } from '@/hooks/use-sundries';
 import { useJobsQuery } from '@/hooks/use-jobs';
 import { useFuneralDirectorsQuery } from '@/hooks/use-funeral-directors';
-import { useMemorialSitesQuery } from '@/hooks/use-memorial-sites';
+import { useMemorialSitesQuery, useMemorialSiteQuery } from '@/hooks/use-memorial-sites';
 import { useTenantPricingSettingsQuery } from '@/hooks/use-tenant-pricing-settings';
 import { Label } from '@/components/ui/label';
 import { ENQUIRY_SOURCES } from '@griffiths-crm/shared/db/schema';
@@ -130,6 +132,12 @@ export function QuoteNewPage() {
 	const [dimensionComboId, setDimensionComboId] = useState<string>('');
 	const [stoneColourMaterialId, setStoneColourMaterialId] = useState<string>('');
 	const [flowerHoles, setFlowerHoles] = useState<FlowerHoleChoice | ''>('');
+	const [flowerTopColor, setFlowerTopColor] = useState<FlowerTopColorChoice | ''>('');
+
+	// Ashes quote specific fields
+	const [deceasedNames, setDeceasedNames] = useState('');
+	const [intermentDate, setIntermentDate] = useState('');
+	const [intermentTime, setIntermentTime] = useState('');
 
 	// Customer creation state (for new customers)
 	const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
@@ -172,6 +180,7 @@ export function QuoteNewPage() {
 	const { data: sundryItems } = useSundriesQuery();
 	const { data: funeralDirectors } = useFuneralDirectorsQuery();
 	const { data: memorialSites } = useMemorialSitesQuery();
+	const { data: selectedMemorialSite } = useMemorialSiteQuery(memorialSiteId || undefined);
 	const { data: pricingSettings } = useTenantPricingSettingsQuery();
 	// Fetch completed jobs for related job selector (only when needed)
 	const sectionConfig = QUOTE_TYPE_SECTION_CONFIG[quoteType];
@@ -367,6 +376,11 @@ export function QuoteNewPage() {
 			productId: productId || undefined,
 			dimensionComboId: dimensionComboId || undefined,
 			flowerHoles: flowerHoles || undefined,
+			flowerTopColor: flowerTopColor || undefined,
+			// Ashes quote fields
+			deceasedNames: deceasedNames || undefined,
+			intermentDate: intermentDate || undefined,
+			intermentTime: intermentTime || undefined,
 			components: components.map(({ id, ...c }) => ({
 				...c,
 				quantity: c.quantity || 1,
@@ -871,12 +885,78 @@ export function QuoteNewPage() {
 									</Select>
 								</Field>
 							)}
+
+							{/* Flower Top Color - only for new memorial */}
+							{quoteType === 'new_memorial' && (
+								<Field>
+									<FieldLabel>Flower Top Colour</FieldLabel>
+									<Select
+										value={flowerTopColor || NONE_VALUE}
+										onValueChange={(v) => setFlowerTopColor(v === NONE_VALUE ? '' : v as FlowerTopColorChoice)}
+									>
+										<SelectTrigger>
+											<SelectValue placeholder="Select colour" />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value={NONE_VALUE}>None</SelectItem>
+											{FLOWER_TOP_COLOR_CHOICES.map((choice) => (
+												<SelectItem key={choice} value={choice}>
+													{choice === 'gold' ? 'Gold Top' : 'Silver Top'}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+								</Field>
+							)}
 						</div>
 					</CardContent>
 				</Card>
 				)}
 
-	
+				{/* Ashes Details - shown only for ashes quotes */}
+				{quoteType === 'ashes' && (
+					<Card>
+						<CardHeader>
+							<CardTitle>Ashes Details</CardTitle>
+							<CardDescription>Information about the ashes interment</CardDescription>
+						</CardHeader>
+						<CardContent>
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+								<Field className="md:col-span-2">
+									<FieldLabel>Deceased Names</FieldLabel>
+									<Textarea
+										value={deceasedNames}
+										onChange={(e) => setDeceasedNames(e.target.value)}
+										placeholder="Enter names, one per line"
+										rows={3}
+									/>
+									<p className="text-sm text-muted-foreground mt-1">
+										Enter each name on a separate line
+									</p>
+								</Field>
+
+								<Field>
+									<FieldLabel>Date of Interment</FieldLabel>
+									<Input
+										type="date"
+										value={intermentDate}
+										onChange={(e) => setIntermentDate(e.target.value)}
+									/>
+								</Field>
+
+								<Field>
+									<FieldLabel>Time of Interment</FieldLabel>
+									<Input
+										type="time"
+										value={intermentTime}
+										onChange={(e) => setIntermentTime(e.target.value)}
+									/>
+								</Field>
+							</div>
+						</CardContent>
+					</Card>
+				)}
+
 				{/* Stone Components Card - shown for types that need components */}
 				{sectionConfig?.showComponents && (
 				<Card>
@@ -1616,6 +1696,15 @@ export function QuoteNewPage() {
 									</Command>
 								</PopoverContent>
 							</Popover>
+							{/* Memorial site location display */}
+							{selectedMemorialSite?.addresses && selectedMemorialSite.addresses.length > 0 && (
+								<div className="text-xs text-muted-foreground pl-1">
+									{selectedMemorialSite.addresses.find(a => a.isPrimary)?.formattedAddress ||
+									 selectedMemorialSite.addresses[0]?.formattedAddress ||
+									 selectedMemorialSite.addresses.find(a => a.isPrimary)?.locality ||
+									 selectedMemorialSite.addresses[0]?.locality}
+								</div>
+							)}
 						</div>
 					</div>
 

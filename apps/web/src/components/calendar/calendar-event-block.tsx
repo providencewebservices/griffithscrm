@@ -1,11 +1,12 @@
 import { parseISO, format } from './calendar-utils';
+import { EventDetailPopover } from './event-detail-popover';
 import type { CalendarEvent } from './types';
 
 type CalendarEventBlockProps = {
 	event: CalendarEvent;
 	top: number;
 	height: number;
-	onClick: (event: CalendarEvent) => void;
+	onClick?: (event: CalendarEvent) => void;
 };
 
 export function CalendarEventBlock({
@@ -18,12 +19,12 @@ export function CalendarEventBlock({
 	const endTime = event.end ? parseISO(event.end) : null;
 	const isCompact = height < 40;
 
-	return (
+	const blockContent = (
 		<button
 			type="button"
 			onClick={(e) => {
 				e.stopPropagation();
-				onClick(event);
+				onClick?.(event);
 			}}
 			className="absolute left-1 right-1 rounded-md px-2 overflow-hidden cursor-pointer text-left transition-all hover:shadow-md hover:z-10 border-l-[3px]"
 			style={{
@@ -61,4 +62,6 @@ export function CalendarEventBlock({
 			)}
 		</button>
 	);
+
+	return <EventDetailPopover event={event}>{blockContent}</EventDetailPopover>;
 }

@@ -474,6 +474,9 @@ export const FLOWER_HOLE_CHOICES = [
 	'Three Flower Holes',
 ] as const;
 
+// Flower top color choices (for new memorials)
+export const FLOWER_TOP_COLOR_CHOICES = ['gold', 'silver'] as const;
+
 // Product options (configurable aspects of a product)
 export const productOptions = pgTable('product_options', {
 	id: text('id').primaryKey(),
@@ -895,6 +898,11 @@ export const quotes = pgTable('quotes', {
 	notes: text('notes'), // Customer-visible notes
 	internalNotes: text('internal_notes'), // Tenant-only notes (hidden from customer)
 	flowerHoles: text('flower_holes'), // From FLOWER_HOLE_CHOICES
+	flowerTopColor: text('flower_top_color'), // 'gold' | 'silver' | null - for new memorials
+	// Ashes quote specific fields
+	deceasedNames: text('deceased_names'), // One name per line
+	intermentDate: timestamp('interment_date'), // Date of ashes interment
+	intermentTime: text('interment_time'), // Time of interment (HH:MM format)
 	proposedInscription: text('proposed_inscription'), // Full text of desired inscription
 	validUntil: timestamp('valid_until'),
 	// Customer email notification fields

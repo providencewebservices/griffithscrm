@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useSuppliersQuery, type SupplierListItem } from '@/hooks/use-suppliers';
-import { Search, List, LayoutGrid, Phone, MapPin } from 'lucide-react';
+import { Search, List, LayoutGrid, Phone, MapPin, Mail } from 'lucide-react';
 
 type ViewMode = 'active' | 'archived';
 type DisplayMode = 'table' | 'cards';
@@ -140,6 +140,7 @@ export function SuppliersPage() {
 						<TableHeader>
 							<TableRow>
 								<TableHead>Name</TableHead>
+								<TableHead>Email</TableHead>
 								<TableHead>Account #</TableHead>
 								<TableHead>Phone</TableHead>
 								<TableHead className="text-center">Materials</TableHead>
@@ -156,6 +157,11 @@ export function SuppliersPage() {
 											<span className="text-muted-foreground text-sm block">
 												{supplier.businessName}
 											</span>
+										)}
+									</TableCell>
+									<TableCell>
+										{supplier.primaryEmail?.value || (
+											<span className="text-muted-foreground">-</span>
 										)}
 									</TableCell>
 									<TableCell>
@@ -220,6 +226,12 @@ function SupplierCard({ supplier }: { supplier: SupplierListItem }) {
 			</CardHeader>
 			<CardContent className="space-y-3">
 				<div className="flex flex-col gap-1.5 text-sm text-muted-foreground">
+					{supplier.primaryEmail?.value && (
+						<div className="flex items-center gap-2">
+							<Mail className="h-3.5 w-3.5" />
+							<span>{supplier.primaryEmail.value}</span>
+						</div>
+					)}
 					{supplier.primaryPhone?.value && (
 						<div className="flex items-center gap-2">
 							<Phone className="h-3.5 w-3.5" />

@@ -9,7 +9,6 @@ type CalendarDayCellProps = {
 	isToday: boolean;
 	events: CalendarEvent[];
 	onDateClick: (date: Date) => void;
-	onEventClick: (event: CalendarEvent) => void;
 };
 
 const MAX_VISIBLE_EVENTS = 3;
@@ -20,7 +19,6 @@ export function CalendarDayCell({
 	isToday,
 	events,
 	onDateClick,
-	onEventClick,
 }: CalendarDayCellProps) {
 	const visibleEvents = events.slice(0, MAX_VISIBLE_EVENTS);
 	const hiddenCount = events.length - MAX_VISIBLE_EVENTS;
@@ -51,7 +49,6 @@ export function CalendarDayCell({
 					<CalendarEventPill
 						key={event.id}
 						event={event}
-						onClick={onEventClick}
 					/>
 				))}
 

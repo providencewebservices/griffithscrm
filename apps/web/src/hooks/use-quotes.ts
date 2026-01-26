@@ -4,6 +4,7 @@ import {
 	QUOTE_TYPES,
 	COMPONENT_TYPES,
 	FLOWER_HOLE_CHOICES,
+	FLOWER_TOP_COLOR_CHOICES,
 } from '@griffiths-crm/shared/db/schema';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -13,6 +14,7 @@ export type QuoteStatus = (typeof QUOTE_STATUSES)[number];
 export type QuoteType = (typeof QUOTE_TYPES)[number];
 export type ComponentType = (typeof COMPONENT_TYPES)[number];
 export type FlowerHoleChoice = (typeof FLOWER_HOLE_CHOICES)[number];
+export type FlowerTopColorChoice = (typeof FLOWER_TOP_COLOR_CHOICES)[number];
 
 export type QuoteComponent = {
 	id: string;
@@ -121,6 +123,11 @@ export type QuoteOption = {
 	productId: string | null;
 	dimensionComboId: string | null;
 	flowerHoles: FlowerHoleChoice | null;
+	flowerTopColor: FlowerTopColorChoice | null;
+	// Ashes quote fields
+	deceasedNames: string | null;
+	intermentDate: string | null;
+	intermentTime: string | null;
 	subtotal: string;
 	vatAmount: string;
 	total: string;
@@ -256,6 +263,11 @@ export type CreateQuoteInput = {
 	productId?: string;
 	dimensionComboId?: string;
 	flowerHoles?: FlowerHoleChoice;
+	flowerTopColor?: FlowerTopColorChoice;
+	// Ashes quote fields
+	deceasedNames?: string;
+	intermentDate?: string;
+	intermentTime?: string;
 	components?: ComponentInput[];
 	lettering?: LetteringInput[];
 	sundries?: SundryInput[];
@@ -269,6 +281,11 @@ export type AddOptionInput = {
 	productId?: string;
 	dimensionComboId?: string;
 	flowerHoles?: FlowerHoleChoice;
+	flowerTopColor?: FlowerTopColorChoice;
+	// Ashes quote fields
+	deceasedNames?: string;
+	intermentDate?: string;
+	intermentTime?: string;
 	components?: ComponentInput[];
 	lettering?: LetteringInput[];
 	sundries?: SundryInput[];
@@ -1053,4 +1070,4 @@ export function formatQuoteNumberWithOptions(
 }
 
 // Re-export for convenience
-export { FLOWER_HOLE_CHOICES, QUOTE_TYPES };
+export { FLOWER_HOLE_CHOICES, FLOWER_TOP_COLOR_CHOICES, QUOTE_TYPES };

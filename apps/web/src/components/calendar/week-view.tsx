@@ -10,6 +10,7 @@ import {
 	CALENDAR_HOURS,
 } from './calendar-utils';
 import { CalendarEventBlock } from './calendar-event-block';
+import { EventDetailPopover } from './event-detail-popover';
 import type { CalendarEvent } from './types';
 
 const HOUR_HEIGHT = 48;
@@ -18,14 +19,12 @@ type WeekViewProps = {
 	currentDate: Date;
 	events: CalendarEvent[];
 	onTimeSlotClick: (date: Date, hour: number) => void;
-	onEventClick: (event: CalendarEvent) => void;
 };
 
 export function WeekView({
 	currentDate,
 	events,
 	onTimeSlotClick,
-	onEventClick,
 }: WeekViewProps) {
 	const days = useMemo(() => getWeekDays(currentDate), [currentDate]);
 
@@ -57,19 +56,20 @@ export function WeekView({
 										)}
 									>
 										{dayAllDayEvents.slice(0, 2).map((event) => (
-											<button
-												key={event.id}
-												type="button"
-												onClick={() => onEventClick(event)}
-												className="w-full text-left text-xs px-2 py-1 rounded truncate mb-1 cursor-pointer hover:opacity-80 transition-opacity"
-												style={{
-													backgroundColor: `${event.color}20`,
-													color: event.color,
-													borderLeft: `3px solid ${event.color}`,
-												}}
-											>
-												{event.title}
-											</button>
+											<EventDetailPopover key={event.id} event={event}>
+												<button
+													type="button"
+													onClick={(e) => e.stopPropagation()}
+													className="w-full text-left text-xs px-2 py-1 rounded truncate mb-1 cursor-pointer hover:opacity-80 transition-opacity"
+													style={{
+														backgroundColor: `${event.color}20`,
+														color: event.color,
+														borderLeft: `3px solid ${event.color}`,
+													}}
+												>
+													{event.title}
+												</button>
+											</EventDetailPopover>
 										))}
 										{dayAllDayEvents.length > 2 && (
 											<div className="text-xs text-muted-foreground px-2">
@@ -123,7 +123,6 @@ export function WeekView({
 							days={days}
 							timedEvents={timedEvents}
 							onTimeSlotClick={onTimeSlotClick}
-							onEventClick={onEventClick}
 						/>
 					))}
 				</div>
@@ -138,14 +137,12 @@ function HourRow({
 	days,
 	timedEvents,
 	onTimeSlotClick,
-	onEventClick,
 }: {
 	hour: number;
 	hourIndex: number;
 	days: Date[];
 	timedEvents: CalendarEvent[];
 	onTimeSlotClick: (date: Date, hour: number) => void;
-	onEventClick: (event: CalendarEvent) => void;
 }) {
 	return (
 		<>
@@ -189,7 +186,6 @@ function HourRow({
 									event={event}
 									top={relativeTop}
 									height={height}
-									onClick={onEventClick}
 								/>
 							);
 						})}

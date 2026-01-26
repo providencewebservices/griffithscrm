@@ -3,25 +3,18 @@ import { CalendarHeader } from './calendar-header';
 import { MonthView } from './month-view';
 import { WeekView } from './week-view';
 import { DayView } from './day-view';
-import { EventDetailSheet } from './event-detail-sheet';
 import { EventFormDialog } from './event-form-dialog';
 import { navigateDate, getDateRange } from './calendar-utils';
 import {
 	useCalendarEventsQuery,
 	useCreateCalendarEventMutation,
 } from '@/hooks/use-calendar';
-import type { CalendarView, CalendarEvent } from './types';
+import type { CalendarView } from './types';
 
 export function Calendar() {
 	// View state
 	const [view, setView] = useState<CalendarView>('month');
 	const [currentDate, setCurrentDate] = useState(new Date());
-
-	// Selection state
-	const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(
-		null
-	);
-	const [eventSheetOpen, setEventSheetOpen] = useState(false);
 
 	// Create event state
 	const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -57,11 +50,6 @@ export function Calendar() {
 	};
 
 	// Event handlers
-	const handleEventClick = (event: CalendarEvent) => {
-		setSelectedEvent(event);
-		setEventSheetOpen(true);
-	};
-
 	const handleDateClick = (date: Date) => {
 		// When clicking a date in month view, switch to day view
 		if (view === 'month') {
@@ -114,7 +102,6 @@ export function Calendar() {
 							currentDate={currentDate}
 							events={events}
 							onDateClick={handleDateClick}
-							onEventClick={handleEventClick}
 						/>
 					)}
 
@@ -123,7 +110,6 @@ export function Calendar() {
 							currentDate={currentDate}
 							events={events}
 							onTimeSlotClick={handleTimeSlotClick}
-							onEventClick={handleEventClick}
 						/>
 					)}
 
@@ -132,17 +118,10 @@ export function Calendar() {
 							currentDate={currentDate}
 							events={events}
 							onTimeSlotClick={handleTimeSlotClick}
-							onEventClick={handleEventClick}
 						/>
 					)}
 				</>
 			)}
-
-			<EventDetailSheet
-				event={selectedEvent}
-				open={eventSheetOpen}
-				onOpenChange={setEventSheetOpen}
-			/>
 
 			<EventFormDialog
 				open={createDialogOpen}

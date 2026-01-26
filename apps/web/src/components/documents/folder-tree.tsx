@@ -20,8 +20,12 @@ interface FolderTreeItemProps {
 	level: number;
 	selectedFolderId: string | null;
 	expandedFolders: Set<string>;
+	dragOverTarget: string | null;
 	onSelectFolder: (folderId: string | null) => void;
 	onToggleExpand: (folderId: string) => void;
+	onDragOver: (e: React.DragEvent, target: string) => void;
+	onDragLeave: (e: React.DragEvent) => void;
+	onDrop: (e: React.DragEvent, folderId: string) => void;
 }
 
 function FolderTreeItem({
@@ -29,21 +33,30 @@ function FolderTreeItem({
 	level,
 	selectedFolderId,
 	expandedFolders,
+	dragOverTarget,
 	onSelectFolder,
 	onToggleExpand,
+	onDragOver,
+	onDragLeave,
+	onDrop,
 }: FolderTreeItemProps) {
 	const hasChildren = folder.children && folder.children.length > 0;
 	const isExpanded = expandedFolders.has(folder.id);
 	const isSelected = selectedFolderId === folder.id;
+	const isDragOver = dragOverTarget === folder.id;
 
 	return (
 		<div>
 			<div
 				className={cn(
-					'flex items-center gap-1 py-1 px-2 rounded-md cursor-pointer hover:bg-accent text-sm',
-					isSelected && 'bg-accent'
+					'flex items-center gap-1 py-1 px-2 rounded-md cursor-pointer hover:bg-accent text-sm transition-colors',
+					isSelected && 'bg-accent',
+					isDragOver && 'bg-primary/20 ring-2 ring-primary ring-inset'
 				)}
 				style={{ paddingLeft: `${level * 16 + 8}px` }}
+				onDragOver={(e) => onDragOver(e, folder.id)}
+				onDragLeave={onDragLeave}
+				onDrop={(e) => onDrop(e, folder.id)}
 			>
 				{hasChildren ? (
 					<Button
@@ -91,8 +104,12 @@ function FolderTreeItem({
 							level={level + 1}
 							selectedFolderId={selectedFolderId}
 							expandedFolders={expandedFolders}
+							dragOverTarget={dragOverTarget}
 							onSelectFolder={onSelectFolder}
 							onToggleExpand={onToggleExpand}
+							onDragOver={onDragOver}
+							onDragLeave={onDragLeave}
+							onDrop={onDrop}
 						/>
 					))}
 				</div>
@@ -105,6 +122,7 @@ interface FolderTreeProps {
 	selectedFolderId: string | null;
 	onSelectFolder: (folderId: string | null) => void;
 	onFilesDropped?: (files: File[], folderId: string | null) => void;
+	onDocumentDropped?: (documentId: string, folderId: string | null) => void;
 	className?: string;
 }
 
@@ -112,6 +130,7 @@ export function FolderTree({
 	selectedFolderId,
 	onSelectFolder,
 	onFilesDropped,
+	onDocumentDropped,
 	className,
 }: FolderTreeProps) {
 	const { data: folders, isLoading } = useAllFoldersQuery();
@@ -135,6 +154,19 @@ export function FolderTree({
 		e.stopPropagation();
 		setDragOverTarget(null);
 
+		// Check for document move first
+		const documentData = e.dataTransfer.getData('application/x-document-move');
+		if (documentData && onDocumentDropped) {
+			try {
+				const { documentId } = JSON.parse(documentData);
+				onDocumentDropped(documentId, folderId);
+				return;
+			} catch {
+				// Invalid data, fall through to file upload
+			}
+		}
+
+		// Fall back to file upload
 		if (e.dataTransfer.files.length > 0 && onFilesDropped) {
 			const files = Array.from(e.dataTransfer.files);
 			onFilesDropped(files, folderId);
@@ -194,8 +226,12 @@ export function FolderTree({
 							level={0}
 							selectedFolderId={selectedFolderId}
 							expandedFolders={expandedFolders}
+							dragOverTarget={dragOverTarget}
 							onSelectFolder={onSelectFolder}
 							onToggleExpand={handleToggleExpand}
+							onDragOver={handleDragOver}
+							onDragLeave={handleDragLeave}
+							onDrop={handleDrop}
 						/>
 					))}
 				</>

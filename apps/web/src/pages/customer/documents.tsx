@@ -41,6 +41,7 @@ import {
 import {
 	useFolderContentsQuery,
 	useDeleteFolderMutation,
+	useMoveDocumentMutation,
 	type DocumentFolder,
 	type BreadcrumbItem,
 } from '@/hooks/use-document-folders';
@@ -130,6 +131,10 @@ export function DocumentsPage() {
 	const deleteMutation = useDeleteDocumentMutation();
 	const deleteFolderMutation = useDeleteFolderMutation();
 	const downloadMutation = useDownloadUrl();
+	const moveDocumentMutation = useMoveDocumentMutation();
+
+	// Drag-and-drop state for subfolder cards
+	const [dragOverFolderId, setDragOverFolderId] = useState<string | null>(null);
 
 	// Debounce search
 	useMemo(() => {
@@ -308,6 +313,38 @@ export function DocumentsPage() {
 		setUploadDialogOpen(true);
 	};
 
+	const handleDocumentDropped = async (documentId: string, folderId: string | null) => {
+		try {
+			await moveDocumentMutation.mutateAsync({ id: documentId, folderId });
+		} catch (error) {
+			console.error('Failed to move document:', error);
+		}
+	};
+
+	const handleDropOnSubfolder = (e: React.DragEvent, folderId: string) => {
+		e.preventDefault();
+		e.stopPropagation();
+		setDragOverFolderId(null);
+
+		// Check for document move first
+		const documentData = e.dataTransfer.getData('application/x-document-move');
+		if (documentData) {
+			try {
+				const { documentId } = JSON.parse(documentData);
+				handleDocumentDropped(documentId, folderId);
+				return;
+			} catch {
+				// Invalid data, fall through to file upload
+			}
+		}
+
+		// Fall back to file upload
+		if (e.dataTransfer.files.length > 0) {
+			const files = Array.from(e.dataTransfer.files);
+			handleFilesDropped(files, folderId);
+		}
+	};
+
 	const handleContentDragOver = (e: React.DragEvent) => {
 		e.preventDefault();
 		setContentDragOver(true);
@@ -372,6 +409,7 @@ export function DocumentsPage() {
 					selectedFolderId={selectedFolderId}
 					onSelectFolder={handleSelectFolder}
 					onFilesDropped={handleFilesDropped}
+					onDocumentDropped={handleDocumentDropped}
 				/>
 			</div>
 
@@ -474,8 +512,22 @@ export function DocumentsPage() {
 										{subfolders.map((folder) => (
 											<Card
 												key={folder.id}
-												className="cursor-pointer hover:bg-accent/50 transition-colors group"
+												className={cn(
+													'cursor-pointer hover:bg-accent/50 transition-colors group',
+													dragOverFolderId === folder.id && 'ring-2 ring-primary bg-primary/10'
+												)}
 												onClick={() => handleSelectFolder(folder.id)}
+												onDragOver={(e) => {
+													e.preventDefault();
+													e.stopPropagation();
+													setDragOverFolderId(folder.id);
+												}}
+												onDragLeave={(e) => {
+													e.preventDefault();
+													e.stopPropagation();
+													setDragOverFolderId(null);
+												}}
+												onDrop={(e) => handleDropOnSubfolder(e, folder.id)}
 											>
 												<CardContent className="p-3">
 													<div className="flex items-start justify-between">
@@ -615,7 +667,21 @@ export function DocumentsPage() {
 													const tags = parseTags(doc.tags);
 
 													return (
-														<TableRow key={doc.id}>
+														<TableRow
+															key={doc.id}
+															draggable
+															onDragStart={(e) => {
+																e.dataTransfer.setData(
+																	'application/x-document-move',
+																	JSON.stringify({
+																		documentId: doc.id,
+																		documentName: doc.name,
+																	})
+																);
+																e.dataTransfer.effectAllowed = 'move';
+															}}
+															className="cursor-grab active:cursor-grabbing"
+														>
 															<TableCell>
 																<FileTypeIcon
 																	contentType={doc.contentType}

@@ -9,6 +9,7 @@ import {
 	CALENDAR_HOURS,
 } from './calendar-utils';
 import { CalendarEventBlock } from './calendar-event-block';
+import { EventDetailPopover } from './event-detail-popover';
 import type { CalendarEvent } from './types';
 
 const HOUR_HEIGHT = 48;
@@ -17,14 +18,12 @@ type DayViewProps = {
 	currentDate: Date;
 	events: CalendarEvent[];
 	onTimeSlotClick: (date: Date, hour: number) => void;
-	onEventClick: (event: CalendarEvent) => void;
 };
 
 export function DayView({
 	currentDate,
 	events,
 	onTimeSlotClick,
-	onEventClick,
 }: DayViewProps) {
 	const dayEvents = getEventsForDay(events, currentDate);
 	const allDayEvents = dayEvents.filter((e) => e.allDay);
@@ -68,19 +67,20 @@ export function DayView({
 							</div>
 							<div className="p-2 space-y-1">
 								{allDayEvents.map((event) => (
-									<button
-										key={event.id}
-										type="button"
-										onClick={() => onEventClick(event)}
-										className="w-full text-left text-sm px-3 py-1.5 rounded-md cursor-pointer hover:opacity-80 transition-opacity"
-										style={{
-											backgroundColor: `${event.color}20`,
-											color: event.color,
-											borderLeft: `3px solid ${event.color}`,
-										}}
-									>
-										{event.title}
-									</button>
+									<EventDetailPopover key={event.id} event={event}>
+										<button
+											type="button"
+											onClick={(e) => e.stopPropagation()}
+											className="w-full text-left text-sm px-3 py-1.5 rounded-md cursor-pointer hover:opacity-80 transition-opacity"
+											style={{
+												backgroundColor: `${event.color}20`,
+												color: event.color,
+												borderLeft: `3px solid ${event.color}`,
+											}}
+										>
+											{event.title}
+										</button>
+									</EventDetailPopover>
 								))}
 							</div>
 						</div>
@@ -98,7 +98,6 @@ export function DayView({
 							timedEvents={timedEvents}
 							today={today}
 							onTimeSlotClick={onTimeSlotClick}
-							onEventClick={onEventClick}
 						/>
 					))}
 				</div>
@@ -114,7 +113,6 @@ function HourRow({
 	timedEvents,
 	today,
 	onTimeSlotClick,
-	onEventClick,
 }: {
 	hour: number;
 	hourIndex: number;
@@ -122,7 +120,6 @@ function HourRow({
 	timedEvents: CalendarEvent[];
 	today: boolean;
 	onTimeSlotClick: (date: Date, hour: number) => void;
-	onEventClick: (event: CalendarEvent) => void;
 }) {
 	const hourEvents = timedEvents.filter((event) => {
 		const eventHour = new Date(event.start).getHours();
@@ -163,7 +160,6 @@ function HourRow({
 							event={event}
 							top={relativeTop}
 							height={height}
-							onClick={onEventClick}
 						/>
 					);
 				})}

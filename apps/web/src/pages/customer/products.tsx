@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useSignedUrls } from '@/hooks/use-uploads';
 import { Link, useNavigate } from 'react-router';
 import {
 	Table,
@@ -79,6 +80,15 @@ export function ProductsPage() {
 	};
 
 	const { data, isLoading, error } = useProductsQuery(params);
+
+	// Get signed URLs for product images (S3 bucket is private)
+	const products = data?.products || [];
+	const imageUrls = useMemo(
+		() => products.map((p) => p.imageUrl).filter(Boolean),
+		[products]
+	);
+	const { data: signedUrls } = useSignedUrls(imageUrls);
+
 	const createMutation = useCreateProductMutation();
 	const archiveMutation = useArchiveProductMutation();
 	const unarchiveMutation = useUnarchiveProductMutation();
@@ -130,7 +140,6 @@ export function ProductsPage() {
 		return `£${parseFloat(price).toFixed(2)}`;
 	};
 
-	const products = data?.products || [];
 	const pagination = data?.pagination;
 
 	if (isLoading && !data) {
@@ -395,6 +404,7 @@ export function ProductsPage() {
 							<ProductCard
 								key={product.id}
 								product={product}
+								signedImageUrl={product.imageUrl ? signedUrls?.get(product.imageUrl) : undefined}
 							/>
 						))}
 					</div>
@@ -449,17 +459,30 @@ export function ProductsPage() {
 
 function ProductCard({
 	product,
+	signedImageUrl,
 }: {
 	product: Product;
+	signedImageUrl?: string;
 }) {
 	return (
 		<Card
 			className={`hover:shadow-md transition-shadow ${product.archivedAt ? 'opacity-60' : ''}`}
 		>
+			<div className="aspect-square bg-muted flex items-center justify-center overflow-hidden rounded-t-xl">
+				{product.imageUrl ? (
+					<img
+						src={signedImageUrl || product.imageUrl}
+						alt={product.name}
+						className="w-full h-full object-cover"
+					/>
+				) : (
+					<Package className="h-12 w-12 text-muted-foreground" />
+				)}
+			</div>
 			<CardHeader className="pb-3">
 				<div className="flex items-start justify-between">
 					<div className="space-y-1 flex-1 min-w-0">
-						<CardTitle className="text-base truncate">{product.name}</CardTitle>
+						<CardTitle className="text-base line-clamp-2">{product.name}</CardTitle>
 						{product.category?.name && (
 							<p className="text-sm text-muted-foreground">{product.category.name}</p>
 						)}

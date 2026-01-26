@@ -90,6 +90,20 @@ export function isPdfType(contentType: string): boolean {
 }
 
 /**
+ * Check if the content type is a Word document (.docx)
+ */
+export function isWordDocument(contentType: string): boolean {
+	return contentType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+}
+
+/**
+ * Check if the content type is a legacy Word document (.doc)
+ */
+export function isLegacyWordDocument(contentType: string): boolean {
+	return contentType === 'application/msword';
+}
+
+/**
  * Check if the content type is a video
  */
 export function isVideoType(contentType: string): boolean {
@@ -146,7 +160,7 @@ export function getFileTypeLabel(contentType: string): string {
  * Check if a file type is previewable in the browser
  */
 export function isPreviewable(contentType: string): boolean {
-	return isImageType(contentType) || isPdfType(contentType);
+	return isImageType(contentType) || isPdfType(contentType) || isWordDocument(contentType);
 }
 
 /**

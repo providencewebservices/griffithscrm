@@ -1,4 +1,6 @@
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router';
+import mammoth from 'mammoth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -17,12 +19,15 @@ import {
 	isImageType,
 	isPdfType,
 	isPreviewable,
+	isWordDocument,
+	isLegacyWordDocument,
 } from '@/lib/file-utils';
 import {
 	ArrowLeft,
 	Download,
 	ExternalLink,
 	FileQuestion,
+	FileText,
 	Loader2,
 } from 'lucide-react';
 
@@ -36,6 +41,64 @@ const ENTITY_ROUTES: Record<DocumentEntityType, string> = {
 	memorial_site: '/app/memorial-sites',
 	product: '/app/products',
 };
+
+function WordDocumentPreview({ url }: { url: string }) {
+	const [html, setHtml] = useState<string | null>(null);
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState<string | null>(null);
+
+	useEffect(() => {
+		async function convertDocument() {
+			try {
+				setLoading(true);
+				setError(null);
+				const response = await fetch(url);
+				if (!response.ok) {
+					throw new Error('Failed to fetch document');
+				}
+				const arrayBuffer = await response.arrayBuffer();
+				const result = await mammoth.convertToHtml({ arrayBuffer });
+				setHtml(result.value);
+			} catch (err) {
+				setError('Failed to load document preview');
+				console.error('Word document conversion error:', err);
+			} finally {
+				setLoading(false);
+			}
+		}
+		convertDocument();
+	}, [url]);
+
+	if (loading) {
+		return (
+			<div className="flex items-center justify-center p-8">
+				<Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+				<span className="ml-2 text-muted-foreground">Loading preview...</span>
+			</div>
+		);
+	}
+
+	if (error) {
+		return (
+			<Card className="max-w-md">
+				<CardContent className="p-8 text-center">
+					<FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+					<h3 className="font-semibold mb-2">Preview Error</h3>
+					<p className="text-sm text-muted-foreground">{error}</p>
+				</CardContent>
+			</Card>
+		);
+	}
+
+	return (
+		<div className="w-full max-w-4xl mx-auto bg-white rounded-lg shadow-lg overflow-auto">
+			<div
+				className="prose prose-sm max-w-none p-8"
+				dangerouslySetInnerHTML={{ __html: html || '' }}
+			/>
+		</div>
+	);
+}
 
 export function DocumentViewerPage() {
 	const { id } = useParams<{ id: string }>();
@@ -196,6 +259,27 @@ export function DocumentViewerPage() {
 							title={doc.name}
 							className="w-full h-full rounded-lg shadow-lg bg-white"
 						/>
+					) : isWordDocument(doc.contentType) && doc.publicUrl ? (
+						<WordDocumentPreview url={doc.publicUrl} />
+					) : isLegacyWordDocument(doc.contentType) ? (
+						<Card className="max-w-md">
+							<CardContent className="p-8 text-center">
+								<FileText className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
+								<h3 className="font-semibold mb-2">Preview Not Available</h3>
+								<p className="text-sm text-muted-foreground mb-4">
+									Preview is not available for legacy .doc files.
+									Download the file to view it.
+								</p>
+								<Button onClick={handleDownload} disabled={downloadMutation.isPending}>
+									{downloadMutation.isPending ? (
+										<Loader2 className="h-4 w-4 mr-2 animate-spin" />
+									) : (
+										<Download className="h-4 w-4 mr-2" />
+									)}
+									Download File
+								</Button>
+							</CardContent>
+						</Card>
 					) : (
 						<Card className="max-w-md">
 							<CardContent className="p-8 text-center">

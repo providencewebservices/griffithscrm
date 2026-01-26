@@ -13,14 +13,12 @@ type MonthViewProps = {
 	currentDate: Date;
 	events: CalendarEvent[];
 	onDateClick: (date: Date) => void;
-	onEventClick: (event: CalendarEvent) => void;
 };
 
 export function MonthView({
 	currentDate,
 	events,
 	onDateClick,
-	onEventClick,
 }: MonthViewProps) {
 	const days = useMemo(() => getMonthDays(currentDate), [currentDate]);
 
@@ -46,7 +44,6 @@ export function MonthView({
 						isToday={isToday(day)}
 						events={getEventsForDay(events, day)}
 						onDateClick={onDateClick}
-						onEventClick={onEventClick}
 					/>
 				))}
 			</div>
