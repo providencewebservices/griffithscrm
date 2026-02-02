@@ -1,21 +1,39 @@
+import { useState } from 'react';
 import { Link } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { PipelineBoard } from '@/components/dashboard/pipeline-board';
 import { StatsCards } from '@/components/dashboard/StatsCards';
-import { Plus, UserPlus } from 'lucide-react';
+import { Calendar } from '@/components/calendar/calendar';
+import { Plus, UserPlus, CalendarDays, LayoutGrid } from 'lucide-react';
 
 export function CustomerDashboard() {
+	const [showCalendar, setShowCalendar] = useState(false);
+
 	return (
 		<div className="space-y-6">
-			<DashboardHeader />
-			<StatsCards />
-			<PipelineBoard />
+			<DashboardHeader
+				showCalendar={showCalendar}
+				onToggleView={() => setShowCalendar(!showCalendar)}
+			/>
+			{showCalendar ? (
+				<Calendar />
+			) : (
+				<>
+					<StatsCards />
+					<PipelineBoard />
+				</>
+			)}
 		</div>
 	);
 }
 
 // Dashboard Header Component
-function DashboardHeader() {
+interface DashboardHeaderProps {
+	showCalendar: boolean;
+	onToggleView: () => void;
+}
+
+function DashboardHeader({ showCalendar, onToggleView }: DashboardHeaderProps) {
 	return (
 		<div className="flex items-center justify-between">
 			<div>
@@ -37,6 +55,19 @@ function DashboardHeader() {
 						New Customer
 					</Button>
 				</Link>
+				<Button variant="outline" onClick={onToggleView}>
+					{showCalendar ? (
+						<>
+							<LayoutGrid className="h-4 w-4 mr-2" />
+							View Pipelines
+						</>
+					) : (
+						<>
+							<CalendarDays className="h-4 w-4 mr-2" />
+							View Calendar
+						</>
+					)}
+				</Button>
 			</div>
 		</div>
 	);

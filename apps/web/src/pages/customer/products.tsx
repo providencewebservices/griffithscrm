@@ -399,7 +399,7 @@ export function ProductsPage() {
 				</>
 			) : (
 				<>
-					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
 						{products.map((product) => (
 							<ProductCard
 								key={product.id}
@@ -466,9 +466,9 @@ function ProductCard({
 }) {
 	return (
 		<Card
-			className={`hover:shadow-md transition-shadow ${product.archivedAt ? 'opacity-60' : ''}`}
+			className={`hover:shadow-md transition-shadow py-0 gap-3 ${product.archivedAt ? 'opacity-60' : ''}`}
 		>
-			<div className="aspect-square bg-muted flex items-center justify-center overflow-hidden rounded-t-xl">
+			<div className="aspect-[4/3] bg-muted flex items-center justify-center overflow-hidden rounded-t-xl">
 				{product.imageUrl ? (
 					<img
 						src={signedImageUrl || product.imageUrl}
@@ -479,7 +479,7 @@ function ProductCard({
 					<Package className="h-12 w-12 text-muted-foreground" />
 				)}
 			</div>
-			<CardHeader className="pb-3">
+			<CardHeader className="pb-2 pt-3">
 				<div className="flex items-start justify-between">
 					<div className="space-y-1 flex-1 min-w-0">
 						<CardTitle className="text-base line-clamp-2">{product.name}</CardTitle>
@@ -492,7 +492,7 @@ function ProductCard({
 					</Badge>
 				</div>
 			</CardHeader>
-			<CardContent className="space-y-3">
+			<CardContent className="space-y-2 pb-4">
 				<div className="flex items-center">
 					{product.archivedAt ? (
 						<Badge variant="outline">Archived</Badge>

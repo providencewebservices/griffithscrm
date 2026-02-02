@@ -29,10 +29,23 @@ export function ImageUpload({
 	const [error, setError] = useState<string | null>(null);
 	const [isDragging, setIsDragging] = useState(false);
 	const fileInputRef = useRef<HTMLInputElement>(null);
+	const blobUrlRef = useRef<string | null>(null);
 
-	// Sync preview with value prop changes (e.g., when dialog reopens)
+	// Clean up blob URL on unmount
 	useEffect(() => {
-		setPreview(value || null);
+		return () => {
+			if (blobUrlRef.current) {
+				URL.revokeObjectURL(blobUrlRef.current);
+			}
+		};
+	}, []);
+
+	// Sync preview with value prop changes (e.g., when dialog reopens or editing existing)
+	// Only update from value if we don't have a local blob preview
+	useEffect(() => {
+		if (!blobUrlRef.current) {
+			setPreview(value || null);
+		}
 	}, [value]);
 
 	const uploadMutation = useUploadImageMutation();
@@ -53,8 +66,14 @@ export function ImageUpload({
 				return;
 			}
 
-			// Create local preview
+			// Clean up any existing blob URL before creating a new one
+			if (blobUrlRef.current) {
+				URL.revokeObjectURL(blobUrlRef.current);
+			}
+
+			// Create local preview and keep it (S3 URLs are private and won't load)
 			const localPreview = URL.createObjectURL(file);
+			blobUrlRef.current = localPreview;
 			setPreview(localPreview);
 
 			try {
@@ -64,16 +83,16 @@ export function ImageUpload({
 					file,
 				});
 
-				// Update with the actual URL
-				setPreview(publicUrl);
+				// Keep the blob preview (it works), just notify parent of S3 URL for storage
 				onChange(publicUrl);
-
-				// Cleanup local preview
-				URL.revokeObjectURL(localPreview);
 			} catch (err) {
 				setError(err instanceof Error ? err.message : 'Failed to upload image');
+				// On error, clear preview and revoke blob
 				setPreview(value || null);
-				URL.revokeObjectURL(localPreview);
+				if (blobUrlRef.current) {
+					URL.revokeObjectURL(blobUrlRef.current);
+					blobUrlRef.current = null;
+				}
 			}
 		},
 		[category, entityId, onChange, uploadMutation, value]
@@ -122,6 +141,11 @@ export function ImageUpload({
 	);
 
 	const handleRemove = useCallback(() => {
+		// Clean up blob URL if we have one
+		if (blobUrlRef.current) {
+			URL.revokeObjectURL(blobUrlRef.current);
+			blobUrlRef.current = null;
+		}
 		setPreview(null);
 		onChange(null);
 		setError(null);

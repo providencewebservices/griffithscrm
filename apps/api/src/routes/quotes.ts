@@ -455,6 +455,28 @@ const updateLineItemPricingSchema = z.object({
 	quantity: z.number().int().min(1).optional(),
 });
 
+// Schema for adding a new lettering item
+const addLetteringItemSchema = z.object({
+	techniqueId: z.string().min(1),
+	colorId: z.string().optional(),
+	text: z.string().min(1),
+	appliesTo: z.enum(LETTERING_COST_APPLIES_TO).optional().default('new_memorial'),
+	notes: z.string().optional(),
+});
+
+// Schema for updating a lettering item (extends pricing schema)
+const updateLetteringItemSchema = z.object({
+	// Pricing fields (existing)
+	supplierCost: z.number().min(0).optional(),
+	markupPercent: z.number().min(0).optional(),
+	// Content fields (new)
+	techniqueId: z.string().min(1).optional(),
+	colorId: z.string().optional().nullable(),
+	text: z.string().min(1).optional(),
+	appliesTo: z.enum(LETTERING_COST_APPLIES_TO).optional(),
+	notes: z.string().optional().nullable(),
+});
+
 // Schema for custom line items
 const lineItemInputSchema = z.object({
 	description: z.string().min(1),
@@ -2484,6 +2506,423 @@ ${tenantName}
 
 		// Delete option (cascades to line items via FK)
 		await db.delete(quotes).where(eq(quotes.id, optionId));
+
+		// Return updated package
+		const fullPackage = await getPackageWithOptions(packageId, tenantId);
+		return c.json({ package: fullPackage });
+	})
+
+	// ============================================
+	// LETTERING ITEM CRUD ENDPOINTS
+	// ============================================
+
+	// Add a new lettering item to an option
+	.post(
+		'/:id/options/:optionId/lettering',
+		zValidator('json', addLetteringItemSchema),
+		async (c) => {
+			const currentUser = c.get('user');
+			const tenantId = currentUser.tenantId!;
+			const packageId = c.req.param('id');
+			const optionId = c.req.param('optionId');
+			const data = c.req.valid('json');
+
+			// Get package and validate
+			const [pkg] = await db
+				.select()
+				.from(quotePackages)
+				.where(and(eq(quotePackages.id, packageId), eq(quotePackages.tenantId, tenantId)))
+				.limit(1);
+
+			if (!pkg) {
+				return c.json({ error: 'Package not found' }, 404);
+			}
+
+			if (pkg.status !== 'draft') {
+				return c.json({ error: 'Can only add lettering to draft quotes' }, 400);
+			}
+
+			// Verify option exists and belongs to this package
+			const [option] = await db
+				.select()
+				.from(quotes)
+				.where(and(eq(quotes.id, optionId), eq(quotes.packageId, packageId)))
+				.limit(1);
+
+			if (!option) {
+				return c.json({ error: 'Option not found in this package' }, 404);
+			}
+
+			// Get technique
+			const [technique] = await db
+				.select()
+				.from(letteringTechniques)
+				.where(
+					and(eq(letteringTechniques.id, data.techniqueId), eq(letteringTechniques.tenantId, tenantId))
+				)
+				.limit(1);
+
+			if (!technique) {
+				return c.json({ error: 'Lettering technique not found' }, 404);
+			}
+
+			// Get color if specified
+			let color = null;
+			if (data.colorId) {
+				[color] = await db
+					.select()
+					.from(letteringColors)
+					.where(and(eq(letteringColors.id, data.colorId), eq(letteringColors.tenantId, tenantId)))
+					.limit(1);
+			}
+
+			// Find cost rule using priority
+			let activeCostRule = null;
+
+			// 1. Try specific color + specific appliesTo
+			if (data.colorId) {
+				[activeCostRule] = await db
+					.select()
+					.from(letteringCosts)
+					.where(
+						and(
+							eq(letteringCosts.techniqueId, data.techniqueId),
+							eq(letteringCosts.colorId, data.colorId),
+							eq(letteringCosts.appliesTo, data.appliesTo)
+						)
+					)
+					.limit(1);
+
+				// 2. Try specific color + 'both'
+				if (!activeCostRule) {
+					[activeCostRule] = await db
+						.select()
+						.from(letteringCosts)
+						.where(
+							and(
+								eq(letteringCosts.techniqueId, data.techniqueId),
+								eq(letteringCosts.colorId, data.colorId),
+								eq(letteringCosts.appliesTo, 'both')
+							)
+						)
+						.limit(1);
+				}
+			}
+
+			// 3. Fall back to default (no color) + specific appliesTo
+			if (!activeCostRule) {
+				const defaultRules = await db
+					.select()
+					.from(letteringCosts)
+					.where(
+						and(
+							eq(letteringCosts.techniqueId, data.techniqueId),
+							eq(letteringCosts.appliesTo, data.appliesTo)
+						)
+					);
+				activeCostRule = defaultRules.find((r) => r.colorId === null) || null;
+			}
+
+			// 4. Fall back to default (no color) + 'both'
+			if (!activeCostRule) {
+				const bothRules = await db
+					.select()
+					.from(letteringCosts)
+					.where(
+						and(eq(letteringCosts.techniqueId, data.techniqueId), eq(letteringCosts.appliesTo, 'both'))
+					);
+				activeCostRule = bothRules.find((r) => r.colorId === null) || null;
+			}
+
+			// Get pricing settings
+			const pricingSettings = await getTenantPricingSettings(tenantId);
+
+			// Calculate pricing
+			const letterCount = data.text.replace(/\s/g, '').length;
+			const freeLetters = activeCostRule?.freeLetters || 0;
+			const supplierCostPerLetter = parseFloat(activeCostRule?.pricePerLetter || '0');
+			const billableLetters = Math.max(0, letterCount - freeLetters);
+			const markupPercent = pricingSettings.defaultMarkupPercent;
+			const unitPrice = calculateRetailPrice(supplierCostPerLetter, markupPercent);
+			const lineTotal = billableLetters * unitPrice;
+
+			// Get current max sort order
+			const [maxSortOrder] = await db
+				.select({ maxOrder: sql<number>`COALESCE(MAX(${quoteLettering.sortOrder}), -1)` })
+				.from(quoteLettering)
+				.where(eq(quoteLettering.quoteId, optionId));
+
+			// Insert new lettering item
+			const letteringId = crypto.randomUUID();
+			await db.insert(quoteLettering).values({
+				id: letteringId,
+				quoteId: optionId,
+				techniqueId: data.techniqueId,
+				colorId: data.colorId || null,
+				text: data.text,
+				letterCount,
+				appliesTo: data.appliesTo,
+				supplierCost: String(supplierCostPerLetter),
+				markupPercent: String(markupPercent),
+				unitPrice: String(unitPrice),
+				lineTotal: String(lineTotal),
+				techniqueName: technique.name,
+				colorName: color?.name || null,
+				notes: data.notes || null,
+				sortOrder: (maxSortOrder.maxOrder ?? -1) + 1,
+			});
+
+			// Recalculate quote totals
+			await recalculateQuoteTotals(optionId);
+
+			// Return updated package
+			const fullPackage = await getPackageWithOptions(packageId, tenantId);
+			return c.json({ package: fullPackage }, 201);
+		}
+	)
+
+	// Update a lettering item (technique, color, text, pricing)
+	.put(
+		'/:id/options/:optionId/lettering/:itemId',
+		zValidator('json', updateLetteringItemSchema),
+		async (c) => {
+			const currentUser = c.get('user');
+			const tenantId = currentUser.tenantId!;
+			const packageId = c.req.param('id');
+			const optionId = c.req.param('optionId');
+			const itemId = c.req.param('itemId');
+			const data = c.req.valid('json');
+
+			// Get package and validate
+			const [pkg] = await db
+				.select()
+				.from(quotePackages)
+				.where(and(eq(quotePackages.id, packageId), eq(quotePackages.tenantId, tenantId)))
+				.limit(1);
+
+			if (!pkg) {
+				return c.json({ error: 'Package not found' }, 404);
+			}
+
+			if (pkg.status !== 'draft') {
+				return c.json({ error: 'Can only edit lettering on draft quotes' }, 400);
+			}
+
+			// Verify option exists and belongs to this package
+			const [option] = await db
+				.select()
+				.from(quotes)
+				.where(and(eq(quotes.id, optionId), eq(quotes.packageId, packageId)))
+				.limit(1);
+
+			if (!option) {
+				return c.json({ error: 'Option not found in this package' }, 404);
+			}
+
+			// Get existing lettering item
+			const [existing] = await db
+				.select()
+				.from(quoteLettering)
+				.where(and(eq(quoteLettering.id, itemId), eq(quoteLettering.quoteId, optionId)))
+				.limit(1);
+
+			if (!existing) {
+				return c.json({ error: 'Lettering item not found' }, 404);
+			}
+
+			// Determine final values
+			const techniqueId = data.techniqueId ?? existing.techniqueId;
+			const colorId = data.colorId !== undefined ? data.colorId : existing.colorId;
+			const text = data.text ?? existing.text;
+			const appliesTo = data.appliesTo ?? existing.appliesTo;
+			const notes = data.notes !== undefined ? data.notes : existing.notes;
+
+			// If technique, color, or text changed, recalculate pricing from cost rules
+			const contentChanged = data.techniqueId !== undefined || data.colorId !== undefined || data.text !== undefined;
+
+			let techniqueName = existing.techniqueName;
+			let colorName = existing.colorName;
+			let supplierCost = data.supplierCost ?? parseFloat(existing.supplierCost);
+			let markupPercent = data.markupPercent ?? parseFloat(existing.markupPercent);
+			const letterCount = text?.replace(/\s/g, '').length || 0;
+
+			if (contentChanged) {
+				// Get technique name if changed
+				if (data.techniqueId) {
+					const [technique] = await db
+						.select()
+						.from(letteringTechniques)
+						.where(
+							and(eq(letteringTechniques.id, data.techniqueId), eq(letteringTechniques.tenantId, tenantId))
+						)
+						.limit(1);
+					if (!technique) {
+						return c.json({ error: 'Lettering technique not found' }, 404);
+					}
+					techniqueName = technique.name;
+				}
+
+				// Get color name if changed
+				if (data.colorId !== undefined) {
+					if (data.colorId) {
+						const [color] = await db
+							.select()
+							.from(letteringColors)
+							.where(and(eq(letteringColors.id, data.colorId), eq(letteringColors.tenantId, tenantId)))
+							.limit(1);
+						colorName = color?.name || null;
+					} else {
+						colorName = null;
+					}
+				}
+
+				// Only recalculate supplier cost from rules if not explicitly provided
+				if (data.supplierCost === undefined) {
+					// Find cost rule using priority
+					let activeCostRule = null;
+
+					// 1. Try specific color + specific appliesTo
+					if (colorId) {
+						[activeCostRule] = await db
+							.select()
+							.from(letteringCosts)
+							.where(
+								and(
+									eq(letteringCosts.techniqueId, techniqueId!),
+									eq(letteringCosts.colorId, colorId),
+									eq(letteringCosts.appliesTo, appliesTo!)
+								)
+							)
+							.limit(1);
+
+						// 2. Try specific color + 'both'
+						if (!activeCostRule) {
+							[activeCostRule] = await db
+								.select()
+								.from(letteringCosts)
+								.where(
+									and(
+										eq(letteringCosts.techniqueId, techniqueId!),
+										eq(letteringCosts.colorId, colorId),
+										eq(letteringCosts.appliesTo, 'both')
+									)
+								)
+								.limit(1);
+						}
+					}
+
+					// 3. Fall back to default (no color) + specific appliesTo
+					if (!activeCostRule) {
+						const defaultRules = await db
+							.select()
+							.from(letteringCosts)
+							.where(
+								and(
+									eq(letteringCosts.techniqueId, techniqueId!),
+									eq(letteringCosts.appliesTo, appliesTo!)
+								)
+							);
+						activeCostRule = defaultRules.find((r) => r.colorId === null) || null;
+					}
+
+					// 4. Fall back to default (no color) + 'both'
+					if (!activeCostRule) {
+						const bothRules = await db
+							.select()
+							.from(letteringCosts)
+							.where(
+								and(eq(letteringCosts.techniqueId, techniqueId!), eq(letteringCosts.appliesTo, 'both'))
+							);
+						activeCostRule = bothRules.find((r) => r.colorId === null) || null;
+					}
+
+					supplierCost = parseFloat(activeCostRule?.pricePerLetter || '0');
+				}
+			}
+
+			// Calculate new pricing
+			const unitPrice = calculateRetailPrice(supplierCost, markupPercent);
+			const lineTotal = letterCount * unitPrice;
+
+			// Update lettering item
+			await db
+				.update(quoteLettering)
+				.set({
+					techniqueId,
+					colorId,
+					text,
+					letterCount,
+					appliesTo,
+					notes,
+					techniqueName,
+					colorName,
+					supplierCost: String(supplierCost),
+					markupPercent: String(markupPercent),
+					unitPrice: String(unitPrice),
+					lineTotal: String(lineTotal),
+					updatedAt: new Date(),
+				})
+				.where(eq(quoteLettering.id, itemId));
+
+			// Recalculate quote totals
+			await recalculateQuoteTotals(optionId);
+
+			// Return updated package
+			const fullPackage = await getPackageWithOptions(packageId, tenantId);
+			return c.json({ package: fullPackage });
+		}
+	)
+
+	// Delete a lettering item
+	.delete('/:id/options/:optionId/lettering/:itemId', async (c) => {
+		const currentUser = c.get('user');
+		const tenantId = currentUser.tenantId!;
+		const packageId = c.req.param('id');
+		const optionId = c.req.param('optionId');
+		const itemId = c.req.param('itemId');
+
+		// Get package and validate
+		const [pkg] = await db
+			.select()
+			.from(quotePackages)
+			.where(and(eq(quotePackages.id, packageId), eq(quotePackages.tenantId, tenantId)))
+			.limit(1);
+
+		if (!pkg) {
+			return c.json({ error: 'Package not found' }, 404);
+		}
+
+		if (pkg.status !== 'draft') {
+			return c.json({ error: 'Can only delete lettering from draft quotes' }, 400);
+		}
+
+		// Verify option exists and belongs to this package
+		const [option] = await db
+			.select()
+			.from(quotes)
+			.where(and(eq(quotes.id, optionId), eq(quotes.packageId, packageId)))
+			.limit(1);
+
+		if (!option) {
+			return c.json({ error: 'Option not found in this package' }, 404);
+		}
+
+		// Verify lettering item exists
+		const [lettering] = await db
+			.select()
+			.from(quoteLettering)
+			.where(and(eq(quoteLettering.id, itemId), eq(quoteLettering.quoteId, optionId)))
+			.limit(1);
+
+		if (!lettering) {
+			return c.json({ error: 'Lettering item not found' }, 404);
+		}
+
+		// Delete the lettering item
+		await db.delete(quoteLettering).where(eq(quoteLettering.id, itemId));
+
+		// Recalculate quote totals
+		await recalculateQuoteTotals(optionId);
 
 		// Return updated package
 		const fullPackage = await getPackageWithOptions(packageId, tenantId);

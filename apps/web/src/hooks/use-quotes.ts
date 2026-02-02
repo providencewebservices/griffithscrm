@@ -666,6 +666,36 @@ export type DeleteLineItemInput = {
 	itemId: string;
 };
 
+// Lettering CRUD types
+export type AddLetteringInput = {
+	packageId: string;
+	optionId: string;
+	techniqueId: string;
+	colorId?: string;
+	text: string;
+	appliesTo?: 'new_memorial' | 'refurbishment' | 'both';
+	notes?: string;
+};
+
+export type UpdateLetteringInput = {
+	packageId: string;
+	optionId: string;
+	itemId: string;
+	techniqueId?: string;
+	colorId?: string | null;
+	text?: string;
+	appliesTo?: 'new_memorial' | 'refurbishment' | 'both';
+	notes?: string | null;
+	supplierCost?: number;
+	markupPercent?: number;
+};
+
+export type DeleteLetteringInput = {
+	packageId: string;
+	optionId: string;
+	itemId: string;
+};
+
 // Line item update functions
 async function updateComponentPricing({
 	packageId,
@@ -884,6 +914,122 @@ export function useDeleteLineItemMutation() {
 
 	return useMutation({
 		mutationFn: deleteLineItem,
+		onSuccess: (data) => {
+			queryClient.setQueryData(['quote', data.id], data);
+			queryClient.invalidateQueries({ queryKey: ['quotes'] });
+		},
+	});
+}
+
+// Lettering CRUD functions
+async function addLettering({
+	packageId,
+	optionId,
+	techniqueId,
+	colorId,
+	text,
+	appliesTo,
+	notes,
+}: AddLetteringInput): Promise<QuotePackageWithOptions> {
+	const response = await fetch(`${API_URL}/api/quotes/${packageId}/options/${optionId}/lettering`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		credentials: 'include',
+		body: JSON.stringify({ techniqueId, colorId, text, appliesTo, notes }),
+	});
+
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.error || 'Failed to add lettering');
+	}
+
+	const data: PackageResponse = await response.json();
+	return data.package;
+}
+
+async function updateLettering({
+	packageId,
+	optionId,
+	itemId,
+	techniqueId,
+	colorId,
+	text,
+	appliesTo,
+	notes,
+	supplierCost,
+	markupPercent,
+}: UpdateLetteringInput): Promise<QuotePackageWithOptions> {
+	const response = await fetch(
+		`${API_URL}/api/quotes/${packageId}/options/${optionId}/lettering/${itemId}`,
+		{
+			method: 'PUT',
+			headers: { 'Content-Type': 'application/json' },
+			credentials: 'include',
+			body: JSON.stringify({ techniqueId, colorId, text, appliesTo, notes, supplierCost, markupPercent }),
+		}
+	);
+
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.error || 'Failed to update lettering');
+	}
+
+	const data: PackageResponse = await response.json();
+	return data.package;
+}
+
+async function deleteLettering({
+	packageId,
+	optionId,
+	itemId,
+}: DeleteLetteringInput): Promise<QuotePackageWithOptions> {
+	const response = await fetch(
+		`${API_URL}/api/quotes/${packageId}/options/${optionId}/lettering/${itemId}`,
+		{
+			method: 'DELETE',
+			credentials: 'include',
+		}
+	);
+
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.error || 'Failed to delete lettering');
+	}
+
+	const data: PackageResponse = await response.json();
+	return data.package;
+}
+
+// Lettering mutation hooks
+export function useAddLetteringMutation() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: addLettering,
+		onSuccess: (data) => {
+			queryClient.setQueryData(['quote', data.id], data);
+			queryClient.invalidateQueries({ queryKey: ['quotes'] });
+		},
+	});
+}
+
+export function useUpdateLetteringMutation() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: updateLettering,
+		onSuccess: (data) => {
+			queryClient.setQueryData(['quote', data.id], data);
+			queryClient.invalidateQueries({ queryKey: ['quotes'] });
+		},
+	});
+}
+
+export function useDeleteLetteringMutation() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: deleteLettering,
 		onSuccess: (data) => {
 			queryClient.setQueryData(['quote', data.id], data);
 			queryClient.invalidateQueries({ queryKey: ['quotes'] });

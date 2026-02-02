@@ -28,7 +28,9 @@ import {
 	Image,
 	FileSpreadsheet,
 	Download,
+	PenSquare,
 } from 'lucide-react';
+import { ComposeEmailDialog } from '@/components/inbox/compose-email-dialog';
 
 type LinkType = 'customer' | 'quote' | 'job' | null;
 
@@ -269,6 +271,8 @@ export function InboxPage() {
 	const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
 	const [searchQuery, setSearchQuery] = useState('');
 	const [filter, setFilter] = useState('all');
+	const [composeOpen, setComposeOpen] = useState(false);
+	const [replyTo, setReplyTo] = useState<Email | null>(null);
 
 	const filteredEmails = DEMO_EMAILS.filter((email) => {
 		const matchesSearch =
@@ -289,10 +293,36 @@ export function InboxPage() {
 		toast.info(`Demo only - ${action} feature coming soon`);
 	};
 
+	const handleSendEmail = async (data: {
+		to: string;
+		subject: string;
+		body: string;
+		attachments: File[];
+	}) => {
+		// Placeholder until Gmail API integration
+		console.log('Email data:', data);
+		toast.success('Email queued');
+		setReplyTo(null);
+	};
+
+	const handleReply = (email: Email) => {
+		setReplyTo(email);
+		setComposeOpen(true);
+	};
+
+	const handleCompose = () => {
+		setReplyTo(null);
+		setComposeOpen(true);
+	};
+
 	return (
 		<div className="h-[calc(100vh-8rem)]">
-			<div className="mb-4">
+			<div className="mb-4 flex items-center justify-between">
 				<h2 className="text-2xl font-bold">Inbox</h2>
+				<Button onClick={handleCompose}>
+					<PenSquare className="h-4 w-4 mr-2" />
+					Compose
+				</Button>
 			</div>
 
 			<div className="flex gap-4 h-[calc(100%-4rem)]">
@@ -431,7 +461,7 @@ export function InboxPage() {
 								<Button
 									variant="outline"
 									size="sm"
-									onClick={() => handleAction('Reply')}
+									onClick={() => handleReply(selectedEmail)}
 								>
 									<Reply className="h-4 w-4 mr-2" />
 									Reply
@@ -567,6 +597,19 @@ export function InboxPage() {
 					)}
 				</Card>
 			</div>
+
+			<ComposeEmailDialog
+				open={composeOpen}
+				onOpenChange={setComposeOpen}
+				onSend={handleSendEmail}
+				defaultTo={replyTo?.senderEmail || ''}
+				defaultSubject={replyTo ? `RE: ${replyTo.subject}` : ''}
+				defaultBody={
+					replyTo
+						? `<br><br><p>On ${replyTo.date} at ${replyTo.time}, ${replyTo.sender} wrote:</p><blockquote style="border-left: 2px solid #ccc; padding-left: 10px; margin-left: 0; color: #666;">${replyTo.body.replace(/\n/g, '<br>')}</blockquote>`
+						: ''
+				}
+			/>
 		</div>
 	);
 }

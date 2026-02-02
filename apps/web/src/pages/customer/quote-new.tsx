@@ -47,7 +47,6 @@ import {
 	QUOTE_TYPE_DESCRIPTIONS,
 	QUOTE_TYPE_SECTION_CONFIG,
 	type ComponentInput,
-	type LetteringInput,
 	type SundryInput,
 	type ComponentType,
 	type FlowerHoleChoice,
@@ -61,8 +60,6 @@ import { useDimensionCombosQuery, useDimensionComboQuery, type DimensionCombo } 
 import { useMaterialSectionsQuery, useMaterialSectionQuery } from '@/hooks/use-material-sections';
 import { useMaterialsQuery } from '@/hooks/use-materials';
 import { useFinishesQuery } from '@/hooks/use-finishes';
-import { useLetteringTechniquesQuery } from '@/hooks/use-lettering-techniques';
-import { useLetteringColorsQuery } from '@/hooks/use-lettering-colors';
 import { useSundriesQuery } from '@/hooks/use-sundries';
 import { useJobsQuery } from '@/hooks/use-jobs';
 import { useFuneralDirectorsQuery } from '@/hooks/use-funeral-directors';
@@ -88,7 +85,6 @@ import { cn } from '@/lib/utils';
 
 // Types for form state
 type ComponentFormItem = ComponentInput & { id: string };
-type LetteringFormItem = LetteringInput & { id: string };
 type SundryFormItem = SundryInput & { id: string };
 type EnquirySource = (typeof ENQUIRY_SOURCES)[number];
 
@@ -158,7 +154,6 @@ export function QuoteNewPage() {
 
 	// Line items state
 	const [components, setComponents] = useState<ComponentFormItem[]>([]);
-	const [lettering, setLettering] = useState<LetteringFormItem[]>([]);
 	const [sundries, setSundries] = useState<SundryFormItem[]>([]);
 
 	const [mutationError, setMutationError] = useState<string | null>(null);
@@ -175,8 +170,6 @@ export function QuoteNewPage() {
 	const { data: allMaterials } = useMaterialsQuery();
 	const { data: selectedSection } = useMaterialSectionQuery(selectedSectionId || undefined);
 	const { data: finishes } = useFinishesQuery();
-	const { data: techniques } = useLetteringTechniquesQuery();
-	const { data: colors } = useLetteringColorsQuery();
 	const { data: sundryItems } = useSundriesQuery();
 	const { data: funeralDirectors } = useFuneralDirectorsQuery();
 	const { data: memorialSites } = useMemorialSitesQuery();
@@ -279,17 +272,6 @@ export function QuoteNewPage() {
 		]);
 	};
 
-	const handleAddLettering = () => {
-		setLettering([
-			...lettering,
-			{
-				id: generateId(),
-				techniqueId: '',
-				text: '',
-			},
-		]);
-	};
-
 	const handleAddSundry = () => {
 		setSundries([
 			...sundries,
@@ -306,10 +288,6 @@ export function QuoteNewPage() {
 		setComponents(components.map((c) => (c.id === id ? { ...c, ...updates } : c)));
 	};
 
-	const updateLettering = (id: string, updates: Partial<LetteringFormItem>) => {
-		setLettering(lettering.map((l) => (l.id === id ? { ...l, ...updates } : l)));
-	};
-
 	const updateSundry = (id: string, updates: Partial<SundryFormItem>) => {
 		setSundries(sundries.map((s) => (s.id === id ? { ...s, ...updates } : s)));
 	};
@@ -317,10 +295,6 @@ export function QuoteNewPage() {
 	// Remove handlers
 	const removeComponent = (id: string) => {
 		setComponents(components.filter((c) => c.id !== id));
-	};
-
-	const removeLettering = (id: string) => {
-		setLettering(lettering.filter((l) => l.id !== id));
 	};
 
 	const removeSundry = (id: string) => {
@@ -341,15 +315,12 @@ export function QuoteNewPage() {
 		// All components must have materialId (if any added)
 		const componentsValid = components.every((c) => c.materialId);
 
-		// All lettering must have techniqueId and text (if any added)
-		const letteringValid = lettering.every((l) => l.techniqueId && l.text);
-
 		// All sundries must have sundryId (if any added)
 		const sundriesValid = sundries.every((s) => s.sundryId);
 
 		// Line items are optional, but if added they must be complete
-		return componentsValid && letteringValid && sundriesValid;
-	}, [components, lettering, sundries]);
+		return componentsValid && sundriesValid;
+	}, [components, sundries]);
 
 	const handleSubmit = async () => {
 		setMutationError(null);
@@ -385,7 +356,6 @@ export function QuoteNewPage() {
 				...c,
 				quantity: c.quantity || 1,
 			})),
-			lettering: lettering.map(({ id, ...l }) => l),
 			sundries: sundries.map(({ id, ...s }) => ({
 				...s,
 				quantity: s.quantity || 1,
@@ -1189,146 +1159,30 @@ export function QuoteNewPage() {
 				</Card>
 				)}
 
-				{/* Inscription & Lettering Card - unified */}
-				{(sectionConfig?.showProposedInscription || sectionConfig?.showLettering) && (
+				{/* Proposed Inscription Card */}
+				{sectionConfig?.showProposedInscription && (
 				<Card>
 					<CardHeader>
-						<CardTitle>
-							{sectionConfig?.showProposedInscription && sectionConfig?.showLettering
-								? 'Inscription & Lettering'
-								: 'Lettering'}
-						</CardTitle>
+						<CardTitle>Proposed Inscription</CardTitle>
 						<CardDescription>
-							{sectionConfig?.showProposedInscription
-								? 'Enter the proposed text and lettering specifications'
-								: 'Add lettering work for this quote'}
+							Enter the full text for the memorial inscription. Lettering details (technique, color) can be added after creating the quote.
 						</CardDescription>
 					</CardHeader>
-					<CardContent className="space-y-6">
-						{/* Section: Proposed Inscription */}
-						{sectionConfig?.showProposedInscription && (
-							<div className="space-y-3">
-								<div className="flex items-center justify-between">
-									<span className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-										Proposed Inscription
-									</span>
-									{proposedInscription && (
-										<span className="text-sm text-muted-foreground">
-											{proposedInscription.length} characters
-										</span>
-									)}
-								</div>
-								<Textarea
-									value={proposedInscription}
-									onChange={(e) => setProposedInscription(e.target.value)}
-									placeholder="Enter the full text of the desired inscription..."
-									rows={4}
-									className="font-mono"
-								/>
+					<CardContent>
+						<div className="space-y-3">
+							<div className="flex items-center justify-between">
+								<span className="text-sm text-muted-foreground">
+									{proposedInscription ? `${proposedInscription.length} characters` : 'No text entered'}
+								</span>
 							</div>
-						)}
-
-						{/* Divider - only when both sections are shown */}
-						{sectionConfig?.showProposedInscription && sectionConfig?.showLettering && (
-							<div className="border-t" />
-						)}
-
-						{/* Section: Lettering Items */}
-						{sectionConfig?.showLettering && (
-							<div className="space-y-4">
-								<div className="flex items-center justify-between">
-									<span className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-										Lettering Details
-									</span>
-									<Button size="sm" onClick={handleAddLettering}>
-										<Plus className="h-4 w-4 mr-2" />
-										Add Lettering
-									</Button>
-								</div>
-
-								{lettering.length === 0 ? (
-									<div className="text-center py-6 text-muted-foreground border rounded-lg border-dashed">
-										No lettering items added yet. Add at least one to specify technique and pricing.
-									</div>
-								) : (
-									<div className="space-y-4">
-										{lettering.map((lett, index) => (
-											<div key={lett.id} className="border rounded-lg p-4">
-												<div className="flex items-center justify-between mb-4">
-													<span className="font-medium">Inscription {index + 1}</span>
-													<Button
-														variant="ghost"
-														size="sm"
-														onClick={() => removeLettering(lett.id)}
-													>
-														<Trash2 className="h-4 w-4" />
-													</Button>
-												</div>
-												<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-													<Field>
-														<FieldLabel>Technique *</FieldLabel>
-														<Select
-															value={lett.techniqueId || NONE_VALUE}
-															onValueChange={(v) => updateLettering(lett.id, { techniqueId: v === NONE_VALUE ? '' : v })}
-														>
-															<SelectTrigger>
-																<SelectValue placeholder="Select technique" />
-															</SelectTrigger>
-															<SelectContent>
-																<SelectItem value={NONE_VALUE}>Select technique</SelectItem>
-																{techniques
-																	?.filter((t) => t.isActive)
-																	.map((technique) => (
-																		<SelectItem key={technique.id} value={technique.id}>
-																			{technique.name}
-																		</SelectItem>
-																	))}
-															</SelectContent>
-														</Select>
-													</Field>
-
-													<Field>
-														<FieldLabel>Color</FieldLabel>
-														<Select
-															value={lett.colorId || NONE_VALUE}
-															onValueChange={(v) =>
-																updateLettering(lett.id, { colorId: v === NONE_VALUE ? undefined : v })
-															}
-														>
-															<SelectTrigger>
-																<SelectValue placeholder="Select color" />
-															</SelectTrigger>
-															<SelectContent>
-																<SelectItem value={NONE_VALUE}>No color</SelectItem>
-																{colors
-																	?.filter((c) => c.isActive)
-																	.map((color) => (
-																		<SelectItem key={color.id} value={color.id}>
-																			{color.name}
-																		</SelectItem>
-																	))}
-															</SelectContent>
-														</Select>
-													</Field>
-
-													<Field className="md:col-span-2">
-														<FieldLabel>
-															Text * ({lett.text?.replace(/\s/g, '').length || 0} letters)
-														</FieldLabel>
-														<Textarea
-															value={lett.text}
-															onChange={(e) => updateLettering(lett.id, { text: e.target.value })}
-															placeholder="Enter inscription text..."
-															rows={2}
-														/>
-													</Field>
-												</div>
-											</div>
-										))}
-									</div>
-								)}
-							</div>
-						)}
+							<Textarea
+								value={proposedInscription}
+								onChange={(e) => setProposedInscription(e.target.value)}
+								placeholder="Enter the full text of the desired inscription..."
+								rows={4}
+								className="font-mono"
+							/>
+						</div>
 					</CardContent>
 				</Card>
 				)}
