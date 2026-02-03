@@ -11,7 +11,19 @@ import {
 	deleteObject,
 	generateSignedDownloadUrl,
 } from '../lib/s3';
-import { documents, users, documentFolders } from '@griffiths-crm/shared/db/schema';
+import {
+	documents,
+	users,
+	documentFolders,
+	customers,
+	quotes,
+	jobs,
+	funeralDirectors,
+	suppliers,
+	councils,
+	memorialSites,
+	products,
+} from '@griffiths-crm/shared/db/schema';
 
 // Entity types that can have documents attached
 const entityTypeSchema = z.enum([
@@ -93,6 +105,148 @@ async function addSignedUrl(doc: typeof documents.$inferSelect) {
 	};
 }
 
+// Helper function to fetch entity names for documents
+async function fetchEntityNames(
+	documentList: Array<{ entityType: string | null; entityId: string | null }>,
+	tenantId: string
+): Promise<Map<string, string>> {
+	const entityNameMap = new Map<string, string>();
+
+	// Group entity IDs by type
+	const entityGroups: Record<string, string[]> = {};
+	for (const doc of documentList) {
+		if (doc.entityType && doc.entityId) {
+			const key = `${doc.entityType}:${doc.entityId}`;
+			if (!entityNameMap.has(key)) {
+				if (!entityGroups[doc.entityType]) {
+					entityGroups[doc.entityType] = [];
+				}
+				if (!entityGroups[doc.entityType].includes(doc.entityId)) {
+					entityGroups[doc.entityType].push(doc.entityId);
+				}
+			}
+		}
+	}
+
+	// Fetch names for each entity type
+	const fetchPromises: Promise<void>[] = [];
+
+	if (entityGroups.customer?.length) {
+		fetchPromises.push(
+			db
+				.select({ id: customers.id, firstName: customers.firstName, lastName: customers.lastName })
+				.from(customers)
+				.where(and(eq(customers.tenantId, tenantId), inArray(customers.id, entityGroups.customer)))
+				.then((rows) => {
+					for (const row of rows) {
+						entityNameMap.set(`customer:${row.id}`, `${row.firstName} ${row.lastName}`);
+					}
+				})
+		);
+	}
+
+	if (entityGroups.quote?.length) {
+		fetchPromises.push(
+			db
+				.select({ id: quotes.id, quoteNumber: quotes.quoteNumber })
+				.from(quotes)
+				.where(and(eq(quotes.tenantId, tenantId), inArray(quotes.id, entityGroups.quote)))
+				.then((rows) => {
+					for (const row of rows) {
+						entityNameMap.set(`quote:${row.id}`, row.quoteNumber);
+					}
+				})
+		);
+	}
+
+	if (entityGroups.job?.length) {
+		fetchPromises.push(
+			db
+				.select({ id: jobs.id, jobNumber: jobs.jobNumber })
+				.from(jobs)
+				.where(and(eq(jobs.tenantId, tenantId), inArray(jobs.id, entityGroups.job)))
+				.then((rows) => {
+					for (const row of rows) {
+						entityNameMap.set(`job:${row.id}`, row.jobNumber);
+					}
+				})
+		);
+	}
+
+	if (entityGroups.funeral_director?.length) {
+		fetchPromises.push(
+			db
+				.select({ id: funeralDirectors.id, businessName: funeralDirectors.businessName })
+				.from(funeralDirectors)
+				.where(and(eq(funeralDirectors.tenantId, tenantId), inArray(funeralDirectors.id, entityGroups.funeral_director)))
+				.then((rows) => {
+					for (const row of rows) {
+						entityNameMap.set(`funeral_director:${row.id}`, row.businessName);
+					}
+				})
+		);
+	}
+
+	if (entityGroups.supplier?.length) {
+		fetchPromises.push(
+			db
+				.select({ id: suppliers.id, businessName: suppliers.businessName })
+				.from(suppliers)
+				.where(and(eq(suppliers.tenantId, tenantId), inArray(suppliers.id, entityGroups.supplier)))
+				.then((rows) => {
+					for (const row of rows) {
+						entityNameMap.set(`supplier:${row.id}`, row.businessName);
+					}
+				})
+		);
+	}
+
+	if (entityGroups.council?.length) {
+		fetchPromises.push(
+			db
+				.select({ id: councils.id, councilName: councils.councilName })
+				.from(councils)
+				.where(and(eq(councils.tenantId, tenantId), inArray(councils.id, entityGroups.council)))
+				.then((rows) => {
+					for (const row of rows) {
+						entityNameMap.set(`council:${row.id}`, row.councilName);
+					}
+				})
+		);
+	}
+
+	if (entityGroups.memorial_site?.length) {
+		fetchPromises.push(
+			db
+				.select({ id: memorialSites.id, name: memorialSites.name })
+				.from(memorialSites)
+				.where(and(eq(memorialSites.tenantId, tenantId), inArray(memorialSites.id, entityGroups.memorial_site)))
+				.then((rows) => {
+					for (const row of rows) {
+						entityNameMap.set(`memorial_site:${row.id}`, row.name);
+					}
+				})
+		);
+	}
+
+	if (entityGroups.product?.length) {
+		fetchPromises.push(
+			db
+				.select({ id: products.id, name: products.name })
+				.from(products)
+				.where(and(eq(products.tenantId, tenantId), inArray(products.id, entityGroups.product)))
+				.then((rows) => {
+					for (const row of rows) {
+						entityNameMap.set(`product:${row.id}`, row.name);
+					}
+				})
+		);
+	}
+
+	await Promise.all(fetchPromises);
+	return entityNameMap;
+}
+
 // Create documents routes
 const documentsRoutes = new Hono()
 	.use('*', requireAuth)
@@ -170,12 +324,21 @@ const documentsRoutes = new Hono()
 			.limit(limit)
 			.offset(offset);
 
-		// Add signed URLs
+		// Fetch entity names for all documents
+		const entityNameMap = await fetchEntityNames(documentList, tenantId);
+
+		// Add signed URLs and entity names
 		const documentsWithUrls = await Promise.all(
-			documentList.map(async (doc) => ({
-				...doc,
-				publicUrl: await getSignedImageUrl(doc.s3Key),
-			}))
+			documentList.map(async (doc) => {
+				const entityName = doc.entityType && doc.entityId
+					? entityNameMap.get(`${doc.entityType}:${doc.entityId}`) || null
+					: null;
+				return {
+					...doc,
+					entityName,
+					publicUrl: await getSignedImageUrl(doc.s3Key),
+				};
+			})
 		);
 
 		return c.json({

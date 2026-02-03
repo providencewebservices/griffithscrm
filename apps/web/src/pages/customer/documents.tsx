@@ -82,13 +82,13 @@ import {
 import { cn } from '@/lib/utils';
 
 const ENTITY_ROUTES: Record<DocumentEntityType, string> = {
-	customer: '/app/contacts',
+	customer: '/app/customers',
 	quote: '/app/quotes',
 	job: '/app/jobs',
-	funeral_director: '/app/contacts?tab=funeral-directors',
+	funeral_director: '/app/funeral-directors',
 	supplier: '/app/suppliers',
 	council: '/app/councils',
-	memorial_site: '/app/contacts?tab=memorial-sites',
+	memorial_site: '/app/memorial-sites',
 	product: '/app/products',
 };
 
@@ -705,12 +705,19 @@ export function DocumentsPage() {
 															</TableCell>
 															<TableCell>
 																{doc.entityType && doc.entityId ? (
-																	<button
-																		onClick={() => navigateToEntity(doc)}
-																		className="text-primary hover:underline"
-																	>
-																		{DOCUMENT_ENTITY_LABELS[doc.entityType]}
-																	</button>
+																	<div className="flex flex-col">
+																		<button
+																			onClick={() => navigateToEntity(doc)}
+																			className="text-primary hover:underline text-left"
+																		>
+																			{doc.entityName || DOCUMENT_ENTITY_LABELS[doc.entityType]}
+																		</button>
+																		{doc.entityName && (
+																			<span className="text-xs text-muted-foreground">
+																				{DOCUMENT_ENTITY_LABELS[doc.entityType]}
+																			</span>
+																		)}
+																	</div>
 																) : (
 																	<span className="text-muted-foreground">Unassigned</span>
 																)}

@@ -40,6 +40,7 @@ export type Document = {
 	folderId: string | null; // Folder for organization (independent of entity)
 	entityType: DocumentEntityType | null; // Nullable for unassigned documents
 	entityId: string | null; // Nullable for unassigned documents
+	entityName?: string | null; // Display name for the linked entity (e.g., "John Smith" for customers)
 	name: string;
 	tags: string | null;
 	notes: string | null;
