@@ -132,7 +132,7 @@ export function CustomerDetailPage() {
 		try {
 			await archiveMutation.mutateAsync(id);
 			setArchiveDialogOpen(false);
-			navigate('/app/customers');
+			navigate('/app/contacts');
 		} catch (err) {
 			setMutationError(err instanceof Error ? err.message : 'An error occurred');
 		}
@@ -197,7 +197,7 @@ export function CustomerDetailPage() {
 				<BreadcrumbList>
 					<BreadcrumbItem>
 						<BreadcrumbLink asChild>
-							<Link to="/app/customers">Customers</Link>
+							<Link to="/app/contacts">Customers</Link>
 						</BreadcrumbLink>
 					</BreadcrumbItem>
 					<BreadcrumbSeparator />

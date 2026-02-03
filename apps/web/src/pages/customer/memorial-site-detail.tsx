@@ -62,7 +62,7 @@ export function MemorialSiteDetailPage() {
 		try {
 			await archiveMutation.mutateAsync(id);
 			setArchiveDialogOpen(false);
-			navigate('/app/memorial-sites');
+			navigate('/app/contacts?tab=memorial-sites');
 		} catch (err) {
 			setMutationError(err instanceof Error ? err.message : 'An error occurred');
 		}
@@ -141,7 +141,7 @@ export function MemorialSiteDetailPage() {
 				<BreadcrumbList>
 					<BreadcrumbItem>
 						<BreadcrumbLink asChild>
-							<Link to="/app/memorial-sites">Memorial Sites</Link>
+							<Link to="/app/contacts?tab=memorial-sites">Memorial Sites</Link>
 						</BreadcrumbLink>
 					</BreadcrumbItem>
 					<BreadcrumbSeparator />

@@ -63,7 +63,7 @@ export function FuneralDirectorDetailPage() {
 		try {
 			await archiveMutation.mutateAsync(id);
 			setArchiveDialogOpen(false);
-			navigate('/app/funeral-directors');
+			navigate('/app/contacts?tab=funeral-directors');
 		} catch (err) {
 			setMutationError(err instanceof Error ? err.message : 'An error occurred');
 		}
@@ -130,7 +130,7 @@ export function FuneralDirectorDetailPage() {
 				<BreadcrumbList>
 					<BreadcrumbItem>
 						<BreadcrumbLink asChild>
-							<Link to="/app/funeral-directors">Funeral Directors</Link>
+							<Link to="/app/contacts?tab=funeral-directors">Funeral Directors</Link>
 						</BreadcrumbLink>
 					</BreadcrumbItem>
 					<BreadcrumbSeparator />

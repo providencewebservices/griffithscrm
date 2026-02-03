@@ -3,3 +3,7 @@ dist/
 .env
 *.log
 .DS_Store
+
+# Deploy scripts (local only)
+deploy-frontend.sh
+deploy-backend.sh

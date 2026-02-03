@@ -285,7 +285,7 @@ export function MemorialSiteFormPage() {
 				<BreadcrumbList>
 					<BreadcrumbItem>
 						<BreadcrumbLink asChild>
-							<Link to="/app/memorial-sites">Memorial Sites</Link>
+							<Link to="/app/contacts?tab=memorial-sites">Memorial Sites</Link>
 						</BreadcrumbLink>
 					</BreadcrumbItem>
 					<BreadcrumbSeparator />
@@ -866,7 +866,7 @@ export function MemorialSiteFormPage() {
 					<Button
 						type="button"
 						variant="outline"
-						onClick={() => navigate('/app/memorial-sites')}
+						onClick={() => navigate('/app/contacts?tab=memorial-sites')}
 						disabled={isLoading}
 					>
 						Cancel

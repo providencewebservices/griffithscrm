@@ -32,13 +32,13 @@ import {
 } from 'lucide-react';
 
 const ENTITY_ROUTES: Record<DocumentEntityType, string> = {
-	customer: '/app/customers',
+	customer: '/app/contacts',
 	quote: '/app/quotes',
 	job: '/app/jobs',
-	funeral_director: '/app/funeral-directors',
+	funeral_director: '/app/contacts?tab=funeral-directors',
 	supplier: '/app/suppliers',
 	council: '/app/councils',
-	memorial_site: '/app/memorial-sites',
+	memorial_site: '/app/contacts?tab=memorial-sites',
 	product: '/app/products',
 };
 

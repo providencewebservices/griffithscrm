@@ -214,7 +214,7 @@ export function FuneralDirectorFormPage() {
 				<BreadcrumbList>
 					<BreadcrumbItem>
 						<BreadcrumbLink asChild>
-							<Link to="/app/funeral-directors">Funeral Directors</Link>
+							<Link to="/app/contacts?tab=funeral-directors">Funeral Directors</Link>
 						</BreadcrumbLink>
 					</BreadcrumbItem>
 					<BreadcrumbSeparator />
@@ -556,7 +556,7 @@ export function FuneralDirectorFormPage() {
 					<Button
 						type="button"
 						variant="outline"
-						onClick={() => navigate('/app/funeral-directors')}
+						onClick={() => navigate('/app/contacts?tab=funeral-directors')}
 						disabled={isLoading}
 					>
 						Cancel

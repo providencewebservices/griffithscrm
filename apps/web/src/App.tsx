@@ -10,7 +10,6 @@ import { UsersPage } from './pages/admin/users';
 import { CustomerDashboard } from './pages/customer';
 import { TeamPage } from './pages/customer/team';
 import { TeamMemberDetailPage } from './pages/customer/team-member-detail';
-import { CustomersPage } from './pages/customer/customers';
 import { ContactsPage } from './pages/customer/contacts';
 import { CustomerDetailPage } from './pages/customer/customer-detail';
 import { ProductsPage } from './pages/customer/products';
@@ -25,10 +24,8 @@ import { QuoteDetailPage } from './pages/customer/quote-detail';
 import { QuoteNewPage } from './pages/customer/quote-new';
 import { JobsPage } from './pages/customer/jobs';
 import { JobDetailPage } from './pages/customer/job-detail';
-import { FuneralDirectorsPage } from './pages/customer/funeral-directors';
 import { FuneralDirectorDetailPage } from './pages/customer/funeral-director-detail';
 import { FuneralDirectorFormPage } from './pages/customer/funeral-director-form';
-import { MemorialSitesPage } from './pages/customer/memorial-sites';
 import { MemorialSiteDetailPage } from './pages/customer/memorial-site-detail';
 import { MemorialSiteFormPage } from './pages/customer/memorial-site-form';
 import { SuppliersPage } from './pages/customer/suppliers';
@@ -90,18 +87,15 @@ function App() {
 					<Route path="products" element={<ProductsPage />} />
 					<Route path="products/:id" element={<ProductDetailPage />} />
 					<Route path="contacts" element={<ContactsPage />} />
-					<Route path="customers" element={<CustomersPage />} />
 					<Route path="customers/:id" element={<CustomerDetailPage />} />
 					<Route path="settings" element={<SettingsPage />} />
 					<Route path="categories/:id" element={<CategoryDetailPage />} />
 					<Route path="lettering-techniques/:id" element={<LetteringTechniqueDetailPage />} />
 					<Route path="material-sections/:id" element={<MaterialSectionDetailPage />} />
 					<Route path="materials/:id" element={<MaterialDetailPage />} />
-					<Route path="funeral-directors" element={<FuneralDirectorsPage />} />
 					<Route path="funeral-directors/new" element={<FuneralDirectorFormPage />} />
 					<Route path="funeral-directors/:id" element={<FuneralDirectorDetailPage />} />
 					<Route path="funeral-directors/:id/edit" element={<FuneralDirectorFormPage />} />
-					<Route path="memorial-sites" element={<MemorialSitesPage />} />
 					<Route path="memorial-sites/new" element={<MemorialSiteFormPage />} />
 					<Route path="memorial-sites/:id" element={<MemorialSiteDetailPage />} />
 					<Route path="memorial-sites/:id/edit" element={<MemorialSiteFormPage />} />
