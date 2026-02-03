@@ -53,6 +53,7 @@ export function LineItemsTab() {
 	const [formPrice, setFormPrice] = useState('0');
 	const [formVatExempt, setFormVatExempt] = useState(false);
 	const [formVisibleToCustomer, setFormVisibleToCustomer] = useState(true);
+	const [formPriceVisibleToCustomer, setFormPriceVisibleToCustomer] = useState(true);
 
 	const isEditing = !!selectedItem;
 
@@ -61,6 +62,7 @@ export function LineItemsTab() {
 		setFormPrice('0');
 		setFormVatExempt(false);
 		setFormVisibleToCustomer(true);
+		setFormPriceVisibleToCustomer(true);
 		setMutationError(null);
 	};
 
@@ -76,6 +78,7 @@ export function LineItemsTab() {
 		setFormPrice(item.defaultPrice);
 		setFormVatExempt(item.vatExempt);
 		setFormVisibleToCustomer(item.visibleToCustomer);
+		setFormPriceVisibleToCustomer(item.priceVisibleToCustomer);
 		setMutationError(null);
 		setFormDialogOpen(true);
 	};
@@ -103,6 +106,7 @@ export function LineItemsTab() {
 			defaultPrice: parseFloat(formPrice) || 0,
 			vatExempt: formVatExempt,
 			visibleToCustomer: formVisibleToCustomer,
+			priceVisibleToCustomer: formPriceVisibleToCustomer,
 		};
 
 		try {
@@ -168,7 +172,8 @@ export function LineItemsTab() {
 								<TableHead>Name</TableHead>
 								<TableHead>Default Price</TableHead>
 								<TableHead>VAT Exempt</TableHead>
-								<TableHead>Visible</TableHead>
+								<TableHead>Line Visible</TableHead>
+								<TableHead>Price Visible</TableHead>
 								<TableHead>Status</TableHead>
 								<TableHead className="w-[70px]"></TableHead>
 							</TableRow>
@@ -190,6 +195,17 @@ export function LineItemsTab() {
 											<Eye className="h-4 w-4 text-muted-foreground" />
 										) : (
 											<EyeOff className="h-4 w-4 text-muted-foreground" />
+										)}
+									</TableCell>
+									<TableCell>
+										{item.visibleToCustomer ? (
+											item.priceVisibleToCustomer ? (
+												<Eye className="h-4 w-4 text-muted-foreground" />
+											) : (
+												<EyeOff className="h-4 w-4 text-muted-foreground" />
+											)
+										) : (
+											<span className="text-muted-foreground">—</span>
 										)}
 									</TableCell>
 									<TableCell>
@@ -289,10 +305,30 @@ export function LineItemsTab() {
 								<Checkbox
 									id="visibleToCustomer"
 									checked={formVisibleToCustomer}
-									onCheckedChange={(checked) => setFormVisibleToCustomer(checked === true)}
+									onCheckedChange={(checked) => {
+										setFormVisibleToCustomer(checked === true);
+										// When line item visibility is disabled, also disable price visibility
+										if (checked !== true) {
+											setFormPriceVisibleToCustomer(false);
+										}
+									}}
 								/>
 								<FieldLabel htmlFor="visibleToCustomer" className="!mb-0 cursor-pointer">
-									Visible to customer on quote
+									Line Item Visible to Customer
+								</FieldLabel>
+							</div>
+						</Field>
+
+						<Field>
+							<div className="flex items-center space-x-2">
+								<Checkbox
+									id="priceVisibleToCustomer"
+									checked={formPriceVisibleToCustomer}
+									onCheckedChange={(checked) => setFormPriceVisibleToCustomer(checked === true)}
+									disabled={!formVisibleToCustomer}
+								/>
+								<FieldLabel htmlFor="priceVisibleToCustomer" className={`!mb-0 cursor-pointer ${!formVisibleToCustomer ? 'text-muted-foreground' : ''}`}>
+									Price Visible to Customer
 								</FieldLabel>
 							</div>
 						</Field>

@@ -665,6 +665,7 @@ export const lineItemPresets = pgTable('line_item_presets', {
 	defaultPrice: numeric('default_price', { precision: 10, scale: 2 }).notNull().default('0'),
 	vatExempt: boolean('vat_exempt').notNull().default(false),
 	visibleToCustomer: boolean('visible_to_customer').notNull().default(true),
+	priceVisibleToCustomer: boolean('price_visible_to_customer').notNull().default(true),
 	isActive: boolean('is_active').notNull().default(true),
 	sortOrder: integer('sort_order').notNull().default(0),
 	createdAt: timestamp('created_at').notNull().defaultNow(),
@@ -808,6 +809,9 @@ export const QUOTE_TYPES = [
 // Package statuses (same as quote statuses)
 export const PACKAGE_STATUSES = QUOTE_STATUSES;
 
+// Payer types for quotes (who gets billed)
+export const PAYER_TYPES = ['customer', 'funeral_director'] as const;
+
 // Quote Packages table (groups multiple quote options for customer presentation)
 export const quotePackages = pgTable('quote_packages', {
 	id: text('id').primaryKey(),
@@ -820,6 +824,7 @@ export const quotePackages = pgTable('quote_packages', {
 
 	// SHARED CONTEXT (shared across all options in package)
 	customerId: text('customer_id').references(() => customers.id, { onDelete: 'set null' }),
+	payerType: text('payer_type'), // 'customer' | 'funeral_director' | null (backwards compat)
 
 	// Memorial context - shared across all options
 	funeralDirectorId: text('funeral_director_id').references(() => funeralDirectors.id, {
@@ -827,6 +832,7 @@ export const quotePackages = pgTable('quote_packages', {
 	}),
 	councilId: text('council_id').references(() => councils.id, { onDelete: 'set null' }),
 	memorialSiteId: text('memorial_site_id').references(() => memorialSites.id, { onDelete: 'set null' }),
+	memorialLocation: text('memorial_location'), // Freeform description of location at memorial site
 
 	// Quote type context - shared
 	quoteType: text('quote_type').notNull().default('new_memorial'), // From QUOTE_TYPES
@@ -1004,6 +1010,7 @@ export const quoteLineItems = pgTable('quote_line_items', {
 	price: numeric('price', { precision: 10, scale: 2 }).notNull().default('0'), // Flat price (no markup)
 	vatExempt: boolean('vat_exempt').notNull().default(false), // True for items like church fees that are not subject to VAT
 	visibleToCustomer: boolean('visible_to_customer').notNull().default(true), // False for internal-only charges
+	priceVisibleToCustomer: boolean('price_visible_to_customer').notNull().default(true), // Show/hide price on customer-facing material
 	sortOrder: integer('sort_order').notNull().default(0),
 	createdAt: timestamp('created_at').notNull().defaultNow(),
 	updatedAt: timestamp('updated_at').notNull().defaultNow(),

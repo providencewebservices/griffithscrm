@@ -1,0 +1,2 @@
+ALTER TABLE "line_item_presets" ADD COLUMN "price_visible_to_customer" boolean DEFAULT true NOT NULL;--> statement-breakpoint
+ALTER TABLE "quote_line_items" ADD COLUMN "price_visible_to_customer" boolean DEFAULT true NOT NULL;

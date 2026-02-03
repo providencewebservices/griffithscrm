@@ -12,6 +12,7 @@ const createSchema = z.object({
 	defaultPrice: z.number().min(0, 'Price must be non-negative'),
 	vatExempt: z.boolean().optional().default(false),
 	visibleToCustomer: z.boolean().optional().default(true),
+	priceVisibleToCustomer: z.boolean().optional().default(true),
 	isActive: z.boolean().optional().default(true),
 });
 
@@ -20,6 +21,7 @@ const updateSchema = z.object({
 	defaultPrice: z.number().min(0, 'Price must be non-negative').optional(),
 	vatExempt: z.boolean().optional(),
 	visibleToCustomer: z.boolean().optional(),
+	priceVisibleToCustomer: z.boolean().optional(),
 	isActive: z.boolean().optional(),
 });
 
@@ -66,6 +68,7 @@ const lineItemPresetsRoutes = new Hono()
 				defaultPrice: String(data.defaultPrice),
 				vatExempt: data.vatExempt ?? false,
 				visibleToCustomer: data.visibleToCustomer ?? true,
+				priceVisibleToCustomer: data.priceVisibleToCustomer ?? true,
 				isActive: data.isActive ?? true,
 				sortOrder: maxSortOrder + 1,
 			})
@@ -97,6 +100,7 @@ const lineItemPresetsRoutes = new Hono()
 		if (data.defaultPrice !== undefined) updateData.defaultPrice = String(data.defaultPrice);
 		if (data.vatExempt !== undefined) updateData.vatExempt = data.vatExempt;
 		if (data.visibleToCustomer !== undefined) updateData.visibleToCustomer = data.visibleToCustomer;
+		if (data.priceVisibleToCustomer !== undefined) updateData.priceVisibleToCustomer = data.priceVisibleToCustomer;
 		if (data.isActive !== undefined) updateData.isActive = data.isActive;
 
 		const [updated] = await db

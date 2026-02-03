@@ -9,6 +9,7 @@ export type LineItemPreset = {
 	defaultPrice: string;
 	vatExempt: boolean;
 	visibleToCustomer: boolean;
+	priceVisibleToCustomer: boolean;
 	isActive: boolean;
 	sortOrder: number;
 	createdAt: string;
@@ -20,6 +21,7 @@ export type CreateLineItemPresetInput = {
 	defaultPrice: number;
 	vatExempt?: boolean;
 	visibleToCustomer?: boolean;
+	priceVisibleToCustomer?: boolean;
 };
 
 export type UpdateLineItemPresetInput = {
@@ -27,6 +29,7 @@ export type UpdateLineItemPresetInput = {
 	defaultPrice?: number;
 	vatExempt?: boolean;
 	visibleToCustomer?: boolean;
+	priceVisibleToCustomer?: boolean;
 	isActive?: boolean;
 };
 

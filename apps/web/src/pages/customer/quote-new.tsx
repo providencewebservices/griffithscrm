@@ -53,8 +53,10 @@ import {
 	type FlowerTopColorChoice,
 	type QuoteType,
 	type CustomerDetailsInput,
+	type PayerType,
 } from '@/hooks/use-quotes';
 import { useCustomersQuery } from '@/hooks/use-customers';
+import { useBillableEntitiesQuery, type BillableEntity } from '@/hooks/use-billable-entities';
 import { useProductsQuery } from '@/hooks/use-products';
 import { useDimensionCombosQuery, useDimensionComboQuery, type DimensionCombo } from '@/hooks/use-dimension-combos';
 import { useMaterialSectionsQuery, useMaterialSectionQuery } from '@/hooks/use-material-sections';
@@ -108,12 +110,21 @@ export function QuoteNewPage() {
 
 	// Form state - Package-level (shared context)
 	const [quoteType, setQuoteType] = useState<QuoteType>('new_memorial');
+	// Payer state (combined selector for customer or funeral director)
+	const [payerId, setPayerId] = useState<string>('');
+	const [payerType, setPayerType] = useState<PayerType | null>(null);
+	const [payerComboOpen, setPayerComboOpen] = useState(false);
+	// Referral funeral director (only shown when payer is customer)
+	const [referralFuneralDirectorId, setReferralFuneralDirectorId] = useState<string>('');
+	const [referralFuneralDirectorComboOpen, setReferralFuneralDirectorComboOpen] = useState(false);
+	// Legacy state for backwards compat (used internally)
 	const [customerId, setCustomerId] = useState<string>('');
 	const [customerComboOpen, setCustomerComboOpen] = useState(false);
 	const [funeralDirectorId, setFuneralDirectorId] = useState<string>('');
 	const [funeralDirectorComboOpen, setFuneralDirectorComboOpen] = useState(false);
 	const [memorialSiteId, setMemorialSiteId] = useState<string>('');
 	const [memorialSiteComboOpen, setMemorialSiteComboOpen] = useState(false);
+	const [memorialLocation, setMemorialLocation] = useState<string>('');
 	const [source, setSource] = useState<EnquirySource | ''>('');
 	const [proposedInscription, setProposedInscription] = useState('');
 	const [existingMemorialDescription, setExistingMemorialDescription] = useState('');
@@ -125,6 +136,7 @@ export function QuoteNewPage() {
 
 	// Form state - First option fields
 	const [productId, setProductId] = useState<string>('');
+	const [productComboOpen, setProductComboOpen] = useState(false);
 	const [dimensionComboId, setDimensionComboId] = useState<string>('');
 	const [stoneColourMaterialId, setStoneColourMaterialId] = useState<string>('');
 	const [flowerHoles, setFlowerHoles] = useState<FlowerHoleChoice | ''>('');
@@ -163,6 +175,7 @@ export function QuoteNewPage() {
 
 	// Fetch reference data
 	const { data: customers } = useCustomersQuery();
+	const { data: billableEntities } = useBillableEntitiesQuery();
 	const { data: productsData } = useProductsQuery({ isActive: 'true' });
 	const { data: dimensionCombos } = useDimensionCombosQuery(productId || undefined);
 	const { data: selectedCombo } = useDimensionComboQuery(dimensionComboId || undefined);
@@ -328,9 +341,13 @@ export function QuoteNewPage() {
 		const quoteData = {
 			// Package-level fields (shared context)
 			quoteType,
-			customerId: customerId || undefined,
-			funeralDirectorId: funeralDirectorId || undefined,
+			// Payer fields (new approach)
+			payerId: payerId || undefined,
+			payerType: payerType || undefined,
+			referralFuneralDirectorId: payerType === 'customer' && referralFuneralDirectorId ? referralFuneralDirectorId : undefined,
+			// Memorial context
 			memorialSiteId: memorialSiteId || undefined,
+			memorialLocation: memorialLocation || undefined,
 			source: source || undefined,
 			proposedInscription: proposedInscription || undefined,
 			existingMemorialDescription: existingMemorialDescription || undefined,
@@ -757,26 +774,67 @@ export function QuoteNewPage() {
 							{/* Product Reference */}
 							<Field>
 								<FieldLabel>Product Reference</FieldLabel>
-								<Select
-									value={productId || NONE_VALUE}
-									onValueChange={(v) => {
-										const newValue = v === NONE_VALUE ? '' : v;
-										setProductId(newValue);
-										setDimensionComboId('');
-									}}
-								>
-									<SelectTrigger>
-										<SelectValue placeholder="Select product (optional)" />
-									</SelectTrigger>
-									<SelectContent>
-										<SelectItem value={NONE_VALUE}>No product</SelectItem>
-										{productsData?.products?.map((product) => (
-											<SelectItem key={product.id} value={product.id}>
-												{product.name} ({product.sku})
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
+								<Popover open={productComboOpen} onOpenChange={setProductComboOpen}>
+									<PopoverTrigger asChild>
+										<Button
+											variant="outline"
+											role="combobox"
+											aria-expanded={productComboOpen}
+											className="w-full justify-between font-normal"
+										>
+											<span className="truncate">
+												{productId
+													? productsData?.products?.find((p) => p.id === productId)
+														? `${productsData.products.find((p) => p.id === productId)?.name} (${productsData.products.find((p) => p.id === productId)?.sku})`
+														: 'Select product...'
+													: 'Select product (optional)'}
+											</span>
+											<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+										</Button>
+									</PopoverTrigger>
+									<PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+										<Command>
+											<CommandInput placeholder="Search products by name or SKU..." />
+											<CommandList>
+												<CommandEmpty>No products found.</CommandEmpty>
+												<CommandGroup>
+													{productId && (
+														<CommandItem
+															value="_clear"
+															onSelect={() => {
+																setProductId('');
+																setDimensionComboId('');
+																setProductComboOpen(false);
+															}}
+														>
+															<span className="text-muted-foreground">Clear selection</span>
+														</CommandItem>
+													)}
+													{productsData?.products?.map((product) => (
+														<CommandItem
+															key={product.id}
+															value={`${product.name} ${product.sku}`}
+															onSelect={() => {
+																setProductId(product.id);
+																setDimensionComboId('');
+																setProductComboOpen(false);
+															}}
+														>
+															<Check
+																className={cn(
+																	'mr-2 h-4 w-4',
+																	productId === product.id ? 'opacity-100' : 'opacity-0'
+																)}
+															/>
+															<span>{product.name}</span>
+															<span className="ml-2 text-muted-foreground">({product.sku})</span>
+														</CommandItem>
+													))}
+												</CommandGroup>
+											</CommandList>
+										</Command>
+									</PopoverContent>
+								</Popover>
 							</Field>
 
 							{/* Dimensions - only show when product selected */}
@@ -1308,10 +1366,10 @@ export function QuoteNewPage() {
 			{/* Sidebar - Right Column */}
 			<div className="hidden lg:block w-80 shrink-0">
 				<div className="sticky top-6 space-y-4">
-					{/* Customer */}
+					{/* Bill To (Combined Customer/Funeral Director selector) */}
 					<div className="space-y-2">
 						<div className="flex items-center justify-between">
-							<FieldLabel className="text-sm font-medium">Customer</FieldLabel>
+							<FieldLabel className="text-sm font-medium">Bill To</FieldLabel>
 							<Button
 								type="button"
 								variant="ghost"
@@ -1320,70 +1378,126 @@ export function QuoteNewPage() {
 								onClick={() => {
 									setIsCreatingCustomer(!isCreatingCustomer);
 									if (!isCreatingCustomer) {
-										setCustomerId('');
+										setPayerId('');
+										setPayerType(null);
 									}
 								}}
 							>
 								<User className="h-3 w-3 mr-1" />
-								{isCreatingCustomer ? 'Select' : 'New'}
+								{isCreatingCustomer ? 'Select' : 'New Customer'}
 							</Button>
 						</div>
 						{!isCreatingCustomer ? (
-							<Popover open={customerComboOpen} onOpenChange={setCustomerComboOpen}>
+							<Popover open={payerComboOpen} onOpenChange={setPayerComboOpen}>
 								<PopoverTrigger asChild>
 									<Button
 										variant="outline"
 										role="combobox"
-										aria-expanded={customerComboOpen}
+										aria-expanded={payerComboOpen}
 										className="w-full justify-between font-normal h-9 text-sm"
 									>
-										{customerId
-											? customers?.find((c) => c.id === customerId)
-												? `${customers.find((c) => c.id === customerId)?.firstName} ${customers.find((c) => c.id === customerId)?.lastName}`
-												: 'Select customer...'
-											: 'Select customer...'}
+										<span className="truncate flex items-center gap-2">
+											{payerId && payerType ? (
+												<>
+													{payerType === 'customer' ? (
+														<User className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+													) : (
+														<Building2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+													)}
+													{billableEntities?.find((e) => e.id === payerId)?.displayName || 'Select...'}
+												</>
+											) : (
+												'Select who to bill...'
+											)}
+										</span>
 										<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
 									</Button>
 								</PopoverTrigger>
 								<PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
 									<Command>
-										<CommandInput placeholder="Search customers..." />
+										<CommandInput placeholder="Search customers or funeral directors..." />
 										<CommandList>
 											<CommandEmpty>
 												<div className="py-2 text-center">
-													<p className="text-sm text-muted-foreground mb-2">No customer found.</p>
+													<p className="text-sm text-muted-foreground mb-2">No match found.</p>
 													<Button
 														variant="outline"
 														size="sm"
 														onClick={() => {
 															setIsCreatingCustomer(true);
-															setCustomerComboOpen(false);
+															setPayerComboOpen(false);
 														}}
 													>
 														<User className="h-4 w-4 mr-2" />
-														Create New
+														Create New Customer
 													</Button>
 												</div>
 											</CommandEmpty>
-											<CommandGroup>
-												{customers?.map((customer) => (
+											{payerId && (
+												<CommandGroup>
 													<CommandItem
-														key={customer.id}
-														value={`${customer.firstName} ${customer.lastName}`}
+														value="_clear"
 														onSelect={() => {
-															setCustomerId(customer.id);
-															setCustomerComboOpen(false);
+															setPayerId('');
+															setPayerType(null);
+															setPayerComboOpen(false);
 														}}
 													>
-														<Check
-															className={cn(
-																'mr-2 h-4 w-4',
-																customerId === customer.id ? 'opacity-100' : 'opacity-0'
-															)}
-														/>
-														{customer.firstName} {customer.lastName}
+														<span className="text-muted-foreground">Clear selection</span>
 													</CommandItem>
-												))}
+												</CommandGroup>
+											)}
+											{/* Customers group */}
+											<CommandGroup heading="Customers">
+												{billableEntities
+													?.filter((e) => e.entityType === 'customer')
+													.map((entity) => (
+														<CommandItem
+															key={entity.id}
+															value={entity.displayName}
+															onSelect={() => {
+																setPayerId(entity.id);
+																setPayerType('customer');
+																setPayerComboOpen(false);
+															}}
+														>
+															<Check
+																className={cn(
+																	'mr-2 h-4 w-4',
+																	payerId === entity.id ? 'opacity-100' : 'opacity-0'
+																)}
+															/>
+															<User className="h-4 w-4 mr-2 text-muted-foreground" />
+															{entity.displayName}
+														</CommandItem>
+													))}
+											</CommandGroup>
+											{/* Funeral Directors group */}
+											<CommandGroup heading="Funeral Directors">
+												{billableEntities
+													?.filter((e) => e.entityType === 'funeral_director')
+													.map((entity) => (
+														<CommandItem
+															key={entity.id}
+															value={entity.displayName}
+															onSelect={() => {
+																setPayerId(entity.id);
+																setPayerType('funeral_director');
+																// Clear referral FD when FD is payer
+																setReferralFuneralDirectorId('');
+																setPayerComboOpen(false);
+															}}
+														>
+															<Check
+																className={cn(
+																	'mr-2 h-4 w-4',
+																	payerId === entity.id ? 'opacity-100' : 'opacity-0'
+																)}
+															/>
+															<Building2 className="h-4 w-4 mr-2 text-muted-foreground" />
+															{entity.displayName}
+														</CommandItem>
+													))}
 											</CommandGroup>
 										</CommandList>
 									</Command>
@@ -1418,72 +1532,74 @@ export function QuoteNewPage() {
 					</div>
 
 					<div className="border-t pt-4 space-y-4">
-						{/* Funeral Director */}
-						<div className="space-y-2">
-							<FieldLabel className="text-sm font-medium">Funeral Director</FieldLabel>
-							<Popover open={funeralDirectorComboOpen} onOpenChange={setFuneralDirectorComboOpen}>
-								<PopoverTrigger asChild>
-									<Button
-										variant="outline"
-										role="combobox"
-										aria-expanded={funeralDirectorComboOpen}
-										className="w-full justify-between font-normal h-9 text-sm"
-									>
-										<span className="truncate">
-											{funeralDirectorId
-												? funeralDirectors?.find((fd) => fd.id === funeralDirectorId)?.businessName ||
-												  'Select...'
-												: 'Optional'}
-										</span>
-										<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-									</Button>
-								</PopoverTrigger>
-								<PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-									<Command>
-										<CommandInput placeholder="Search..." />
-										<CommandList>
-											<CommandEmpty>No funeral directors found.</CommandEmpty>
-											<CommandGroup>
-												{funeralDirectorId && (
-													<CommandItem
-														value="_clear"
-														onSelect={() => {
-															setFuneralDirectorId('');
-															setFuneralDirectorComboOpen(false);
-														}}
-													>
-														<span className="text-muted-foreground">Clear selection</span>
-													</CommandItem>
-												)}
-												{funeralDirectors
-													?.filter((fd) => fd.isActive)
-													.map((fd) => (
+						{/* Referred By Funeral Director - only shown when payer is a customer */}
+						{payerType === 'customer' && (
+							<div className="space-y-2">
+								<FieldLabel className="text-sm font-medium">Referred By</FieldLabel>
+								<Popover open={referralFuneralDirectorComboOpen} onOpenChange={setReferralFuneralDirectorComboOpen}>
+									<PopoverTrigger asChild>
+										<Button
+											variant="outline"
+											role="combobox"
+											aria-expanded={referralFuneralDirectorComboOpen}
+											className="w-full justify-between font-normal h-9 text-sm"
+										>
+											<span className="truncate">
+												{referralFuneralDirectorId
+													? funeralDirectors?.find((fd) => fd.id === referralFuneralDirectorId)?.businessName ||
+													  'Select...'
+													: 'No referral'}
+											</span>
+											<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+										</Button>
+									</PopoverTrigger>
+									<PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+										<Command>
+											<CommandInput placeholder="Search funeral directors..." />
+											<CommandList>
+												<CommandEmpty>No funeral directors found.</CommandEmpty>
+												<CommandGroup>
+													{referralFuneralDirectorId && (
 														<CommandItem
-															key={fd.id}
-															value={fd.businessName}
+															value="_clear"
 															onSelect={() => {
-																setFuneralDirectorId(fd.id);
-																setFuneralDirectorComboOpen(false);
+																setReferralFuneralDirectorId('');
+																setReferralFuneralDirectorComboOpen(false);
 															}}
 														>
-															<Check
-																className={cn(
-																	'mr-2 h-4 w-4',
-																	funeralDirectorId === fd.id ? 'opacity-100' : 'opacity-0'
-																)}
-															/>
-															<div className="flex items-center gap-2 truncate">
-																<Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
-																<span className="truncate">{fd.businessName}</span>
-															</div>
+															<span className="text-muted-foreground">Clear selection</span>
 														</CommandItem>
-													))}
-											</CommandGroup>
-										</CommandList>
-									</Command>
-								</PopoverContent>
-							</Popover>
-						</div>
+													)}
+													{funeralDirectors
+														?.filter((fd) => fd.isActive)
+														.map((fd) => (
+															<CommandItem
+																key={fd.id}
+																value={fd.businessName}
+																onSelect={() => {
+																	setReferralFuneralDirectorId(fd.id);
+																	setReferralFuneralDirectorComboOpen(false);
+																}}
+															>
+																<Check
+																	className={cn(
+																		'mr-2 h-4 w-4',
+																		referralFuneralDirectorId === fd.id ? 'opacity-100' : 'opacity-0'
+																	)}
+																/>
+																<div className="flex items-center gap-2 truncate">
+																	<Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
+																	<span className="truncate">{fd.businessName}</span>
+																</div>
+															</CommandItem>
+														))}
+												</CommandGroup>
+											</CommandList>
+										</Command>
+									</PopoverContent>
+								</Popover>
+							</div>
+						)}
 
 						{/* Memorial Site */}
 						<div className="space-y-2">
@@ -1559,6 +1675,21 @@ export function QuoteNewPage() {
 									 selectedMemorialSite.addresses[0]?.locality}
 								</div>
 							)}
+						</div>
+
+						{/* Memorial Location */}
+						<div className="space-y-2">
+							<FieldLabel className="text-sm font-medium">Memorial Location</FieldLabel>
+							<Textarea
+								value={memorialLocation}
+								onChange={(e) => setMemorialLocation(e.target.value)}
+								placeholder="e.g., Row B, Plot 12, near the oak tree"
+								rows={2}
+								className="text-sm resize-none"
+							/>
+							<p className="text-xs text-muted-foreground">
+								Describe where the memorial is located at the site
+							</p>
 						</div>
 					</div>
 

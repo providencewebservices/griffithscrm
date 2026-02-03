@@ -81,6 +81,7 @@ export type QuoteLineItem = {
 	price: string;
 	vatExempt: boolean;
 	visibleToCustomer: boolean;
+	priceVisibleToCustomer: boolean;
 	sortOrder: number;
 	createdAt: string;
 	updatedAt: string;
@@ -142,6 +143,9 @@ export type QuoteOption = {
 	updatedAt: string;
 };
 
+// Payer type for billing
+export type PayerType = 'customer' | 'funeral_director';
+
 // Quote Package - container for quote options with shared context
 export type QuotePackage = {
 	id: string;
@@ -149,9 +153,11 @@ export type QuotePackage = {
 	status: QuoteStatus;
 	quoteType: QuoteType;
 	customerId: string | null;
+	payerType: PayerType | null;
 	funeralDirectorId: string | null;
 	councilId: string | null;
 	memorialSiteId: string | null;
+	memorialLocation: string | null;
 	source: string | null;
 	notes: string | null;
 	internalNotes: string | null;
@@ -178,8 +184,12 @@ export type QuotePackageListItem = {
 	status: QuoteStatus;
 	quoteType: QuoteType;
 	customerId: string | null;
+	payerType: PayerType | null;
+	funeralDirectorId: string | null;
 	customerFirstName: string | null;
 	customerLastName: string | null;
+	funeralDirectorBusinessName: string | null;
+	funeralDirectorTradingName: string | null;
 	notes: string | null;
 	validUntil: string | null;
 	createdAt: string;
@@ -247,10 +257,16 @@ export type CustomerDetailsInput = {
 export type CreateQuoteInput = {
 	// Package-level fields (shared context)
 	quoteType?: QuoteType;
+	// Payer fields - determines who gets billed
+	payerId?: string;
+	payerType?: PayerType;
+	referralFuneralDirectorId?: string;
+	// Legacy fields for backwards compatibility
 	customerId?: string;
 	funeralDirectorId?: string;
 	councilId?: string;
 	memorialSiteId?: string;
+	memorialLocation?: string;
 	source?: string;
 	proposedInscription?: string;
 	existingMemorialDescription?: string;
@@ -639,6 +655,7 @@ export type LineItemInput = {
 	price: number;
 	vatExempt?: boolean;
 	visibleToCustomer?: boolean;
+	priceVisibleToCustomer?: boolean;
 };
 
 export type AddLineItemInput = {
@@ -648,6 +665,7 @@ export type AddLineItemInput = {
 	price: number;
 	vatExempt?: boolean;
 	visibleToCustomer?: boolean;
+	priceVisibleToCustomer?: boolean;
 };
 
 export type UpdateLineItemInput = {
@@ -658,6 +676,7 @@ export type UpdateLineItemInput = {
 	price?: number;
 	vatExempt?: boolean;
 	visibleToCustomer?: boolean;
+	priceVisibleToCustomer?: boolean;
 };
 
 export type DeleteLineItemInput = {
@@ -817,12 +836,13 @@ async function addLineItem({
 	price,
 	vatExempt,
 	visibleToCustomer,
+	priceVisibleToCustomer,
 }: AddLineItemInput): Promise<QuotePackageWithOptions> {
 	const response = await fetch(`${API_URL}/api/quotes/${packageId}/options/${optionId}/line-items`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		credentials: 'include',
-		body: JSON.stringify({ description, price, vatExempt, visibleToCustomer }),
+		body: JSON.stringify({ description, price, vatExempt, visibleToCustomer, priceVisibleToCustomer }),
 	});
 
 	if (!response.ok) {
@@ -842,6 +862,7 @@ async function updateLineItem({
 	price,
 	vatExempt,
 	visibleToCustomer,
+	priceVisibleToCustomer,
 }: UpdateLineItemInput): Promise<QuotePackageWithOptions> {
 	const response = await fetch(
 		`${API_URL}/api/quotes/${packageId}/options/${optionId}/line-items/${itemId}`,
@@ -849,7 +870,7 @@ async function updateLineItem({
 			method: 'PUT',
 			headers: { 'Content-Type': 'application/json' },
 			credentials: 'include',
-			body: JSON.stringify({ description, price, vatExempt, visibleToCustomer }),
+			body: JSON.stringify({ description, price, vatExempt, visibleToCustomer, priceVisibleToCustomer }),
 		}
 	);
 

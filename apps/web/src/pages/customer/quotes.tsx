@@ -38,7 +38,7 @@ import {
 	type QuotePackageListItem,
 } from '@/hooks/use-quotes';
 import { QUOTE_STATUSES } from '@griffiths-crm/shared/db/schema';
-import { Search, Plus, List, LayoutGrid, Calendar, User, Layers } from 'lucide-react';
+import { Search, Plus, List, LayoutGrid, Calendar, User, Layers, Building2 } from 'lucide-react';
 
 type DisplayMode = 'table' | 'cards';
 
@@ -78,6 +78,20 @@ export function QuotesPage() {
 		if (pkg.customerFirstName) return pkg.customerFirstName;
 		if (pkg.customerLastName) return pkg.customerLastName;
 		return null;
+	};
+
+	// Get the bill-to entity name and type (customer or funeral director)
+	const getBillToInfo = (pkg: QuotePackageListItem): { name: string | null; type: 'customer' | 'funeral_director' | null } => {
+		// If payerType is funeral_director, show FD name
+		if (pkg.payerType === 'funeral_director' && pkg.funeralDirectorBusinessName) {
+			const name = pkg.funeralDirectorTradingName
+				? `${pkg.funeralDirectorBusinessName} (${pkg.funeralDirectorTradingName})`
+				: pkg.funeralDirectorBusinessName;
+			return { name, type: 'funeral_director' };
+		}
+		// Otherwise show customer name (or null for walk-in)
+		const customerName = getCustomerName(pkg);
+		return { name: customerName, type: customerName ? 'customer' : null };
 	};
 
 	if (isLoading) {
@@ -203,7 +217,7 @@ export function QuotesPage() {
 						<TableHeader>
 							<TableRow>
 								<TableHead>Quote #</TableHead>
-								<TableHead>Customer</TableHead>
+								<TableHead>Bill To</TableHead>
 								<TableHead>Type</TableHead>
 								<TableHead>Status</TableHead>
 								<TableHead className="text-right">Price</TableHead>
@@ -222,10 +236,23 @@ export function QuotesPage() {
 											)}
 										</div>
 									</TableCell>
-									<TableCell className="font-display">
-										{getCustomerName(pkg) || (
-											<span className="text-muted-foreground font-sans">Walk-in</span>
-										)}
+									<TableCell>
+										{(() => {
+											const billTo = getBillToInfo(pkg);
+											if (!billTo.name) {
+												return <span className="text-muted-foreground">Walk-in</span>;
+											}
+											return (
+												<span className="flex items-center gap-1.5">
+													{billTo.type === 'funeral_director' ? (
+														<Building2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+													) : (
+														<User className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+													)}
+													<span className="font-display">{billTo.name}</span>
+												</span>
+											);
+										})()}
 									</TableCell>
 									<TableCell>
 										{pkg.quoteType && pkg.quoteType !== 'new_memorial' ? (
@@ -266,7 +293,7 @@ export function QuotesPage() {
 							key={pkg.id}
 							pkg={pkg}
 							formatDate={formatDate}
-							getCustomerName={getCustomerName}
+							getBillToInfo={getBillToInfo}
 						/>
 					))}
 				</div>
@@ -278,12 +305,13 @@ export function QuotesPage() {
 function QuoteCard({
 	pkg,
 	formatDate,
-	getCustomerName,
+	getBillToInfo,
 }: {
 	pkg: QuotePackageListItem;
 	formatDate: (dateString: string) => string;
-	getCustomerName: (pkg: QuotePackageListItem) => string | null;
+	getBillToInfo: (pkg: QuotePackageListItem) => { name: string | null; type: 'customer' | 'funeral_director' | null };
 }) {
+	const billTo = getBillToInfo(pkg);
 	return (
 		<Card className="hover:shadow-md transition-shadow">
 			<CardHeader className="pb-3">
@@ -296,9 +324,13 @@ function QuoteCard({
 							)}
 						</CardTitle>
 						<CardDescription className="flex items-center gap-1.5">
-							<User className="h-3.5 w-3.5" />
-							<span className={getCustomerName(pkg) ? 'font-display' : ''}>
-								{getCustomerName(pkg) || 'Walk-in'}
+							{billTo.type === 'funeral_director' ? (
+								<Building2 className="h-3.5 w-3.5" />
+							) : (
+								<User className="h-3.5 w-3.5" />
+							)}
+							<span className={billTo.name ? 'font-display' : ''}>
+								{billTo.name || 'Walk-in'}
 							</span>
 						</CardDescription>
 					</div>

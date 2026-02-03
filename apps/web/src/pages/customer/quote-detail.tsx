@@ -260,6 +260,7 @@ export function QuoteDetailPage() {
 	const [newLineItemPrice, setNewLineItemPrice] = useState('');
 	const [newLineItemVatExempt, setNewLineItemVatExempt] = useState(false);
 	const [newLineItemVisibleToCustomer, setNewLineItemVisibleToCustomer] = useState(true);
+	const [newLineItemPriceVisibleToCustomer, setNewLineItemPriceVisibleToCustomer] = useState(true);
 
 	// Set initial selected option when data loads
 	useEffect(() => {
@@ -276,6 +277,7 @@ export function QuoteDetailPage() {
 			setNewLineItemPrice('');
 			setNewLineItemVatExempt(false);
 			setNewLineItemVisibleToCustomer(true);
+			setNewLineItemPriceVisibleToCustomer(true);
 		} else {
 			const preset = activePresets.find((p) => p.id === presetId);
 			if (preset) {
@@ -283,6 +285,7 @@ export function QuoteDetailPage() {
 				setNewLineItemPrice(preset.defaultPrice);
 				setNewLineItemVatExempt(preset.vatExempt);
 				setNewLineItemVisibleToCustomer(preset.visibleToCustomer);
+				setNewLineItemPriceVisibleToCustomer(preset.priceVisibleToCustomer);
 			}
 		}
 	};
@@ -694,6 +697,8 @@ export function QuoteDetailPage() {
 									setNewLineItemVatExempt={setNewLineItemVatExempt}
 									newLineItemVisibleToCustomer={newLineItemVisibleToCustomer}
 									setNewLineItemVisibleToCustomer={setNewLineItemVisibleToCustomer}
+									newLineItemPriceVisibleToCustomer={newLineItemPriceVisibleToCustomer}
+									setNewLineItemPriceVisibleToCustomer={setNewLineItemPriceVisibleToCustomer}
 									handlePresetSelect={handlePresetSelect}
 								/>
 							)}
@@ -986,6 +991,8 @@ function OptionContent({
 	setNewLineItemVatExempt,
 	newLineItemVisibleToCustomer,
 	setNewLineItemVisibleToCustomer,
+	newLineItemPriceVisibleToCustomer,
+	setNewLineItemPriceVisibleToCustomer,
 	handlePresetSelect,
 }: {
 	pkg: QuotePackageWithOptions;
@@ -1001,7 +1008,7 @@ function OptionContent({
 	addLetteringMutation: ReturnType<typeof useAddLetteringMutation>;
 	updateLetteringMutation: ReturnType<typeof useUpdateLetteringMutation>;
 	deleteLetteringMutation: ReturnType<typeof useDeleteLetteringMutation>;
-	activePresets: { id: string; name: string; defaultPrice: string; vatExempt: boolean; visibleToCustomer: boolean }[];
+	activePresets: { id: string; name: string; defaultPrice: string; vatExempt: boolean; visibleToCustomer: boolean; priceVisibleToCustomer: boolean }[];
 	newLineItemPresetId: string;
 	setNewLineItemPresetId: (value: string) => void;
 	newLineItemDesc: string;
@@ -1012,6 +1019,8 @@ function OptionContent({
 	setNewLineItemVatExempt: (value: boolean) => void;
 	newLineItemVisibleToCustomer: boolean;
 	setNewLineItemVisibleToCustomer: (value: boolean) => void;
+	newLineItemPriceVisibleToCustomer: boolean;
+	setNewLineItemPriceVisibleToCustomer: (value: boolean) => void;
 	handlePresetSelect: (presetId: string) => void;
 }) {
 	return (
@@ -1196,7 +1205,8 @@ function OptionContent({
 									<TableHead>Description</TableHead>
 									<TableHead className="text-right w-32">Price</TableHead>
 									<TableHead className="text-center w-24">VAT Exempt</TableHead>
-									<TableHead className="text-center w-20">Visible</TableHead>
+									<TableHead className="text-center w-20">Line Visible</TableHead>
+									<TableHead className="text-center w-24">Price Visible</TableHead>
 									{canEditPricing && <TableHead className="w-16"></TableHead>}
 								</TableRow>
 							</TableHeader>
@@ -1262,6 +1272,8 @@ function OptionContent({
 															optionId: option.id,
 															itemId: item.id,
 															visibleToCustomer: checked === true,
+															// When line visibility is disabled, also disable price visibility
+															...(checked !== true ? { priceVisibleToCustomer: false } : {}),
 														});
 													}}
 												/>
@@ -1269,6 +1281,30 @@ function OptionContent({
 												<Eye className="h-4 w-4 mx-auto text-muted-foreground" />
 											) : (
 												<EyeOff className="h-4 w-4 mx-auto text-muted-foreground" />
+											)}
+										</TableCell>
+										<TableCell className="text-center">
+											{canEditPricing ? (
+												<Checkbox
+													checked={item.priceVisibleToCustomer}
+													onCheckedChange={async (checked) => {
+														await updateLineItem.mutateAsync({
+															packageId: pkg.id,
+															optionId: option.id,
+															itemId: item.id,
+															priceVisibleToCustomer: checked === true,
+														});
+													}}
+													disabled={!item.visibleToCustomer}
+												/>
+											) : item.visibleToCustomer ? (
+												item.priceVisibleToCustomer ? (
+													<Eye className="h-4 w-4 mx-auto text-muted-foreground" />
+												) : (
+													<EyeOff className="h-4 w-4 mx-auto text-muted-foreground" />
+												)
+											) : (
+												<span className="text-muted-foreground">—</span>
 											)}
 										</TableCell>
 										{canEditPricing && (
@@ -1365,10 +1401,27 @@ function OptionContent({
 								<Checkbox
 									id="lineItemVisibleToCustomer"
 									checked={newLineItemVisibleToCustomer}
-									onCheckedChange={(checked) => setNewLineItemVisibleToCustomer(checked === true)}
+									onCheckedChange={(checked) => {
+										setNewLineItemVisibleToCustomer(checked === true);
+										// When line visibility is disabled, also disable price visibility
+										if (checked !== true) {
+											setNewLineItemPriceVisibleToCustomer(false);
+										}
+									}}
 								/>
 								<Label htmlFor="lineItemVisibleToCustomer" className="text-xs whitespace-nowrap">
-									Visible to Customer
+									Line Visible
+								</Label>
+							</div>
+							<div className="flex items-center gap-2">
+								<Checkbox
+									id="lineItemPriceVisibleToCustomer"
+									checked={newLineItemPriceVisibleToCustomer}
+									onCheckedChange={(checked) => setNewLineItemPriceVisibleToCustomer(checked === true)}
+									disabled={!newLineItemVisibleToCustomer}
+								/>
+								<Label htmlFor="lineItemPriceVisibleToCustomer" className={`text-xs whitespace-nowrap ${!newLineItemVisibleToCustomer ? 'text-muted-foreground' : ''}`}>
+									Price Visible
 								</Label>
 							</div>
 							<div className="flex-1"></div>
@@ -1384,12 +1437,14 @@ function OptionContent({
 										price: parseFloat(newLineItemPrice),
 										vatExempt: newLineItemVatExempt,
 										visibleToCustomer: newLineItemVisibleToCustomer,
+										priceVisibleToCustomer: newLineItemPriceVisibleToCustomer,
 									});
 									setNewLineItemPresetId('');
 									setNewLineItemDesc('');
 									setNewLineItemPrice('');
 									setNewLineItemVatExempt(false);
 									setNewLineItemVisibleToCustomer(true);
+									setNewLineItemPriceVisibleToCustomer(true);
 								}}
 								disabled={!newLineItemDesc.trim() || !newLineItemPrice || addLineItem.isPending}
 							>
@@ -1982,7 +2037,9 @@ function CustomerView({
 															{item.description}
 															{item.vatExempt && <span className="text-xs ml-1">(VAT Exempt)</span>}
 														</span>
-														<span>{formatCurrency(item.price)}</span>
+														{item.priceVisibleToCustomer && (
+															<span>{formatCurrency(item.price)}</span>
+														)}
 													</div>
 												))}
 										</div>

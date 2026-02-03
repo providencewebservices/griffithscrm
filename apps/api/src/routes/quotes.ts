@@ -41,6 +41,7 @@ import {
 	LETTERING_COST_APPLIES_TO,
 	FLOWER_HOLE_CHOICES,
 	ENQUIRY_SOURCES,
+	PAYER_TYPES,
 } from '@griffiths-crm/shared/db/schema';
 import { generateJobNumber } from './jobs';
 
@@ -410,10 +411,16 @@ const customerDetailsSchema = z.object({
 const createQuoteSchema = z.object({
 	// Package-level fields (shared context)
 	quoteType: z.enum(QUOTE_TYPES).optional().default('new_memorial'),
+	// Payer fields - determines who gets billed
+	payerId: z.string().optional(), // ID of customer or funeral director
+	payerType: z.enum(PAYER_TYPES).optional(), // 'customer' | 'funeral_director'
+	referralFuneralDirectorId: z.string().optional(), // Only when payer is customer
+	// Legacy field for backwards compatibility (deprecated, use payerId + payerType instead)
 	customerId: z.string().optional(),
-	funeralDirectorId: z.string().optional(), // Memorial context
+	funeralDirectorId: z.string().optional(), // Memorial context (deprecated)
 	councilId: z.string().optional(),
 	memorialSiteId: z.string().optional(),
+	memorialLocation: z.string().optional(), // Freeform description of location at memorial site
 	source: z.enum(ENQUIRY_SOURCES).optional(), // How the customer contacted us
 	proposedInscription: z.string().optional(), // Full text of desired inscription (shared)
 	notes: z.string().optional(), // Customer-visible notes
@@ -483,6 +490,7 @@ const lineItemInputSchema = z.object({
 	price: z.number().min(0),
 	vatExempt: z.boolean().optional().default(false),
 	visibleToCustomer: z.boolean().optional().default(true),
+	priceVisibleToCustomer: z.boolean().optional().default(true),
 });
 
 const updateLineItemSchema = z.object({
@@ -490,6 +498,7 @@ const updateLineItemSchema = z.object({
 	price: z.number().min(0).optional(),
 	vatExempt: z.boolean().optional(),
 	visibleToCustomer: z.boolean().optional(),
+	priceVisibleToCustomer: z.boolean().optional(),
 });
 
 const listQuerySchema = z.object({
@@ -529,12 +538,14 @@ const quotesRoutes = new Hono()
 			conditions.push(eq(quotePackages.customerId, customerId));
 		}
 
-		// Get packages with customer info
+		// Get packages with customer and funeral director info
 		const packages = await db
 			.select({
 				id: quotePackages.id,
 				tenantId: quotePackages.tenantId,
 				customerId: quotePackages.customerId,
+				payerType: quotePackages.payerType,
+				funeralDirectorId: quotePackages.funeralDirectorId,
 				quoteType: quotePackages.quoteType,
 				status: quotePackages.status,
 				notes: quotePackages.notes,
@@ -543,9 +554,12 @@ const quotesRoutes = new Hono()
 				updatedAt: quotePackages.updatedAt,
 				customerFirstName: customers.firstName,
 				customerLastName: customers.lastName,
+				funeralDirectorBusinessName: funeralDirectors.businessName,
+				funeralDirectorTradingName: funeralDirectors.tradingName,
 			})
 			.from(quotePackages)
 			.leftJoin(customers, eq(quotePackages.customerId, customers.id))
+			.leftJoin(funeralDirectors, eq(quotePackages.funeralDirectorId, funeralDirectors.id))
 			.where(and(...conditions))
 			.orderBy(desc(quotePackages.createdAt));
 
@@ -592,6 +606,63 @@ const quotesRoutes = new Hono()
 		}
 
 		return c.json({ packages: filteredPackages });
+	})
+
+	// Get billable entities (combined customers and funeral directors for payer selection)
+	.get('/billable-entities', async (c) => {
+		const currentUser = c.get('user');
+		const tenantId = currentUser.tenantId!;
+
+		// Get all active/non-archived customers
+		const customerRows = await db
+			.select({
+				id: customers.id,
+				firstName: customers.firstName,
+				lastName: customers.lastName,
+			})
+			.from(customers)
+			.where(and(eq(customers.tenantId, tenantId), sql`${customers.archivedAt} IS NULL`))
+			.orderBy(asc(customers.firstName), asc(customers.lastName));
+
+		// Get all active/non-archived funeral directors
+		const funeralDirectorRows = await db
+			.select({
+				id: funeralDirectors.id,
+				businessName: funeralDirectors.businessName,
+				tradingName: funeralDirectors.tradingName,
+			})
+			.from(funeralDirectors)
+			.where(
+				and(
+					eq(funeralDirectors.tenantId, tenantId),
+					eq(funeralDirectors.isActive, true),
+					sql`${funeralDirectors.archivedAt} IS NULL`
+				)
+			)
+			.orderBy(asc(funeralDirectors.businessName));
+
+		// Transform to common format
+		const entities = [
+			...customerRows.map((c) => ({
+				id: c.id,
+				displayName: `${c.firstName} ${c.lastName}`,
+				entityType: 'customer' as const,
+				firstName: c.firstName,
+				lastName: c.lastName,
+			})),
+			...funeralDirectorRows.map((fd) => ({
+				id: fd.id,
+				displayName: fd.tradingName ? `${fd.businessName} (${fd.tradingName})` : fd.businessName,
+				entityType: 'funeral_director' as const,
+				businessName: fd.businessName,
+				tradingName: fd.tradingName,
+			})),
+		];
+
+		// Sort alphabetically by displayName
+		entities.sort((a, b) => a.displayName.localeCompare(b.displayName));
+
+		return c.json({ entities });
 	})
 
 	// Get single package with all options and their line items
@@ -690,6 +761,30 @@ const quotesRoutes = new Hono()
 			}
 
 			customerId = newCustomerId;
+		}
+
+		// Determine customerId and funeralDirectorId based on payer fields
+		// New approach: payerId + payerType determines who gets billed
+		// - When payerType = 'funeral_director', funeralDirectorId is the billing entity
+		// - When payerType = 'customer' or null, customerId is the billing entity
+		// - referralFuneralDirectorId can still be set as referral source when payer is customer
+		let finalCustomerId = customerId;
+		let finalFuneralDirectorId = data.funeralDirectorId || null;
+		let payerType = data.payerType || null;
+
+		if (data.payerId && data.payerType) {
+			if (data.payerType === 'funeral_director') {
+				// Funeral director is the payer - they get billed
+				finalCustomerId = null;
+				finalFuneralDirectorId = data.payerId;
+				payerType = 'funeral_director';
+			} else if (data.payerType === 'customer') {
+				// Customer is the payer
+				finalCustomerId = data.payerId;
+				// If there's a referral funeral director, use that for the FD field
+				finalFuneralDirectorId = data.referralFuneralDirectorId || null;
+				payerType = 'customer';
+			}
 		}
 
 		// Validate dimension combo if provided
@@ -942,7 +1037,8 @@ const quotesRoutes = new Hono()
 			id: packageId,
 			tenantId,
 			packageNumber: quoteNumber, // Use first quote number as package identifier
-			customerId,
+			customerId: finalCustomerId,
+			payerType,
 			quoteType: data.quoteType,
 			source: data.source || null,
 			status: 'draft',
@@ -952,9 +1048,10 @@ const quotesRoutes = new Hono()
 			proposedInscription: data.proposedInscription || null,
 			existingMemorialDescription: data.existingMemorialDescription || null,
 			relatedJobId: data.relatedJobId || null,
-			funeralDirectorId: data.funeralDirectorId || null,
+			funeralDirectorId: finalFuneralDirectorId,
 			councilId: data.councilId || null,
 			memorialSiteId: data.memorialSiteId || null,
+			memorialLocation: data.memorialLocation || null,
 		});
 
 		// Step 2: Create the first quote option linked to the package
@@ -968,7 +1065,7 @@ const quotesRoutes = new Hono()
 			parentQuoteId: null,
 			version: 1,
 			quoteType: data.quoteType,
-			customerId,
+			customerId: finalCustomerId,
 			productId: data.productId || null,
 			dimensionComboId: data.dimensionComboId || null,
 			source: data.source || null,
@@ -1903,6 +2000,7 @@ ${tenantName}
 					price: String(data.price),
 					vatExempt: data.vatExempt ?? false,
 					visibleToCustomer: data.visibleToCustomer ?? true,
+					priceVisibleToCustomer: data.priceVisibleToCustomer ?? true,
 					sortOrder,
 				})
 				.returning();
@@ -1959,6 +2057,7 @@ ${tenantName}
 			if (data.price !== undefined) updateData.price = String(data.price);
 			if (data.vatExempt !== undefined) updateData.vatExempt = data.vatExempt;
 			if (data.visibleToCustomer !== undefined) updateData.visibleToCustomer = data.visibleToCustomer;
+			if (data.priceVisibleToCustomer !== undefined) updateData.priceVisibleToCustomer = data.priceVisibleToCustomer;
 
 			await db
 				.update(quoteLineItems)

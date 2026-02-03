@@ -120,8 +120,9 @@ const publicQuotesRoutes = new Hono()
 					// Only show line items marked as visible to customer
 					lineItems: lineItems.filter((li) => li.visibleToCustomer).map((li) => ({
 						description: li.description,
-						price: li.price,
+						price: li.priceVisibleToCustomer ? li.price : null,
 						vatExempt: li.vatExempt,
+						priceHidden: !li.priceVisibleToCustomer,
 					})),
 				};
 			})
