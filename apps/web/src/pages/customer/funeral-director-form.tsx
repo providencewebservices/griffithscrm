@@ -39,7 +39,6 @@ import {
 	type CreateFuneralDirectorInput,
 	type ContactInfoInput,
 	type AddressInput,
-	type ReferralArrangement,
 } from '@/hooks/use-funeral-directors';
 
 const CONTACT_TYPES = [
@@ -48,13 +47,6 @@ const CONTACT_TYPES = [
 	{ value: 'mobile', label: 'Mobile' },
 	{ value: 'fax', label: 'Fax' },
 	{ value: 'other', label: 'Other' },
-] as const;
-
-const REFERRAL_OPTIONS = [
-	{ value: 'none', label: 'None' },
-	{ value: 'informal', label: 'Informal' },
-	{ value: 'commission', label: 'Commission Based' },
-	{ value: 'preferred_partner', label: 'Preferred Partner' },
 ] as const;
 
 const emptyContact: ContactInfoInput = {
@@ -87,10 +79,7 @@ export function FuneralDirectorFormPage() {
 
 	const [businessName, setBusinessName] = useState('');
 	const [tradingName, setTradingName] = useState('');
-	const [branchName, setBranchName] = useState('');
 	const [website, setWebsite] = useState('');
-	const [referralArrangement, setReferralArrangement] = useState<ReferralArrangement>('none');
-	const [commissionRate, setCommissionRate] = useState('');
 	const [notes, setNotes] = useState('');
 	const [contacts, setContacts] = useState<ContactInfoInput[]>([]);
 	const [addresses, setAddresses] = useState<AddressInput[]>([]);
@@ -100,10 +89,7 @@ export function FuneralDirectorFormPage() {
 		if (existingData) {
 			setBusinessName(existingData.businessName);
 			setTradingName(existingData.tradingName || '');
-			setBranchName(existingData.branchName || '');
 			setWebsite(existingData.website || '');
-			setReferralArrangement(existingData.referralArrangement);
-			setCommissionRate(existingData.commissionRate || '');
 			setNotes(existingData.notes || '');
 			setContacts(
 				existingData.contactInfo.map((c) => ({
@@ -136,10 +122,7 @@ export function FuneralDirectorFormPage() {
 		const data: CreateFuneralDirectorInput = {
 			businessName,
 			tradingName: tradingName || undefined,
-			branchName: branchName || undefined,
 			website: website || undefined,
-			referralArrangement,
-			commissionRate: commissionRate ? parseFloat(commissionRate) : undefined,
 			notes: notes || undefined,
 			contactInfo: contacts.filter((c) => c.value.trim()),
 			addresses: addresses.filter((a) => a.formattedAddress.trim()),
@@ -273,73 +256,15 @@ export function FuneralDirectorFormPage() {
 										/>
 									</Field>
 								</div>
-								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-									<Field>
-										<FieldLabel htmlFor="branchName">Branch Name</FieldLabel>
-										<Input
-											id="branchName"
-											value={branchName}
-											onChange={(e) => setBranchName(e.target.value)}
-											placeholder="e.g., High Street Branch"
-										/>
-									</Field>
-									<Field>
-										<FieldLabel htmlFor="website">Website</FieldLabel>
-										<Input
-											id="website"
-											type="url"
-											value={website}
-											onChange={(e) => setWebsite(e.target.value)}
-											placeholder="https://www.example.com"
-										/>
-									</Field>
-								</div>
-							</FieldGroup>
-						</CardContent>
-					</Card>
-
-					<Card>
-						<CardHeader>
-							<CardTitle>Referral Arrangement</CardTitle>
-							<CardDescription>Commercial relationship details</CardDescription>
-						</CardHeader>
-						<CardContent>
-							<FieldGroup>
-								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-									<Field>
-										<FieldLabel htmlFor="referralArrangement">Arrangement Type</FieldLabel>
-										<Select
-											value={referralArrangement}
-											onValueChange={(v) => setReferralArrangement(v as ReferralArrangement)}
-										>
-											<SelectTrigger>
-												<SelectValue />
-											</SelectTrigger>
-											<SelectContent>
-												{REFERRAL_OPTIONS.map((opt) => (
-													<SelectItem key={opt.value} value={opt.value}>
-														{opt.label}
-													</SelectItem>
-												))}
-											</SelectContent>
-										</Select>
-									</Field>
-									{referralArrangement === 'commission' && (
-										<Field>
-											<FieldLabel htmlFor="commissionRate">Commission Rate (%)</FieldLabel>
-											<Input
-												id="commissionRate"
-												type="number"
-												step="0.1"
-												min="0"
-												max="100"
-												value={commissionRate}
-												onChange={(e) => setCommissionRate(e.target.value)}
-												placeholder="e.g., 10"
-											/>
-										</Field>
-									)}
-								</div>
+								<Field>
+									<FieldLabel htmlFor="website">Website</FieldLabel>
+									<Input
+										id="website"
+										value={website}
+										onChange={(e) => setWebsite(e.target.value)}
+										placeholder="www.example.com"
+									/>
+								</Field>
 							</FieldGroup>
 						</CardContent>
 					</Card>

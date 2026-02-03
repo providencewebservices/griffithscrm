@@ -1,0 +1,1 @@
+ALTER TABLE "funeral_directors" DROP COLUMN "branch_name";

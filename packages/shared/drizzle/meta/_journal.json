@@ -99,6 +99,20 @@
       "when": 1770148548196,
       "tag": "0013_uneven_night_thrasher",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1770149494457,
+      "tag": "0014_fuzzy_loa",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1770149820347,
+      "tag": "0015_omniscient_chronomancer",
+      "breakpoints": true
     }
   ]
 }

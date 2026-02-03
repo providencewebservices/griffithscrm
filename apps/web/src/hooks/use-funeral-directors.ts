@@ -33,17 +33,12 @@ export type Address = {
 	updatedAt: string;
 };
 
-export type ReferralArrangement = 'none' | 'informal' | 'commission' | 'preferred_partner';
-
 export type FuneralDirector = {
 	id: string;
 	tenantId: string;
 	businessName: string;
 	tradingName: string | null;
-	branchName: string | null;
 	website: string | null;
-	referralArrangement: ReferralArrangement;
-	commissionRate: string | null;
 	notes: string | null;
 	isActive: boolean;
 	archivedAt: string | null;
@@ -89,10 +84,7 @@ export type AddressInput = {
 export type CreateFuneralDirectorInput = {
 	businessName: string;
 	tradingName?: string;
-	branchName?: string;
 	website?: string;
-	referralArrangement?: ReferralArrangement;
-	commissionRate?: number;
 	notes?: string;
 	contactInfo?: ContactInfoInput[];
 	addresses?: AddressInput[];

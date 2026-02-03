@@ -10,7 +10,6 @@ import {
 	addresses,
 	funeralDirectorContactInfo,
 	funeralDirectorAddresses,
-	REFERRAL_ARRANGEMENTS,
 } from '@griffiths-crm/shared/db/schema';
 
 // Validation schemas
@@ -41,10 +40,7 @@ const addressSchema = z.object({
 const createFuneralDirectorSchema = z.object({
 	businessName: z.string().min(1, 'Business name is required'),
 	tradingName: z.string().optional(),
-	branchName: z.string().optional(),
 	website: z.string().optional(),
-	referralArrangement: z.enum(REFERRAL_ARRANGEMENTS).optional().default('none'),
-	commissionRate: z.number().min(0).max(100).optional(),
 	notes: z.string().optional(),
 	contactInfo: z.array(contactInfoSchema).optional().default([]),
 	addresses: z.array(addressSchema).optional().default([]),
@@ -53,10 +49,7 @@ const createFuneralDirectorSchema = z.object({
 const updateFuneralDirectorSchema = z.object({
 	businessName: z.string().min(1, 'Business name is required').optional(),
 	tradingName: z.string().nullable().optional(),
-	branchName: z.string().nullable().optional(),
 	website: z.string().nullable().optional(),
-	referralArrangement: z.enum(REFERRAL_ARRANGEMENTS).optional(),
-	commissionRate: z.number().min(0).max(100).nullable().optional(),
 	notes: z.string().nullable().optional(),
 	contactInfo: z.array(contactInfoSchema).optional(),
 	addresses: z.array(addressSchema).optional(),
@@ -129,8 +122,7 @@ const funeralDirectorsRoutes = new Hono()
 				.filter(
 					(d) =>
 						d.businessName.toLowerCase().includes(q.toLowerCase()) ||
-						d.tradingName?.toLowerCase().includes(q.toLowerCase()) ||
-						d.branchName?.toLowerCase().includes(q.toLowerCase())
+						d.tradingName?.toLowerCase().includes(q.toLowerCase())
 				)
 				.map((d) => d.id);
 
@@ -239,10 +231,7 @@ const funeralDirectorsRoutes = new Hono()
 				tenantId,
 				businessName: data.businessName,
 				tradingName: data.tradingName || null,
-				branchName: data.branchName || null,
 				website: data.website || null,
-				referralArrangement: data.referralArrangement,
-				commissionRate: data.commissionRate?.toString() || null,
 				notes: data.notes || null,
 				createdAt: now,
 				updatedAt: now,
@@ -325,10 +314,7 @@ const funeralDirectorsRoutes = new Hono()
 			const updateData: Record<string, unknown> = { updatedAt: now };
 			if (updates.businessName !== undefined) updateData.businessName = updates.businessName;
 			if (updates.tradingName !== undefined) updateData.tradingName = updates.tradingName;
-			if (updates.branchName !== undefined) updateData.branchName = updates.branchName;
 			if (updates.website !== undefined) updateData.website = updates.website;
-			if (updates.referralArrangement !== undefined) updateData.referralArrangement = updates.referralArrangement;
-			if (updates.commissionRate !== undefined) updateData.commissionRate = updates.commissionRate?.toString() || null;
 			if (updates.notes !== undefined) updateData.notes = updates.notes;
 
 			await db.update(funeralDirectors).set(updateData).where(eq(funeralDirectors.id, id));

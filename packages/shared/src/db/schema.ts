@@ -164,9 +164,6 @@ export const customerAddresses = pgTable(
 // LINKED RECORDS (Funeral Directors, Councils, Churches, Chapels)
 // ============================================
 
-// Referral arrangement types for funeral directors
-export const REFERRAL_ARRANGEMENTS = ['none', 'informal', 'commission', 'preferred_partner'] as const;
-
 // Memorial site types
 export const MEMORIAL_SITE_TYPES = ['churchyard', 'crematorium', 'council_cemetery'] as const;
 
@@ -196,10 +193,7 @@ export const funeralDirectors = pgTable('funeral_directors', {
 		.references(() => tenants.id, { onDelete: 'cascade' }),
 	businessName: text('business_name').notNull(),
 	tradingName: text('trading_name'), // If different from legal name
-	branchName: text('branch_name'), // For chains with multiple branches
 	website: text('website'),
-	referralArrangement: text('referral_arrangement').notNull().default('none'), // From REFERRAL_ARRANGEMENTS
-	commissionRate: numeric('commission_rate', { precision: 5, scale: 2 }), // Percentage if commission-based
 	notes: text('notes'),
 	isActive: boolean('is_active').notNull().default(true),
 	archivedAt: timestamp('archived_at'),

@@ -526,8 +526,6 @@ async function seedPartners() {
 				id: fdId,
 				tenantId,
 				businessName: fd.name,
-				referralArrangement: fd.arrangement,
-				commissionRate: fd.rate,
 				website: `https://www.${fd.name.toLowerCase().replace(/[^a-z]/g, '')}.co.uk`,
 			});
 

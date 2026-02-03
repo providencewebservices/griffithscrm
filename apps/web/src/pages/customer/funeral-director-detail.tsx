@@ -30,16 +30,8 @@ import {
 	MapPin,
 	Globe,
 	ArrowLeft,
-	Handshake,
 } from 'lucide-react';
 import { DocumentsCard } from '@/components/documents';
-
-const REFERRAL_LABELS: Record<string, string> = {
-	none: 'None',
-	informal: 'Informal',
-	commission: 'Commission Based',
-	preferred_partner: 'Preferred Partner',
-};
 
 export function FuneralDirectorDetailPage() {
 	const { id } = useParams<{ id: string }>();
@@ -150,11 +142,6 @@ export function FuneralDirectorDetailPage() {
 							<Badge variant="default">Active</Badge>
 						)}
 					</div>
-					{funeralDirector.branchName && (
-						<p className="text-muted-foreground mt-1">
-							{funeralDirector.branchName}
-						</p>
-					)}
 					{funeralDirector.tradingName && (
 						<p className="text-sm text-muted-foreground">
 							Legal name: {funeralDirector.businessName}
@@ -311,32 +298,6 @@ export function FuneralDirectorDetailPage() {
 					</CardContent>
 				</Card>
 			</div>
-
-			<Card className="mt-6">
-				<CardHeader>
-					<CardTitle className="flex items-center gap-2">
-						<Handshake className="h-5 w-5" />
-						Referral Arrangement
-					</CardTitle>
-					<CardDescription>
-						Commercial relationship with this funeral director
-					</CardDescription>
-				</CardHeader>
-				<CardContent>
-					<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-						<div>
-							<p className="text-sm font-medium mb-1">Arrangement Type</p>
-							<p>{REFERRAL_LABELS[funeralDirector.referralArrangement] || 'None'}</p>
-						</div>
-						{funeralDirector.commissionRate && (
-							<div>
-								<p className="text-sm font-medium mb-1">Commission Rate</p>
-								<p>{funeralDirector.commissionRate}%</p>
-							</div>
-						)}
-					</div>
-				</CardContent>
-			</Card>
 
 			{funeralDirector.notes && (
 				<Card className="mt-6">

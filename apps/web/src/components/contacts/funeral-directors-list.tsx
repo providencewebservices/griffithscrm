@@ -172,7 +172,6 @@ export function FuneralDirectorsList() {
 							<TableHeader>
 								<TableRow>
 									<TableHead>Business Name</TableHead>
-									<TableHead>Branch</TableHead>
 									<TableHead>Email</TableHead>
 									<TableHead>Phone</TableHead>
 									<TableHead>Location</TableHead>
@@ -184,11 +183,6 @@ export function FuneralDirectorsList() {
 									<TableRow key={fd.id}>
 										<TableCell className="font-medium">
 											{fd.tradingName || fd.businessName}
-										</TableCell>
-										<TableCell>
-											{fd.branchName || (
-												<span className="text-muted-foreground">-</span>
-											)}
 										</TableCell>
 										<TableCell>
 											{fd.primaryEmail?.value || (
@@ -258,9 +252,6 @@ function FuneralDirectorCard({ funeralDirector: fd }: { funeralDirector: Funeral
 		<Card className="hover:shadow-md transition-shadow">
 			<CardHeader className="pb-3">
 				<CardTitle className="text-base">{displayName}</CardTitle>
-				{fd.branchName && (
-					<p className="text-sm text-muted-foreground">{fd.branchName}</p>
-				)}
 			</CardHeader>
 			<CardContent className="space-y-3">
 				<div className="flex flex-col gap-1.5 text-sm text-muted-foreground">
