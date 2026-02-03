@@ -17,6 +17,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from '@/components/ui/card';
+import { Pagination, usePagination } from '@/components/ui/pagination';
 import { CustomerFormDialog } from '@/components/customer/customer-form-dialog';
 import {
 	useCustomersQuery,
@@ -30,6 +31,8 @@ import { Search, List, LayoutGrid, Mail, Phone, MapPin } from 'lucide-react';
 type ViewMode = 'active' | 'archived';
 type DisplayMode = 'table' | 'cards';
 
+const ITEMS_PER_PAGE = 12;
+
 export function CustomersList() {
 	const [searchQuery, setSearchQuery] = useState('');
 	const [viewMode, setViewMode] = useState<ViewMode>('active');
@@ -37,11 +40,13 @@ export function CustomersList() {
 	const [debouncedSearch, setDebouncedSearch] = useState('');
 	const [formDialogOpen, setFormDialogOpen] = useState(false);
 	const [mutationError, setMutationError] = useState<string | null>(null);
+	const [currentPage, setCurrentPage] = useState(0);
 
 	// Debounce search
 	useMemo(() => {
 		const timer = setTimeout(() => {
 			setDebouncedSearch(searchQuery);
+			setCurrentPage(0); // Reset to first page on search
 		}, 300);
 		return () => clearTimeout(timer);
 	}, [searchQuery]);
@@ -50,6 +55,9 @@ export function CustomersList() {
 		q: debouncedSearch || undefined,
 		archivedOnly: viewMode === 'archived',
 	});
+
+	const { totalItems, totalPages, paginateItems } = usePagination(customers, ITEMS_PER_PAGE);
+	const paginatedCustomers = paginateItems(currentPage);
 
 	const createMutation = useCreateCustomerMutation();
 
@@ -71,6 +79,11 @@ export function CustomersList() {
 		}
 	};
 
+	const handleViewModeChange = (v: string) => {
+		setViewMode(v as ViewMode);
+		setCurrentPage(0);
+	};
+
 	if (isLoading) {
 		return <div className="text-muted-foreground">Loading customers...</div>;
 	}
@@ -87,7 +100,7 @@ export function CustomersList() {
 		<div>
 			<div className="flex justify-between items-center mb-4 gap-4">
 				<div className="flex items-center gap-4 flex-1">
-					<Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
+					<Tabs value={viewMode} onValueChange={handleViewModeChange}>
 						<TabsList>
 							<TabsTrigger value="active">Active</TabsTrigger>
 							<TabsTrigger value="archived">Archived</TabsTrigger>
@@ -141,62 +154,80 @@ export function CustomersList() {
 							: 'No customers yet. Add your first customer to get started.'}
 				</div>
 			) : displayMode === 'table' ? (
-				<div className="border rounded-lg">
-					<Table>
-						<TableHeader>
-							<TableRow>
-								<TableHead>Name</TableHead>
-								<TableHead>Email</TableHead>
-								<TableHead>Phone</TableHead>
-								<TableHead>Location</TableHead>
-								<TableHead className="w-[100px]">Actions</TableHead>
-							</TableRow>
-						</TableHeader>
-						<TableBody>
-							{customers?.map((customer) => (
-								<TableRow key={customer.id}>
-									<TableCell className="font-medium">
-										{customer.firstName} {customer.lastName}
-									</TableCell>
-									<TableCell>
-										{customer.primaryEmail?.value || (
-											<span className="text-muted-foreground">-</span>
-										)}
-									</TableCell>
-									<TableCell>
-										{customer.primaryPhone?.value || (
-											<span className="text-muted-foreground">-</span>
-										)}
-									</TableCell>
-									<TableCell>
-										{customer.primaryAddress ? (
-											<span>
-												{customer.primaryAddress.locality}
-												{customer.primaryAddress.administrativeAreaLevel1 &&
-													`, ${customer.primaryAddress.administrativeAreaLevel1}`}
-											</span>
-										) : (
-											<span className="text-muted-foreground">-</span>
-										)}
-									</TableCell>
-									<TableCell>
-										<Link to={`/app/customers/${customer.id}`}>
-											<Button variant="ghost" size="sm">
-												View
-											</Button>
-										</Link>
-									</TableCell>
+				<>
+					<div className="border rounded-lg">
+						<Table>
+							<TableHeader>
+								<TableRow>
+									<TableHead>Name</TableHead>
+									<TableHead>Email</TableHead>
+									<TableHead>Phone</TableHead>
+									<TableHead>Location</TableHead>
+									<TableHead className="w-[100px]">Actions</TableHead>
 								</TableRow>
-							))}
-						</TableBody>
-					</Table>
-				</div>
+							</TableHeader>
+							<TableBody>
+								{paginatedCustomers.map((customer) => (
+									<TableRow key={customer.id}>
+										<TableCell className="font-medium">
+											{customer.firstName} {customer.lastName}
+										</TableCell>
+										<TableCell>
+											{customer.primaryEmail?.value || (
+												<span className="text-muted-foreground">-</span>
+											)}
+										</TableCell>
+										<TableCell>
+											{customer.primaryPhone?.value || (
+												<span className="text-muted-foreground">-</span>
+											)}
+										</TableCell>
+										<TableCell>
+											{customer.primaryAddress ? (
+												<span>
+													{customer.primaryAddress.locality}
+													{customer.primaryAddress.administrativeAreaLevel1 &&
+														`, ${customer.primaryAddress.administrativeAreaLevel1}`}
+												</span>
+											) : (
+												<span className="text-muted-foreground">-</span>
+											)}
+										</TableCell>
+										<TableCell>
+											<Link to={`/app/customers/${customer.id}`}>
+												<Button variant="ghost" size="sm">
+													View
+												</Button>
+											</Link>
+										</TableCell>
+									</TableRow>
+								))}
+							</TableBody>
+						</Table>
+					</div>
+					<Pagination
+						currentPage={currentPage}
+						totalPages={totalPages}
+						totalItems={totalItems}
+						itemsPerPage={ITEMS_PER_PAGE}
+						onPageChange={setCurrentPage}
+					/>
+				</>
 			) : (
-				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-					{customers?.map((customer) => (
-						<CustomerCard key={customer.id} customer={customer} />
-					))}
-				</div>
+				<>
+					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+						{paginatedCustomers.map((customer) => (
+							<CustomerCard key={customer.id} customer={customer} />
+						))}
+					</div>
+					<Pagination
+						currentPage={currentPage}
+						totalPages={totalPages}
+						totalItems={totalItems}
+						itemsPerPage={ITEMS_PER_PAGE}
+						onPageChange={setCurrentPage}
+					/>
+				</>
 			)}
 
 			<CustomerFormDialog

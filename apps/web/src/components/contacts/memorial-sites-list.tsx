@@ -25,6 +25,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select';
+import { Pagination, usePagination } from '@/components/ui/pagination';
 import {
 	useMemorialSitesQuery,
 	SITE_TYPE_LABELS,
@@ -37,17 +38,21 @@ import { Search, Church, Flame, Building2, List, LayoutGrid, Phone, MapPin } fro
 type ViewMode = 'active' | 'archived';
 type DisplayMode = 'table' | 'cards';
 
+const ITEMS_PER_PAGE = 12;
+
 export function MemorialSitesList() {
 	const [searchQuery, setSearchQuery] = useState('');
 	const [viewMode, setViewMode] = useState<ViewMode>('active');
 	const [displayMode, setDisplayMode] = useState<DisplayMode>('cards');
 	const [siteTypeFilter, setSiteTypeFilter] = useState<MemorialSiteType | 'all'>('all');
 	const [debouncedSearch, setDebouncedSearch] = useState('');
+	const [currentPage, setCurrentPage] = useState(0);
 
 	// Debounce search
 	useMemo(() => {
 		const timer = setTimeout(() => {
 			setDebouncedSearch(searchQuery);
+			setCurrentPage(0); // Reset to first page on search
 		}, 300);
 		return () => clearTimeout(timer);
 	}, [searchQuery]);
@@ -57,6 +62,19 @@ export function MemorialSitesList() {
 		archivedOnly: viewMode === 'archived',
 		siteType: siteTypeFilter === 'all' ? undefined : siteTypeFilter,
 	});
+
+	const { totalItems, totalPages, paginateItems } = usePagination(memorialSites, ITEMS_PER_PAGE);
+	const paginatedMemorialSites = paginateItems(currentPage);
+
+	const handleViewModeChange = (v: string) => {
+		setViewMode(v as ViewMode);
+		setCurrentPage(0);
+	};
+
+	const handleSiteTypeChange = (v: string) => {
+		setSiteTypeFilter(v as MemorialSiteType | 'all');
+		setCurrentPage(0);
+	};
 
 	if (isLoading) {
 		return <div className="text-muted-foreground">Loading memorial sites...</div>;
@@ -74,7 +92,7 @@ export function MemorialSitesList() {
 		<div>
 			<div className="flex justify-between items-center mb-4 gap-4">
 				<div className="flex items-center gap-4 flex-1">
-					<Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
+					<Tabs value={viewMode} onValueChange={handleViewModeChange}>
 						<TabsList>
 							<TabsTrigger value="active">Active</TabsTrigger>
 							<TabsTrigger value="archived">Archived</TabsTrigger>
@@ -82,7 +100,7 @@ export function MemorialSitesList() {
 					</Tabs>
 					<Select
 						value={siteTypeFilter}
-						onValueChange={(v) => setSiteTypeFilter(v as MemorialSiteType | 'all')}
+						onValueChange={handleSiteTypeChange}
 					>
 						<SelectTrigger className="w-[180px]">
 							<SelectValue placeholder="All types" />
@@ -138,70 +156,88 @@ export function MemorialSitesList() {
 							: 'No memorial sites yet. Add your first memorial site to get started.'}
 				</div>
 			) : displayMode === 'table' ? (
-				<div className="border rounded-lg">
-					<Table>
-						<TableHeader>
-							<TableRow>
-								<TableHead>Name</TableHead>
-								<TableHead>Type</TableHead>
-								<TableHead>Details</TableHead>
-								<TableHead>Phone</TableHead>
-								<TableHead>Location</TableHead>
-								<TableHead className="w-[100px]">Actions</TableHead>
-							</TableRow>
-						</TableHeader>
-						<TableBody>
-							{memorialSites?.map((site) => (
-								<TableRow key={site.id}>
-									<TableCell className="font-medium">{site.name}</TableCell>
-									<TableCell>
-										<SiteTypeBadge siteType={site.siteType} />
-									</TableCell>
-									<TableCell>
-										{site.siteType === 'churchyard' && site.denomination ? (
-											<span>{DENOMINATION_LABELS[site.denomination]}</span>
-										) : site.siteType === 'crematorium' && site.operatorName ? (
-											<span>{site.operatorName}</span>
-										) : site.siteType === 'council_cemetery' && site.councilName ? (
-											<span>{site.councilName}</span>
-										) : (
-											<span className="text-muted-foreground">-</span>
-										)}
-									</TableCell>
-									<TableCell>
-										{site.primaryPhone?.value || (
-											<span className="text-muted-foreground">-</span>
-										)}
-									</TableCell>
-									<TableCell>
-										{site.primaryAddress ? (
-											<span>
-												{site.primaryAddress.locality}
-												{site.primaryAddress.administrativeAreaLevel1 &&
-													`, ${site.primaryAddress.administrativeAreaLevel1}`}
-											</span>
-										) : (
-											<span className="text-muted-foreground">-</span>
-										)}
-									</TableCell>
-									<TableCell>
-										<Link to={`/app/memorial-sites/${site.id}`}>
-											<Button variant="ghost" size="sm">
-												View
-											</Button>
-										</Link>
-									</TableCell>
+				<>
+					<div className="border rounded-lg">
+						<Table>
+							<TableHeader>
+								<TableRow>
+									<TableHead>Name</TableHead>
+									<TableHead>Type</TableHead>
+									<TableHead>Details</TableHead>
+									<TableHead>Phone</TableHead>
+									<TableHead>Location</TableHead>
+									<TableHead className="w-[100px]">Actions</TableHead>
 								</TableRow>
-							))}
-						</TableBody>
-					</Table>
-				</div>
+							</TableHeader>
+							<TableBody>
+								{paginatedMemorialSites.map((site) => (
+									<TableRow key={site.id}>
+										<TableCell className="font-medium">{site.name}</TableCell>
+										<TableCell>
+											<SiteTypeBadge siteType={site.siteType} />
+										</TableCell>
+										<TableCell>
+											{site.siteType === 'churchyard' && site.denomination ? (
+												<span>{DENOMINATION_LABELS[site.denomination]}</span>
+											) : site.siteType === 'crematorium' && site.operatorName ? (
+												<span>{site.operatorName}</span>
+											) : site.siteType === 'council_cemetery' && site.councilName ? (
+												<span>{site.councilName}</span>
+											) : (
+												<span className="text-muted-foreground">-</span>
+											)}
+										</TableCell>
+										<TableCell>
+											{site.primaryPhone?.value || (
+												<span className="text-muted-foreground">-</span>
+											)}
+										</TableCell>
+										<TableCell>
+											{site.primaryAddress ? (
+												<span>
+													{site.primaryAddress.locality}
+													{site.primaryAddress.administrativeAreaLevel1 &&
+														`, ${site.primaryAddress.administrativeAreaLevel1}`}
+												</span>
+											) : (
+												<span className="text-muted-foreground">-</span>
+											)}
+										</TableCell>
+										<TableCell>
+											<Link to={`/app/memorial-sites/${site.id}`}>
+												<Button variant="ghost" size="sm">
+													View
+												</Button>
+											</Link>
+										</TableCell>
+									</TableRow>
+								))}
+							</TableBody>
+						</Table>
+					</div>
+					<Pagination
+						currentPage={currentPage}
+						totalPages={totalPages}
+						totalItems={totalItems}
+						itemsPerPage={ITEMS_PER_PAGE}
+						onPageChange={setCurrentPage}
+					/>
+				</>
 			) : (
-				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-					{memorialSites?.map((site) => (
-						<MemorialSiteCard key={site.id} site={site} />
-					))}
-				</div>
+				<>
+					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+						{paginatedMemorialSites.map((site) => (
+							<MemorialSiteCard key={site.id} site={site} />
+						))}
+					</div>
+					<Pagination
+						currentPage={currentPage}
+						totalPages={totalPages}
+						totalItems={totalItems}
+						itemsPerPage={ITEMS_PER_PAGE}
+						onPageChange={setCurrentPage}
+					/>
+				</>
 			)}
 		</div>
 	);
