@@ -75,7 +75,7 @@ const emptyAddress: AddressInput = {
 	locality: '',
 	administrativeAreaLevel1: '',
 	postalCode: '',
-	country: 'US',
+	country: 'GB',
 	formattedAddress: '',
 	label: '',
 	isPrimary: false,
@@ -88,7 +88,7 @@ export function CustomerFormDialog({
 	customer,
 	isLoading,
 	error,
-	defaultCountry = 'US',
+	defaultCountry = 'GB',
 }: CustomerFormDialogProps) {
 	const [firstName, setFirstName] = useState('');
 	const [lastName, setLastName] = useState('');

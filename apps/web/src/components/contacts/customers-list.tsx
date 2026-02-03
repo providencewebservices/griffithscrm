@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router';
 import {
 	Table,
@@ -26,7 +26,7 @@ import {
 	type CustomerListItem,
 } from '@/hooks/use-customers';
 import { useTenantSettingsQuery } from '@/hooks/use-tenant-settings';
-import { Search, List, LayoutGrid, Mail, Phone, MapPin } from 'lucide-react';
+import { Search, List, LayoutGrid, Mail, Phone, MapPin, X, Plus } from 'lucide-react';
 
 type ViewMode = 'active' | 'archived';
 type DisplayMode = 'table' | 'cards';
@@ -43,7 +43,7 @@ export function CustomersList() {
 	const [currentPage, setCurrentPage] = useState(0);
 
 	// Debounce search
-	useMemo(() => {
+	useEffect(() => {
 		const timer = setTimeout(() => {
 			setDebouncedSearch(searchQuery);
 			setCurrentPage(0); // Reset to first page on search
@@ -62,7 +62,7 @@ export function CustomersList() {
 	const createMutation = useCreateCustomerMutation();
 
 	const { data: tenantSettings } = useTenantSettingsQuery();
-	const defaultCountry = tenantSettings?.address?.country || 'US';
+	const defaultCountry = tenantSettings?.address?.country || 'GB';
 
 	const handleAddCustomer = () => {
 		setMutationError(null);
@@ -98,44 +98,89 @@ export function CustomersList() {
 
 	return (
 		<div>
-			<div className="flex justify-between items-center mb-4 gap-4">
-				<div className="flex items-center gap-4 flex-1">
-					<Tabs value={viewMode} onValueChange={handleViewModeChange}>
-						<TabsList>
-							<TabsTrigger value="active">Active</TabsTrigger>
-							<TabsTrigger value="archived">Archived</TabsTrigger>
-						</TabsList>
-					</Tabs>
-					<div className="relative flex-1">
-						<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-						<Input
-							placeholder="Search by name, email, phone, or address..."
-							value={searchQuery}
-							onChange={(e) => setSearchQuery(e.target.value)}
-							className="pl-9"
-						/>
-					</div>
+			<div className="flex flex-col gap-3 mb-4">
+				{/* Mobile-only search row (full width) */}
+				<div className="relative w-full sm:hidden">
+					<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+					<Input
+						placeholder="Search customers..."
+						value={searchQuery}
+						onChange={(e) => setSearchQuery(e.target.value)}
+						className="pl-9 pr-9"
+						autoComplete="off"
+					/>
+					{searchQuery && (
+						<button
+							type="button"
+							onClick={() => setSearchQuery('')}
+							className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+						>
+							<X className="h-4 w-4" />
+						</button>
+					)}
 				</div>
-				<div className="flex items-center gap-2">
-					<div className="flex items-center border rounded-md">
-						<Button
-							variant={displayMode === 'table' ? 'secondary' : 'ghost'}
-							size="sm"
-							className="rounded-r-none"
-							onClick={() => setDisplayMode('table')}
-						>
-							<List className="h-4 w-4" />
+
+				{/* Controls row */}
+				<div className="flex items-center justify-between gap-2 sm:gap-4">
+					{/* Left: Tabs + Desktop search */}
+					<div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
+						<Tabs value={viewMode} onValueChange={handleViewModeChange}>
+							<TabsList>
+								<TabsTrigger value="active">Active</TabsTrigger>
+								<TabsTrigger value="archived">Archived</TabsTrigger>
+							</TabsList>
+						</Tabs>
+						{/* Desktop-only inline search */}
+						<div className="relative flex-1 hidden sm:block">
+							<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+							<Input
+								placeholder="Search customers..."
+								value={searchQuery}
+								onChange={(e) => setSearchQuery(e.target.value)}
+								className="pl-9 pr-9"
+								autoComplete="off"
+							/>
+							{searchQuery && (
+								<button
+									type="button"
+									onClick={() => setSearchQuery('')}
+									className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+								>
+									<X className="h-4 w-4" />
+								</button>
+							)}
+						</div>
+					</div>
+
+					{/* Right: Display toggle + Add */}
+					<div className="flex items-center gap-2 shrink-0">
+						{/* Display toggle - hidden on mobile */}
+						<div className="hidden sm:flex items-center border rounded-md">
+							<Button
+								variant={displayMode === 'table' ? 'secondary' : 'ghost'}
+								size="sm"
+								className="rounded-r-none"
+								onClick={() => setDisplayMode('table')}
+							>
+								<List className="h-4 w-4" />
+							</Button>
+							<Button
+								variant={displayMode === 'cards' ? 'secondary' : 'ghost'}
+								size="sm"
+								className="rounded-l-none"
+								onClick={() => setDisplayMode('cards')}
+							>
+								<LayoutGrid className="h-4 w-4" />
+							</Button>
+						</div>
+						{/* Add button - icon only on mobile */}
+						<Button size="icon" className="sm:hidden" onClick={handleAddCustomer}>
+							<Plus className="h-4 w-4" />
 						</Button>
-						<Button
-							variant={displayMode === 'cards' ? 'secondary' : 'ghost'}
-							size="sm"
-							className="rounded-l-none"
-							onClick={() => setDisplayMode('cards')}
-						>
-							<LayoutGrid className="h-4 w-4" />
+						<Button className="hidden sm:inline-flex" onClick={handleAddCustomer}>
+							Add Customer
 						</Button>
 					</div>
-					<Button onClick={handleAddCustomer}>Add Customer</Button>
 				</div>
 			</div>
 
