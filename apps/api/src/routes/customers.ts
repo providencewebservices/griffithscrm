@@ -56,6 +56,15 @@ const searchQuerySchema = z.object({
 	archivedOnly: z.enum(['true', 'false']).optional().default('false'),
 });
 
+const updateCommunicationPreferencesSchema = z.object({
+	preferredContactMethod: z.enum(['email', 'phone', 'mobile', 'post']).nullable().optional(),
+	preferredContactTime: z.enum(['morning', 'afternoon', 'evening']).nullable().optional(),
+	doNotCall: z.boolean().optional(),
+	doNotEmail: z.boolean().optional(),
+	doNotMail: z.boolean().optional(),
+	communicationNotes: z.string().nullable().optional(),
+});
+
 // Helper function to get customer with relations
 async function getCustomerWithRelations(customerId: string, tenantId: string) {
 	// Get customer
@@ -492,6 +501,62 @@ const customerRoutes = new Hono()
 			.returning();
 
 		return c.json({ customer: updated });
-	});
+	})
+
+	// Update communication preferences
+	.patch(
+		'/:id/preferences',
+		zValidator('json', updateCommunicationPreferencesSchema),
+		async (c) => {
+			const currentUser = c.get('user');
+			const tenantId = currentUser.tenantId!;
+			const customerId = c.req.param('id');
+			const preferences = c.req.valid('json');
+
+			// Check if customer exists and belongs to tenant
+			const [existing] = await db
+				.select()
+				.from(customers)
+				.where(and(eq(customers.id, customerId), eq(customers.tenantId, tenantId)))
+				.limit(1);
+
+			if (!existing) {
+				return c.json({ error: 'Customer not found' }, 404);
+			}
+
+			try {
+				const [updated] = await db
+					.update(customers)
+					.set({
+						...(preferences.preferredContactMethod !== undefined && {
+							preferredContactMethod: preferences.preferredContactMethod,
+						}),
+						...(preferences.preferredContactTime !== undefined && {
+							preferredContactTime: preferences.preferredContactTime,
+						}),
+						...(preferences.doNotCall !== undefined && {
+							doNotCall: preferences.doNotCall,
+						}),
+						...(preferences.doNotEmail !== undefined && {
+							doNotEmail: preferences.doNotEmail,
+						}),
+						...(preferences.doNotMail !== undefined && {
+							doNotMail: preferences.doNotMail,
+						}),
+						...(preferences.communicationNotes !== undefined && {
+							communicationNotes: preferences.communicationNotes,
+						}),
+						updatedAt: new Date(),
+					})
+					.where(eq(customers.id, customerId))
+					.returning();
+
+				return c.json({ customer: updated });
+			} catch (error) {
+				console.error('Error updating communication preferences:', error);
+				return c.json({ error: 'Failed to update communication preferences' }, 500);
+			}
+		}
+	);
 
 export { customerRoutes };

@@ -92,6 +92,13 @@
       "when": 1770132210030,
       "tag": "0012_unusual_whistler",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1770148548196,
+      "tag": "0013_uneven_night_thrasher",
+      "breakpoints": true
     }
   ]
 }

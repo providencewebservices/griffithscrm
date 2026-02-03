@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -25,6 +25,16 @@ import {
 	TableHeader,
 	TableRow,
 } from '@/components/ui/table';
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { CustomerFormDialog } from '@/components/customer/customer-form-dialog';
 import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
@@ -33,8 +43,11 @@ import {
 	useUpdateCustomerMutation,
 	useArchiveCustomerMutation,
 	useUnarchiveCustomerMutation,
+	useUpdateCommunicationPreferencesMutation,
 	type CustomerWithRelations,
 	type CreateCustomerInput,
+	type PreferredContactMethod,
+	type PreferredContactTime,
 } from '@/hooks/use-customers';
 import { useQuotesQuery, formatPriceRange, formatQuoteNumberWithOptions } from '@/hooks/use-quotes';
 import { useTenantSettingsQuery } from '@/hooks/use-tenant-settings';
@@ -47,6 +60,7 @@ import {
 	Bell,
 	Clock,
 	ArrowLeft,
+	Check,
 } from 'lucide-react';
 import { DocumentsCard } from '@/components/documents';
 
@@ -58,6 +72,15 @@ export function CustomerDetailPage() {
 	const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
 	const [mutationError, setMutationError] = useState<string | null>(null);
 
+	// Communication preferences state
+	const [preferredContactMethod, setPreferredContactMethod] = useState<PreferredContactMethod | null>(null);
+	const [preferredContactTime, setPreferredContactTime] = useState<PreferredContactTime | null>(null);
+	const [doNotCall, setDoNotCall] = useState(false);
+	const [doNotEmail, setDoNotEmail] = useState(false);
+	const [doNotMail, setDoNotMail] = useState(false);
+	const [communicationNotes, setCommunicationNotes] = useState('');
+	const [preferencesSaved, setPreferencesSaved] = useState(false);
+
 	const { data: customer, isLoading, error } = useCustomerQuery(id || '');
 	const { data: tenantSettings } = useTenantSettingsQuery();
 	const { data: customerQuotes, isLoading: quotesLoading } = useQuotesQuery(
@@ -66,8 +89,51 @@ export function CustomerDetailPage() {
 	const updateMutation = useUpdateCustomerMutation();
 	const archiveMutation = useArchiveCustomerMutation();
 	const unarchiveMutation = useUnarchiveCustomerMutation();
+	const updatePreferencesMutation = useUpdateCommunicationPreferencesMutation();
 
 	const defaultCountry = tenantSettings?.address?.country || 'US';
+
+	// Sync form state with customer data
+	useEffect(() => {
+		if (customer) {
+			setPreferredContactMethod(customer.preferredContactMethod);
+			setPreferredContactTime(customer.preferredContactTime);
+			setDoNotCall(customer.doNotCall);
+			setDoNotEmail(customer.doNotEmail);
+			setDoNotMail(customer.doNotMail);
+			setCommunicationNotes(customer.communicationNotes || '');
+		}
+	}, [customer]);
+
+	// Check if preferences have changed
+	const preferencesChanged = customer && (
+		preferredContactMethod !== customer.preferredContactMethod ||
+		preferredContactTime !== customer.preferredContactTime ||
+		doNotCall !== customer.doNotCall ||
+		doNotEmail !== customer.doNotEmail ||
+		doNotMail !== customer.doNotMail ||
+		communicationNotes !== (customer.communicationNotes || '')
+	);
+
+	const handleSavePreferences = async () => {
+		if (!id) return;
+		setPreferencesSaved(false);
+		try {
+			await updatePreferencesMutation.mutateAsync({
+				id,
+				preferredContactMethod,
+				preferredContactTime,
+				doNotCall,
+				doNotEmail,
+				doNotMail,
+				communicationNotes: communicationNotes || null,
+			});
+			setPreferencesSaved(true);
+			setTimeout(() => setPreferencesSaved(false), 3000);
+		} catch (err) {
+			setMutationError(err instanceof Error ? err.message : 'Failed to save preferences');
+		}
+	};
 
 	// Format currency
 	const formatCurrency = (amount: string) => {
@@ -359,45 +425,132 @@ export function CustomerDetailPage() {
 			{/* Communication Preferences */}
 			<Card className="mt-6">
 				<CardHeader>
-					<CardTitle className="flex items-center gap-2">
-						<Bell className="h-5 w-5" />
-						Communication Preferences
-					</CardTitle>
-					<CardDescription>
-						How this customer prefers to be contacted
-					</CardDescription>
+					<div className="flex items-center justify-between">
+						<div>
+							<CardTitle className="flex items-center gap-2">
+								<Bell className="h-5 w-5" />
+								Communication Preferences
+							</CardTitle>
+							<CardDescription>
+								How this customer prefers to be contacted
+							</CardDescription>
+						</div>
+						<div className="flex items-center gap-2">
+							{preferencesSaved && (
+								<span className="text-sm text-green-600 flex items-center gap-1">
+									<Check className="h-4 w-4" />
+									Preferences saved
+								</span>
+							)}
+							{preferencesChanged && (
+								<Button
+									onClick={handleSavePreferences}
+									disabled={updatePreferencesMutation.isPending}
+									size="sm"
+								>
+									{updatePreferencesMutation.isPending ? 'Saving...' : 'Save Changes'}
+								</Button>
+							)}
+						</div>
+					</div>
 				</CardHeader>
-				<CardContent>
-					<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-						<div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30">
-							<Mail className="h-5 w-5 text-muted-foreground" />
-							<div>
-								<p className="text-sm font-medium">Email</p>
-								<p className="text-xs text-muted-foreground">
-									{getEmailContacts().length > 0 ? 'Available' : 'Not provided'}
-								</p>
+				<CardContent className="space-y-6">
+					<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+						<div className="space-y-2">
+							<Label htmlFor="preferred-contact-method">Preferred Contact Method</Label>
+							<Select
+								value={preferredContactMethod || 'none'}
+								onValueChange={(value) =>
+									setPreferredContactMethod(value === 'none' ? null : (value as PreferredContactMethod))
+								}
+							>
+								<SelectTrigger id="preferred-contact-method">
+									<SelectValue placeholder="No preference" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="none">No preference</SelectItem>
+									<SelectItem value="email">Email</SelectItem>
+									<SelectItem value="phone">Phone</SelectItem>
+									<SelectItem value="mobile">Mobile</SelectItem>
+									<SelectItem value="post">Post</SelectItem>
+								</SelectContent>
+							</Select>
+						</div>
+						<div className="space-y-2">
+							<Label htmlFor="preferred-contact-time">Best Time to Contact</Label>
+							<Select
+								value={preferredContactTime || 'none'}
+								onValueChange={(value) =>
+									setPreferredContactTime(value === 'none' ? null : (value as PreferredContactTime))
+								}
+							>
+								<SelectTrigger id="preferred-contact-time">
+									<SelectValue placeholder="Any time" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="none">Any time</SelectItem>
+									<SelectItem value="morning">Morning (9am - 12pm)</SelectItem>
+									<SelectItem value="afternoon">Afternoon (12pm - 5pm)</SelectItem>
+									<SelectItem value="evening">Evening (5pm - 8pm)</SelectItem>
+								</SelectContent>
+							</Select>
+						</div>
+					</div>
+
+					<div className="space-y-3">
+						<Label>Contact Restrictions</Label>
+						<div className="flex flex-wrap gap-6">
+							<div className="flex items-center space-x-2">
+								<Checkbox
+									id="do-not-call"
+									checked={doNotCall}
+									onCheckedChange={(checked) => setDoNotCall(checked === true)}
+								/>
+								<label
+									htmlFor="do-not-call"
+									className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+								>
+									Do not call
+								</label>
+							</div>
+							<div className="flex items-center space-x-2">
+								<Checkbox
+									id="do-not-email"
+									checked={doNotEmail}
+									onCheckedChange={(checked) => setDoNotEmail(checked === true)}
+								/>
+								<label
+									htmlFor="do-not-email"
+									className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+								>
+									Do not email
+								</label>
+							</div>
+							<div className="flex items-center space-x-2">
+								<Checkbox
+									id="do-not-mail"
+									checked={doNotMail}
+									onCheckedChange={(checked) => setDoNotMail(checked === true)}
+								/>
+								<label
+									htmlFor="do-not-mail"
+									className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+								>
+									Do not mail
+								</label>
 							</div>
 						</div>
-						<div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30">
-							<Phone className="h-5 w-5 text-muted-foreground" />
-							<div>
-								<p className="text-sm font-medium">Phone</p>
-								<p className="text-xs text-muted-foreground">
-									{getPhoneContacts().length > 0 ? 'Available' : 'Not provided'}
-								</p>
-							</div>
-						</div>
-						<div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30">
-							<MessageSquare className="h-5 w-5 text-muted-foreground" />
-							<div>
-								<p className="text-sm font-medium">SMS/WhatsApp</p>
-								<p className="text-xs text-muted-foreground">
-									{getPhoneContacts().some((c) => c.type === 'mobile')
-										? 'Available'
-										: 'Not provided'}
-								</p>
-							</div>
-						</div>
+					</div>
+
+					<div className="space-y-2">
+						<Label htmlFor="communication-notes">Special Instructions</Label>
+						<Textarea
+							id="communication-notes"
+							placeholder="E.g., Call on weekdays only, prefers text messages..."
+							value={communicationNotes}
+							onChange={(e) => setCommunicationNotes(e.target.value)}
+							rows={3}
+						/>
 					</div>
 				</CardContent>
 			</Card>

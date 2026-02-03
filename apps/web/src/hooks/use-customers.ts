@@ -33,11 +33,21 @@ export type Address = {
 	updatedAt: string;
 };
 
+export type PreferredContactMethod = 'email' | 'phone' | 'mobile' | 'post';
+export type PreferredContactTime = 'morning' | 'afternoon' | 'evening';
+
 export type Customer = {
 	id: string;
 	firstName: string;
 	lastName: string;
 	tenantId: string;
+	// Communication Preferences
+	preferredContactMethod: PreferredContactMethod | null;
+	preferredContactTime: PreferredContactTime | null;
+	doNotCall: boolean;
+	doNotEmail: boolean;
+	doNotMail: boolean;
+	communicationNotes: string | null;
 	archivedAt: string | null;
 	createdAt: string;
 	updatedAt: string;
@@ -103,6 +113,15 @@ export type UpdateCustomerInput = {
 export type CustomerSearchParams = {
 	q?: string;
 	archivedOnly?: boolean;
+};
+
+export type CommunicationPreferencesInput = {
+	preferredContactMethod?: PreferredContactMethod | null;
+	preferredContactTime?: PreferredContactTime | null;
+	doNotCall?: boolean;
+	doNotEmail?: boolean;
+	doNotMail?: boolean;
+	communicationNotes?: string | null;
 };
 
 // Fetch functions
@@ -207,6 +226,26 @@ async function unarchiveCustomer(id: string): Promise<Customer> {
 	return data.customer;
 }
 
+async function updateCommunicationPreferences({
+	id,
+	...input
+}: CommunicationPreferencesInput & { id: string }): Promise<Customer> {
+	const response = await fetch(`${API_URL}/api/customers/${id}/preferences`, {
+		method: 'PATCH',
+		headers: { 'Content-Type': 'application/json' },
+		credentials: 'include',
+		body: JSON.stringify(input),
+	});
+
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.error || 'Failed to update communication preferences');
+	}
+
+	const data: { customer: Customer } = await response.json();
+	return data.customer;
+}
+
 // React Query hooks
 export function useCustomersQuery(params?: CustomerSearchParams) {
 	return useQuery({
@@ -265,6 +304,18 @@ export function useUnarchiveCustomerMutation() {
 		mutationFn: unarchiveCustomer,
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ['customers'] });
+		},
+	});
+}
+
+export function useUpdateCommunicationPreferencesMutation() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: updateCommunicationPreferences,
+		onSuccess: (data) => {
+			queryClient.invalidateQueries({ queryKey: ['customers'] });
+			queryClient.invalidateQueries({ queryKey: ['customer', data.id] });
 		},
 	});
 }

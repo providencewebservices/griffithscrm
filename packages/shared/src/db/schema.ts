@@ -68,6 +68,10 @@ export const verifications = pgTable('verifications', {
 	updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
+// Communication preferences options
+export const PREFERRED_CONTACT_METHODS = ['email', 'phone', 'mobile', 'post'] as const;
+export const PREFERRED_CONTACT_TIMES = ['morning', 'afternoon', 'evening'] as const;
+
 // Customers table (tenant-scoped)
 export const customers = pgTable('customers', {
 	id: text('id').primaryKey(),
@@ -76,6 +80,13 @@ export const customers = pgTable('customers', {
 	tenantId: text('tenant_id')
 		.notNull()
 		.references(() => tenants.id, { onDelete: 'cascade' }),
+	// Communication Preferences
+	preferredContactMethod: text('preferred_contact_method'), // email, phone, mobile, post, or null
+	preferredContactTime: text('preferred_contact_time'), // morning, afternoon, evening, or null
+	doNotCall: boolean('do_not_call').notNull().default(false),
+	doNotEmail: boolean('do_not_email').notNull().default(false),
+	doNotMail: boolean('do_not_mail').notNull().default(false),
+	communicationNotes: text('communication_notes'),
 	archivedAt: timestamp('archived_at'),
 	createdAt: timestamp('created_at').notNull().defaultNow(),
 	updatedAt: timestamp('updated_at').notNull().defaultNow(),
