@@ -249,11 +249,11 @@ function FuneralDirectorCard({ funeralDirector: fd }: { funeralDirector: Funeral
 	const displayName = fd.tradingName || fd.businessName;
 
 	return (
-		<Card className="hover:shadow-md transition-shadow">
+		<Card className="h-full hover:shadow-md transition-shadow">
 			<CardHeader className="pb-3">
 				<CardTitle className="text-base">{displayName}</CardTitle>
 			</CardHeader>
-			<CardContent className="space-y-3">
+			<CardContent className="flex flex-col flex-1">
 				<div className="flex flex-col gap-1.5 text-sm text-muted-foreground">
 					{fd.primaryEmail?.value && (
 						<div className="flex items-center gap-2">
@@ -285,7 +285,7 @@ function FuneralDirectorCard({ funeralDirector: fd }: { funeralDirector: Funeral
 					)}
 				</div>
 
-				<div className="pt-2">
+				<div className="mt-auto pt-3">
 					<Link to={`/app/funeral-directors/${fd.id}`}>
 						<Button variant="outline" size="sm" className="w-full">
 							View Details

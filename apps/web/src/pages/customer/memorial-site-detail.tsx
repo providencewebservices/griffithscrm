@@ -24,7 +24,6 @@ import {
 	useArchiveMemorialSiteMutation,
 	useUnarchiveMemorialSiteMutation,
 	SITE_TYPE_LABELS,
-	DENOMINATION_LABELS,
 } from '@/hooks/use-memorial-sites';
 import {
 	Mail,
@@ -34,9 +33,7 @@ import {
 	Church,
 	Flame,
 	Building2,
-	FileText,
-	CheckCircle,
-	XCircle,
+	Building,
 } from 'lucide-react';
 import { DocumentsCard } from '@/components/documents';
 
@@ -119,20 +116,17 @@ export function MemorialSiteDetailPage() {
 	const getPhoneContacts = () =>
 		site.contactInfo.filter((c) => c.type === 'phone' || c.type === 'mobile');
 
-	const isChurchyard = site.siteType === 'churchyard';
-	const isCrematorium = site.siteType === 'crematorium';
-	const isCouncilCemetery = site.siteType === 'council_cemetery';
-
 	const getSiteTypeIcon = () => {
-		if (isChurchyard) return <Church className="h-3 w-3" />;
-		if (isCouncilCemetery) return <Building2 className="h-3 w-3" />;
+		if (site.siteType === 'churchyard') return <Church className="h-3 w-3" />;
+		if (site.siteType === 'council_cemetery') return <Building2 className="h-3 w-3" />;
+		if (site.siteType === 'chapel') return <Building className="h-3 w-3" />;
 		return <Flame className="h-3 w-3" />;
 	};
 
 	const getBadgeVariant = () => {
-		if (isChurchyard) return 'default';
-		if (isCouncilCemetery) return 'outline';
-		return 'secondary';
+		if (site.siteType === 'churchyard' || site.siteType === 'chapel') return 'default';
+		if (site.siteType === 'council_cemetery') return 'outline';
+		return 'secondary'; // crematorium uses secondary
 	};
 
 	return (
@@ -166,21 +160,6 @@ export function MemorialSiteDetailPage() {
 							<Badge variant="outline">Archived</Badge>
 						) : null}
 					</div>
-					{isChurchyard && site.denomination && (
-						<p className="text-muted-foreground mt-1">
-							{DENOMINATION_LABELS[site.denomination]}
-						</p>
-					)}
-					{isCrematorium && site.operatorName && (
-						<p className="text-muted-foreground mt-1">
-							Operated by: {site.operatorName}
-						</p>
-					)}
-					{isCouncilCemetery && site.councilName && (
-						<p className="text-muted-foreground mt-1">
-							Managed by: {site.councilName}
-						</p>
-					)}
 				</div>
 				<div className="flex gap-2">
 					<Link to={`/app/memorial-sites/${id}/edit`}>
@@ -312,280 +291,6 @@ export function MemorialSiteDetailPage() {
 					</CardContent>
 				</Card>
 			</div>
-
-			{/* Site-specific details */}
-			{isChurchyard && (
-				<Card className="mt-6">
-					<CardHeader>
-						<CardTitle className="flex items-center gap-2">
-							<Church className="h-5 w-5" />
-							Churchyard Details
-						</CardTitle>
-						<CardDescription>
-							Church-specific information and requirements
-						</CardDescription>
-					</CardHeader>
-					<CardContent>
-						<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-							{site.denomination && (
-								<div>
-									<p className="text-sm font-medium mb-1">Denomination</p>
-									<p>{DENOMINATION_LABELS[site.denomination]}</p>
-								</div>
-							)}
-							{site.diocese && (
-								<div>
-									<p className="text-sm font-medium mb-1">Diocese</p>
-									<p>{site.diocese}</p>
-								</div>
-							)}
-							{site.parish && (
-								<div>
-									<p className="text-sm font-medium mb-1">Parish</p>
-									<p>{site.parish}</p>
-								</div>
-							)}
-							<div>
-								<p className="text-sm font-medium mb-1">Churchyard Status</p>
-								<div className="flex items-center gap-2">
-									{site.churchyardOpen ? (
-										<>
-											<CheckCircle className="h-4 w-4 text-green-600" />
-											<span>Open</span>
-										</>
-									) : site.churchyardOpen === false ? (
-										<>
-											<XCircle className="h-4 w-4 text-amber-600" />
-											<span>Closed</span>
-										</>
-									) : (
-										<span className="text-muted-foreground">Unknown</span>
-									)}
-								</div>
-							</div>
-							<div>
-								<p className="text-sm font-medium mb-1">Faculty Required</p>
-								<div className="flex items-center gap-2">
-									{site.facultyRequired ? (
-										<>
-											<CheckCircle className="h-4 w-4 text-amber-600" />
-											<span>Yes</span>
-										</>
-									) : site.facultyRequired === false ? (
-										<>
-											<XCircle className="h-4 w-4 text-green-600" />
-											<span>No</span>
-										</>
-									) : (
-										<span className="text-muted-foreground">Unknown</span>
-									)}
-								</div>
-							</div>
-						</div>
-					</CardContent>
-				</Card>
-			)}
-
-			{isCrematorium && (
-				<Card className="mt-6">
-					<CardHeader>
-						<CardTitle className="flex items-center gap-2">
-							<Flame className="h-5 w-5" />
-							Crematorium Details
-						</CardTitle>
-						<CardDescription>
-							Crematorium-specific information and services
-						</CardDescription>
-					</CardHeader>
-					<CardContent>
-						<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-							{site.operatorName && (
-								<div>
-									<p className="text-sm font-medium mb-1">Operator</p>
-									<p>{site.operatorName}</p>
-								</div>
-							)}
-							<div>
-								<p className="text-sm font-medium mb-1">Memorial Garden</p>
-								<div className="flex items-center gap-2">
-									{site.hasMemorialGarden ? (
-										<>
-											<CheckCircle className="h-4 w-4 text-green-600" />
-											<span>Yes</span>
-										</>
-									) : site.hasMemorialGarden === false ? (
-										<>
-											<XCircle className="h-4 w-4 text-muted-foreground" />
-											<span>No</span>
-										</>
-									) : (
-										<span className="text-muted-foreground">Unknown</span>
-									)}
-								</div>
-							</div>
-							<div>
-								<p className="text-sm font-medium mb-1">Plaques Offered</p>
-								<div className="flex items-center gap-2">
-									{site.plaquesOffered ? (
-										<>
-											<CheckCircle className="h-4 w-4 text-green-600" />
-											<span>Yes</span>
-										</>
-									) : site.plaquesOffered === false ? (
-										<>
-											<XCircle className="h-4 w-4 text-muted-foreground" />
-											<span>No</span>
-										</>
-									) : (
-										<span className="text-muted-foreground">Unknown</span>
-									)}
-								</div>
-							</div>
-							<div>
-								<p className="text-sm font-medium mb-1">Preferred Supplier</p>
-								<div className="flex items-center gap-2">
-									{site.preferredSupplier ? (
-										<>
-											<CheckCircle className="h-4 w-4 text-green-600" />
-											<span>Yes</span>
-										</>
-									) : site.preferredSupplier === false ? (
-										<>
-											<XCircle className="h-4 w-4 text-muted-foreground" />
-											<span>No</span>
-										</>
-									) : (
-										<span className="text-muted-foreground">Unknown</span>
-									)}
-								</div>
-							</div>
-						</div>
-						{site.memorialOptions && (
-							<div className="mt-6">
-								<p className="text-sm font-medium mb-1">Memorial Options</p>
-								<p className="whitespace-pre-wrap">{site.memorialOptions}</p>
-							</div>
-						)}
-					</CardContent>
-				</Card>
-			)}
-
-			{isCouncilCemetery && (
-				<Card className="mt-6">
-					<CardHeader>
-						<CardTitle className="flex items-center gap-2">
-							<Building2 className="h-5 w-5" />
-							Council Cemetery Details
-						</CardTitle>
-						<CardDescription>
-							Council-specific information and requirements
-						</CardDescription>
-					</CardHeader>
-					<CardContent>
-						<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-							{site.councilName && (
-								<div>
-									<p className="text-sm font-medium mb-1">Council</p>
-									<p>{site.councilName}</p>
-								</div>
-							)}
-							{site.cemeteryName && (
-								<div>
-									<p className="text-sm font-medium mb-1">Cemetery Name</p>
-									<p>{site.cemeteryName}</p>
-								</div>
-							)}
-							{site.department && (
-								<div>
-									<p className="text-sm font-medium mb-1">Department</p>
-									<p>{site.department}</p>
-								</div>
-							)}
-							<div>
-								<p className="text-sm font-medium mb-1">Permit Required</p>
-								<div className="flex items-center gap-2">
-									{site.permitRequired ? (
-										<>
-											<CheckCircle className="h-4 w-4 text-amber-600" />
-											<span>Yes</span>
-										</>
-									) : site.permitRequired === false ? (
-										<>
-											<XCircle className="h-4 w-4 text-green-600" />
-											<span>No</span>
-										</>
-									) : (
-										<span className="text-muted-foreground">Unknown</span>
-									)}
-								</div>
-							</div>
-							{site.permitFee && (
-								<div>
-									<p className="text-sm font-medium mb-1">Permit Fee</p>
-									<p>£{site.permitFee}</p>
-								</div>
-							)}
-							{site.maxHeadstoneHeight && (
-								<div>
-									<p className="text-sm font-medium mb-1">Max Headstone Height</p>
-									<p>{site.maxHeadstoneHeight}</p>
-								</div>
-							)}
-							{site.maxHeadstoneWidth && (
-								<div>
-									<p className="text-sm font-medium mb-1">Max Headstone Width</p>
-									<p>{site.maxHeadstoneWidth}</p>
-								</div>
-							)}
-						</div>
-						{(site.foundationSpec || site.installationRules) && (
-							<div className="mt-6 space-y-4">
-								{site.foundationSpec && (
-									<div>
-										<p className="text-sm font-medium mb-1">Foundation Specification</p>
-										<p className="whitespace-pre-wrap">{site.foundationSpec}</p>
-									</div>
-								)}
-								{site.installationRules && (
-									<div>
-										<p className="text-sm font-medium mb-1">Installation Rules</p>
-										<p className="whitespace-pre-wrap">{site.installationRules}</p>
-									</div>
-								)}
-							</div>
-						)}
-					</CardContent>
-				</Card>
-			)}
-
-			{/* Regulations (common to both types) */}
-			{(site.memorialRegulations || site.approvedMaterials) && (
-				<Card className="mt-6">
-					<CardHeader>
-						<CardTitle className="flex items-center gap-2">
-							<FileText className="h-5 w-5" />
-							Regulations & Requirements
-						</CardTitle>
-						<CardDescription>
-							Memorial regulations and approved materials
-						</CardDescription>
-					</CardHeader>
-					<CardContent className="space-y-6">
-						{site.memorialRegulations && (
-							<div>
-								<p className="text-sm font-medium mb-1">Memorial Regulations</p>
-								<p className="whitespace-pre-wrap">{site.memorialRegulations}</p>
-							</div>
-						)}
-						{site.approvedMaterials && (
-							<div>
-								<p className="text-sm font-medium mb-1">Approved Materials</p>
-								<p className="whitespace-pre-wrap">{site.approvedMaterials}</p>
-							</div>
-						)}
-					</CardContent>
-				</Card>
-			)}
 
 			{site.notes && (
 				<Card className="mt-6">

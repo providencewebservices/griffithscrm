@@ -31,18 +31,16 @@ import {
 	FieldGroup,
 	FieldLabel,
 } from '@/components/ui/field';
-import { Plus, Trash2, Church, Flame, Building2 } from 'lucide-react';
+import { Plus, Trash2, Church, Flame, Building2, Building } from 'lucide-react';
 import {
 	useMemorialSiteQuery,
 	useCreateMemorialSiteMutation,
 	useUpdateMemorialSiteMutation,
 	SITE_TYPE_LABELS,
-	DENOMINATION_LABELS,
 	type CreateMemorialSiteInput,
 	type ContactInfoInput,
 	type AddressInput,
 	type MemorialSiteType,
-	type ChurchDenomination,
 } from '@/hooks/use-memorial-sites';
 
 const CONTACT_TYPES = [
@@ -84,34 +82,7 @@ export function MemorialSiteFormPage() {
 	// Common fields
 	const [name, setName] = useState('');
 	const [siteType, setSiteType] = useState<MemorialSiteType>('churchyard');
-	const [memorialRegulations, setMemorialRegulations] = useState('');
-	const [approvedMaterials, setApprovedMaterials] = useState('');
 	const [notes, setNotes] = useState('');
-
-	// Churchyard-specific fields
-	const [denomination, setDenomination] = useState<ChurchDenomination | ''>('');
-	const [diocese, setDiocese] = useState('');
-	const [parish, setParish] = useState('');
-	const [churchyardOpen, setChurchyardOpen] = useState<boolean | null>(null);
-	const [facultyRequired, setFacultyRequired] = useState<boolean | null>(null);
-
-	// Crematorium-specific fields
-	const [operatorName, setOperatorName] = useState('');
-	const [hasMemorialGarden, setHasMemorialGarden] = useState<boolean | null>(null);
-	const [plaquesOffered, setPlaquesOffered] = useState<boolean | null>(null);
-	const [memorialOptions, setMemorialOptions] = useState('');
-	const [preferredSupplier, setPreferredSupplier] = useState<boolean | null>(null);
-
-	// Council cemetery-specific fields
-	const [councilName, setCouncilName] = useState('');
-	const [cemeteryName, setCemeteryName] = useState('');
-	const [department, setDepartment] = useState('');
-	const [permitRequired, setPermitRequired] = useState<boolean | null>(null);
-	const [permitFee, setPermitFee] = useState('');
-	const [foundationSpec, setFoundationSpec] = useState('');
-	const [maxHeadstoneHeight, setMaxHeadstoneHeight] = useState('');
-	const [maxHeadstoneWidth, setMaxHeadstoneWidth] = useState('');
-	const [installationRules, setInstallationRules] = useState('');
 
 	const [contacts, setContacts] = useState<ContactInfoInput[]>([]);
 	const [addresses, setAddresses] = useState<AddressInput[]>([]);
@@ -121,34 +92,7 @@ export function MemorialSiteFormPage() {
 		if (existingData) {
 			setName(existingData.name);
 			setSiteType(existingData.siteType);
-			setMemorialRegulations(existingData.memorialRegulations || '');
-			setApprovedMaterials(existingData.approvedMaterials || '');
 			setNotes(existingData.notes || '');
-
-			// Churchyard fields
-			setDenomination(existingData.denomination || '');
-			setDiocese(existingData.diocese || '');
-			setParish(existingData.parish || '');
-			setChurchyardOpen(existingData.churchyardOpen);
-			setFacultyRequired(existingData.facultyRequired);
-
-			// Crematorium fields
-			setOperatorName(existingData.operatorName || '');
-			setHasMemorialGarden(existingData.hasMemorialGarden);
-			setPlaquesOffered(existingData.plaquesOffered);
-			setMemorialOptions(existingData.memorialOptions || '');
-			setPreferredSupplier(existingData.preferredSupplier);
-
-			// Council cemetery fields
-			setCouncilName(existingData.councilName || '');
-			setCemeteryName(existingData.cemeteryName || '');
-			setDepartment(existingData.department || '');
-			setPermitRequired(existingData.permitRequired);
-			setPermitFee(existingData.permitFee || '');
-			setFoundationSpec(existingData.foundationSpec || '');
-			setMaxHeadstoneHeight(existingData.maxHeadstoneHeight || '');
-			setMaxHeadstoneWidth(existingData.maxHeadstoneWidth || '');
-			setInstallationRules(existingData.installationRules || '');
 
 			setContacts(
 				existingData.contactInfo.map((c) => ({
@@ -181,37 +125,10 @@ export function MemorialSiteFormPage() {
 		const data: CreateMemorialSiteInput = {
 			name,
 			siteType,
-			memorialRegulations: memorialRegulations || undefined,
-			approvedMaterials: approvedMaterials || undefined,
 			notes: notes || undefined,
 			contactInfo: contacts.filter((c) => c.value.trim()),
 			addresses: addresses.filter((a) => a.formattedAddress.trim()),
 		};
-
-		// Add site-type-specific fields
-		if (siteType === 'churchyard') {
-			data.denomination = denomination || undefined;
-			data.diocese = diocese || undefined;
-			data.parish = parish || undefined;
-			data.churchyardOpen = churchyardOpen ?? undefined;
-			data.facultyRequired = facultyRequired ?? undefined;
-		} else if (siteType === 'crematorium') {
-			data.operatorName = operatorName || undefined;
-			data.hasMemorialGarden = hasMemorialGarden ?? undefined;
-			data.plaquesOffered = plaquesOffered ?? undefined;
-			data.memorialOptions = memorialOptions || undefined;
-			data.preferredSupplier = preferredSupplier ?? undefined;
-		} else if (siteType === 'council_cemetery') {
-			data.councilName = councilName || undefined;
-			data.cemeteryName = cemeteryName || undefined;
-			data.department = department || undefined;
-			data.permitRequired = permitRequired ?? undefined;
-			data.permitFee = permitFee || undefined;
-			data.foundationSpec = foundationSpec || undefined;
-			data.maxHeadstoneHeight = maxHeadstoneHeight || undefined;
-			data.maxHeadstoneWidth = maxHeadstoneWidth || undefined;
-			data.installationRules = installationRules || undefined;
-		}
 
 		try {
 			if (isEditing && id) {
@@ -264,9 +181,6 @@ export function MemorialSiteFormPage() {
 	};
 
 	const isLoading = createMutation.isPending || updateMutation.isPending;
-	const isChurchyard = siteType === 'churchyard';
-	const isCrematorium = siteType === 'crematorium';
-	const isCouncilCemetery = siteType === 'council_cemetery';
 
 	if (isEditing && isLoadingData) {
 		return (
@@ -363,293 +277,16 @@ export function MemorialSiteFormPage() {
 														{SITE_TYPE_LABELS.council_cemetery}
 													</div>
 												</SelectItem>
+												<SelectItem value="chapel">
+													<div className="flex items-center gap-2">
+														<Building className="h-4 w-4" />
+														{SITE_TYPE_LABELS.chapel}
+													</div>
+												</SelectItem>
 											</SelectContent>
 										</Select>
 									</Field>
 								</div>
-							</FieldGroup>
-						</CardContent>
-					</Card>
-
-					{/* Churchyard-specific fields */}
-					{isChurchyard && (
-						<Card>
-							<CardHeader>
-								<CardTitle className="flex items-center gap-2">
-									<Church className="h-5 w-5" />
-									Churchyard Details
-								</CardTitle>
-								<CardDescription>Church-specific information</CardDescription>
-							</CardHeader>
-							<CardContent>
-								<FieldGroup>
-									<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-										<Field>
-											<FieldLabel htmlFor="denomination">Denomination</FieldLabel>
-											<Select
-												value={denomination}
-												onValueChange={(v) => setDenomination(v as ChurchDenomination)}
-											>
-												<SelectTrigger>
-													<SelectValue placeholder="Select denomination..." />
-												</SelectTrigger>
-												<SelectContent>
-													{Object.entries(DENOMINATION_LABELS).map(([value, label]) => (
-														<SelectItem key={value} value={value}>
-															{label}
-														</SelectItem>
-													))}
-												</SelectContent>
-											</Select>
-										</Field>
-										<Field>
-											<FieldLabel htmlFor="diocese">Diocese</FieldLabel>
-											<Input
-												id="diocese"
-												value={diocese}
-												onChange={(e) => setDiocese(e.target.value)}
-												placeholder="e.g., Diocese of Chester"
-											/>
-										</Field>
-									</div>
-									<Field>
-										<FieldLabel htmlFor="parish">Parish</FieldLabel>
-										<Input
-											id="parish"
-											value={parish}
-											onChange={(e) => setParish(e.target.value)}
-											placeholder="e.g., Parish of St Mary"
-										/>
-									</Field>
-									<div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-										<label className="flex items-center gap-3 cursor-pointer">
-											<Checkbox
-												id="churchyardOpen"
-												checked={churchyardOpen === true}
-												onCheckedChange={(checked: boolean) => setChurchyardOpen(checked)}
-											/>
-											<span className="text-sm font-medium">
-												Churchyard Open for Burials
-											</span>
-										</label>
-										<label className="flex items-center gap-3 cursor-pointer">
-											<Checkbox
-												id="facultyRequired"
-												checked={facultyRequired === true}
-												onCheckedChange={(checked: boolean) => setFacultyRequired(checked)}
-											/>
-											<span className="text-sm font-medium">
-												Faculty Required
-											</span>
-										</label>
-									</div>
-								</FieldGroup>
-							</CardContent>
-						</Card>
-					)}
-
-					{/* Crematorium-specific fields */}
-					{isCrematorium && (
-						<Card>
-							<CardHeader>
-								<CardTitle className="flex items-center gap-2">
-									<Flame className="h-5 w-5" />
-									Crematorium Details
-								</CardTitle>
-								<CardDescription>Crematorium-specific information</CardDescription>
-							</CardHeader>
-							<CardContent>
-								<FieldGroup>
-									<Field>
-										<FieldLabel htmlFor="operatorName">Operator Name</FieldLabel>
-										<Input
-											id="operatorName"
-											value={operatorName}
-											onChange={(e) => setOperatorName(e.target.value)}
-											placeholder="e.g., Dignity Funerals Ltd"
-										/>
-									</Field>
-									<div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-										<label className="flex items-center gap-3 cursor-pointer">
-											<Checkbox
-												id="hasMemorialGarden"
-												checked={hasMemorialGarden === true}
-												onCheckedChange={(checked: boolean) => setHasMemorialGarden(checked)}
-											/>
-											<span className="text-sm font-medium">
-												Has Memorial Garden
-											</span>
-										</label>
-										<label className="flex items-center gap-3 cursor-pointer">
-											<Checkbox
-												id="plaquesOffered"
-												checked={plaquesOffered === true}
-												onCheckedChange={(checked: boolean) => setPlaquesOffered(checked)}
-											/>
-											<span className="text-sm font-medium">
-												Plaques Offered
-											</span>
-										</label>
-										<label className="flex items-center gap-3 cursor-pointer">
-											<Checkbox
-												id="preferredSupplier"
-												checked={preferredSupplier === true}
-												onCheckedChange={(checked: boolean) => setPreferredSupplier(checked)}
-											/>
-											<span className="text-sm font-medium">
-												We Are Preferred Supplier
-											</span>
-										</label>
-									</div>
-									<Field>
-										<FieldLabel htmlFor="memorialOptions">Memorial Options Available</FieldLabel>
-										<Textarea
-											id="memorialOptions"
-											value={memorialOptions}
-											onChange={(e) => setMemorialOptions(e.target.value)}
-											placeholder="e.g., Wall plaques, Book of Remembrance, Memorial trees..."
-											rows={3}
-										/>
-									</Field>
-								</FieldGroup>
-							</CardContent>
-						</Card>
-					)}
-
-					{/* Council Cemetery-specific fields */}
-					{isCouncilCemetery && (
-						<Card>
-							<CardHeader>
-								<CardTitle className="flex items-center gap-2">
-									<Building2 className="h-5 w-5" />
-									Council Cemetery Details
-								</CardTitle>
-								<CardDescription>Council and cemetery information</CardDescription>
-							</CardHeader>
-							<CardContent>
-								<FieldGroup>
-									<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-										<Field>
-											<FieldLabel htmlFor="councilName">Council Name</FieldLabel>
-											<Input
-												id="councilName"
-												value={councilName}
-												onChange={(e) => setCouncilName(e.target.value)}
-												placeholder="e.g., Chester City Council"
-											/>
-										</Field>
-										<Field>
-											<FieldLabel htmlFor="cemeteryName">Cemetery Name</FieldLabel>
-											<Input
-												id="cemeteryName"
-												value={cemeteryName}
-												onChange={(e) => setCemeteryName(e.target.value)}
-												placeholder="e.g., Blacon Cemetery"
-											/>
-										</Field>
-									</div>
-									<Field>
-										<FieldLabel htmlFor="department">Department</FieldLabel>
-										<Input
-											id="department"
-											value={department}
-											onChange={(e) => setDepartment(e.target.value)}
-											placeholder="e.g., Bereavement Services"
-										/>
-									</Field>
-									<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-										<label className="flex items-center gap-3 cursor-pointer pt-2">
-											<Checkbox
-												id="permitRequired"
-												checked={permitRequired === true}
-												onCheckedChange={(checked: boolean) => setPermitRequired(checked)}
-											/>
-											<span className="text-sm font-medium">
-												Permit Required for Memorial Work
-											</span>
-										</label>
-										<Field>
-											<FieldLabel htmlFor="permitFee">Permit Fee (£)</FieldLabel>
-											<Input
-												id="permitFee"
-												value={permitFee}
-												onChange={(e) => setPermitFee(e.target.value)}
-												placeholder="e.g., 150.00"
-											/>
-										</Field>
-									</div>
-									<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-										<Field>
-											<FieldLabel htmlFor="maxHeadstoneHeight">Max Headstone Height</FieldLabel>
-											<Input
-												id="maxHeadstoneHeight"
-												value={maxHeadstoneHeight}
-												onChange={(e) => setMaxHeadstoneHeight(e.target.value)}
-												placeholder="e.g., 3ft 6in"
-											/>
-										</Field>
-										<Field>
-											<FieldLabel htmlFor="maxHeadstoneWidth">Max Headstone Width</FieldLabel>
-											<Input
-												id="maxHeadstoneWidth"
-												value={maxHeadstoneWidth}
-												onChange={(e) => setMaxHeadstoneWidth(e.target.value)}
-												placeholder="e.g., 3ft"
-											/>
-										</Field>
-									</div>
-									<Field>
-										<FieldLabel htmlFor="foundationSpec">Foundation Specification</FieldLabel>
-										<Textarea
-											id="foundationSpec"
-											value={foundationSpec}
-											onChange={(e) => setFoundationSpec(e.target.value)}
-											placeholder="Foundation requirements for memorials..."
-											rows={3}
-										/>
-									</Field>
-									<Field>
-										<FieldLabel htmlFor="installationRules">Installation Rules</FieldLabel>
-										<Textarea
-											id="installationRules"
-											value={installationRules}
-											onChange={(e) => setInstallationRules(e.target.value)}
-											placeholder="Specific installation requirements..."
-											rows={3}
-										/>
-									</Field>
-								</FieldGroup>
-							</CardContent>
-						</Card>
-					)}
-
-					<Card>
-						<CardHeader>
-							<CardTitle>Regulations & Requirements</CardTitle>
-							<CardDescription>Memorial regulations for this site</CardDescription>
-						</CardHeader>
-						<CardContent>
-							<FieldGroup>
-								<Field>
-									<FieldLabel htmlFor="memorialRegulations">Memorial Regulations</FieldLabel>
-									<Textarea
-										id="memorialRegulations"
-										value={memorialRegulations}
-										onChange={(e) => setMemorialRegulations(e.target.value)}
-										placeholder="e.g., Size restrictions, design guidelines..."
-										rows={4}
-									/>
-								</Field>
-								<Field>
-									<FieldLabel htmlFor="approvedMaterials">Approved Materials</FieldLabel>
-									<Textarea
-										id="approvedMaterials"
-										value={approvedMaterials}
-										onChange={(e) => setApprovedMaterials(e.target.value)}
-										placeholder="e.g., Granite, Marble, Slate..."
-										rows={3}
-									/>
-								</Field>
 							</FieldGroup>
 						</CardContent>
 					</Card>

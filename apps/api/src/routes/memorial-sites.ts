@@ -11,7 +11,6 @@ import {
 	memorialSiteContactInfo,
 	memorialSiteAddresses,
 	MEMORIAL_SITE_TYPES,
-	CHURCH_DENOMINATIONS,
 } from '@griffiths-crm/shared/db/schema';
 
 // Validation schemas
@@ -42,31 +41,6 @@ const addressSchema = z.object({
 const createMemorialSiteSchema = z.object({
 	name: z.string().min(1, 'Name is required'),
 	siteType: z.enum(MEMORIAL_SITE_TYPES),
-	// Churchyard fields
-	denomination: z.enum(CHURCH_DENOMINATIONS).optional(),
-	diocese: z.string().optional(),
-	parish: z.string().optional(),
-	churchyardOpen: z.boolean().optional(),
-	facultyRequired: z.boolean().optional(),
-	// Crematorium fields
-	operatorName: z.string().optional(),
-	hasMemorialGarden: z.boolean().optional(),
-	plaquesOffered: z.boolean().optional(),
-	memorialOptions: z.string().optional(),
-	preferredSupplier: z.boolean().optional(),
-	// Council cemetery fields
-	councilName: z.string().optional(),
-	cemeteryName: z.string().optional(),
-	department: z.string().optional(),
-	permitRequired: z.boolean().optional(),
-	permitFee: z.string().optional(),
-	foundationSpec: z.string().optional(),
-	maxHeadstoneHeight: z.string().optional(),
-	maxHeadstoneWidth: z.string().optional(),
-	installationRules: z.string().optional(),
-	// Common fields
-	memorialRegulations: z.string().optional(),
-	approvedMaterials: z.string().optional(),
 	notes: z.string().optional(),
 	contactInfo: z.array(contactInfoSchema).optional().default([]),
 	addresses: z.array(addressSchema).optional().default([]),
@@ -75,31 +49,6 @@ const createMemorialSiteSchema = z.object({
 const updateMemorialSiteSchema = z.object({
 	name: z.string().min(1, 'Name is required').optional(),
 	siteType: z.enum(MEMORIAL_SITE_TYPES).optional(),
-	// Churchyard fields
-	denomination: z.enum(CHURCH_DENOMINATIONS).nullable().optional(),
-	diocese: z.string().nullable().optional(),
-	parish: z.string().nullable().optional(),
-	churchyardOpen: z.boolean().nullable().optional(),
-	facultyRequired: z.boolean().nullable().optional(),
-	// Crematorium fields
-	operatorName: z.string().nullable().optional(),
-	hasMemorialGarden: z.boolean().nullable().optional(),
-	plaquesOffered: z.boolean().nullable().optional(),
-	memorialOptions: z.string().nullable().optional(),
-	preferredSupplier: z.boolean().nullable().optional(),
-	// Council cemetery fields
-	councilName: z.string().nullable().optional(),
-	cemeteryName: z.string().nullable().optional(),
-	department: z.string().nullable().optional(),
-	permitRequired: z.boolean().nullable().optional(),
-	permitFee: z.string().nullable().optional(),
-	foundationSpec: z.string().nullable().optional(),
-	maxHeadstoneHeight: z.string().nullable().optional(),
-	maxHeadstoneWidth: z.string().nullable().optional(),
-	installationRules: z.string().nullable().optional(),
-	// Common fields
-	memorialRegulations: z.string().nullable().optional(),
-	approvedMaterials: z.string().nullable().optional(),
 	notes: z.string().nullable().optional(),
 	contactInfo: z.array(contactInfoSchema).optional(),
 	addresses: z.array(addressSchema).optional(),
@@ -174,14 +123,7 @@ const memorialSitesRoutes = new Hono()
 			const searchTerm = `%${q.trim().toLowerCase()}%`;
 
 			const nameMatches = allSites
-				.filter(
-					(s) =>
-						s.name.toLowerCase().includes(q.toLowerCase()) ||
-						s.parish?.toLowerCase().includes(q.toLowerCase()) ||
-						s.operatorName?.toLowerCase().includes(q.toLowerCase()) ||
-						s.councilName?.toLowerCase().includes(q.toLowerCase()) ||
-						s.cemeteryName?.toLowerCase().includes(q.toLowerCase())
-				)
+				.filter((s) => s.name.toLowerCase().includes(q.toLowerCase()))
 				.map((s) => s.id);
 
 			const contactMatches = await db
@@ -289,31 +231,6 @@ const memorialSitesRoutes = new Hono()
 				tenantId,
 				name: data.name,
 				siteType: data.siteType,
-				// Churchyard fields
-				denomination: data.denomination || null,
-				diocese: data.diocese || null,
-				parish: data.parish || null,
-				churchyardOpen: data.churchyardOpen ?? null,
-				facultyRequired: data.facultyRequired ?? null,
-				// Crematorium fields
-				operatorName: data.operatorName || null,
-				hasMemorialGarden: data.hasMemorialGarden ?? null,
-				plaquesOffered: data.plaquesOffered ?? null,
-				memorialOptions: data.memorialOptions || null,
-				preferredSupplier: data.preferredSupplier ?? null,
-				// Council cemetery fields
-				councilName: data.councilName || null,
-				cemeteryName: data.cemeteryName || null,
-				department: data.department || null,
-				permitRequired: data.permitRequired ?? null,
-				permitFee: data.permitFee || null,
-				foundationSpec: data.foundationSpec || null,
-				maxHeadstoneHeight: data.maxHeadstoneHeight || null,
-				maxHeadstoneWidth: data.maxHeadstoneWidth || null,
-				installationRules: data.installationRules || null,
-				// Common fields
-				memorialRegulations: data.memorialRegulations || null,
-				approvedMaterials: data.approvedMaterials || null,
 				notes: data.notes || null,
 				createdAt: now,
 				updatedAt: now,
@@ -396,31 +313,6 @@ const memorialSitesRoutes = new Hono()
 			const updateData: Record<string, unknown> = { updatedAt: now };
 			if (updates.name !== undefined) updateData.name = updates.name;
 			if (updates.siteType !== undefined) updateData.siteType = updates.siteType;
-			// Churchyard fields
-			if (updates.denomination !== undefined) updateData.denomination = updates.denomination;
-			if (updates.diocese !== undefined) updateData.diocese = updates.diocese;
-			if (updates.parish !== undefined) updateData.parish = updates.parish;
-			if (updates.churchyardOpen !== undefined) updateData.churchyardOpen = updates.churchyardOpen;
-			if (updates.facultyRequired !== undefined) updateData.facultyRequired = updates.facultyRequired;
-			// Crematorium fields
-			if (updates.operatorName !== undefined) updateData.operatorName = updates.operatorName;
-			if (updates.hasMemorialGarden !== undefined) updateData.hasMemorialGarden = updates.hasMemorialGarden;
-			if (updates.plaquesOffered !== undefined) updateData.plaquesOffered = updates.plaquesOffered;
-			if (updates.memorialOptions !== undefined) updateData.memorialOptions = updates.memorialOptions;
-			if (updates.preferredSupplier !== undefined) updateData.preferredSupplier = updates.preferredSupplier;
-			// Council cemetery fields
-			if (updates.councilName !== undefined) updateData.councilName = updates.councilName;
-			if (updates.cemeteryName !== undefined) updateData.cemeteryName = updates.cemeteryName;
-			if (updates.department !== undefined) updateData.department = updates.department;
-			if (updates.permitRequired !== undefined) updateData.permitRequired = updates.permitRequired;
-			if (updates.permitFee !== undefined) updateData.permitFee = updates.permitFee;
-			if (updates.foundationSpec !== undefined) updateData.foundationSpec = updates.foundationSpec;
-			if (updates.maxHeadstoneHeight !== undefined) updateData.maxHeadstoneHeight = updates.maxHeadstoneHeight;
-			if (updates.maxHeadstoneWidth !== undefined) updateData.maxHeadstoneWidth = updates.maxHeadstoneWidth;
-			if (updates.installationRules !== undefined) updateData.installationRules = updates.installationRules;
-			// Common fields
-			if (updates.memorialRegulations !== undefined) updateData.memorialRegulations = updates.memorialRegulations;
-			if (updates.approvedMaterials !== undefined) updateData.approvedMaterials = updates.approvedMaterials;
 			if (updates.notes !== undefined) updateData.notes = updates.notes;
 
 			await db.update(memorialSites).set(updateData).where(eq(memorialSites.id, id));

@@ -33,51 +33,13 @@ export type Address = {
 	updatedAt: string;
 };
 
-export type MemorialSiteType = 'churchyard' | 'crematorium' | 'council_cemetery';
-
-export type ChurchDenomination =
-	| 'church_of_england'
-	| 'catholic'
-	| 'methodist'
-	| 'baptist'
-	| 'presbyterian'
-	| 'quaker'
-	| 'jewish'
-	| 'muslim'
-	| 'hindu'
-	| 'sikh'
-	| 'other';
+export type MemorialSiteType = 'churchyard' | 'crematorium' | 'council_cemetery' | 'chapel';
 
 export type MemorialSite = {
 	id: string;
 	tenantId: string;
 	name: string;
 	siteType: MemorialSiteType;
-	// Churchyard fields
-	denomination: ChurchDenomination | null;
-	diocese: string | null;
-	parish: string | null;
-	churchyardOpen: boolean | null;
-	facultyRequired: boolean | null;
-	// Crematorium fields
-	operatorName: string | null;
-	hasMemorialGarden: boolean | null;
-	plaquesOffered: boolean | null;
-	memorialOptions: string | null;
-	preferredSupplier: boolean | null;
-	// Council cemetery fields
-	councilName: string | null;
-	cemeteryName: string | null;
-	department: string | null;
-	permitRequired: boolean | null;
-	permitFee: string | null;
-	foundationSpec: string | null;
-	maxHeadstoneHeight: string | null;
-	maxHeadstoneWidth: string | null;
-	installationRules: string | null;
-	// Common fields
-	memorialRegulations: string | null;
-	approvedMaterials: string | null;
 	notes: string | null;
 	isActive: boolean;
 	archivedAt: string | null;
@@ -123,31 +85,6 @@ export type AddressInput = {
 export type CreateMemorialSiteInput = {
 	name: string;
 	siteType: MemorialSiteType;
-	// Churchyard fields
-	denomination?: ChurchDenomination;
-	diocese?: string;
-	parish?: string;
-	churchyardOpen?: boolean;
-	facultyRequired?: boolean;
-	// Crematorium fields
-	operatorName?: string;
-	hasMemorialGarden?: boolean;
-	plaquesOffered?: boolean;
-	memorialOptions?: string;
-	preferredSupplier?: boolean;
-	// Council cemetery fields
-	councilName?: string;
-	cemeteryName?: string;
-	department?: string;
-	permitRequired?: boolean;
-	permitFee?: string;
-	foundationSpec?: string;
-	maxHeadstoneHeight?: string;
-	maxHeadstoneWidth?: string;
-	installationRules?: string;
-	// Common fields
-	memorialRegulations?: string;
-	approvedMaterials?: string;
 	notes?: string;
 	contactInfo?: ContactInfoInput[];
 	addresses?: AddressInput[];
@@ -329,18 +266,5 @@ export const SITE_TYPE_LABELS: Record<MemorialSiteType, string> = {
 	churchyard: 'Churchyard',
 	crematorium: 'Crematorium',
 	council_cemetery: 'Council Cemetery',
-};
-
-export const DENOMINATION_LABELS: Record<ChurchDenomination, string> = {
-	church_of_england: 'Church of England',
-	catholic: 'Catholic',
-	methodist: 'Methodist',
-	baptist: 'Baptist',
-	presbyterian: 'Presbyterian',
-	quaker: 'Quaker',
-	jewish: 'Jewish',
-	muslim: 'Muslim',
-	hindu: 'Hindu',
-	sikh: 'Sikh',
-	other: 'Other',
+	chapel: 'Chapel',
 };

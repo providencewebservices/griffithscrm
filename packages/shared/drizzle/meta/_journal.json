@@ -113,6 +113,20 @@
       "when": 1770149820347,
       "tag": "0015_omniscient_chronomancer",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1770162321878,
+      "tag": "0016_parched_betty_ross",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1770163305881,
+      "tag": "0017_complex_living_lightning",
+      "breakpoints": true
     }
   ]
 }

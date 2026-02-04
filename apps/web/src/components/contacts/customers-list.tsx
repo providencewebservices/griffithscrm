@@ -293,11 +293,11 @@ function CustomerCard({ customer }: { customer: CustomerListItem }) {
 	const hasLocation = customer.primaryAddress?.locality;
 
 	return (
-		<Card className="hover:shadow-md transition-shadow">
+		<Card className="h-full hover:shadow-md transition-shadow">
 			<CardHeader className="pb-3">
 				<CardTitle className="text-base">{fullName}</CardTitle>
 			</CardHeader>
-			<CardContent className="space-y-3">
+			<CardContent className="flex flex-col flex-1">
 				<div className="flex flex-col gap-1.5 text-sm text-muted-foreground">
 					{customer.primaryEmail?.value && (
 						<div className="flex items-center gap-2">
@@ -323,7 +323,7 @@ function CustomerCard({ customer }: { customer: CustomerListItem }) {
 					)}
 				</div>
 
-				<div className="pt-2">
+				<div className="mt-auto pt-3">
 					<Link to={`/app/customers/${customer.id}`}>
 						<Button variant="outline" size="sm" className="w-full">
 							View Details

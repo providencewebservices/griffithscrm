@@ -29,11 +29,10 @@ import { Pagination, usePagination } from '@/components/ui/pagination';
 import {
 	useMemorialSitesQuery,
 	SITE_TYPE_LABELS,
-	DENOMINATION_LABELS,
 	type MemorialSiteType,
 	type MemorialSiteListItem,
 } from '@/hooks/use-memorial-sites';
-import { Search, Church, Flame, Building2, List, LayoutGrid, Phone, MapPin, X, Plus } from 'lucide-react';
+import { Search, Church, Flame, Building2, Building, List, LayoutGrid, Phone, MapPin, X, Plus } from 'lucide-react';
 
 type ViewMode = 'active' | 'archived';
 type DisplayMode = 'table' | 'cards';
@@ -134,6 +133,7 @@ export function MemorialSitesList() {
 								<SelectItem value="churchyard">Churchyards</SelectItem>
 								<SelectItem value="crematorium">Crematoria</SelectItem>
 								<SelectItem value="council_cemetery">Council Cemeteries</SelectItem>
+								<SelectItem value="chapel">Chapels</SelectItem>
 							</SelectContent>
 						</Select>
 						{/* Desktop-only inline search */}
@@ -208,7 +208,6 @@ export function MemorialSitesList() {
 								<TableRow>
 									<TableHead>Name</TableHead>
 									<TableHead>Type</TableHead>
-									<TableHead>Details</TableHead>
 									<TableHead>Phone</TableHead>
 									<TableHead>Location</TableHead>
 									<TableHead className="w-[100px]">Actions</TableHead>
@@ -220,17 +219,6 @@ export function MemorialSitesList() {
 										<TableCell className="font-medium">{site.name}</TableCell>
 										<TableCell>
 											<SiteTypeBadge siteType={site.siteType} />
-										</TableCell>
-										<TableCell>
-											{site.siteType === 'churchyard' && site.denomination ? (
-												<span>{DENOMINATION_LABELS[site.denomination]}</span>
-											) : site.siteType === 'crematorium' && site.operatorName ? (
-												<span>{site.operatorName}</span>
-											) : site.siteType === 'council_cemetery' && site.councilName ? (
-												<span>{site.councilName}</span>
-											) : (
-												<span className="text-muted-foreground">-</span>
-											)}
 										</TableCell>
 										<TableCell>
 											{site.primaryPhone?.value || (
@@ -289,51 +277,43 @@ export function MemorialSitesList() {
 }
 
 function SiteTypeBadge({ siteType }: { siteType: MemorialSiteType }) {
+	const getVariant = () => {
+		if (siteType === 'churchyard') return 'default';
+		if (siteType === 'council_cemetery') return 'outline';
+		return 'secondary'; // crematorium and chapel both use secondary
+	};
+
+	const getIcon = () => {
+		switch (siteType) {
+			case 'churchyard':
+				return <Church className="h-3 w-3" />;
+			case 'council_cemetery':
+				return <Building2 className="h-3 w-3" />;
+			case 'chapel':
+				return <Building className="h-3 w-3" />;
+			default:
+				return <Flame className="h-3 w-3" />;
+		}
+	};
+
 	return (
-		<Badge
-			variant={siteType === 'churchyard' ? 'default' : siteType === 'council_cemetery' ? 'outline' : 'secondary'}
-			className="gap-1"
-		>
-			{siteType === 'churchyard' ? (
-				<Church className="h-3 w-3" />
-			) : siteType === 'council_cemetery' ? (
-				<Building2 className="h-3 w-3" />
-			) : (
-				<Flame className="h-3 w-3" />
-			)}
+		<Badge variant={getVariant()} className="gap-1">
+			{getIcon()}
 			{SITE_TYPE_LABELS[siteType]}
 		</Badge>
 	);
 }
 
 function MemorialSiteCard({ site }: { site: MemorialSiteListItem }) {
-	const getDetail = () => {
-		if (site.siteType === 'churchyard' && site.denomination) {
-			return DENOMINATION_LABELS[site.denomination];
-		}
-		if (site.siteType === 'crematorium' && site.operatorName) {
-			return site.operatorName;
-		}
-		if (site.siteType === 'council_cemetery' && site.councilName) {
-			return site.councilName;
-		}
-		return null;
-	};
-
-	const detail = getDetail();
-
 	return (
-		<Card className="hover:shadow-md transition-shadow">
+		<Card className="h-full hover:shadow-md transition-shadow">
 			<CardHeader className="pb-3">
 				<div className="flex items-start justify-between gap-2">
 					<CardTitle className="text-base">{site.name}</CardTitle>
 					<SiteTypeBadge siteType={site.siteType} />
 				</div>
-				{detail && (
-					<p className="text-sm text-muted-foreground">{detail}</p>
-				)}
 			</CardHeader>
-			<CardContent className="space-y-3">
+			<CardContent className="flex flex-col flex-1">
 				<div className="flex flex-col gap-1.5 text-sm text-muted-foreground">
 					{site.primaryPhone?.value && (
 						<div className="flex items-center gap-2">
@@ -359,7 +339,7 @@ function MemorialSiteCard({ site }: { site: MemorialSiteListItem }) {
 					)}
 				</div>
 
-				<div className="pt-2">
+				<div className="mt-auto pt-3">
 					<Link to={`/app/memorial-sites/${site.id}`}>
 						<Button variant="outline" size="sm" className="w-full">
 							View Details
