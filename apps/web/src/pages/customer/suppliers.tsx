@@ -205,7 +205,7 @@ export function SuppliersPage() {
 
 function SupplierCard({ supplier }: { supplier: SupplierListItem }) {
 	const displayName = supplier.tradingName || supplier.businessName;
-	const hasLocation = supplier.primaryAddress?.locality;
+	const hasLocation = supplier.primaryAddress?.formattedAddress;
 
 	return (
 		<Card className="hover:shadow-md transition-shadow">
@@ -239,9 +239,13 @@ function SupplierCard({ supplier }: { supplier: SupplierListItem }) {
 						</div>
 					)}
 					{hasLocation && (
-						<div className="flex items-center gap-2">
-							<MapPin className="h-3.5 w-3.5" />
-							<span>{supplier.primaryAddress?.locality}</span>
+						<div className="flex gap-2">
+							<MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+							<div className="flex flex-col">
+								{supplier.primaryAddress?.formattedAddress?.split(', ').map((part, i) => (
+									<span key={i}>{part}</span>
+								))}
+							</div>
 						</div>
 					)}
 				</div>

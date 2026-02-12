@@ -228,12 +228,12 @@ export function CustomersList() {
 											)}
 										</TableCell>
 										<TableCell>
-											{customer.primaryAddress ? (
-												<span>
-													{customer.primaryAddress.locality}
-													{customer.primaryAddress.administrativeAreaLevel1 &&
-														`, ${customer.primaryAddress.administrativeAreaLevel1}`}
-												</span>
+											{customer.primaryAddress?.formattedAddress ? (
+												<div className="flex flex-col">
+													{customer.primaryAddress.formattedAddress.split(', ').map((part, i) => (
+														<span key={i}>{part}</span>
+													))}
+												</div>
 											) : (
 												<span className="text-muted-foreground">-</span>
 											)}
@@ -290,7 +290,7 @@ export function CustomersList() {
 
 function CustomerCard({ customer }: { customer: CustomerListItem }) {
 	const fullName = `${customer.firstName} ${customer.lastName}`;
-	const hasLocation = customer.primaryAddress?.locality;
+	const hasLocation = customer.primaryAddress?.formattedAddress;
 
 	return (
 		<Card className="h-full hover:shadow-md transition-shadow">
@@ -312,13 +312,13 @@ function CustomerCard({ customer }: { customer: CustomerListItem }) {
 						</div>
 					)}
 					{hasLocation && (
-						<div className="flex items-center gap-2">
-							<MapPin className="h-3.5 w-3.5" />
-							<span>
-								{customer.primaryAddress?.locality}
-								{customer.primaryAddress?.administrativeAreaLevel1 &&
-									`, ${customer.primaryAddress.administrativeAreaLevel1}`}
-							</span>
+						<div className="flex gap-2">
+							<MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+							<div className="flex flex-col">
+								{customer.primaryAddress?.formattedAddress?.split(', ').map((part, i) => (
+									<span key={i}>{part}</span>
+								))}
+							</div>
 						</div>
 					)}
 				</div>

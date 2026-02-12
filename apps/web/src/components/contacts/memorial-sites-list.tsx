@@ -226,12 +226,12 @@ export function MemorialSitesList() {
 											)}
 										</TableCell>
 										<TableCell>
-											{site.primaryAddress ? (
-												<span>
-													{site.primaryAddress.locality}
-													{site.primaryAddress.administrativeAreaLevel1 &&
-														`, ${site.primaryAddress.administrativeAreaLevel1}`}
-												</span>
+											{site.primaryAddress?.formattedAddress ? (
+												<div className="flex flex-col">
+													{site.primaryAddress.formattedAddress.split(', ').map((part, i) => (
+														<span key={i}>{part}</span>
+													))}
+												</div>
 											) : (
 												<span className="text-muted-foreground">-</span>
 											)}
@@ -322,13 +322,13 @@ function MemorialSiteCard({ site }: { site: MemorialSiteListItem }) {
 						</div>
 					)}
 					{site.primaryAddress && (
-						<div className="flex items-center gap-2">
-							<MapPin className="h-3.5 w-3.5" />
-							<span>
-								{site.primaryAddress.locality}
-								{site.primaryAddress.administrativeAreaLevel1 &&
-									`, ${site.primaryAddress.administrativeAreaLevel1}`}
-							</span>
+						<div className="flex gap-2">
+							<MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+							<div className="flex flex-col">
+								{site.primaryAddress.formattedAddress?.split(', ').map((part, i) => (
+									<span key={i}>{part}</span>
+								))}
+							</div>
 						</div>
 					)}
 					{!site.primaryPhone?.value && !site.primaryAddress && (

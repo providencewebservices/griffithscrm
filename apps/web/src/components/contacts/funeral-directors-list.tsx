@@ -195,12 +195,12 @@ export function FuneralDirectorsList() {
 											)}
 										</TableCell>
 										<TableCell>
-											{fd.primaryAddress ? (
-												<span>
-													{fd.primaryAddress.locality}
-													{fd.primaryAddress.administrativeAreaLevel1 &&
-														`, ${fd.primaryAddress.administrativeAreaLevel1}`}
-												</span>
+											{fd.primaryAddress?.formattedAddress ? (
+												<div className="flex flex-col">
+													{fd.primaryAddress.formattedAddress.split(', ').map((part, i) => (
+														<span key={i}>{part}</span>
+													))}
+												</div>
 											) : (
 												<span className="text-muted-foreground">-</span>
 											)}
@@ -268,13 +268,13 @@ function FuneralDirectorCard({ funeralDirector: fd }: { funeralDirector: Funeral
 						</div>
 					)}
 					{fd.primaryAddress && (
-						<div className="flex items-center gap-2">
-							<MapPin className="h-3.5 w-3.5" />
-							<span>
-								{fd.primaryAddress.locality}
-								{fd.primaryAddress.administrativeAreaLevel1 &&
-									`, ${fd.primaryAddress.administrativeAreaLevel1}`}
-							</span>
+						<div className="flex gap-2">
+							<MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+							<div className="flex flex-col">
+								{fd.primaryAddress.formattedAddress?.split(', ').map((part, i) => (
+									<span key={i}>{part}</span>
+								))}
+							</div>
 						</div>
 					)}
 					{!fd.primaryEmail?.value && !fd.primaryPhone?.value && !fd.primaryAddress && (
