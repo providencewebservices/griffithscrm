@@ -11,6 +11,7 @@ import {
 	memorialSiteContactInfo,
 	memorialSiteAddresses,
 	MEMORIAL_SITE_TYPES,
+	MEMORIAL_SITE_PAYMENT_METHODS,
 } from '@griffiths-crm/shared/db/schema';
 
 // Validation schemas
@@ -41,6 +42,8 @@ const addressSchema = z.object({
 const createMemorialSiteSchema = z.object({
 	name: z.string().min(1, 'Name is required'),
 	siteType: z.enum(MEMORIAL_SITE_TYPES),
+	preferredPaymentMethod: z.enum(MEMORIAL_SITE_PAYMENT_METHODS).nullable().optional(),
+	paymentDetails: z.string().nullable().optional(),
 	notes: z.string().optional(),
 	contactInfo: z.array(contactInfoSchema).optional().default([]),
 	addresses: z.array(addressSchema).optional().default([]),
@@ -49,6 +52,8 @@ const createMemorialSiteSchema = z.object({
 const updateMemorialSiteSchema = z.object({
 	name: z.string().min(1, 'Name is required').optional(),
 	siteType: z.enum(MEMORIAL_SITE_TYPES).optional(),
+	preferredPaymentMethod: z.enum(MEMORIAL_SITE_PAYMENT_METHODS).nullable().optional(),
+	paymentDetails: z.string().nullable().optional(),
 	notes: z.string().nullable().optional(),
 	contactInfo: z.array(contactInfoSchema).optional(),
 	addresses: z.array(addressSchema).optional(),
@@ -231,6 +236,8 @@ const memorialSitesRoutes = new Hono()
 				tenantId,
 				name: data.name,
 				siteType: data.siteType,
+				preferredPaymentMethod: data.preferredPaymentMethod || null,
+				paymentDetails: data.paymentDetails || null,
 				notes: data.notes || null,
 				createdAt: now,
 				updatedAt: now,
@@ -313,6 +320,8 @@ const memorialSitesRoutes = new Hono()
 			const updateData: Record<string, unknown> = { updatedAt: now };
 			if (updates.name !== undefined) updateData.name = updates.name;
 			if (updates.siteType !== undefined) updateData.siteType = updates.siteType;
+			if (updates.preferredPaymentMethod !== undefined) updateData.preferredPaymentMethod = updates.preferredPaymentMethod;
+			if (updates.paymentDetails !== undefined) updateData.paymentDetails = updates.paymentDetails;
 			if (updates.notes !== undefined) updateData.notes = updates.notes;
 
 			await db.update(memorialSites).set(updateData).where(eq(memorialSites.id, id));

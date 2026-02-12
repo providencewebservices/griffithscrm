@@ -167,6 +167,9 @@ export const customerAddresses = pgTable(
 // Memorial site types
 export const MEMORIAL_SITE_TYPES = ['churchyard', 'crematorium', 'council_cemetery', 'chapel'] as const;
 
+// Memorial site payment methods
+export const MEMORIAL_SITE_PAYMENT_METHODS = ['bacs', 'cheque', 'card', 'cash', 'online_portal', 'other'] as const;
+
 // Payment terms for suppliers
 export const PAYMENT_TERMS = ['cod', 'net_7', 'net_14', 'net_30', 'net_60', 'net_90'] as const;
 
@@ -285,6 +288,9 @@ export const memorialSites = pgTable('memorial_sites', {
 		.references(() => tenants.id, { onDelete: 'cascade' }),
 	name: text('name').notNull(), // e.g., "St Mary's Church" or "Blacon Crematorium"
 	siteType: text('site_type').notNull(), // From MEMORIAL_SITE_TYPES: 'churchyard' | 'crematorium' | 'council_cemetery' | 'chapel'
+	// Payment information
+	preferredPaymentMethod: text('preferred_payment_method'), // From MEMORIAL_SITE_PAYMENT_METHODS
+	paymentDetails: text('payment_details'), // Free-form payment details (account numbers, etc.)
 	// Common fields
 	notes: text('notes'),
 	isActive: boolean('is_active').notNull().default(true),

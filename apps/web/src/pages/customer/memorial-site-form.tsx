@@ -37,10 +37,12 @@ import {
 	useCreateMemorialSiteMutation,
 	useUpdateMemorialSiteMutation,
 	SITE_TYPE_LABELS,
+	PAYMENT_METHOD_LABELS,
 	type CreateMemorialSiteInput,
 	type ContactInfoInput,
 	type AddressInput,
 	type MemorialSiteType,
+	type MemorialSitePaymentMethod,
 } from '@/hooks/use-memorial-sites';
 
 const CONTACT_TYPES = [
@@ -82,6 +84,8 @@ export function MemorialSiteFormPage() {
 	// Common fields
 	const [name, setName] = useState('');
 	const [siteType, setSiteType] = useState<MemorialSiteType>('churchyard');
+	const [preferredPaymentMethod, setPreferredPaymentMethod] = useState<MemorialSitePaymentMethod | ''>('');
+	const [paymentDetails, setPaymentDetails] = useState('');
 	const [notes, setNotes] = useState('');
 
 	const [contacts, setContacts] = useState<ContactInfoInput[]>([]);
@@ -92,6 +96,8 @@ export function MemorialSiteFormPage() {
 		if (existingData) {
 			setName(existingData.name);
 			setSiteType(existingData.siteType);
+			setPreferredPaymentMethod(existingData.preferredPaymentMethod || '');
+			setPaymentDetails(existingData.paymentDetails || '');
 			setNotes(existingData.notes || '');
 
 			setContacts(
@@ -125,6 +131,8 @@ export function MemorialSiteFormPage() {
 		const data: CreateMemorialSiteInput = {
 			name,
 			siteType,
+			preferredPaymentMethod: preferredPaymentMethod || null,
+			paymentDetails: paymentDetails || null,
 			notes: notes || undefined,
 			contactInfo: contacts.filter((c) => c.value.trim()),
 			addresses: addresses.filter((a) => a.formattedAddress.trim()),
@@ -287,6 +295,47 @@ export function MemorialSiteFormPage() {
 										</Select>
 									</Field>
 								</div>
+							</FieldGroup>
+						</CardContent>
+					</Card>
+
+					<Card>
+						<CardHeader>
+							<CardTitle>Payment Information</CardTitle>
+							<CardDescription>How this site prefers to receive payments</CardDescription>
+						</CardHeader>
+						<CardContent>
+							<FieldGroup>
+								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+									<Field>
+										<FieldLabel htmlFor="paymentMethod">Preferred Payment Method</FieldLabel>
+										<Select
+											value={preferredPaymentMethod}
+											onValueChange={(v) => setPreferredPaymentMethod(v as MemorialSitePaymentMethod)}
+										>
+											<SelectTrigger>
+												<SelectValue placeholder="Select payment method" />
+											</SelectTrigger>
+											<SelectContent>
+												{Object.entries(PAYMENT_METHOD_LABELS).map(([value, label]) => (
+													<SelectItem key={value} value={value}>
+														{label}
+													</SelectItem>
+												))}
+											</SelectContent>
+										</Select>
+									</Field>
+								</div>
+								<Field>
+									<FieldLabel htmlFor="paymentDetails">Payment Details</FieldLabel>
+									<Textarea
+										id="paymentDetails"
+										value={paymentDetails}
+										onChange={(e) => setPaymentDetails(e.target.value)}
+										placeholder="e.g., BACS details, account numbers, payee name..."
+										rows={3}
+									/>
+								</Field>
 							</FieldGroup>
 						</CardContent>
 					</Card>

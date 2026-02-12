@@ -24,6 +24,8 @@ import {
 	useArchiveMemorialSiteMutation,
 	useUnarchiveMemorialSiteMutation,
 	SITE_TYPE_LABELS,
+	PAYMENT_METHOD_LABELS,
+	type MemorialSitePaymentMethod,
 } from '@/hooks/use-memorial-sites';
 import {
 	Mail,
@@ -34,6 +36,7 @@ import {
 	Flame,
 	Building2,
 	Building,
+	CreditCard,
 } from 'lucide-react';
 import { DocumentsCard } from '@/components/documents';
 
@@ -292,6 +295,32 @@ export function MemorialSiteDetailPage() {
 				</Card>
 			</div>
 
+			{(site.preferredPaymentMethod || site.paymentDetails) && (
+				<Card className="mt-6">
+					<CardHeader>
+						<CardTitle className="flex items-center gap-2">
+							<CreditCard className="h-4 w-4" />
+							Payment Information
+						</CardTitle>
+						<CardDescription>How this site prefers to receive payments</CardDescription>
+					</CardHeader>
+					<CardContent className="space-y-3">
+						{site.preferredPaymentMethod && (
+							<div>
+								<h4 className="text-sm font-medium text-muted-foreground">Preferred Payment Method</h4>
+								<p>{PAYMENT_METHOD_LABELS[site.preferredPaymentMethod as MemorialSitePaymentMethod]}</p>
+							</div>
+						)}
+						{site.paymentDetails && (
+							<div>
+								<h4 className="text-sm font-medium text-muted-foreground">Payment Details</h4>
+								<p className="whitespace-pre-wrap">{site.paymentDetails}</p>
+							</div>
+						)}
+					</CardContent>
+				</Card>
+			)}
+
 			{site.notes && (
 				<Card className="mt-6">
 					<CardHeader>
@@ -303,13 +332,32 @@ export function MemorialSiteDetailPage() {
 				</Card>
 			)}
 
-			{/* Documents */}
-			<div className="mt-6">
+			{/* Documents - split into categorised sections */}
+			<div className="mt-6 space-y-6">
 				<DocumentsCard
 					entityType="memorial_site"
 					entityId={site.id}
-					title="Documents"
-					description="Files and documents for this memorial site"
+					title="Rules & Regulations"
+					description="PDF documents containing site rules and regulations"
+					tagFilter="rules-and-regulations"
+					defaultTags="rules-and-regulations"
+				/>
+
+				<DocumentsCard
+					entityType="memorial_site"
+					entityId={site.id}
+					title="Application Forms"
+					description="Permit and faculty application forms"
+					tagFilter="application-form"
+					defaultTags="application-form"
+				/>
+
+				<DocumentsCard
+					entityType="memorial_site"
+					entityId={site.id}
+					title="Other Documents"
+					description="Other files and documents for this memorial site"
+					excludeTags={['rules-and-regulations', 'application-form']}
 				/>
 			</div>
 

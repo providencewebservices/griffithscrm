@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
 	Card,
 	CardContent,
@@ -15,12 +15,16 @@ import {
 	type DocumentEntityType,
 } from '@/hooks/use-documents';
 import { Plus, Files } from 'lucide-react';
+import { parseTags } from '@/lib/file-utils';
 
 interface DocumentsCardProps {
 	entityType: DocumentEntityType;
 	entityId: string;
 	title?: string;
 	description?: string;
+	tagFilter?: string;
+	defaultTags?: string;
+	excludeTags?: string[];
 }
 
 export function DocumentsCard({
@@ -28,12 +32,34 @@ export function DocumentsCard({
 	entityId,
 	title = 'Documents',
 	description = 'Attached files and documents',
+	tagFilter,
+	defaultTags,
+	excludeTags,
 }: DocumentsCardProps) {
 	const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
 	const [uploadError, setUploadError] = useState<string | null>(null);
 
 	const { data: documents, isLoading } = useEntityDocumentsQuery(entityType, entityId);
 	const uploadMutation = useUploadDocumentMutation();
+
+	const filteredDocuments = useMemo(() => {
+		if (!documents) return [];
+		if (!tagFilter && !excludeTags) return documents;
+
+		return documents.filter((doc) => {
+			const docTags = parseTags(doc.tags);
+
+			if (tagFilter) {
+				return docTags.includes(tagFilter);
+			}
+
+			if (excludeTags && excludeTags.length > 0) {
+				return !excludeTags.some((tag) => docTags.includes(tag));
+			}
+
+			return true;
+		});
+	}, [documents, tagFilter, excludeTags]);
 
 	const handleUpload = async (data: {
 		file: File;
@@ -43,12 +69,21 @@ export function DocumentsCard({
 	}) => {
 		setUploadError(null);
 		try {
+			// Merge defaultTags with user-provided tags
+			let tags = data.tags;
+			if (defaultTags) {
+				const userTags = parseTags(tags);
+				const defaultTagsList = parseTags(defaultTags);
+				const mergedTags = [...new Set([...defaultTagsList, ...userTags])];
+				tags = mergedTags.join(', ');
+			}
+
 			await uploadMutation.mutateAsync({
 				entityType,
 				entityId,
 				file: data.file,
 				name: data.name,
-				tags: data.tags,
+				tags,
 				notes: data.notes,
 			});
 			setUploadDialogOpen(false);
@@ -77,14 +112,14 @@ export function DocumentsCard({
 						<div className="text-center py-8 text-muted-foreground">
 							Loading documents...
 						</div>
-					) : !documents || documents.length === 0 ? (
+					) : filteredDocuments.length === 0 ? (
 						<div className="text-center py-8 text-muted-foreground border rounded-lg">
 							<Files className="h-8 w-8 mx-auto mb-2 opacity-50" />
 							No documents uploaded yet
 						</div>
 					) : (
 						<div className="space-y-2">
-							{documents.map((doc) => (
+							{filteredDocuments.map((doc) => (
 								<DocumentRow key={doc.id} document={doc} />
 							))}
 						</div>

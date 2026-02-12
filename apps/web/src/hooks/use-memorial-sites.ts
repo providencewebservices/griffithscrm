@@ -35,11 +35,24 @@ export type Address = {
 
 export type MemorialSiteType = 'churchyard' | 'crematorium' | 'council_cemetery' | 'chapel';
 
+export type MemorialSitePaymentMethod = 'bacs' | 'cheque' | 'card' | 'cash' | 'online_portal' | 'other';
+
+export const PAYMENT_METHOD_LABELS: Record<MemorialSitePaymentMethod, string> = {
+	bacs: 'BACS',
+	cheque: 'Cheque',
+	card: 'Card',
+	cash: 'Cash',
+	online_portal: 'Online Portal',
+	other: 'Other',
+};
+
 export type MemorialSite = {
 	id: string;
 	tenantId: string;
 	name: string;
 	siteType: MemorialSiteType;
+	preferredPaymentMethod: MemorialSitePaymentMethod | null;
+	paymentDetails: string | null;
 	notes: string | null;
 	isActive: boolean;
 	archivedAt: string | null;
@@ -85,6 +98,8 @@ export type AddressInput = {
 export type CreateMemorialSiteInput = {
 	name: string;
 	siteType: MemorialSiteType;
+	preferredPaymentMethod?: MemorialSitePaymentMethod | null;
+	paymentDetails?: string | null;
 	notes?: string;
 	contactInfo?: ContactInfoInput[];
 	addresses?: AddressInput[];
