@@ -36,6 +36,7 @@ import { documentsRoutes } from './routes/documents';
 import { documentFoldersRoutes } from './routes/document-folders';
 import { emailIntegrationsRoutes } from './routes/email-integrations';
 import { inboxRoutes } from './routes/inbox';
+import { startEmailSyncScheduler } from './lib/email-sync-scheduler';
 
 const app = new Hono();
 
@@ -147,6 +148,9 @@ app.route('/api/inbox', inboxRoutes);
 
 // Export type for RPC client
 export type AppType = typeof api;
+
+// Start background email sync
+startEmailSyncScheduler();
 
 export default {
 	port: 3000,
