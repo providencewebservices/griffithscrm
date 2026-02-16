@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
@@ -147,21 +147,25 @@ export function ComposeEmailDialog({
 	const isOverLimit = totalSize > MAX_ATTACHMENT_SIZE;
 	const isNearLimit = totalSize > WARN_ATTACHMENT_SIZE && !isOverLimit;
 
-	// Reset form when dialog opens with new defaults
+	// Sync form state when dialog opens (open prop changes programmatically,
+	// which does NOT trigger onOpenChange in Radix Dialog)
+	useEffect(() => {
+		if (open) {
+			setTo(defaultTo);
+			setCc('');
+			setBcc('');
+			setShowCcBcc(false);
+			setSubject(defaultSubject);
+			setAttachments([]);
+			editor?.commands.setContent(defaultBody);
+		}
+	}, [open, defaultTo, defaultSubject, defaultBody]);
+
 	const handleOpenChange = useCallback(
 		(isOpen: boolean) => {
-			if (isOpen) {
-				setTo(defaultTo);
-				setCc('');
-				setBcc('');
-				setShowCcBcc(false);
-				setSubject(defaultSubject);
-				setAttachments([]);
-				editor?.commands.setContent(defaultBody);
-			}
 			onOpenChange(isOpen);
 		},
-		[defaultTo, defaultSubject, defaultBody, editor, onOpenChange]
+		[onOpenChange]
 	);
 
 	const handleAddLink = useCallback(() => {

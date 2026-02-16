@@ -308,11 +308,18 @@ export function InboxPage() {
 	const handleReply = () => {
 		if (!selectedThread || !selectedThread.messages.length) return;
 		const lastMsg = selectedThread.messages[selectedThread.messages.length - 1];
+		const isOwnMessage = lastMsg.fromAddress === activeIntegration?.emailAddress;
+		const replyTo = isOwnMessage
+			? lastMsg.toAddresses?.[0]?.address || lastMsg.fromAddress
+			: lastMsg.fromAddress;
+		const replyToName = isOwnMessage
+			? lastMsg.toAddresses?.[0]?.name || lastMsg.fromName
+			: lastMsg.fromName;
 		setReplyToThread({
 			threadId: selectedThreadId!,
 			subject: lastMsg.subject,
-			fromAddress: lastMsg.fromAddress,
-			fromName: lastMsg.fromName,
+			fromAddress: replyTo,
+			fromName: replyToName,
 			body: lastMsg.bodyHtml || lastMsg.bodyText,
 		});
 		setComposeOpen(true);
