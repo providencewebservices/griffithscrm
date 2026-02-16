@@ -47,6 +47,7 @@ import {
 	ShoppingBag,
 } from 'lucide-react';
 import { DocumentsCard } from '@/components/documents';
+import { EmailThreadsCard } from '@/components/inbox/email-threads-card';
 
 export function SupplierDetailPage() {
 	const { id } = useParams<{ id: string }>();
@@ -471,6 +472,15 @@ export function SupplierDetailPage() {
 					</CardContent>
 				</Card>
 			)}
+
+			{/* Email Threads */}
+			<div className="mt-6">
+				<EmailThreadsCard
+					entityType="supplier"
+					entityId={supplier.id}
+					entityName={displayName}
+				/>
+			</div>
 
 			{/* Documents */}
 			<div className="mt-6">

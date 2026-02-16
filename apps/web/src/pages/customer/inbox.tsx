@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router';
 import { toast } from 'sonner';
 import { Card } from '@/components/ui/card';
@@ -22,6 +22,19 @@ import {
 	DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+} from '@/components/ui/popover';
+import {
+	Command,
+	CommandEmpty,
+	CommandGroup,
+	CommandInput,
+	CommandItem,
+	CommandList,
+} from '@/components/ui/command';
+import {
 	Search,
 	Reply,
 	Link2,
@@ -39,6 +52,8 @@ import {
 	PenSquare,
 	RefreshCw,
 	Loader2,
+	X,
+	Users,
 } from 'lucide-react';
 import { ComposeEmailDialog } from '@/components/inbox/compose-email-dialog';
 import {
@@ -54,6 +69,9 @@ import {
 	type EmailMessageFull,
 	type ThreadsQueryParams,
 } from '@/hooks/use-inbox';
+import { useCustomersQuery } from '@/hooks/use-customers';
+import { useFuneralDirectorsQuery } from '@/hooks/use-funeral-directors';
+import { useSuppliersQuery } from '@/hooks/use-suppliers';
 
 const LINK_COLORS: Record<string, string> = {
 	customer: 'bg-blue-100 text-blue-800 hover:bg-blue-100',
@@ -192,6 +210,13 @@ function ThreadDetailSkeleton() {
 	);
 }
 
+type ContactFilterSelection = {
+	entityType: string;
+	entityId: string;
+	label: string;
+	email?: string;
+};
+
 export function InboxPage() {
 	const [searchParams, setSearchParams] = useSearchParams();
 	const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
@@ -200,6 +225,21 @@ export function InboxPage() {
 	const [filter, setFilter] = useState<ThreadsQueryParams['filter']>('all');
 	const [composeOpen, setComposeOpen] = useState(false);
 	const [replyToThread, setReplyToThread] = useState<{ threadId: string; subject: string; fromAddress: string; fromName: string; body: string } | null>(null);
+
+	// Contact filter state
+	const [contactFilterOpen, setContactFilterOpen] = useState(false);
+	const [contactSearch, setContactSearch] = useState('');
+	const [debouncedContactSearch, setDebouncedContactSearch] = useState('');
+	const [selectedContact, setSelectedContact] = useState<ContactFilterSelection | null>(null);
+
+	// Read contact filter from URL params on mount
+	useEffect(() => {
+		const entityType = searchParams.get('contactEntityType');
+		const entityId = searchParams.get('contactEntityId');
+		if (entityType && entityId) {
+			setSelectedContact({ entityType, entityId, label: 'Contact' });
+		}
+	}, []);
 
 	// Show toast on connection success/error from redirect
 	useEffect(() => {
@@ -220,6 +260,24 @@ export function InboxPage() {
 		return () => clearTimeout(timer);
 	}, [searchQuery]);
 
+	// Debounce contact search
+	useEffect(() => {
+		const timer = setTimeout(() => setDebouncedContactSearch(contactSearch), 300);
+		return () => clearTimeout(timer);
+	}, [contactSearch]);
+
+	// Contact search queries (only when combobox is open and has search text)
+	const contactSearchEnabled = contactFilterOpen && debouncedContactSearch.length >= 2;
+	const { data: customerResults } = useCustomersQuery(
+		contactSearchEnabled ? { q: debouncedContactSearch } : undefined
+	);
+	const { data: fdResults } = useFuneralDirectorsQuery(
+		contactSearchEnabled ? { q: debouncedContactSearch } : undefined
+	);
+	const { data: supplierResults } = useSuppliersQuery(
+		contactSearchEnabled ? { q: debouncedContactSearch } : undefined
+	);
+
 	// Queries
 	const { data: integrations, isLoading: integrationsLoading } = useEmailIntegrationsQuery();
 	const activeIntegration = integrations?.find((i) => i.status === 'active');
@@ -227,6 +285,8 @@ export function InboxPage() {
 	const queryParams: ThreadsQueryParams = {
 		q: debouncedSearch || undefined,
 		filter,
+		contactEntityType: selectedContact?.entityType || undefined,
+		contactEntityId: selectedContact?.entityId || undefined,
 	};
 	const { data: threadsData, isLoading: threadsLoading } = useInboxThreadsQuery(queryParams);
 	const { data: selectedThread, isLoading: threadLoading } = useInboxThreadQuery(selectedThreadId);
@@ -381,14 +441,135 @@ export function InboxPage() {
 								)}
 							</div>
 						</div>
-						<div className="relative">
-							<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-							<Input
-								placeholder="Search emails..."
-								value={searchQuery}
-								onChange={(e) => setSearchQuery(e.target.value)}
-								className="pl-9"
-							/>
+						{selectedContact && (
+							<div className="flex items-center gap-2">
+								<Badge variant="secondary" className="flex items-center gap-1 py-1">
+									<Users className="h-3 w-3" />
+									{selectedContact.label}
+									{selectedContact.email && (
+										<span className="text-muted-foreground ml-1">({selectedContact.email})</span>
+									)}
+									<button
+										onClick={() => setSelectedContact(null)}
+										className="ml-1 hover:bg-muted rounded-full p-0.5"
+									>
+										<X className="h-3 w-3" />
+									</button>
+								</Badge>
+							</div>
+						)}
+						<div className="flex items-center gap-2">
+							<div className="relative flex-1">
+								<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+								<Input
+									placeholder="Search emails..."
+									value={searchQuery}
+									onChange={(e) => setSearchQuery(e.target.value)}
+									className="pl-9"
+								/>
+							</div>
+							<Popover open={contactFilterOpen} onOpenChange={setContactFilterOpen}>
+								<PopoverTrigger asChild>
+									<Button variant="outline" size="sm" className="h-9 shrink-0">
+										<Users className="h-4 w-4 mr-1" />
+										Contact
+									</Button>
+								</PopoverTrigger>
+								<PopoverContent className="w-72 p-0" align="end">
+									<Command shouldFilter={false}>
+										<CommandInput
+											placeholder="Search contacts..."
+											value={contactSearch}
+											onValueChange={setContactSearch}
+										/>
+										<CommandList>
+											<CommandEmpty>
+												{debouncedContactSearch.length < 2
+													? 'Type to search contacts...'
+													: 'No contacts found'}
+											</CommandEmpty>
+											{customerResults && customerResults.length > 0 && (
+												<CommandGroup heading="Customers">
+													{customerResults.slice(0, 5).map((c) => (
+														<CommandItem
+															key={`customer-${c.id}`}
+															onSelect={() => {
+																setSelectedContact({
+																	entityType: 'customer',
+																	entityId: c.id,
+																	label: `${c.firstName} ${c.lastName}`,
+																	email: c.primaryEmail?.value,
+																});
+																setContactFilterOpen(false);
+																setContactSearch('');
+															}}
+														>
+															<div className="flex flex-col">
+																<span className="text-sm">{c.firstName} {c.lastName}</span>
+																{c.primaryEmail && (
+																	<span className="text-xs text-muted-foreground">{c.primaryEmail.value}</span>
+																)}
+															</div>
+														</CommandItem>
+													))}
+												</CommandGroup>
+											)}
+											{fdResults && fdResults.length > 0 && (
+												<CommandGroup heading="Funeral Directors">
+													{fdResults.slice(0, 5).map((fd) => (
+														<CommandItem
+															key={`fd-${fd.id}`}
+															onSelect={() => {
+																setSelectedContact({
+																	entityType: 'funeral_director',
+																	entityId: fd.id,
+																	label: fd.tradingName || fd.businessName,
+																	email: fd.primaryEmail?.value,
+																});
+																setContactFilterOpen(false);
+																setContactSearch('');
+															}}
+														>
+															<div className="flex flex-col">
+																<span className="text-sm">{fd.tradingName || fd.businessName}</span>
+																{fd.primaryEmail && (
+																	<span className="text-xs text-muted-foreground">{fd.primaryEmail.value}</span>
+																)}
+															</div>
+														</CommandItem>
+													))}
+												</CommandGroup>
+											)}
+											{supplierResults && supplierResults.length > 0 && (
+												<CommandGroup heading="Suppliers">
+													{supplierResults.slice(0, 5).map((s) => (
+														<CommandItem
+															key={`supplier-${s.id}`}
+															onSelect={() => {
+																setSelectedContact({
+																	entityType: 'supplier',
+																	entityId: s.id,
+																	label: s.tradingName || s.businessName,
+																	email: s.primaryEmail?.value,
+																});
+																setContactFilterOpen(false);
+																setContactSearch('');
+															}}
+														>
+															<div className="flex flex-col">
+																<span className="text-sm">{s.tradingName || s.businessName}</span>
+																{s.primaryEmail && (
+																	<span className="text-xs text-muted-foreground">{s.primaryEmail.value}</span>
+																)}
+															</div>
+														</CommandItem>
+													))}
+												</CommandGroup>
+											)}
+										</CommandList>
+									</Command>
+								</PopoverContent>
+							</Popover>
 						</div>
 					</div>
 

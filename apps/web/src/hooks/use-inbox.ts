@@ -97,6 +97,8 @@ export type ThreadsQueryParams = {
 	page?: number;
 	limit?: number;
 	filter?: 'all' | 'unread' | 'customers' | 'quotes' | 'jobs' | 'unlinked';
+	contactEntityType?: string;
+	contactEntityId?: string;
 };
 
 // Fetch functions
@@ -125,6 +127,8 @@ async function fetchInboxThreads(params?: ThreadsQueryParams): Promise<{
 	if (params?.page) searchParams.set('page', String(params.page));
 	if (params?.limit) searchParams.set('limit', String(params.limit));
 	if (params?.filter) searchParams.set('filter', params.filter);
+	if (params?.contactEntityType) searchParams.set('contactEntityType', params.contactEntityType);
+	if (params?.contactEntityId) searchParams.set('contactEntityId', params.contactEntityId);
 
 	const url = `${API_URL}/api/inbox/threads${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
 	const response = await fetch(url, { credentials: 'include' });
@@ -395,6 +399,52 @@ export function useDisconnectIntegrationMutation() {
 			queryClient.invalidateQueries({ queryKey: ['email-integrations'] });
 			queryClient.invalidateQueries({ queryKey: ['inbox-threads'] });
 		},
+	});
+}
+
+// Entity email threads (for detail pages)
+export type EntityEmailThread = {
+	id: string;
+	subject: string | null;
+	snippet: string | null;
+	lastMessageAt: string | null;
+	messageCount: number;
+	isUnread: boolean;
+	linkSource: string;
+	latestMessage: {
+		fromAddress: string | null;
+		fromName: string | null;
+		internalDate: string | null;
+		hasAttachments: boolean;
+	} | null;
+};
+
+async function fetchEntityEmailThreads(
+	entityType: string,
+	entityId: string,
+	page = 1,
+	limit = 10
+): Promise<{ threads: EntityEmailThread[]; total: number }> {
+	const searchParams = new URLSearchParams();
+	searchParams.set('page', String(page));
+	searchParams.set('limit', String(limit));
+
+	const url = `${API_URL}/api/inbox/entity-threads/${entityType}/${entityId}?${searchParams.toString()}`;
+	const response = await fetch(url, { credentials: 'include' });
+
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.error || 'Failed to fetch entity threads');
+	}
+
+	return response.json();
+}
+
+export function useEntityEmailThreadsQuery(entityType: string, entityId: string) {
+	return useQuery({
+		queryKey: ['entity-email-threads', entityType, entityId],
+		queryFn: () => fetchEntityEmailThreads(entityType, entityId),
+		enabled: !!entityType && !!entityId,
 	});
 }
 

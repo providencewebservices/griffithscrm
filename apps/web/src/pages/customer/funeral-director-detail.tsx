@@ -32,6 +32,7 @@ import {
 	ArrowLeft,
 } from 'lucide-react';
 import { DocumentsCard } from '@/components/documents';
+import { EmailThreadsCard } from '@/components/inbox/email-threads-card';
 
 export function FuneralDirectorDetailPage() {
 	const { id } = useParams<{ id: string }>();
@@ -309,6 +310,15 @@ export function FuneralDirectorDetailPage() {
 					</CardContent>
 				</Card>
 			)}
+
+			{/* Email Threads */}
+			<div className="mt-6">
+				<EmailThreadsCard
+					entityType="funeral_director"
+					entityId={funeralDirector.id}
+					entityName={displayName}
+				/>
+			</div>
 
 			{/* Documents */}
 			<div className="mt-6">

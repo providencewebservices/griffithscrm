@@ -15,6 +15,7 @@ import { getEmailProvider, getValidAccessToken } from '../lib/email-providers';
 import type { EmailAttachment } from '../lib/email-providers/types';
 import { GmailProvider } from '../lib/email-providers/gmail';
 import { getObjectBuffer } from '../lib/s3';
+import { autoLinkThreadByEmail, collectEmailAddresses } from '../lib/email-auto-link';
 import crypto from 'crypto';
 
 const SYNC_INTERVAL_MS = 60 * 1000; // 60 seconds
@@ -131,6 +132,20 @@ async function doSync(integrationId: string, tenantId: string) {
 						},
 					});
 				}
+
+				// Auto-link thread to contacts by email address
+				try {
+					const addresses = collectEmailAddresses(
+						thread.messages.map((m) => ({
+							fromAddress: m.fromAddress,
+							toAddresses: JSON.stringify(m.toAddresses),
+							ccAddresses: JSON.stringify(m.ccAddresses),
+						}))
+					);
+					await autoLinkThreadByEmail(resolvedThreadId, tenantId, addresses);
+				} catch (err) {
+					console.error('Auto-link failed for thread:', resolvedThreadId, err);
+				}
 			}
 
 			await db
@@ -221,6 +236,18 @@ async function doSync(integrationId: string, tenantId: string) {
 					updatedAt: new Date(),
 				},
 			});
+
+			// Auto-link thread to contacts by email address
+			try {
+				const addresses = collectEmailAddresses([{
+					fromAddress: msg.fromAddress,
+					toAddresses: JSON.stringify(msg.toAddresses),
+					ccAddresses: JSON.stringify(msg.ccAddresses),
+				}]);
+				await autoLinkThreadByEmail(thread.id, tenantId, addresses);
+			} catch (err) {
+				console.error('Auto-link failed for thread:', thread.id, err);
+			}
 		}
 
 		// Process deleted messages
@@ -273,6 +300,8 @@ const threadsQuerySchema = z.object({
 	page: z.coerce.number().int().min(1).optional().default(1),
 	limit: z.coerce.number().int().min(1).max(100).optional().default(50),
 	filter: z.enum(['all', 'unread', 'customers', 'quotes', 'jobs', 'unlinked']).optional().default('all'),
+	contactEntityType: z.enum(['customer', 'funeral_director', 'supplier', 'quote', 'job']).optional(),
+	contactEntityId: z.string().optional(),
 });
 
 const linkSchema = z.object({
@@ -288,7 +317,7 @@ const inboxRoutes = new Hono()
 	.get('/threads', zValidator('query', threadsQuerySchema), async (c) => {
 		const user = c.get('user');
 		const tenantId = user.tenantId!;
-		const { q, page, limit, filter } = c.req.valid('query');
+		const { q, page, limit, filter, contactEntityType, contactEntityId } = c.req.valid('query');
 
 		// Get user's active integration
 		const [integration] = await db
@@ -310,11 +339,34 @@ const inboxRoutes = new Hono()
 		// Trigger incremental sync if needed (fire and forget for list)
 		syncIfNeeded(integration.id, tenantId).catch(() => {});
 
+		// If filtering by contact entity, get the linked thread IDs first
+		let contactLinkedThreadIds: string[] | null = null;
+		if (contactEntityType && contactEntityId) {
+			const contactLinks = await db
+				.select({ threadId: emailEntityLinks.threadId })
+				.from(emailEntityLinks)
+				.where(
+					and(
+						eq(emailEntityLinks.tenantId, tenantId),
+						eq(emailEntityLinks.entityType, contactEntityType),
+						eq(emailEntityLinks.entityId, contactEntityId)
+					)
+				);
+			contactLinkedThreadIds = contactLinks.map((l) => l.threadId);
+			if (contactLinkedThreadIds.length === 0) {
+				return c.json({ threads: [], total: 0, page, limit });
+			}
+		}
+
 		// Build query conditions
 		const conditions = [
 			eq(emailThreads.integrationId, integration.id),
 			eq(emailThreads.tenantId, tenantId),
 		];
+
+		if (contactLinkedThreadIds) {
+			conditions.push(inArray(emailThreads.id, contactLinkedThreadIds));
+		}
 
 		if (q) {
 			conditions.push(
@@ -765,6 +817,105 @@ const inboxRoutes = new Hono()
 
 		return c.json({ success: true, messageId: result.providerMessageId, threadId: result.providerThreadId });
 	})
+
+	// GET /entity-threads/:entityType/:entityId - Get threads linked to an entity
+	.get(
+		'/entity-threads/:entityType/:entityId',
+		zValidator('query', z.object({
+			page: z.coerce.number().int().min(1).optional().default(1),
+			limit: z.coerce.number().int().min(1).max(50).optional().default(10),
+		})),
+		async (c) => {
+			const user = c.get('user');
+			const tenantId = user.tenantId!;
+			const entityType = c.req.param('entityType');
+			const entityId = c.req.param('entityId');
+			const { page, limit } = c.req.valid('query');
+
+			// Verify user has an active integration
+			const [integration] = await db
+				.select()
+				.from(emailIntegrations)
+				.where(
+					and(
+						eq(emailIntegrations.userId, user.id),
+						eq(emailIntegrations.tenantId, tenantId),
+						eq(emailIntegrations.status, 'active')
+					)
+				)
+				.limit(1);
+
+			if (!integration) {
+				return c.json({ threads: [], total: 0 });
+			}
+
+			// Get linked thread IDs
+			const links = await db
+				.select()
+				.from(emailEntityLinks)
+				.where(
+					and(
+						eq(emailEntityLinks.tenantId, tenantId),
+						eq(emailEntityLinks.entityType, entityType),
+						eq(emailEntityLinks.entityId, entityId)
+					)
+				);
+
+			if (links.length === 0) {
+				return c.json({ threads: [], total: 0 });
+			}
+
+			const linkedThreadIds = links.map((l) => l.threadId);
+			const linksByThreadId = new Map(links.map((l) => [l.threadId, l]));
+
+			// Get threads
+			const threads = await db
+				.select()
+				.from(emailThreads)
+				.where(
+					and(
+						inArray(emailThreads.id, linkedThreadIds),
+						eq(emailThreads.tenantId, tenantId)
+					)
+				)
+				.orderBy(desc(emailThreads.lastMessageAt))
+				.limit(limit)
+				.offset((page - 1) * limit);
+
+			// Get latest message for each thread
+			const latestMessages = await Promise.all(
+				threads.map(async (thread) => {
+					const [msg] = await db
+						.select()
+						.from(emailMessages)
+						.where(eq(emailMessages.threadId, thread.id))
+						.orderBy(desc(emailMessages.internalDate))
+						.limit(1);
+					return { threadId: thread.id, message: msg || null };
+				})
+			);
+
+			const latestByThread = new Map(latestMessages.map((m) => [m.threadId, m.message]));
+
+			const result = threads.map((thread) => {
+				const link = linksByThreadId.get(thread.id);
+				const latestMsg = latestByThread.get(thread.id);
+				return {
+					...thread,
+					labelIds: thread.labelIds ? JSON.parse(thread.labelIds) : [],
+					linkSource: link?.linkSource || 'manual',
+					latestMessage: latestMsg ? {
+						fromAddress: latestMsg.fromAddress,
+						fromName: latestMsg.fromName,
+						internalDate: latestMsg.internalDate,
+						hasAttachments: latestMsg.hasAttachments,
+					} : null,
+				};
+			});
+
+			return c.json({ threads: result, total: links.length });
+		}
+	)
 
 	// POST /threads/:threadId/links - Link thread to entity
 	.post('/threads/:threadId/links', zValidator('json', linkSchema), async (c) => {

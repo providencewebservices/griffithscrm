@@ -63,6 +63,7 @@ import {
 	Check,
 } from 'lucide-react';
 import { DocumentsCard } from '@/components/documents';
+import { EmailThreadsCard } from '@/components/inbox/email-threads-card';
 
 export function CustomerDetailPage() {
 	const { id } = useParams<{ id: string }>();
@@ -618,6 +619,15 @@ export function CustomerDetailPage() {
 					)}
 				</CardContent>
 			</Card>
+
+			{/* Email Threads */}
+			<div className="mt-6">
+				<EmailThreadsCard
+					entityType="customer"
+					entityId={customer.id}
+					entityName={`${customer.firstName} ${customer.lastName}`}
+				/>
+			</div>
 
 			{/* Documents */}
 			<div className="mt-6">

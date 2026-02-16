@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, boolean, primaryKey, integer, numeric, uniqueIndex } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, boolean, primaryKey, integer, numeric, uniqueIndex, index } from 'drizzle-orm/pg-core';
 
 // Tenants table (must be defined before users due to foreign key)
 export const tenants = pgTable('tenants', {
@@ -101,7 +101,9 @@ export const contactInfo = pgTable('contact_info', {
 	isPrimary: boolean('is_primary').notNull().default(false),
 	createdAt: timestamp('created_at').notNull().defaultNow(),
 	updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
+}, (table) => ({
+	typeValueIdx: index('contact_info_type_value_idx').on(table.type, table.value),
+}));
 
 // Addresses table (Google Places compatible, reusable via join tables)
 export const addresses = pgTable('addresses', {
@@ -1308,6 +1310,10 @@ export const emailEntityLinks = pgTable('email_entity_links', {
 		.references(() => emailThreads.id, { onDelete: 'cascade' }),
 	entityType: text('entity_type').notNull(), // From EMAIL_ENTITY_LINK_TYPES
 	entityId: text('entity_id').notNull(),
+	linkSource: text('link_source').notNull().default('manual'), // 'manual' | 'auto_email_match'
 	linkedById: text('linked_by_id').references(() => users.id, { onDelete: 'set null' }),
 	createdAt: timestamp('created_at').notNull().defaultNow(),
-});
+}, (table) => ({
+	uniqueLink: uniqueIndex('email_entity_links_unique_idx')
+		.on(table.threadId, table.entityType, table.entityId),
+}));
