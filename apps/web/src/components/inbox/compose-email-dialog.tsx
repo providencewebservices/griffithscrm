@@ -252,7 +252,7 @@ export function ComposeEmailDialog({
 
 	return (
 		<Dialog open={open} onOpenChange={handleOpenChange}>
-			<DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col">
+			<DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col" onOpenAutoFocus={(e) => e.preventDefault()}>
 				<DialogHeader>
 					<DialogTitle>Compose Email</DialogTitle>
 				</DialogHeader>

@@ -119,6 +119,12 @@ export interface IEmailProvider {
 		attachmentId: string;
 	}): Promise<{ data: Buffer; mimeType: string; filename: string }>;
 
+	getMessageHeaders(params: {
+		accessToken: string;
+		messageId: string;
+		headers: string[];
+	}): Promise<Record<string, string>>;
+
 	sendMessage(params: {
 		accessToken: string;
 		email: SendEmailParams;

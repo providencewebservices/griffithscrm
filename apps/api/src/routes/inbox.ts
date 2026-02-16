@@ -614,7 +614,6 @@ const inboxRoutes = new Hono()
 		const subject = formData.get('subject') as string | null;
 		const bodyHtml = formData.get('bodyHtml') as string | null;
 		const replyToThreadIdField = formData.get('replyToThreadId') as string | null;
-		const replyToMessageIdField = formData.get('replyToMessageId') as string | null;
 		const documentIdsRaw = formData.get('documentIds') as string | null;
 
 		// Validate required fields
@@ -711,20 +710,8 @@ const inboxRoutes = new Hono()
 			return c.json({ error: 'Total attachment size exceeds 18MB limit' }, 400);
 		}
 
-		// If replying, get original message headers for In-Reply-To
+		// Get provider thread ID and RFC 2822 Message-ID for threading
 		let replyToMessageId: string | undefined;
-		if (replyToMessageIdField) {
-			const [origMsg] = await db
-				.select()
-				.from(emailMessages)
-				.where(eq(emailMessages.id, replyToMessageIdField))
-				.limit(1);
-			if (origMsg) {
-				replyToMessageId = origMsg.providerMessageId;
-			}
-		}
-
-		// Get provider thread ID for threading
 		let providerThreadId: string | undefined;
 		if (replyToThreadIdField) {
 			const [origThread] = await db
@@ -734,6 +721,29 @@ const inboxRoutes = new Hono()
 				.limit(1);
 			if (origThread) {
 				providerThreadId = origThread.providerThreadId;
+
+				// Find the last message in this thread to get its RFC 2822 Message-ID
+				const [lastMsg] = await db
+					.select({ providerMessageId: emailMessages.providerMessageId })
+					.from(emailMessages)
+					.where(eq(emailMessages.threadId, origThread.id))
+					.orderBy(desc(emailMessages.internalDate))
+					.limit(1);
+
+				if (lastMsg) {
+					try {
+						const msgHeaders = await provider.getMessageHeaders({
+							accessToken,
+							messageId: lastMsg.providerMessageId,
+							headers: ['Message-Id'],
+						});
+						if (msgHeaders['Message-Id']) {
+							replyToMessageId = msgHeaders['Message-Id'];
+						}
+					} catch (err) {
+						console.error('Failed to fetch Message-ID header:', err);
+					}
+				}
 			}
 		}
 

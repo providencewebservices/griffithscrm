@@ -291,6 +291,29 @@ export class GmailProvider implements IEmailProvider {
 		};
 	}
 
+	async getMessageHeaders(params: {
+		accessToken: string;
+		messageId: string;
+		headers: string[];
+	}): Promise<Record<string, string>> {
+		const gmail = createAuthenticatedClient(params.accessToken);
+
+		const res = await gmail.users.messages.get({
+			userId: 'me',
+			id: params.messageId,
+			format: 'metadata',
+			metadataHeaders: params.headers,
+		});
+
+		const result: Record<string, string> = {};
+		for (const h of res.data.payload?.headers || []) {
+			if (h.name && h.value) {
+				result[h.name] = h.value;
+			}
+		}
+		return result;
+	}
+
 	async sendMessage(params: { accessToken: string; email: SendEmailParams }): Promise<SendEmailResult> {
 		const gmail = createAuthenticatedClient(params.accessToken);
 		const { email } = params;
@@ -345,7 +368,7 @@ export class GmailProvider implements IEmailProvider {
 
 			parts.push(`--${boundary}--`);
 
-			messageBody = headers.join('\r\n') + '\r\n' + parts.join('\r\n');
+			messageBody = headers.join('\r\n') + '\r\n\r\n' + parts.join('\r\n');
 		} else {
 			// Simple message without attachments
 			headers.push('Content-Type: text/html; charset=UTF-8');
