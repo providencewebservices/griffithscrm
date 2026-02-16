@@ -7,7 +7,13 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
 	DropdownMenu,
@@ -321,8 +327,8 @@ export function InboxPage() {
 	};
 
 	return (
-		<div className="h-[calc(100vh-8rem)]">
-			<div className="mb-4 flex items-center justify-between">
+		<div className="h-[calc(100vh-8rem)] flex flex-col">
+			<div className="mb-4 flex items-center justify-between shrink-0">
 				<h2 className="text-2xl font-bold">Inbox</h2>
 				<div className="flex items-center gap-2">
 					<Button variant="outline" size="sm" onClick={handleSync} disabled={syncMutation.isPending}>
@@ -336,13 +342,26 @@ export function InboxPage() {
 				</div>
 			</div>
 
-			<div className="flex gap-4 h-[calc(100%-4rem)]">
+			<div className="flex gap-4 flex-1 min-h-0 overflow-hidden">
 				{/* Left Panel - Thread List */}
-				<Card className="w-2/5 flex flex-col overflow-hidden">
-					<div className="p-4 border-b space-y-4">
-						<div className="flex items-center justify-between">
+				<Card className={`${selectedThreadId ? 'w-80' : 'w-2/5'} min-w-0 flex flex-col overflow-hidden transition-[width] duration-200`}>
+					<div className="p-4 border-b space-y-3">
+						<div className="flex items-center justify-between gap-2">
+							<h3 className="font-semibold">Messages</h3>
 							<div className="flex items-center gap-2">
-								<h3 className="font-semibold">Messages</h3>
+								<Select value={filter} onValueChange={(v) => setFilter(v as ThreadsQueryParams['filter'])}>
+									<SelectTrigger size="sm" className="h-7 text-xs">
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="all">All</SelectItem>
+										<SelectItem value="unread">Unread</SelectItem>
+										<SelectItem value="customers">Customers</SelectItem>
+										<SelectItem value="quotes">Quotes</SelectItem>
+										<SelectItem value="jobs">Jobs</SelectItem>
+										<SelectItem value="unlinked">Unlinked</SelectItem>
+									</SelectContent>
+								</Select>
 								{unreadCount > 0 && (
 									<Badge variant="secondary">{unreadCount} unread</Badge>
 								)}
@@ -357,16 +376,6 @@ export function InboxPage() {
 								className="pl-9"
 							/>
 						</div>
-						<Tabs value={filter} onValueChange={(v) => setFilter(v as ThreadsQueryParams['filter'])}>
-							<TabsList className="w-full">
-								<TabsTrigger value="all" className="flex-1">All</TabsTrigger>
-								<TabsTrigger value="unread" className="flex-1">Unread</TabsTrigger>
-								<TabsTrigger value="customers" className="flex-1">Customers</TabsTrigger>
-								<TabsTrigger value="quotes" className="flex-1">Quotes</TabsTrigger>
-								<TabsTrigger value="jobs" className="flex-1">Jobs</TabsTrigger>
-								<TabsTrigger value="unlinked" className="flex-1">Unlinked</TabsTrigger>
-							</TabsList>
-						</Tabs>
 					</div>
 
 					<div className="flex-1 overflow-y-auto">
@@ -446,7 +455,7 @@ export function InboxPage() {
 				</Card>
 
 				{/* Right Panel - Thread Detail */}
-				<Card className="flex-1 flex flex-col overflow-hidden">
+				<Card className="flex-1 min-w-0 flex flex-col overflow-hidden">
 					{selectedThreadId && threadLoading ? (
 						<ThreadDetailSkeleton />
 					) : selectedThread ? (
@@ -563,14 +572,27 @@ export function InboxPage() {
 											{msg.bodyHtml ? (
 												<iframe
 													srcDoc={msg.bodyHtml}
-													sandbox=""
+													sandbox="allow-same-origin"
 													className="w-full border-0"
-													style={{ minHeight: '200px' }}
+													style={{ overflow: 'hidden' }}
 													onLoad={(e) => {
 														const iframe = e.target as HTMLIFrameElement;
-														if (iframe.contentDocument) {
-															iframe.style.height = iframe.contentDocument.body.scrollHeight + 'px';
-														}
+														const doc = iframe.contentDocument;
+														if (!doc) return;
+
+														// Prevent scrollbars inside iframe content
+														doc.body.style.overflow = 'hidden';
+														doc.body.style.margin = '0';
+
+														// Size to content
+														const resize = () => {
+															iframe.style.height = doc.body.scrollHeight + 'px';
+														};
+														resize();
+
+														// Re-measure when content changes (images loading, etc.)
+														const observer = new ResizeObserver(resize);
+														observer.observe(doc.body);
 													}}
 													title="Email content"
 												/>
