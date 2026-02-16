@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { google } from 'googleapis';
 import type {
 	IEmailProvider,
@@ -9,8 +10,10 @@ import type {
 	EmailMessageSummary,
 	EmailAttachmentMeta,
 	EmailAddress,
+	EmailAttachment,
 	SendEmailResult,
 	SyncResult,
+	SendEmailParams,
 } from './types';
 
 const GMAIL_SCOPES = [
@@ -288,31 +291,68 @@ export class GmailProvider implements IEmailProvider {
 		};
 	}
 
-	async sendMessage(params: { accessToken: string; email: any }): Promise<SendEmailResult> {
+	async sendMessage(params: { accessToken: string; email: SendEmailParams }): Promise<SendEmailResult> {
 		const gmail = createAuthenticatedClient(params.accessToken);
 		const { email } = params;
 
-		// Build RFC 2822 message
-		const lines: string[] = [];
-		lines.push(`From: ${email.fromName ? `${email.fromName} <${email.fromAddress}>` : email.fromAddress}`);
-		lines.push(`To: ${email.to.map((a: EmailAddress) => a.name ? `${a.name} <${a.address}>` : a.address).join(', ')}`);
+		const formatAddr = (a: EmailAddress) => a.name ? `${a.name} <${a.address}>` : a.address;
+
+		// Common headers
+		const headers: string[] = [];
+		headers.push(`From: ${email.fromName ? `${email.fromName} <${email.fromAddress}>` : email.fromAddress}`);
+		headers.push(`To: ${email.to.map(formatAddr).join(', ')}`);
 		if (email.cc?.length) {
-			lines.push(`Cc: ${email.cc.map((a: EmailAddress) => a.name ? `${a.name} <${a.address}>` : a.address).join(', ')}`);
+			headers.push(`Cc: ${email.cc.map(formatAddr).join(', ')}`);
 		}
 		if (email.bcc?.length) {
-			lines.push(`Bcc: ${email.bcc.map((a: EmailAddress) => a.name ? `${a.name} <${a.address}>` : a.address).join(', ')}`);
+			headers.push(`Bcc: ${email.bcc.map(formatAddr).join(', ')}`);
 		}
-		lines.push(`Subject: ${email.subject}`);
+		headers.push(`Subject: ${email.subject}`);
 		if (email.replyToMessageId) {
-			lines.push(`In-Reply-To: ${email.replyToMessageId}`);
-			lines.push(`References: ${email.replyToMessageId}`);
+			headers.push(`In-Reply-To: ${email.replyToMessageId}`);
+			headers.push(`References: ${email.replyToMessageId}`);
 		}
-		lines.push('MIME-Version: 1.0');
-		lines.push('Content-Type: text/html; charset=UTF-8');
-		lines.push('');
-		lines.push(email.bodyHtml);
+		headers.push('MIME-Version: 1.0');
 
-		const raw = Buffer.from(lines.join('\r\n')).toString('base64url');
+		let messageBody: string;
+
+		if (email.attachments?.length) {
+			// Build multipart/mixed message with attachments
+			const boundary = `boundary_${crypto.randomUUID().replace(/-/g, '')}`;
+			headers.push(`Content-Type: multipart/mixed; boundary="${boundary}"`);
+
+			const parts: string[] = [];
+
+			// HTML body part
+			parts.push(`--${boundary}`);
+			parts.push('Content-Type: text/html; charset=UTF-8');
+			parts.push('');
+			parts.push(email.bodyHtml);
+
+			// Attachment parts
+			for (const att of email.attachments) {
+				const base64Content = att.content.toString('base64');
+				// Wrap base64 at 76 chars per RFC 2045
+				const wrappedBase64 = base64Content.match(/.{1,76}/g)?.join('\r\n') || base64Content;
+
+				parts.push(`--${boundary}`);
+				parts.push(`Content-Type: ${att.contentType}; name="${att.filename}"`);
+				parts.push('Content-Transfer-Encoding: base64');
+				parts.push(`Content-Disposition: attachment; filename="${att.filename}"`);
+				parts.push('');
+				parts.push(wrappedBase64);
+			}
+
+			parts.push(`--${boundary}--`);
+
+			messageBody = headers.join('\r\n') + '\r\n' + parts.join('\r\n');
+		} else {
+			// Simple message without attachments
+			headers.push('Content-Type: text/html; charset=UTF-8');
+			messageBody = headers.join('\r\n') + '\r\n\r\n' + email.bodyHtml;
+		}
+
+		const raw = Buffer.from(messageBody).toString('base64url');
 
 		const res = await gmail.users.messages.send({
 			userId: 'me',

@@ -159,12 +159,32 @@ async function sendEmail(params: {
 	bodyHtml: string;
 	replyToThreadId?: string;
 	replyToMessageId?: string;
+	localFiles?: File[];
+	documentIds?: string[];
 }): Promise<{ success: boolean; messageId: string; threadId: string }> {
+	const formData = new FormData();
+	formData.append('to', params.to);
+	if (params.cc) formData.append('cc', params.cc);
+	if (params.bcc) formData.append('bcc', params.bcc);
+	formData.append('subject', params.subject);
+	formData.append('bodyHtml', params.bodyHtml);
+	if (params.replyToThreadId) formData.append('replyToThreadId', params.replyToThreadId);
+	if (params.replyToMessageId) formData.append('replyToMessageId', params.replyToMessageId);
+
+	if (params.localFiles?.length) {
+		for (const file of params.localFiles) {
+			formData.append('files', file);
+		}
+	}
+
+	if (params.documentIds?.length) {
+		formData.append('documentIds', JSON.stringify(params.documentIds));
+	}
+
 	const response = await fetch(`${API_URL}/api/inbox/send`, {
 		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
 		credentials: 'include',
-		body: JSON.stringify(params),
+		body: formData,
 	});
 
 	if (!response.ok) {

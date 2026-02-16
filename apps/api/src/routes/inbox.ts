@@ -9,9 +9,12 @@ import {
 	emailThreads,
 	emailMessages,
 	emailEntityLinks,
+	documents,
 } from '@griffiths-crm/shared/db/schema';
 import { getEmailProvider, getValidAccessToken } from '../lib/email-providers';
+import type { EmailAttachment } from '../lib/email-providers/types';
 import { GmailProvider } from '../lib/email-providers/gmail';
+import { getObjectBuffer } from '../lib/s3';
 import crypto from 'crypto';
 
 const SYNC_INTERVAL_MS = 60 * 1000; // 60 seconds
@@ -277,15 +280,6 @@ const linkSchema = z.object({
 	entityId: z.string().min(1),
 });
 
-const sendEmailSchema = z.object({
-	to: z.string().min(1),
-	cc: z.string().optional(),
-	bcc: z.string().optional(),
-	subject: z.string().min(1),
-	bodyHtml: z.string().min(1),
-	replyToThreadId: z.string().optional(),
-	replyToMessageId: z.string().optional(),
-});
 
 const inboxRoutes = new Hono()
 	.use('*', requireAuth, requireTenant)
@@ -606,11 +600,27 @@ const inboxRoutes = new Hono()
 		});
 	})
 
-	// POST /send - Send an email
-	.post('/send', zValidator('json', sendEmailSchema), async (c) => {
+	// POST /send - Send an email (FormData: text fields + file uploads + document IDs)
+	.post('/send', async (c) => {
 		const user = c.get('user');
 		const tenantId = user.tenantId!;
-		const body = c.req.valid('json');
+
+		const formData = await c.req.formData();
+
+		// Extract text fields
+		const to = formData.get('to') as string | null;
+		const cc = formData.get('cc') as string | null;
+		const bcc = formData.get('bcc') as string | null;
+		const subject = formData.get('subject') as string | null;
+		const bodyHtml = formData.get('bodyHtml') as string | null;
+		const replyToThreadIdField = formData.get('replyToThreadId') as string | null;
+		const replyToMessageIdField = formData.get('replyToMessageId') as string | null;
+		const documentIdsRaw = formData.get('documentIds') as string | null;
+
+		// Validate required fields
+		if (!to?.trim() || !subject?.trim() || !bodyHtml?.trim()) {
+			return c.json({ error: 'Missing required fields: to, subject, bodyHtml' }, 400);
+		}
 
 		// Get user's active integration
 		const [integration] = await db
@@ -633,18 +643,81 @@ const inboxRoutes = new Hono()
 		const provider = getEmailProvider(integration.provider as 'gmail' | 'microsoft');
 
 		// Parse recipients
-		const toAddresses = body.to.split(',').map((a) => ({ address: a.trim() }));
-		const ccAddresses = body.cc ? body.cc.split(',').map((a) => ({ address: a.trim() })) : undefined;
-		const bccAddresses = body.bcc ? body.bcc.split(',').map((a) => ({ address: a.trim() })) : undefined;
+		const toAddresses = to.split(',').map((a) => ({ address: a.trim() }));
+		const ccAddresses = cc ? cc.split(',').map((a) => ({ address: a.trim() })) : undefined;
+		const bccAddresses = bcc ? bcc.split(',').map((a) => ({ address: a.trim() })) : undefined;
+
+		// Collect attachments from local file uploads
+		const attachments: EmailAttachment[] = [];
+		const fileEntries = formData.getAll('files');
+		for (const entry of fileEntries) {
+			if (entry instanceof File && entry.size > 0) {
+				const buffer = Buffer.from(await entry.arrayBuffer());
+				attachments.push({
+					filename: entry.name,
+					contentType: entry.type || 'application/octet-stream',
+					content: buffer,
+				});
+			}
+		}
+
+		// Collect attachments from CRM document IDs
+		if (documentIdsRaw) {
+			let documentIds: string[];
+			try {
+				documentIds = JSON.parse(documentIdsRaw);
+			} catch {
+				return c.json({ error: 'Invalid documentIds format' }, 400);
+			}
+
+			if (documentIds.length > 0) {
+				// Fetch documents from DB (validate tenant ownership)
+				const docs = await db
+					.select({
+						id: documents.id,
+						name: documents.name,
+						filename: documents.filename,
+						s3Key: documents.s3Key,
+						contentType: documents.contentType,
+					})
+					.from(documents)
+					.where(
+						and(
+							eq(documents.tenantId, tenantId),
+							inArray(documents.id, documentIds)
+						)
+					);
+
+				if (docs.length !== documentIds.length) {
+					return c.json({ error: 'One or more documents not found' }, 404);
+				}
+
+				// Fetch each document from S3
+				for (const doc of docs) {
+					const { buffer } = await getObjectBuffer(doc.s3Key);
+					attachments.push({
+						filename: doc.filename,
+						contentType: doc.contentType,
+						content: buffer,
+					});
+				}
+			}
+		}
+
+		// Validate total attachment size (18MB raw = ~24MB base64, within Gmail's 25MB limit)
+		const MAX_ATTACHMENT_SIZE = 18 * 1024 * 1024;
+		const totalSize = attachments.reduce((sum, a) => sum + a.content.length, 0);
+		if (totalSize > MAX_ATTACHMENT_SIZE) {
+			return c.json({ error: 'Total attachment size exceeds 18MB limit' }, 400);
+		}
 
 		// If replying, get original message headers for In-Reply-To
 		let replyToMessageId: string | undefined;
-		if (body.replyToMessageId) {
-			// The replyToMessageId from frontend is our DB message ID
+		if (replyToMessageIdField) {
 			const [origMsg] = await db
 				.select()
 				.from(emailMessages)
-				.where(eq(emailMessages.id, body.replyToMessageId))
+				.where(eq(emailMessages.id, replyToMessageIdField))
 				.limit(1);
 			if (origMsg) {
 				replyToMessageId = origMsg.providerMessageId;
@@ -653,11 +726,11 @@ const inboxRoutes = new Hono()
 
 		// Get provider thread ID for threading
 		let providerThreadId: string | undefined;
-		if (body.replyToThreadId) {
+		if (replyToThreadIdField) {
 			const [origThread] = await db
 				.select()
 				.from(emailThreads)
-				.where(eq(emailThreads.id, body.replyToThreadId))
+				.where(eq(emailThreads.id, replyToThreadIdField))
 				.limit(1);
 			if (origThread) {
 				providerThreadId = origThread.providerThreadId;
@@ -670,12 +743,13 @@ const inboxRoutes = new Hono()
 				to: toAddresses,
 				cc: ccAddresses,
 				bcc: bccAddresses,
-				subject: body.bodyHtml ? body.subject : body.subject,
-				bodyHtml: body.bodyHtml,
+				subject,
+				bodyHtml,
 				replyToMessageId,
 				replyToThreadId: providerThreadId,
 				fromAddress: integration.emailAddress,
 				fromName: user.name,
+				attachments: attachments.length > 0 ? attachments : undefined,
 			},
 		});
 

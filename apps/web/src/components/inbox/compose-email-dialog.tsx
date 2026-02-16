@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import {
 	Bold,
 	Italic,
@@ -22,30 +23,43 @@ import {
 	Paperclip,
 	X,
 	File,
+	FolderOpen,
+	AlertTriangle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { formatFileSize } from '@/lib/file-utils';
+import { DocumentPickerDialog } from './document-picker-dialog';
 
-interface Attachment {
+export type ComposeAttachment = {
 	id: string;
-	file: File;
+	source: 'local' | 'app';
 	name: string;
-	size: string;
-}
+	size: number;
+	contentType: string;
+	file?: File;
+	documentId?: string;
+};
+
+const MAX_ATTACHMENT_SIZE = 18 * 1024 * 1024; // 18MB raw
+const WARN_ATTACHMENT_SIZE = 15 * 1024 * 1024; // 15MB warning
 
 interface ComposeEmailDialogProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
-	onSend: (data: { to: string; cc?: string; bcc?: string; subject: string; body: string; attachments: File[] }) => void;
+	onSend: (data: {
+		to: string;
+		cc?: string;
+		bcc?: string;
+		subject: string;
+		body: string;
+		localFiles: File[];
+		documentIds: string[];
+	}) => void;
 	defaultTo?: string;
 	defaultSubject?: string;
 	defaultBody?: string;
 	fromAddress?: string;
-}
-
-function formatFileSize(bytes: number): string {
-	if (bytes < 1024) return `${bytes} B`;
-	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-	return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+	entityContext?: { entityType: string; entityId: string };
 }
 
 function ToolbarButton({
@@ -86,14 +100,16 @@ export function ComposeEmailDialog({
 	defaultSubject = '',
 	defaultBody = '',
 	fromAddress,
+	entityContext,
 }: ComposeEmailDialogProps) {
 	const [to, setTo] = useState(defaultTo);
 	const [cc, setCc] = useState('');
 	const [bcc, setBcc] = useState('');
 	const [showCcBcc, setShowCcBcc] = useState(false);
 	const [subject, setSubject] = useState(defaultSubject);
-	const [attachments, setAttachments] = useState<Attachment[]>([]);
+	const [attachments, setAttachments] = useState<ComposeAttachment[]>([]);
 	const [isSending, setIsSending] = useState(false);
+	const [docPickerOpen, setDocPickerOpen] = useState(false);
 	// Force re-render when editor state changes (for toolbar active states)
 	const [, setEditorVersion] = useState(0);
 
@@ -126,6 +142,10 @@ export function ComposeEmailDialog({
 			},
 		},
 	});
+
+	const totalSize = attachments.reduce((sum, a) => sum + a.size, 0);
+	const isOverLimit = totalSize > MAX_ATTACHMENT_SIZE;
+	const isNearLimit = totalSize > WARN_ATTACHMENT_SIZE && !isOverLimit;
 
 	// Reset form when dialog opens with new defaults
 	const handleOpenChange = useCallback(
@@ -160,15 +180,30 @@ export function ComposeEmailDialog({
 		const files = e.target.files;
 		if (!files) return;
 
-		const newAttachments: Attachment[] = Array.from(files).map((file) => ({
+		const newAttachments: ComposeAttachment[] = Array.from(files).map((file) => ({
 			id: crypto.randomUUID(),
-			file,
+			source: 'local' as const,
 			name: file.name,
-			size: formatFileSize(file.size),
+			size: file.size,
+			contentType: file.type || 'application/octet-stream',
+			file,
 		}));
 
 		setAttachments((prev) => [...prev, ...newAttachments]);
 		e.target.value = '';
+	}, []);
+
+	const handleDocumentsSelected = useCallback((docs: { id: string; name: string; size: number; contentType: string }[]) => {
+		const newAttachments: ComposeAttachment[] = docs.map((doc) => ({
+			id: crypto.randomUUID(),
+			source: 'app' as const,
+			name: doc.name,
+			size: doc.size,
+			contentType: doc.contentType,
+			documentId: doc.id,
+		}));
+
+		setAttachments((prev) => [...prev, ...newAttachments]);
 	}, []);
 
 	const handleRemoveAttachment = useCallback((id: string) => {
@@ -178,27 +213,38 @@ export function ComposeEmailDialog({
 	const handleSubmit = useCallback(
 		async (e: React.FormEvent) => {
 			e.preventDefault();
-			if (!to.trim() || !subject.trim()) return;
+			if (!to.trim() || !subject.trim() || isOverLimit) return;
 
 			setIsSending(true);
 			try {
+				const localFiles = attachments
+					.filter((a) => a.source === 'local' && a.file)
+					.map((a) => a.file!);
+				const documentIds = attachments
+					.filter((a) => a.source === 'app' && a.documentId)
+					.map((a) => a.documentId!);
+
 				await onSend({
 					to: to.trim(),
 					cc: cc.trim() || undefined,
 					bcc: bcc.trim() || undefined,
 					subject: subject.trim(),
 					body: editor?.getHTML() || '',
-					attachments: attachments.map((a) => a.file),
+					localFiles,
+					documentIds,
 				});
 				handleOpenChange(false);
 			} finally {
 				setIsSending(false);
 			}
 		},
-		[to, subject, editor, attachments, onSend, handleOpenChange]
+		[to, cc, bcc, subject, editor, attachments, isOverLimit, onSend, handleOpenChange]
 	);
 
-	const canSend = to.trim() && subject.trim();
+	const canSend = to.trim() && subject.trim() && !isOverLimit;
+	const excludeDocIds = attachments
+		.filter((a) => a.source === 'app' && a.documentId)
+		.map((a) => a.documentId!);
 
 	return (
 		<Dialog open={open} onOpenChange={handleOpenChange}>
@@ -356,8 +402,20 @@ export function ComposeEmailDialog({
 							<div className="flex items-center gap-2 text-sm text-muted-foreground">
 								<Paperclip className="h-4 w-4" />
 								<span>
-									{attachments.length} attachment{attachments.length > 1 ? 's' : ''}
+									{attachments.length} attachment{attachments.length > 1 ? 's' : ''} ({formatFileSize(totalSize)})
 								</span>
+								{isOverLimit && (
+									<span className="flex items-center gap-1 text-destructive text-xs font-medium">
+										<AlertTriangle className="h-3 w-3" />
+										Exceeds 18MB limit
+									</span>
+								)}
+								{isNearLimit && (
+									<span className="flex items-center gap-1 text-amber-600 text-xs font-medium">
+										<AlertTriangle className="h-3 w-3" />
+										Approaching size limit
+									</span>
+								)}
 							</div>
 							<div className="flex flex-wrap gap-2">
 								{attachments.map((attachment) => (
@@ -368,8 +426,13 @@ export function ComposeEmailDialog({
 										<File className="h-3 w-3 text-muted-foreground" />
 										<span className="max-w-[150px] truncate">{attachment.name}</span>
 										<span className="text-muted-foreground text-xs">
-											({attachment.size})
+											({formatFileSize(attachment.size)})
 										</span>
+										{attachment.source === 'app' && (
+											<Badge variant="outline" className="text-[10px] px-1 py-0 h-4">
+												CRM
+											</Badge>
+										)}
 										<button
 											type="button"
 											onClick={() => handleRemoveAttachment(attachment.id)}
@@ -384,7 +447,7 @@ export function ComposeEmailDialog({
 					)}
 
 					<DialogFooter className="mt-4 flex-row justify-between sm:justify-between">
-						<div>
+						<div className="flex gap-2">
 							<input
 								type="file"
 								id="attachment-input"
@@ -399,7 +462,16 @@ export function ComposeEmailDialog({
 								onClick={() => document.getElementById('attachment-input')?.click()}
 							>
 								<Paperclip className="h-4 w-4 mr-2" />
-								Attach Files
+								From Computer
+							</Button>
+							<Button
+								type="button"
+								variant="outline"
+								size="sm"
+								onClick={() => setDocPickerOpen(true)}
+							>
+								<FolderOpen className="h-4 w-4 mr-2" />
+								From Documents
 							</Button>
 						</div>
 						<div className="flex gap-2">
@@ -418,6 +490,14 @@ export function ComposeEmailDialog({
 					</DialogFooter>
 				</form>
 			</DialogContent>
+
+			<DocumentPickerDialog
+				open={docPickerOpen}
+				onOpenChange={setDocPickerOpen}
+				onSelect={handleDocumentsSelected}
+				excludeIds={excludeDocIds}
+				entityContext={entityContext}
+			/>
 		</Dialog>
 	);
 }

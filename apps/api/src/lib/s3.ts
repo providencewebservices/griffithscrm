@@ -199,6 +199,34 @@ export async function getSignedImageUrl(storedUrl: string | null): Promise<strin
 }
 
 /**
+ * Fetch an S3 object as a Buffer
+ * Used for attaching CRM documents to outgoing emails
+ */
+export async function getObjectBuffer(key: string): Promise<{ buffer: Buffer; contentType: string }> {
+	const command = new GetObjectCommand({
+		Bucket: s3Config.bucket,
+		Key: key,
+	});
+
+	const response = await s3Client.send(command);
+	const stream = response.Body;
+	if (!stream) {
+		throw new Error(`S3 object not found: ${key}`);
+	}
+
+	const chunks: Uint8Array[] = [];
+	// @ts-expect-error - S3 Body is a Readable stream in Node
+	for await (const chunk of stream) {
+		chunks.push(chunk);
+	}
+
+	return {
+		buffer: Buffer.concat(chunks),
+		contentType: response.ContentType || 'application/octet-stream',
+	};
+}
+
+/**
  * Delete an object from S3
  */
 export async function deleteObject(key: string): Promise<void> {

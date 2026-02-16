@@ -53,6 +53,12 @@ export type EmailThreadFull = {
 	historyId?: string;
 };
 
+export type EmailAttachment = {
+	filename: string;
+	contentType: string;
+	content: Buffer;
+};
+
 export type SendEmailParams = {
 	to: EmailAddress[];
 	cc?: EmailAddress[];
@@ -63,6 +69,7 @@ export type SendEmailParams = {
 	replyToThreadId?: string;
 	fromAddress: string;
 	fromName?: string;
+	attachments?: EmailAttachment[];
 };
 
 export type SendEmailResult = {

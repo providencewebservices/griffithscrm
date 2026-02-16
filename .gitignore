@@ -7,3 +7,4 @@ dist/
 # Deploy scripts (local only)
 deploy-frontend.sh
 deploy-backend.sh
+check-ecs-deploy.sh

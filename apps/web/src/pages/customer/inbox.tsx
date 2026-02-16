@@ -280,16 +280,23 @@ export function InboxPage() {
 
 	const handleSendEmail = async (data: {
 		to: string;
+		cc?: string;
+		bcc?: string;
 		subject: string;
 		body: string;
-		attachments: File[];
+		localFiles: File[];
+		documentIds: string[];
 	}) => {
 		try {
 			await sendEmailMutation.mutateAsync({
 				to: data.to,
+				cc: data.cc,
+				bcc: data.bcc,
 				subject: data.subject,
 				bodyHtml: data.body,
 				replyToThreadId: replyToThread?.threadId,
+				localFiles: data.localFiles.length > 0 ? data.localFiles : undefined,
+				documentIds: data.documentIds.length > 0 ? data.documentIds : undefined,
 			});
 			toast.success('Email sent');
 			setReplyToThread(null);
@@ -628,6 +635,11 @@ export function InboxPage() {
 						: ''
 				}
 				fromAddress={activeIntegration?.emailAddress}
+				entityContext={
+					selectedThread?.links?.[0]
+						? { entityType: selectedThread.links[0].entityType, entityId: selectedThread.links[0].entityId }
+						: undefined
+				}
 			/>
 		</div>
 	);
