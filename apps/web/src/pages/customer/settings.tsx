@@ -8,6 +8,7 @@ import {
 	Type,
 	Package,
 	List,
+	Mail,
 } from 'lucide-react';
 import {
 	Select,
@@ -25,6 +26,7 @@ import { LineItemsTab } from '@/components/customer/settings/line-items-tab';
 import { ProductCategoriesTab } from '@/components/customer/settings/product-categories-tab';
 import { MaterialSectionsTab } from '@/components/customer/settings/material-sections-tab';
 import { FinishesTab } from '@/components/customer/settings/finishes-tab';
+import { IntegrationsTab } from '@/components/customer/settings/integrations-tab';
 
 type SettingsTab =
 	| 'business'
@@ -34,7 +36,8 @@ type SettingsTab =
 	| 'finishes'
 	| 'lettering'
 	| 'sundries'
-	| 'line-items';
+	| 'line-items'
+	| 'integrations';
 
 const TAB_CONFIG: { value: SettingsTab; label: string; icon: typeof Building2 }[] = [
 	{ value: 'business', label: 'Business', icon: Building2 },
@@ -45,6 +48,7 @@ const TAB_CONFIG: { value: SettingsTab; label: string; icon: typeof Building2 }[
 	{ value: 'lettering', label: 'Lettering', icon: Type },
 	{ value: 'sundries', label: 'Sundries', icon: Package },
 	{ value: 'line-items', label: 'Line Items', icon: List },
+	{ value: 'integrations', label: 'Integrations', icon: Mail },
 ];
 
 function SettingsContent({ tab }: { tab: SettingsTab }) {
@@ -65,6 +69,8 @@ function SettingsContent({ tab }: { tab: SettingsTab }) {
 			return <SundriesTab />;
 		case 'line-items':
 			return <LineItemsTab />;
+		case 'integrations':
+			return <IntegrationsTab />;
 		default:
 			return <BusinessTab />;
 	}

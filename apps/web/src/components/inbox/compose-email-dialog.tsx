@@ -35,10 +35,11 @@ interface Attachment {
 interface ComposeEmailDialogProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
-	onSend: (data: { to: string; subject: string; body: string; attachments: File[] }) => void;
+	onSend: (data: { to: string; cc?: string; bcc?: string; subject: string; body: string; attachments: File[] }) => void;
 	defaultTo?: string;
 	defaultSubject?: string;
 	defaultBody?: string;
+	fromAddress?: string;
 }
 
 function formatFileSize(bytes: number): string {
@@ -84,8 +85,12 @@ export function ComposeEmailDialog({
 	defaultTo = '',
 	defaultSubject = '',
 	defaultBody = '',
+	fromAddress,
 }: ComposeEmailDialogProps) {
 	const [to, setTo] = useState(defaultTo);
+	const [cc, setCc] = useState('');
+	const [bcc, setBcc] = useState('');
+	const [showCcBcc, setShowCcBcc] = useState(false);
 	const [subject, setSubject] = useState(defaultSubject);
 	const [attachments, setAttachments] = useState<Attachment[]>([]);
 	const [isSending, setIsSending] = useState(false);
@@ -127,6 +132,9 @@ export function ComposeEmailDialog({
 		(isOpen: boolean) => {
 			if (isOpen) {
 				setTo(defaultTo);
+				setCc('');
+				setBcc('');
+				setShowCcBcc(false);
 				setSubject(defaultSubject);
 				setAttachments([]);
 				editor?.commands.setContent(defaultBody);
@@ -176,6 +184,8 @@ export function ComposeEmailDialog({
 			try {
 				await onSend({
 					to: to.trim(),
+					cc: cc.trim() || undefined,
+					bcc: bcc.trim() || undefined,
 					subject: subject.trim(),
 					body: editor?.getHTML() || '',
 					attachments: attachments.map((a) => a.file),
@@ -199,6 +209,15 @@ export function ComposeEmailDialog({
 
 				<form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0">
 					<div className="space-y-3">
+						{fromAddress && (
+							<div className="flex items-center gap-2">
+								<label className="text-sm font-medium w-16">
+									From:
+								</label>
+								<span className="text-sm text-muted-foreground">{fromAddress}</span>
+							</div>
+						)}
+
 						<div className="flex items-center gap-2">
 							<label htmlFor="to" className="text-sm font-medium w-16">
 								To:
@@ -212,7 +231,49 @@ export function ComposeEmailDialog({
 								className="flex-1"
 								required
 							/>
+							{!showCcBcc && (
+								<Button
+									type="button"
+									variant="ghost"
+									size="sm"
+									onClick={() => setShowCcBcc(true)}
+									className="text-xs text-muted-foreground"
+								>
+									Cc/Bcc
+								</Button>
+							)}
 						</div>
+
+						{showCcBcc && (
+							<>
+								<div className="flex items-center gap-2">
+									<label htmlFor="cc" className="text-sm font-medium w-16">
+										Cc:
+									</label>
+									<Input
+										id="cc"
+										type="text"
+										value={cc}
+										onChange={(e) => setCc(e.target.value)}
+										placeholder="cc@example.com"
+										className="flex-1"
+									/>
+								</div>
+								<div className="flex items-center gap-2">
+									<label htmlFor="bcc" className="text-sm font-medium w-16">
+										Bcc:
+									</label>
+									<Input
+										id="bcc"
+										type="text"
+										value={bcc}
+										onChange={(e) => setBcc(e.target.value)}
+										placeholder="bcc@example.com"
+										className="flex-1"
+									/>
+								</div>
+							</>
+						)}
 
 						<div className="flex items-center gap-2">
 							<label htmlFor="subject" className="text-sm font-medium w-16">

@@ -134,6 +134,13 @@
       "when": 1770911683744,
       "tag": "0018_woozy_lady_ursula",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1771248845266,
+      "tag": "0019_stiff_roulette",
+      "breakpoints": true
     }
   ]
 }

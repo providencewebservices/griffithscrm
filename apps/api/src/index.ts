@@ -34,6 +34,8 @@ import { calendarRoutes } from './routes/calendar';
 import { timeOffRoutes } from './routes/time-off';
 import { documentsRoutes } from './routes/documents';
 import { documentFoldersRoutes } from './routes/document-folders';
+import { emailIntegrationsRoutes } from './routes/email-integrations';
+import { inboxRoutes } from './routes/inbox';
 
 const app = new Hono();
 
@@ -138,6 +140,10 @@ app.route('/api/time-off', timeOffRoutes);
 // Documents routes (for tenant users)
 app.route('/api/documents', documentsRoutes);
 app.route('/api/document-folders', documentFoldersRoutes);
+
+// Email integration routes
+app.route('/api/email-integrations', emailIntegrationsRoutes);
+app.route('/api/inbox', inboxRoutes);
 
 // Export type for RPC client
 export type AppType = typeof api;

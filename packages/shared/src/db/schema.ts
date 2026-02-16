@@ -1204,3 +1204,104 @@ export const calendarSettings = pgTable('calendar_settings', {
 	createdAt: timestamp('created_at').notNull().defaultNow(),
 	updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
+
+// ============================================
+// EMAIL INTEGRATION TABLES
+// ============================================
+
+// Email provider options
+export const EMAIL_PROVIDERS = ['gmail', 'microsoft'] as const;
+
+// Email integration status options
+export const EMAIL_INTEGRATION_STATUSES = ['active', 'token_expired', 'revoked', 'error'] as const;
+
+// Email integrations (per-user email provider connections)
+export const emailIntegrations = pgTable('email_integrations', {
+	id: text('id').primaryKey(),
+	userId: text('user_id')
+		.notNull()
+		.references(() => users.id, { onDelete: 'cascade' }),
+	tenantId: text('tenant_id')
+		.notNull()
+		.references(() => tenants.id, { onDelete: 'cascade' }),
+	provider: text('provider').notNull(), // From EMAIL_PROVIDERS
+	emailAddress: text('email_address').notNull(),
+	accessToken: text('access_token').notNull(),
+	refreshToken: text('refresh_token').notNull(),
+	accessTokenExpiresAt: timestamp('access_token_expires_at'),
+	scopes: text('scopes'), // Comma-separated scopes
+	providerAccountId: text('provider_account_id'), // Google/Microsoft account ID
+	status: text('status').notNull().default('active'), // From EMAIL_INTEGRATION_STATUSES
+	lastSyncAt: timestamp('last_sync_at'),
+	historyId: text('history_id'), // Gmail history ID for incremental sync
+	syncCursor: text('sync_cursor'), // Generic cursor (for Microsoft delta tokens later)
+	errorMessage: text('error_message'),
+	createdAt: timestamp('created_at').notNull().defaultNow(),
+	updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// Email threads (cached thread metadata)
+export const emailThreads = pgTable('email_threads', {
+	id: text('id').primaryKey(),
+	integrationId: text('integration_id')
+		.notNull()
+		.references(() => emailIntegrations.id, { onDelete: 'cascade' }),
+	tenantId: text('tenant_id')
+		.notNull()
+		.references(() => tenants.id, { onDelete: 'cascade' }),
+	providerThreadId: text('provider_thread_id').notNull(),
+	subject: text('subject'),
+	snippet: text('snippet'),
+	lastMessageAt: timestamp('last_message_at'),
+	messageCount: integer('message_count').notNull().default(0),
+	isUnread: boolean('is_unread').notNull().default(false),
+	isArchived: boolean('is_archived').notNull().default(false),
+	labelIds: text('label_ids'), // JSON array of provider label IDs
+	createdAt: timestamp('created_at').notNull().defaultNow(),
+	updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// Email messages (cached message metadata, NOT full body)
+export const emailMessages = pgTable('email_messages', {
+	id: text('id').primaryKey(),
+	threadId: text('thread_id')
+		.notNull()
+		.references(() => emailThreads.id, { onDelete: 'cascade' }),
+	integrationId: text('integration_id')
+		.notNull()
+		.references(() => emailIntegrations.id, { onDelete: 'cascade' }),
+	tenantId: text('tenant_id')
+		.notNull()
+		.references(() => tenants.id, { onDelete: 'cascade' }),
+	providerMessageId: text('provider_message_id').notNull(),
+	fromAddress: text('from_address'),
+	fromName: text('from_name'),
+	toAddresses: text('to_addresses'), // JSON array of {name, address}
+	ccAddresses: text('cc_addresses'), // JSON array
+	subject: text('subject'),
+	snippet: text('snippet'),
+	isUnread: boolean('is_unread').notNull().default(false),
+	hasAttachments: boolean('has_attachments').notNull().default(false),
+	labelIds: text('label_ids'), // JSON array
+	internalDate: timestamp('internal_date'), // When message was received
+	createdAt: timestamp('created_at').notNull().defaultNow(),
+	updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// Email entity link types
+export const EMAIL_ENTITY_LINK_TYPES = ['customer', 'quote', 'job', 'funeral_director', 'supplier'] as const;
+
+// Email entity links (thread <-> CRM entity linking)
+export const emailEntityLinks = pgTable('email_entity_links', {
+	id: text('id').primaryKey(),
+	tenantId: text('tenant_id')
+		.notNull()
+		.references(() => tenants.id, { onDelete: 'cascade' }),
+	threadId: text('thread_id')
+		.notNull()
+		.references(() => emailThreads.id, { onDelete: 'cascade' }),
+	entityType: text('entity_type').notNull(), // From EMAIL_ENTITY_LINK_TYPES
+	entityId: text('entity_id').notNull(),
+	linkedById: text('linked_by_id').references(() => users.id, { onDelete: 'set null' }),
+	createdAt: timestamp('created_at').notNull().defaultNow(),
+});
