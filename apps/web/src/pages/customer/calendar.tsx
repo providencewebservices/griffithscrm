@@ -2,7 +2,7 @@ import { Calendar } from '@/components/calendar';
 
 export function CalendarPage() {
 	return (
-		<div className="h-[calc(100vh-6rem)]">
+		<div>
 			<div className="mb-4">
 				<h1 className="text-3xl font-bold tracking-tight">Calendar</h1>
 				<p className="text-muted-foreground">

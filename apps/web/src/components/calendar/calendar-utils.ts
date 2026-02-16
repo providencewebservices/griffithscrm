@@ -171,6 +171,66 @@ export function formatDateRange(start: Date, end: Date | null): string {
 	return `${format(start, 'MMM d')} - ${format(end, 'MMM d, yyyy')}`;
 }
 
+// Get upcoming events filtered by view
+export function getUpcomingEvents(
+	events: CalendarEvent[],
+	currentDate: Date,
+	view: CalendarView
+): CalendarEvent[] {
+	const now = new Date();
+	const today = startOfDay(currentDate);
+
+	let filtered: CalendarEvent[];
+
+	switch (view) {
+		case 'day': {
+			// Show all events for the selected day, sorted by time
+			filtered = getEventsForDay(events, currentDate);
+			break;
+		}
+		case 'week': {
+			// Show events from today onward within the week
+			const weekEnd = endOfWeek(currentDate, { weekStartsOn: 0 });
+			filtered = events.filter((event) => {
+				const eventStart = parseISO(event.start);
+				// Include events from today onward (or from now if today)
+				return eventStart <= weekEnd && (eventStart >= today || (event.end && parseISO(event.end) >= today));
+			});
+			break;
+		}
+		case 'month':
+		default: {
+			// Show today's events + upcoming events in the visible range
+			const range = getDateRange(currentDate, 'month');
+			filtered = events.filter((event) => {
+				const eventStart = parseISO(event.start);
+				return eventStart <= range.end && (eventStart >= today || (event.end && parseISO(event.end) >= today));
+			});
+			break;
+		}
+	}
+
+	// Sort: all-day events first, then by start time
+	return filtered.sort((a, b) => {
+		const aStart = parseISO(a.start);
+		const bStart = parseISO(b.start);
+		const aDay = startOfDay(aStart);
+		const bDay = startOfDay(bStart);
+
+		// Group by day first
+		if (aDay.getTime() !== bDay.getTime()) {
+			return aDay.getTime() - bDay.getTime();
+		}
+
+		// Within same day: all-day events first
+		if (a.allDay && !b.allDay) return -1;
+		if (!a.allDay && b.allDay) return 1;
+
+		// Then by start time
+		return aStart.getTime() - bStart.getTime();
+	});
+}
+
 // Re-export commonly used date-fns functions
 export { isSameMonth, isSameDay, parseISO, format, startOfDay, addDays };
 export const isToday = dateFnsIsToday;

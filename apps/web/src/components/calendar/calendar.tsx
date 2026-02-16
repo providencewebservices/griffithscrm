@@ -3,6 +3,7 @@ import { CalendarHeader } from './calendar-header';
 import { MonthView } from './month-view';
 import { WeekView } from './week-view';
 import { DayView } from './day-view';
+import { UpcomingEventsList } from './upcoming-events-list';
 import { EventFormDialog } from './event-form-dialog';
 import { navigateDate, getDateRange } from './calendar-utils';
 import {
@@ -81,56 +82,68 @@ export function Calendar() {
 	};
 
 	return (
-		<div className="flex flex-col h-full bg-card rounded-xl border shadow-sm overflow-hidden">
-			<CalendarHeader
-				currentDate={currentDate}
-				view={view}
-				onViewChange={setView}
-				onPrevious={handlePrevious}
-				onNext={handleNext}
-				onToday={handleToday}
-			/>
+		<div>
+			<div className="flex flex-col h-[calc(100vh-10.5rem)] bg-card rounded-xl border shadow-sm overflow-hidden">
+				<CalendarHeader
+					currentDate={currentDate}
+					view={view}
+					onViewChange={setView}
+					onPrevious={handlePrevious}
+					onNext={handleNext}
+					onToday={handleToday}
+				/>
 
-			{isLoading ? (
-				<div className="flex-1 flex items-center justify-center text-muted-foreground">
-					Loading events...
+				{isLoading ? (
+					<div className="flex-1 flex items-center justify-center text-muted-foreground">
+						Loading events...
+					</div>
+				) : (
+					<>
+						{view === 'month' && (
+							<MonthView
+								currentDate={currentDate}
+								events={events}
+								onDateClick={handleDateClick}
+							/>
+						)}
+
+						{view === 'week' && (
+							<WeekView
+								currentDate={currentDate}
+								events={events}
+								onTimeSlotClick={handleTimeSlotClick}
+							/>
+						)}
+
+						{view === 'day' && (
+							<DayView
+								currentDate={currentDate}
+								events={events}
+								onTimeSlotClick={handleTimeSlotClick}
+							/>
+						)}
+					</>
+				)}
+
+				<EventFormDialog
+					open={createDialogOpen}
+					onOpenChange={setCreateDialogOpen}
+					onSubmit={handleCreateEvent}
+					initialDate={createDate}
+					initialHour={createHour}
+					isLoading={createEventMutation.isPending}
+				/>
+			</div>
+
+			{!isLoading && (
+				<div className="mt-3 pb-4">
+					<UpcomingEventsList
+						events={events}
+						currentDate={currentDate}
+						view={view}
+					/>
 				</div>
-			) : (
-				<>
-					{view === 'month' && (
-						<MonthView
-							currentDate={currentDate}
-							events={events}
-							onDateClick={handleDateClick}
-						/>
-					)}
-
-					{view === 'week' && (
-						<WeekView
-							currentDate={currentDate}
-							events={events}
-							onTimeSlotClick={handleTimeSlotClick}
-						/>
-					)}
-
-					{view === 'day' && (
-						<DayView
-							currentDate={currentDate}
-							events={events}
-							onTimeSlotClick={handleTimeSlotClick}
-						/>
-					)}
-				</>
 			)}
-
-			<EventFormDialog
-				open={createDialogOpen}
-				onOpenChange={setCreateDialogOpen}
-				onSubmit={handleCreateEvent}
-				initialDate={createDate}
-				initialHour={createHour}
-				isLoading={createEventMutation.isPending}
-			/>
 		</div>
 	);
 }
