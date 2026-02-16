@@ -16,8 +16,23 @@ import crypto from 'crypto';
 
 const SYNC_INTERVAL_MS = 60 * 1000; // 60 seconds
 
+// In-memory lock to prevent concurrent syncs for the same integration
+const activeSyncs = new Map<string, Promise<void>>();
+
 // Perform incremental sync if needed
 async function syncIfNeeded(integrationId: string, tenantId: string) {
+	if (activeSyncs.has(integrationId)) return;
+
+	const syncPromise = doSync(integrationId, tenantId);
+	activeSyncs.set(integrationId, syncPromise);
+	try {
+		await syncPromise;
+	} finally {
+		activeSyncs.delete(integrationId);
+	}
+}
+
+async function doSync(integrationId: string, tenantId: string) {
 	const [integration] = await db
 		.select()
 		.from(emailIntegrations)
@@ -52,7 +67,7 @@ async function syncIfNeeded(integrationId: string, tenantId: string) {
 
 			for (const thread of listResult.threads) {
 				const threadId = crypto.randomUUID();
-				await db.insert(emailThreads).values({
+				const [upsertedThread] = await db.insert(emailThreads).values({
 					id: threadId,
 					integrationId,
 					tenantId,
@@ -64,12 +79,25 @@ async function syncIfNeeded(integrationId: string, tenantId: string) {
 					isUnread: thread.isUnread,
 					isArchived: false,
 					labelIds: JSON.stringify(thread.labelIds),
-				});
+				}).onConflictDoUpdate({
+					target: [emailThreads.integrationId, emailThreads.providerThreadId],
+					set: {
+						subject: thread.subject,
+						snippet: thread.snippet,
+						lastMessageAt: thread.lastMessageAt,
+						messageCount: thread.messageCount,
+						isUnread: thread.isUnread,
+						labelIds: JSON.stringify(thread.labelIds),
+						updatedAt: new Date(),
+					},
+				}).returning({ id: emailThreads.id });
+
+				const resolvedThreadId = upsertedThread.id;
 
 				for (const msg of thread.messages) {
 					await db.insert(emailMessages).values({
 						id: crypto.randomUUID(),
-						threadId,
+						threadId: resolvedThreadId,
 						integrationId,
 						tenantId,
 						providerMessageId: msg.providerMessageId,
@@ -83,6 +111,21 @@ async function syncIfNeeded(integrationId: string, tenantId: string) {
 						hasAttachments: msg.hasAttachments,
 						labelIds: JSON.stringify(msg.labelIds),
 						internalDate: msg.internalDate,
+					}).onConflictDoUpdate({
+						target: [emailMessages.integrationId, emailMessages.providerMessageId],
+						set: {
+							fromAddress: msg.fromAddress,
+							fromName: msg.fromName,
+							toAddresses: JSON.stringify(msg.toAddresses),
+							ccAddresses: JSON.stringify(msg.ccAddresses),
+							subject: msg.subject,
+							snippet: msg.snippet,
+							isUnread: msg.isUnread,
+							hasAttachments: msg.hasAttachments,
+							labelIds: JSON.stringify(msg.labelIds),
+							internalDate: msg.internalDate,
+							updatedAt: new Date(),
+						},
 					});
 				}
 			}
@@ -142,25 +185,26 @@ async function syncIfNeeded(integrationId: string, tenantId: string) {
 					.where(eq(emailThreads.id, thread.id));
 			}
 
-			// Check if message already exists
-			const [existingMsg] = await db
-				.select({ id: emailMessages.id })
-				.from(emailMessages)
-				.where(
-					and(
-						eq(emailMessages.integrationId, integrationId),
-						eq(emailMessages.providerMessageId, msg.providerMessageId)
-					)
-				)
-				.limit(1);
-
-			if (!existingMsg) {
-				await db.insert(emailMessages).values({
-					id: crypto.randomUUID(),
-					threadId: thread.id,
-					integrationId,
-					tenantId,
-					providerMessageId: msg.providerMessageId,
+			// Upsert message
+			await db.insert(emailMessages).values({
+				id: crypto.randomUUID(),
+				threadId: thread.id,
+				integrationId,
+				tenantId,
+				providerMessageId: msg.providerMessageId,
+				fromAddress: msg.fromAddress,
+				fromName: msg.fromName,
+				toAddresses: JSON.stringify(msg.toAddresses),
+				ccAddresses: JSON.stringify(msg.ccAddresses),
+				subject: msg.subject,
+				snippet: msg.snippet,
+				isUnread: msg.isUnread,
+				hasAttachments: msg.hasAttachments,
+				labelIds: JSON.stringify(msg.labelIds),
+				internalDate: msg.internalDate,
+			}).onConflictDoUpdate({
+				target: [emailMessages.integrationId, emailMessages.providerMessageId],
+				set: {
 					fromAddress: msg.fromAddress,
 					fromName: msg.fromName,
 					toAddresses: JSON.stringify(msg.toAddresses),
@@ -171,8 +215,9 @@ async function syncIfNeeded(integrationId: string, tenantId: string) {
 					hasAttachments: msg.hasAttachments,
 					labelIds: JSON.stringify(msg.labelIds),
 					internalDate: msg.internalDate,
-				});
-			}
+					updatedAt: new Date(),
+				},
+			});
 		}
 
 		// Process deleted messages

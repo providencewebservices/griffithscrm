@@ -187,7 +187,7 @@ function ThreadDetailSkeleton() {
 }
 
 export function InboxPage() {
-	const [searchParams] = useSearchParams();
+	const [searchParams, setSearchParams] = useSearchParams();
 	const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
 	const [searchQuery, setSearchQuery] = useState('');
 	const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -201,10 +201,12 @@ export function InboxPage() {
 		const error = searchParams.get('error');
 		if (connected === 'gmail') {
 			toast.success('Gmail connected successfully');
+			setSearchParams({}, { replace: true });
 		} else if (error) {
 			toast.error(`Connection failed: ${error}`);
+			setSearchParams({}, { replace: true });
 		}
-	}, [searchParams]);
+	}, [searchParams, setSearchParams]);
 
 	// Debounce search
 	useEffect(() => {
@@ -559,9 +561,18 @@ export function InboxPage() {
 										{/* Message body */}
 										<div className="px-6 pb-4">
 											{msg.bodyHtml ? (
-												<div
-													className="prose prose-sm max-w-none"
-													dangerouslySetInnerHTML={{ __html: msg.bodyHtml }}
+												<iframe
+													srcDoc={msg.bodyHtml}
+													sandbox=""
+													className="w-full border-0"
+													style={{ minHeight: '200px' }}
+													onLoad={(e) => {
+														const iframe = e.target as HTMLIFrameElement;
+														if (iframe.contentDocument) {
+															iframe.style.height = iframe.contentDocument.body.scrollHeight + 'px';
+														}
+													}}
+													title="Email content"
 												/>
 											) : (
 												<pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed">

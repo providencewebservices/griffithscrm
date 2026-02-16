@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, boolean, primaryKey, integer, numeric } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, boolean, primaryKey, integer, numeric, uniqueIndex } from 'drizzle-orm/pg-core';
 
 // Tenants table (must be defined before users due to foreign key)
 export const tenants = pgTable('tenants', {
@@ -1259,7 +1259,10 @@ export const emailThreads = pgTable('email_threads', {
 	labelIds: text('label_ids'), // JSON array of provider label IDs
 	createdAt: timestamp('created_at').notNull().defaultNow(),
 	updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
+}, (table) => ({
+	integrationProviderThreadIdx: uniqueIndex('email_threads_integration_provider_idx')
+		.on(table.integrationId, table.providerThreadId),
+}));
 
 // Email messages (cached message metadata, NOT full body)
 export const emailMessages = pgTable('email_messages', {
@@ -1286,7 +1289,10 @@ export const emailMessages = pgTable('email_messages', {
 	internalDate: timestamp('internal_date'), // When message was received
 	createdAt: timestamp('created_at').notNull().defaultNow(),
 	updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
+}, (table) => ({
+	integrationProviderMessageIdx: uniqueIndex('email_messages_integration_provider_idx')
+		.on(table.integrationId, table.providerMessageId),
+}));
 
 // Email entity link types
 export const EMAIL_ENTITY_LINK_TYPES = ['customer', 'quote', 'job', 'funeral_director', 'supplier'] as const;

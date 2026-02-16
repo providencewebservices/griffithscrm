@@ -141,6 +141,13 @@
       "when": 1771248845266,
       "tag": "0019_stiff_roulette",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1771251933628,
+      "tag": "0020_tranquil_shooting_star",
+      "breakpoints": true
     }
   ]
 }
