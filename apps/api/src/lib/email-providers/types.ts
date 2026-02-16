@@ -142,4 +142,14 @@ export interface IEmailProvider {
 		addLabelIds?: string[];
 		removeLabelIds?: string[];
 	}): Promise<void>;
+
+	watchMailbox(params: {
+		accessToken: string;
+		topicName: string;
+		labelIds?: string[];
+	}): Promise<{ historyId: string; expiration: string }>;
+
+	stopWatch(params: {
+		accessToken: string;
+	}): Promise<void>;
 }

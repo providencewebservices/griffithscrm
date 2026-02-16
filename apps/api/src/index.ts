@@ -36,6 +36,7 @@ import { documentsRoutes } from './routes/documents';
 import { documentFoldersRoutes } from './routes/document-folders';
 import { emailIntegrationsRoutes } from './routes/email-integrations';
 import { inboxRoutes } from './routes/inbox';
+import { inboxWebhookRoutes } from './routes/inbox-webhook';
 import { startEmailSyncScheduler } from './lib/email-sync-scheduler';
 
 const app = new Hono();
@@ -144,6 +145,7 @@ app.route('/api/document-folders', documentFoldersRoutes);
 
 // Email integration routes
 app.route('/api/email-integrations', emailIntegrationsRoutes);
+app.route('/api/inbox', inboxWebhookRoutes); // Unauthenticated webhook (must be before authenticated routes)
 app.route('/api/inbox', inboxRoutes);
 
 // Export type for RPC client

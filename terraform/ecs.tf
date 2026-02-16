@@ -258,6 +258,16 @@ resource "aws_ecs_task_definition" "api" {
           name      = "MICROSOFT_CLIENT_SECRET"
           valueFrom = aws_ssm_parameter.microsoft_client_secret[0].arn
         }
+      ] : [],
+      var.google_pubsub_topic != "" ? [
+        {
+          name      = "GOOGLE_PUBSUB_TOPIC"
+          valueFrom = aws_ssm_parameter.google_pubsub_topic[0].arn
+        },
+        {
+          name      = "GMAIL_WEBHOOK_TOKEN"
+          valueFrom = aws_ssm_parameter.gmail_webhook_token[0].arn
+        }
       ] : [])
 
       logConfiguration = {
@@ -330,6 +340,27 @@ resource "aws_ssm_parameter" "microsoft_client_secret" {
   description = "Microsoft OAuth client secret"
   type        = "SecureString"
   value       = var.microsoft_client_secret
+
+  tags = local.tags
+}
+
+# Google Pub/Sub - Gmail push notifications (optional)
+resource "aws_ssm_parameter" "google_pubsub_topic" {
+  count       = var.google_pubsub_topic != "" ? 1 : 0
+  name        = "/${local.name}/app/google-pubsub-topic"
+  description = "Google Pub/Sub topic for Gmail push notifications"
+  type        = "String"
+  value       = var.google_pubsub_topic
+
+  tags = local.tags
+}
+
+resource "aws_ssm_parameter" "gmail_webhook_token" {
+  count       = var.gmail_webhook_token != "" ? 1 : 0
+  name        = "/${local.name}/app/gmail-webhook-token"
+  description = "Shared secret for Gmail webhook validation"
+  type        = "SecureString"
+  value       = var.gmail_webhook_token
 
   tags = local.tags
 }

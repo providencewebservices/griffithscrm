@@ -120,6 +120,20 @@ variable "s3_documents_bucket_name" {
   default     = ""
 }
 
+# Gmail Push Notifications (Pub/Sub)
+variable "google_pubsub_topic" {
+  description = "Google Pub/Sub topic name for Gmail push notifications (e.g., projects/my-project/topics/gmail-push)"
+  type        = string
+  default     = ""
+}
+
+variable "gmail_webhook_token" {
+  description = "Shared secret token for Gmail webhook validation (generate with: openssl rand -hex 32)"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
 # VPC CIDR
 variable "vpc_cidr" {
   description = "CIDR block for the VPC"

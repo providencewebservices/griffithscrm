@@ -1238,6 +1238,8 @@ export const emailIntegrations = pgTable('email_integrations', {
 	historyId: text('history_id'), // Gmail history ID for incremental sync
 	syncCursor: text('sync_cursor'), // Generic cursor (for Microsoft delta tokens later)
 	errorMessage: text('error_message'),
+	watchExpiration: timestamp('watch_expiration'),
+	watchHistoryId: text('watch_history_id'),
 	createdAt: timestamp('created_at').notNull().defaultNow(),
 	updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });

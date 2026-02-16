@@ -231,6 +231,24 @@ const emailIntegrationsRoutes = new Hono()
 				console.error('Background initial sync error:', err);
 			});
 
+			// Set up Gmail push notifications if Pub/Sub is configured
+			if (process.env.GOOGLE_PUBSUB_TOPIC) {
+				try {
+					const provider = new GmailProvider();
+					const watchResult = await provider.watchMailbox({
+						accessToken: tokens.access_token!,
+						topicName: process.env.GOOGLE_PUBSUB_TOPIC,
+					});
+					await db.update(emailIntegrations).set({
+						watchExpiration: new Date(parseInt(watchResult.expiration)),
+						watchHistoryId: watchResult.historyId,
+					}).where(eq(emailIntegrations.id, integrationId));
+				} catch (err) {
+					console.error('Failed to set up Gmail watch:', err);
+					// Non-fatal: polling continues
+				}
+			}
+
 			return c.redirect(`${corsOrigin}/app/inbox?connected=gmail`);
 		} catch (err) {
 			console.error('Gmail OAuth callback error:', err);
@@ -287,6 +305,17 @@ const emailIntegrationsRoutes = new Hono()
 
 		if (!integration) {
 			return c.json({ error: 'Integration not found' }, 404);
+		}
+
+		// Stop Gmail push notifications (best effort)
+		if (integration.provider === 'gmail') {
+			try {
+				const provider = new GmailProvider();
+				await provider.stopWatch({ accessToken: integration.accessToken });
+			} catch (err) {
+				console.error('Failed to stop Gmail watch:', err);
+				// Best effort — watch expires on its own in 7 days
+			}
 		}
 
 		// Try to revoke the token (best effort)

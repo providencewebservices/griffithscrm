@@ -514,6 +514,32 @@ export class GmailProvider implements IEmailProvider {
 			});
 		}
 	}
+	async watchMailbox(params: {
+		accessToken: string;
+		topicName: string;
+		labelIds?: string[];
+	}): Promise<{ historyId: string; expiration: string }> {
+		const gmail = createAuthenticatedClient(params.accessToken);
+
+		const res = await gmail.users.watch({
+			userId: 'me',
+			requestBody: {
+				topicName: params.topicName,
+				labelIds: params.labelIds || ['INBOX'],
+				labelFilterBehavior: 'INCLUDE',
+			},
+		});
+
+		return {
+			historyId: res.data.historyId!.toString(),
+			expiration: res.data.expiration!.toString(),
+		};
+	}
+
+	async stopWatch(params: { accessToken: string }): Promise<void> {
+		const gmail = createAuthenticatedClient(params.accessToken);
+		await gmail.users.stop({ userId: 'me' });
+	}
 }
 
 export { GMAIL_SCOPES, getOAuth2Client };
