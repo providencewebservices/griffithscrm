@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
-import { eq, and, desc, like, or, inArray, isNull } from 'drizzle-orm';
+import { eq, and, desc, like, or, inArray, isNull, sql } from 'drizzle-orm';
 import { requireAuth, requireTenant } from '../middleware/auth';
 import { db } from '../lib/auth';
 import {
@@ -35,6 +35,42 @@ const linkSchema = z.object({
 
 const inboxRoutes = new Hono()
 	.use('*', requireAuth, requireTenant)
+
+	// GET /unread-count - Count of unread, non-archived threads
+	.get('/unread-count', async (c) => {
+		const user = c.get('user');
+		const tenantId = user.tenantId!;
+
+		const [integration] = await db
+			.select()
+			.from(emailIntegrations)
+			.where(
+				and(
+					eq(emailIntegrations.userId, user.id),
+					eq(emailIntegrations.tenantId, tenantId),
+					eq(emailIntegrations.status, 'active')
+				)
+			)
+			.limit(1);
+
+		if (!integration) {
+			return c.json({ count: 0 });
+		}
+
+		const [result] = await db
+			.select({ count: sql<number>`count(*)::int` })
+			.from(emailThreads)
+			.where(
+				and(
+					eq(emailThreads.integrationId, integration.id),
+					eq(emailThreads.tenantId, tenantId),
+					eq(emailThreads.isUnread, true),
+					eq(emailThreads.isArchived, false)
+				)
+			);
+
+		return c.json({ count: result?.count ?? 0 });
+	})
 
 	// GET /threads - List threads
 	.get('/threads', zValidator('query', threadsQuerySchema), async (c) => {

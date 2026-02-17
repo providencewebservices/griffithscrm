@@ -328,6 +328,7 @@ export function useSendEmailMutation() {
 		mutationFn: sendEmail,
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ['inbox-threads'] });
+			queryClient.invalidateQueries({ queryKey: ['inbox-unread-count'] });
 		},
 	});
 }
@@ -363,6 +364,7 @@ export function useMarkReadMutation() {
 		mutationFn: markThreadRead,
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ['inbox-threads'] });
+			queryClient.invalidateQueries({ queryKey: ['inbox-unread-count'] });
 		},
 	});
 }
@@ -374,6 +376,7 @@ export function useArchiveThreadMutation() {
 		mutationFn: archiveThread,
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ['inbox-threads'] });
+			queryClient.invalidateQueries({ queryKey: ['inbox-unread-count'] });
 		},
 	});
 }
@@ -386,6 +389,7 @@ export function useSyncInboxMutation() {
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ['inbox-threads'] });
 			queryClient.invalidateQueries({ queryKey: ['email-integrations'] });
+			queryClient.invalidateQueries({ queryKey: ['inbox-unread-count'] });
 		},
 	});
 }
@@ -445,6 +449,25 @@ export function useEntityEmailThreadsQuery(entityType: string, entityId: string)
 		queryKey: ['entity-email-threads', entityType, entityId],
 		queryFn: () => fetchEntityEmailThreads(entityType, entityId),
 		enabled: !!entityType && !!entityId,
+	});
+}
+
+// Unread count for sidebar badge
+async function fetchUnreadCount(): Promise<number> {
+	const response = await fetch(`${API_URL}/api/inbox/unread-count`, {
+		credentials: 'include',
+	});
+	if (!response.ok) return 0;
+	const data = await response.json();
+	return data.count;
+}
+
+export function useUnreadCountQuery() {
+	return useQuery({
+		queryKey: ['inbox-unread-count'],
+		queryFn: fetchUnreadCount,
+		refetchInterval: 60_000,
+		staleTime: 30_000,
 	});
 }
 

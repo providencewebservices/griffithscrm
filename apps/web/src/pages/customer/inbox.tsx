@@ -54,6 +54,7 @@ import {
 	Loader2,
 	X,
 	Users,
+	ArrowLeft,
 } from 'lucide-react';
 import { ComposeEmailDialog } from '@/components/inbox/compose-email-dialog';
 import {
@@ -402,7 +403,7 @@ export function InboxPage() {
 
 	return (
 		<div className="h-[calc(100vh-8rem)] flex flex-col">
-			<div className="mb-4 flex items-center justify-between shrink-0">
+			<div className="mb-4 flex items-center justify-between shrink-0 gap-2 flex-wrap">
 				<h2 className="text-2xl font-bold">Inbox</h2>
 				<div className="flex items-center gap-2">
 					<Button variant="outline" size="sm" onClick={handleSync} disabled={syncMutation.isPending}>
@@ -418,7 +419,7 @@ export function InboxPage() {
 
 			<div className="flex gap-4 flex-1 min-h-0 overflow-hidden">
 				{/* Left Panel - Thread List */}
-				<Card className={`${selectedThreadId ? 'w-80' : 'w-2/5'} min-w-0 flex flex-col overflow-hidden transition-[width] duration-200`}>
+				<Card className={`${selectedThreadId ? 'hidden lg:flex lg:w-80' : 'w-full lg:w-2/5'} min-w-0 flex flex-col overflow-hidden transition-[width] duration-200`}>
 					<div className="p-4 border-b space-y-3">
 						<div className="flex items-center justify-between gap-2">
 							<h3 className="font-semibold">Messages</h3>
@@ -650,7 +651,15 @@ export function InboxPage() {
 				</Card>
 
 				{/* Right Panel - Thread Detail */}
-				<Card className="flex-1 min-w-0 flex flex-col overflow-hidden">
+				<Card className={`${selectedThreadId ? 'flex-1' : 'hidden lg:flex lg:flex-1'} min-w-0 flex flex-col overflow-hidden`}>
+					{selectedThreadId && (
+						<div className="p-2 border-b lg:hidden">
+							<Button variant="ghost" size="sm" onClick={() => setSelectedThreadId(null)}>
+								<ArrowLeft className="h-4 w-4 mr-1" />
+								Back
+							</Button>
+						</div>
+					)}
 					{selectedThreadId && threadLoading ? (
 						<ThreadDetailSkeleton />
 					) : selectedThread ? (
