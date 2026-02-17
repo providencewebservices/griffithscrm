@@ -10,6 +10,8 @@ import {
 	productOptions,
 	optionChoices,
 	suppliers,
+	supplierProducts,
+	supplierCollections,
 } from '@griffiths-crm/shared/db/schema';
 
 // Validation schemas
@@ -44,13 +46,14 @@ const listQuerySchema = z.object({
 
 // Helper function to get product with all relations
 async function getProductWithRelations(productId: string, tenantId: string) {
-	// Get product with category and supplier
+	// Get product with category, supplier, and supplier product info
 	const [product] = await db
 		.select({
 			id: products.id,
 			tenantId: products.tenantId,
 			categoryId: products.categoryId,
 			supplierId: products.supplierId,
+			supplierProductId: products.supplierProductId,
 			sku: products.sku,
 			name: products.name,
 			description: products.description,
@@ -63,10 +66,15 @@ async function getProductWithRelations(productId: string, tenantId: string) {
 			categoryName: productCategories.name,
 			supplierBusinessName: suppliers.businessName,
 			supplierTradingName: suppliers.tradingName,
+			supplierProductName: supplierProducts.name,
+			supplierProductCollectionId: supplierProducts.collectionId,
+			supplierProductCollectionName: supplierCollections.name,
 		})
 		.from(products)
 		.leftJoin(productCategories, eq(productCategories.id, products.categoryId))
 		.leftJoin(suppliers, eq(suppliers.id, products.supplierId))
+		.leftJoin(supplierProducts, eq(supplierProducts.id, products.supplierProductId))
+		.leftJoin(supplierCollections, eq(supplierCollections.id, supplierProducts.collectionId))
 		.where(and(eq(products.id, productId), eq(products.tenantId, tenantId)))
 		.limit(1);
 
@@ -100,6 +108,14 @@ async function getProductWithRelations(productId: string, tenantId: string) {
 			? { id: product.categoryId, name: product.categoryName }
 			: null,
 		supplierName: product.supplierTradingName || product.supplierBusinessName || null,
+		supplierProductSource: product.supplierProductId
+			? {
+					supplierProductId: product.supplierProductId,
+					supplierProductName: product.supplierProductName,
+					collectionId: product.supplierProductCollectionId,
+					collectionName: product.supplierProductCollectionName,
+			  }
+			: null,
 		options: optionsWithChoices,
 	};
 }

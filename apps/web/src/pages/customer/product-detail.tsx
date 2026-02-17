@@ -450,6 +450,25 @@ export function ProductDetailPage() {
 									<p className="text-muted-foreground">-</p>
 								)}
 							</div>
+							{product.supplierProductSource && (
+								<>
+									<Separator />
+									<div>
+										<p className="text-sm font-medium text-muted-foreground">Imported From</p>
+										<Link
+											to={`/app/suppliers/${product.supplierId}/collections/${product.supplierProductSource.collectionId}/products/${product.supplierProductSource.supplierProductId}`}
+											className="text-primary hover:underline text-sm"
+										>
+											{product.supplierProductSource.supplierProductName || 'Supplier Product'}
+										</Link>
+										{product.supplierProductSource.collectionName && (
+											<p className="text-xs text-muted-foreground">
+												{product.supplierName} &gt; {product.supplierProductSource.collectionName}
+											</p>
+										)}
+									</div>
+								</>
+							)}
 							<Separator />
 							<div>
 								<p className="text-sm font-medium text-muted-foreground">Status</p>

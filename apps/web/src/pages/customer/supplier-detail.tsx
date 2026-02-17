@@ -45,9 +45,16 @@ import {
 	CreditCard,
 	Package,
 	ShoppingBag,
+	BookOpen,
 } from 'lucide-react';
 import { DocumentsCard } from '@/components/documents';
 import { EmailThreadsCard } from '@/components/inbox/email-threads-card';
+import {
+	useSupplierCollectionsQuery,
+	useCreateSupplierCollectionMutation,
+} from '@/hooks/use-supplier-collections';
+import { CollectionFormDialog } from '@/components/customer/supplier-catalog/collection-form-dialog';
+import { CsvImportDialog } from '@/components/customer/supplier-catalog/csv-import-dialog';
 
 export function SupplierDetailPage() {
 	const { id } = useParams<{ id: string }>();
@@ -55,12 +62,16 @@ export function SupplierDetailPage() {
 
 	const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
 	const [mutationError, setMutationError] = useState<string | null>(null);
+	const [collectionDialogOpen, setCollectionDialogOpen] = useState(false);
+	const [collectionError, setCollectionError] = useState<string | null>(null);
 
 	const { data: supplier, isLoading, error } = useSupplierQuery(id);
 	const { data: materials } = useSupplierMaterialsQuery(id);
 	const { data: sundries } = useSupplierSundriesQuery(id);
+	const { data: collections } = useSupplierCollectionsQuery(id);
 	const archiveMutation = useArchiveSupplierMutation();
 	const unarchiveMutation = useUnarchiveSupplierMutation();
+	const createCollectionMutation = useCreateSupplierCollectionMutation();
 
 	const formatCurrency = (amount: string) => {
 		return new Intl.NumberFormat('en-GB', {
@@ -461,6 +472,87 @@ export function SupplierDetailPage() {
 					</CardContent>
 				</Card>
 			</div>
+
+			<Card className="mt-6">
+				<CardHeader>
+					<div className="flex items-center justify-between">
+						<div>
+							<CardTitle className="flex items-center gap-2">
+								<BookOpen className="h-5 w-5" />
+								Supplier Catalog
+							</CardTitle>
+							<CardDescription>
+								Browse and manage this supplier's product collections
+							</CardDescription>
+						</div>
+						<Button onClick={() => {
+							setCollectionError(null);
+							setCollectionDialogOpen(true);
+						}}>
+							Add Collection
+						</Button>
+					</div>
+				</CardHeader>
+				<CardContent>
+					{!collections || collections.length === 0 ? (
+						<p className="text-sm text-muted-foreground">
+							No collections yet. Add a collection to start organizing this supplier's products.
+						</p>
+					) : (
+						<Table>
+							<TableHeader>
+								<TableRow>
+									<TableHead>Name</TableHead>
+									<TableHead className="text-right">Categories</TableHead>
+									<TableHead>Status</TableHead>
+									<TableHead className="w-[80px]"></TableHead>
+								</TableRow>
+							</TableHeader>
+							<TableBody>
+								{collections.map((collection) => (
+									<TableRow key={collection.id}>
+										<TableCell className="font-medium">
+											{collection.name}
+										</TableCell>
+										<TableCell className="text-right">
+											{collection.categoryCount}
+										</TableCell>
+										<TableCell>
+											<Badge variant={collection.isActive ? 'default' : 'secondary'}>
+												{collection.isActive ? 'Active' : 'Inactive'}
+											</Badge>
+										</TableCell>
+										<TableCell>
+											<Link to={`/app/suppliers/${id}/collections/${collection.id}`}>
+												<Button variant="ghost" size="sm">View</Button>
+											</Link>
+										</TableCell>
+									</TableRow>
+								))}
+							</TableBody>
+						</Table>
+					)}
+				</CardContent>
+			</Card>
+
+			{id && (
+				<CollectionFormDialog
+					open={collectionDialogOpen}
+					onOpenChange={setCollectionDialogOpen}
+					supplierId={id}
+					onSubmit={async (data) => {
+						setCollectionError(null);
+						try {
+							await createCollectionMutation.mutateAsync(data);
+							setCollectionDialogOpen(false);
+						} catch (err) {
+							setCollectionError(err instanceof Error ? err.message : 'Failed to create collection');
+						}
+					}}
+					isLoading={createCollectionMutation.isPending}
+					error={collectionError}
+				/>
+			)}
 
 			{supplier.notes && (
 				<Card className="mt-6">

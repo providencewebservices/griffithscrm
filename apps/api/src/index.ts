@@ -30,6 +30,9 @@ import { pipelineRoutes } from './routes/pipeline';
 import { funeralDirectorsRoutes } from './routes/funeral-directors';
 import { memorialSitesRoutes } from './routes/memorial-sites';
 import { suppliersRoutes } from './routes/suppliers';
+import { supplierCollectionsRoutes } from './routes/supplier-collections';
+import { supplierCategoriesRoutes } from './routes/supplier-categories';
+import { supplierProductsRoutes } from './routes/supplier-products';
 import { calendarRoutes } from './routes/calendar';
 import { timeOffRoutes } from './routes/time-off';
 import { documentsRoutes } from './routes/documents';
@@ -134,6 +137,9 @@ app.route('/api/dashboard/pipeline', pipelineRoutes);
 app.route('/api/funeral-directors', funeralDirectorsRoutes);
 app.route('/api/memorial-sites', memorialSitesRoutes);
 app.route('/api/suppliers', suppliersRoutes);
+app.route('/api/tenant/supplier-collections', supplierCollectionsRoutes);
+app.route('/api/tenant/supplier-categories', supplierCategoriesRoutes);
+app.route('/api/tenant/supplier-products', supplierProductsRoutes);
 
 // Calendar routes (for tenant users)
 app.route('/api/calendar', calendarRoutes);

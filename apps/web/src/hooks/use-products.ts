@@ -32,6 +32,7 @@ export type Product = {
 	tenantId: string;
 	categoryId: string | null;
 	supplierId: string | null;
+	supplierProductId: string | null;
 	sku: string;
 	name: string;
 	description: string | null;
@@ -43,6 +44,12 @@ export type Product = {
 	updatedAt: string;
 	category: { id: string; name: string } | null;
 	supplierName: string | null;
+	supplierProductSource?: {
+		supplierProductId: string;
+		supplierProductName: string | null;
+		collectionId: string | null;
+		collectionName: string | null;
+	} | null;
 	optionCount?: number;
 	options?: ProductOption[];
 };

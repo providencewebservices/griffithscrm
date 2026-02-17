@@ -390,6 +390,78 @@ export const supplierAddresses = pgTable(
 );
 
 // ============================================
+// SUPPLIER CATALOG TABLES
+// ============================================
+
+// Supplier collections (top-level groupings per supplier, e.g., "Premium Range", "Budget Range")
+export const supplierCollections = pgTable('supplier_collections', {
+	id: text('id').primaryKey(),
+	tenantId: text('tenant_id')
+		.notNull()
+		.references(() => tenants.id, { onDelete: 'cascade' }),
+	supplierId: text('supplier_id')
+		.notNull()
+		.references(() => suppliers.id, { onDelete: 'cascade' }),
+	name: text('name').notNull(),
+	description: text('description'),
+	imageUrl: text('image_url'),
+	sortOrder: integer('sort_order').notNull().default(0),
+	isActive: boolean('is_active').notNull().default(true),
+	archivedAt: timestamp('archived_at'),
+	createdAt: timestamp('created_at').notNull().defaultNow(),
+	updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// Supplier categories (categories within a collection, e.g., "Headstones", "Vases")
+export const supplierCategories = pgTable('supplier_categories', {
+	id: text('id').primaryKey(),
+	tenantId: text('tenant_id')
+		.notNull()
+		.references(() => tenants.id, { onDelete: 'cascade' }),
+	collectionId: text('collection_id')
+		.notNull()
+		.references(() => supplierCollections.id, { onDelete: 'cascade' }),
+	name: text('name').notNull(),
+	description: text('description'),
+	imageUrl: text('image_url'),
+	sortOrder: integer('sort_order').notNull().default(0),
+	isActive: boolean('is_active').notNull().default(true),
+	createdAt: timestamp('created_at').notNull().defaultNow(),
+	updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// Supplier products (individual products in the supplier's catalog)
+export const supplierProducts = pgTable('supplier_products', {
+	id: text('id').primaryKey(),
+	tenantId: text('tenant_id')
+		.notNull()
+		.references(() => tenants.id, { onDelete: 'cascade' }),
+	supplierId: text('supplier_id')
+		.notNull()
+		.references(() => suppliers.id, { onDelete: 'cascade' }),
+	collectionId: text('collection_id')
+		.notNull()
+		.references(() => supplierCollections.id, { onDelete: 'cascade' }),
+	categoryId: text('category_id').references(() => supplierCategories.id, {
+		onDelete: 'set null',
+	}),
+	sku: text('sku'),
+	name: text('name').notNull(),
+	description: text('description'),
+	imageUrl: text('image_url'),
+	supplierCost: numeric('supplier_cost', { precision: 10, scale: 2 }),
+	height: numeric('height', { precision: 10, scale: 2 }),
+	width: numeric('width', { precision: 10, scale: 2 }),
+	depth: numeric('depth', { precision: 10, scale: 2 }),
+	weight: numeric('weight', { precision: 10, scale: 2 }),
+	material: text('material'),
+	isActive: boolean('is_active').notNull().default(true),
+	archivedAt: timestamp('archived_at'),
+	createdAt: timestamp('created_at').notNull().defaultNow(),
+	updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// ============================================
 // PRODUCT CATALOG TABLES
 // ============================================
 
@@ -417,6 +489,9 @@ export const products = pgTable('products', {
 		onDelete: 'set null',
 	}),
 	supplierId: text('supplier_id').references(() => suppliers.id, {
+		onDelete: 'set null',
+	}),
+	supplierProductId: text('supplier_product_id').references(() => supplierProducts.id, {
 		onDelete: 'set null',
 	}),
 	sku: text('sku').notNull(),

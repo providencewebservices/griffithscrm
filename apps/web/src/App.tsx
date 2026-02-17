@@ -31,6 +31,8 @@ import { MemorialSiteFormPage } from './pages/customer/memorial-site-form';
 import { SuppliersPage } from './pages/customer/suppliers';
 import { SupplierDetailPage } from './pages/customer/supplier-detail';
 import { SupplierFormPage } from './pages/customer/supplier-form';
+import { SupplierCollectionDetailPage } from './pages/customer/supplier-collection-detail';
+import { SupplierProductDetailPage } from './pages/customer/supplier-product-detail';
 import { DocumentsPage } from './pages/customer/documents';
 import { DocumentViewerPage } from './pages/customer/document-viewer';
 import { CalendarPage } from './pages/customer/calendar';
@@ -103,6 +105,8 @@ function App() {
 					<Route path="suppliers/new" element={<SupplierFormPage />} />
 					<Route path="suppliers/:id" element={<SupplierDetailPage />} />
 					<Route path="suppliers/:id/edit" element={<SupplierFormPage />} />
+					<Route path="suppliers/:supplierId/collections/:collectionId" element={<SupplierCollectionDetailPage />} />
+					<Route path="suppliers/:supplierId/collections/:collectionId/products/:productId" element={<SupplierProductDetailPage />} />
 					<Route path="documents" element={<DocumentsPage />} />
 					<Route path="documents/:id" element={<DocumentViewerPage />} />
 					<Route path="calendar" element={<CalendarPage />} />
