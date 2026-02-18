@@ -61,7 +61,7 @@ import {
 	type SupplierProduct,
 } from '@/hooks/use-supplier-products';
 import { toast } from 'sonner';
-import { Search, Upload } from 'lucide-react';
+import { Search, Upload, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export function SupplierCollectionDetailPage() {
 	const { supplierId, collectionId } = useParams<{
@@ -92,6 +92,7 @@ export function SupplierCollectionDetailPage() {
 	// Filter state
 	const [categoryFilter, setCategoryFilter] = useState<string>('all');
 	const [searchQuery, setSearchQuery] = useState('');
+	const [page, setPage] = useState(1);
 
 	// Queries
 	const { data: collection, isLoading, error } = useSupplierCollectionQuery(collectionId);
@@ -100,7 +101,7 @@ export function SupplierCollectionDetailPage() {
 		collectionId,
 		categoryId: categoryFilter !== 'all' ? categoryFilter : undefined,
 		q: searchQuery || undefined,
-		limit: 100,
+		page,
 	});
 
 	// Mutations
@@ -338,12 +339,15 @@ export function SupplierCollectionDetailPage() {
 							<Input
 								placeholder="Search products..."
 								value={searchQuery}
-								onChange={(e) => setSearchQuery(e.target.value)}
+								onChange={(e) => {
+									setSearchQuery(e.target.value);
+									setPage(1);
+								}}
 								className="pl-9"
 							/>
 						</div>
 						{categories && categories.length > 0 && (
-							<Select value={categoryFilter} onValueChange={setCategoryFilter}>
+							<Select value={categoryFilter} onValueChange={(v) => { setCategoryFilter(v); setPage(1); }}>
 								<SelectTrigger className="w-48">
 									<SelectValue placeholder="All categories" />
 								</SelectTrigger>
@@ -364,59 +368,94 @@ export function SupplierCollectionDetailPage() {
 							No products found. Add products or import from CSV.
 						</p>
 					) : (
-						<Table>
-							<TableHeader>
-								<TableRow>
-									<TableHead>Name</TableHead>
-									<TableHead>SKU</TableHead>
-									<TableHead>Material</TableHead>
-									<TableHead className="text-right">Cost</TableHead>
-									<TableHead>Status</TableHead>
-									<TableHead className="w-[160px]"></TableHead>
-								</TableRow>
-							</TableHeader>
-							<TableBody>
-								{productsData.products.map((product) => (
-									<TableRow key={product.id}>
-										<TableCell className="font-medium">{product.name}</TableCell>
-										<TableCell className="text-muted-foreground">
-											{product.sku || '-'}
-										</TableCell>
-										<TableCell className="text-muted-foreground">
-											{product.material || '-'}
-										</TableCell>
-										<TableCell className="text-right">
-											{product.supplierCost
-												? formatCurrency(product.supplierCost)
-												: '-'}
-										</TableCell>
-										<TableCell>
-											<Badge variant={product.isActive ? 'default' : 'secondary'}>
-												{product.isActive ? 'Active' : 'Inactive'}
-											</Badge>
-										</TableCell>
-										<TableCell>
-											<div className="flex gap-1">
-												<Link to={`/app/suppliers/${supplierId}/collections/${collectionId}/products/${product.id}`}>
-													<Button variant="ghost" size="sm">View</Button>
-												</Link>
-												<Button
-													variant="ghost"
-													size="sm"
-													onClick={() => {
-														setImportError(null);
-														setImportProduct(product);
-														setImportDialogOpen(true);
-													}}
-												>
-													Import
-												</Button>
-											</div>
-										</TableCell>
+						<>
+							<Table>
+								<TableHeader>
+									<TableRow>
+										<TableHead>Name</TableHead>
+										<TableHead>SKU</TableHead>
+										<TableHead>Material</TableHead>
+										<TableHead className="text-right">Cost</TableHead>
+										<TableHead>Status</TableHead>
+										<TableHead className="w-[160px]"></TableHead>
 									</TableRow>
-								))}
-							</TableBody>
-						</Table>
+								</TableHeader>
+								<TableBody>
+									{productsData.products.map((product) => (
+										<TableRow key={product.id}>
+											<TableCell className="font-medium">{product.name}</TableCell>
+											<TableCell className="text-muted-foreground">
+												{product.sku || '-'}
+											</TableCell>
+											<TableCell className="text-muted-foreground">
+												{product.material || '-'}
+											</TableCell>
+											<TableCell className="text-right">
+												{product.supplierCost
+													? formatCurrency(product.supplierCost)
+													: '-'}
+											</TableCell>
+											<TableCell>
+												<Badge variant={product.isActive ? 'default' : 'secondary'}>
+													{product.isActive ? 'Active' : 'Inactive'}
+												</Badge>
+											</TableCell>
+											<TableCell>
+												<div className="flex gap-1">
+													<Link to={`/app/suppliers/${supplierId}/collections/${collectionId}/products/${product.id}`}>
+														<Button variant="ghost" size="sm">View</Button>
+													</Link>
+													<Button
+														variant="ghost"
+														size="sm"
+														onClick={() => {
+															setImportError(null);
+															setImportProduct(product);
+															setImportDialogOpen(true);
+														}}
+													>
+														Import
+													</Button>
+												</div>
+											</TableCell>
+										</TableRow>
+									))}
+								</TableBody>
+							</Table>
+
+							{productsData.pagination.totalPages > 1 && (
+								<div className="flex items-center justify-between mt-4">
+									<div className="text-sm text-muted-foreground">
+										Showing {(productsData.pagination.page - 1) * productsData.pagination.limit + 1} to{' '}
+										{Math.min(productsData.pagination.page * productsData.pagination.limit, productsData.pagination.total)} of{' '}
+										{productsData.pagination.total} products
+									</div>
+									<div className="flex items-center gap-2">
+										<Button
+											variant="outline"
+											size="sm"
+											onClick={() => setPage((p) => Math.max(1, p - 1))}
+											disabled={productsData.pagination.page <= 1}
+										>
+											<ChevronLeft className="h-4 w-4" />
+											Previous
+										</Button>
+										<span className="text-sm">
+											Page {productsData.pagination.page} of {productsData.pagination.totalPages}
+										</span>
+										<Button
+											variant="outline"
+											size="sm"
+											onClick={() => setPage((p) => p + 1)}
+											disabled={productsData.pagination.page >= productsData.pagination.totalPages}
+										>
+											Next
+											<ChevronRight className="h-4 w-4" />
+										</Button>
+									</div>
+								</div>
+							)}
+						</>
 					)}
 				</CardContent>
 			</Card>
