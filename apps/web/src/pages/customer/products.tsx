@@ -473,7 +473,7 @@ function ProductCard({
 					<img
 						src={signedImageUrl || product.imageUrl}
 						alt={product.name}
-						className="w-full h-full object-cover"
+						className="w-full h-full object-contain"
 					/>
 				) : (
 					<Package className="h-12 w-12 text-muted-foreground" />
