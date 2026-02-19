@@ -32,8 +32,9 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ProductFormDialog } from '@/components/customer/products/product-form-dialog';
-import { CategorySelect } from '@/components/customer/products/category-select';
+import { useProductCategoriesQuery } from '@/hooks/use-product-categories';
 import {
 	useProductsQuery,
 	useCreateProductMutation,
@@ -51,6 +52,7 @@ type DisplayMode = 'table' | 'cards';
 
 export function ProductsPage() {
 	const navigate = useNavigate();
+	const { data: categories } = useProductCategoriesQuery();
 	const [search, setSearch] = useState('');
 	const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
 	const [statusFilter, setStatusFilter] = useState<StatusFilter>('true');
@@ -183,6 +185,23 @@ export function ProductsPage() {
 				</p>
 			</div>
 
+			<Tabs
+				value={categoryFilter || 'all'}
+				onValueChange={(val) => {
+					setCategoryFilter(val === 'all' ? null : val);
+					setPage(1);
+				}}
+			>
+				<TabsList className="mb-4">
+					<TabsTrigger value="all">All</TabsTrigger>
+					{categories?.map((cat) => (
+						<TabsTrigger key={cat.id} value={cat.id}>
+							{cat.name}
+						</TabsTrigger>
+					))}
+				</TabsList>
+			</Tabs>
+
 			<div className="flex justify-between items-center mb-4 gap-4">
 				<div className="flex items-center gap-3 flex-1">
 					<div className="relative flex-1 max-w-xs">
@@ -191,17 +210,6 @@ export function ProductsPage() {
 							placeholder="Search by name or SKU..."
 							onChange={(e) => debouncedSearch(e.target.value)}
 							className="pl-9"
-						/>
-					</div>
-					<div className="w-48">
-						<CategorySelect
-							value={categoryFilter}
-							onChange={(val) => {
-								setCategoryFilter(val);
-								setPage(1);
-							}}
-							placeholder="All Categories"
-							allowClear
 						/>
 					</div>
 					<Select
@@ -469,7 +477,7 @@ function ProductCard({
 		<Card
 			className={`hover:shadow-md transition-shadow py-0 gap-3 ${product.archivedAt ? 'opacity-60' : ''}`}
 		>
-			<div className="aspect-[4/3] bg-muted flex items-center justify-center overflow-hidden rounded-t-xl">
+			<div className="aspect-[4/3] bg-white flex items-center justify-center overflow-hidden rounded-t-xl">
 				{product.imageUrl ? (
 					<img
 						src={signedImageUrl || product.imageUrl}
