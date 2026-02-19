@@ -40,6 +40,8 @@ import { documentFoldersRoutes } from './routes/document-folders';
 import { emailIntegrationsRoutes } from './routes/email-integrations';
 import { inboxRoutes } from './routes/inbox';
 import { inboxWebhookRoutes } from './routes/inbox-webhook';
+import { tasksRoutes } from './routes/tasks';
+import { worksheetsRoutes } from './routes/worksheets';
 import { startEmailSyncScheduler } from './lib/email-sync-scheduler';
 
 const app = new Hono();
@@ -148,6 +150,10 @@ app.route('/api/time-off', timeOffRoutes);
 // Documents routes (for tenant users)
 app.route('/api/documents', documentsRoutes);
 app.route('/api/document-folders', documentFoldersRoutes);
+
+// Tasks & Worksheets routes
+app.route('/api/tasks', tasksRoutes);
+app.route('/api/worksheets', worksheetsRoutes);
 
 // Email integration routes
 app.route('/api/email-integrations', emailIntegrationsRoutes);

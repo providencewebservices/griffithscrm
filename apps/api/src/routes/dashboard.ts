@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { eq, and, sql, desc, lt, gte, lte } from 'drizzle-orm';
+import { eq, and, sql, desc, lt, gte, lte, isNull, inArray } from 'drizzle-orm';
 import { requireAuth, requireTenant } from '../middleware/auth';
 import { db } from '../lib/auth';
 import {
@@ -7,6 +7,7 @@ import {
 	jobs,
 	customers,
 	jobPaymentScheduleItems,
+	tasks,
 	QUOTE_STATUSES,
 	JOB_STATUSES,
 } from '@griffiths-crm/shared/db/schema';
@@ -257,6 +258,32 @@ export const dashboardRoutes = new Hono()
 			})
 		);
 
+		// Task stats for current user
+		const [taskOpenResult] = await db
+			.select({ count: sql<number>`count(*)::int` })
+			.from(tasks)
+			.where(
+				and(
+					eq(tasks.tenantId, tenantId),
+					eq(tasks.assigneeId, currentUser.id),
+					isNull(tasks.archivedAt),
+					inArray(tasks.status, ['todo', 'in_progress'])
+				)
+			);
+
+		const [taskOverdueResult] = await db
+			.select({ count: sql<number>`count(*)::int` })
+			.from(tasks)
+			.where(
+				and(
+					eq(tasks.tenantId, tenantId),
+					eq(tasks.assigneeId, currentUser.id),
+					isNull(tasks.archivedAt),
+					inArray(tasks.status, ['todo', 'in_progress']),
+					lt(tasks.dueDate, now)
+				)
+			);
+
 		return c.json({
 			quotes: {
 				byStatus: quotesByStatus,
@@ -271,6 +298,10 @@ export const dashboardRoutes = new Hono()
 			payments: {
 				overdueCount,
 				overdueAmount,
+			},
+			tasks: {
+				myOpenCount: taskOpenResult?.count || 0,
+				myOverdueCount: taskOverdueResult?.count || 0,
 			},
 			recent: {
 				quotes: recentQuotes,

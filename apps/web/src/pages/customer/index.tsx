@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { PipelineBoard } from '@/components/dashboard/pipeline-board';
 import { StatsCards } from '@/components/dashboard/StatsCards';
+import { MyTasksWidget } from '@/components/tasks/my-tasks-widget';
 import { Calendar } from '@/components/calendar/calendar';
 import { Plus, UserPlus, CalendarDays, LayoutGrid } from 'lucide-react';
 
@@ -20,6 +21,7 @@ export function CustomerDashboard() {
 			) : (
 				<>
 					<StatsCards />
+					<MyTasksWidget />
 					<PipelineBoard />
 				</>
 			)}

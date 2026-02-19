@@ -78,6 +78,7 @@ import {
 	X,
 } from 'lucide-react';
 import { DocumentsCard } from '@/components/documents';
+import { JobTasksSection } from '@/components/tasks/job-tasks-section';
 
 // Job status order for progress calculation
 const JOB_STATUS_ORDER: JobStatus[] = [
@@ -711,6 +712,11 @@ export function JobDetailPage() {
 							</div>
 						</CollapsibleContent>
 					</Collapsible>
+
+					{/* Tasks Section */}
+					<div className="mt-6">
+						<JobTasksSection jobId={id!} />
+					</div>
 				</TabsContent>
 
 				<TabsContent value="payments" className="mt-6">

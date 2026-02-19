@@ -169,6 +169,13 @@
       "when": 1771340701965,
       "tag": "0023_superb_micromacro",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1771507862742,
+      "tag": "0024_young_ricochet",
+      "breakpoints": true
     }
   ]
 }

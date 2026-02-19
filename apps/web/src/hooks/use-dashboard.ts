@@ -41,6 +41,10 @@ export type DashboardStats = {
 		overdueCount: number;
 		overdueAmount: string;
 	};
+	tasks: {
+		myOpenCount: number;
+		myOverdueCount: number;
+	};
 	recent: {
 		quotes: RecentQuote[];
 		jobs: RecentJob[];

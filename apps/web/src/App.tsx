@@ -36,6 +36,9 @@ import { SupplierProductDetailPage } from './pages/customer/supplier-product-det
 import { DocumentsPage } from './pages/customer/documents';
 import { DocumentViewerPage } from './pages/customer/document-viewer';
 import { CalendarPage } from './pages/customer/calendar';
+import { TasksPage } from './pages/customer/tasks';
+import { TaskDetailPage } from './pages/customer/task-detail';
+import { WorksheetDetailPage } from './pages/customer/worksheet-detail';
 import { InboxPage } from './pages/customer/inbox';
 import { PublicPackageViewPage } from './pages/public/package-view';
 import { ProtectedRoute } from './components/protected-route';
@@ -107,6 +110,9 @@ function App() {
 					<Route path="suppliers/:id/edit" element={<SupplierFormPage />} />
 					<Route path="suppliers/:supplierId/collections/:collectionId" element={<SupplierCollectionDetailPage />} />
 					<Route path="suppliers/:supplierId/collections/:collectionId/products/:productId" element={<SupplierProductDetailPage />} />
+					<Route path="tasks" element={<TasksPage />} />
+					<Route path="tasks/:id" element={<TaskDetailPage />} />
+					<Route path="tasks/worksheets/:id" element={<WorksheetDetailPage />} />
 					<Route path="documents" element={<DocumentsPage />} />
 					<Route path="documents/:id" element={<DocumentViewerPage />} />
 					<Route path="calendar" element={<CalendarPage />} />

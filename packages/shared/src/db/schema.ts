@@ -1283,6 +1283,78 @@ export const calendarSettings = pgTable('calendar_settings', {
 });
 
 // ============================================
+// TASKS & WORKSHEETS TABLES
+// ============================================
+
+// Task status options
+export const TASK_STATUSES = ['todo', 'in_progress', 'done'] as const;
+
+// Task priority options
+export const TASK_PRIORITIES = ['low', 'normal', 'high', 'urgent'] as const;
+
+// Task entity types (polymorphic link)
+export const TASK_ENTITY_TYPES = ['job', 'quote', 'customer'] as const;
+
+// Worksheet status options
+export const WORKSHEET_STATUSES = ['draft', 'active', 'completed'] as const;
+
+// Worksheets table (assignment sheets for team members)
+export const worksheets = pgTable('worksheets', {
+	id: text('id').primaryKey(),
+	tenantId: text('tenant_id')
+		.notNull()
+		.references(() => tenants.id, { onDelete: 'cascade' }),
+	title: text('title').notNull(),
+	description: text('description'),
+	status: text('status').notNull().default('draft'),
+	assigneeId: text('assignee_id').references(() => users.id, { onDelete: 'set null' }),
+	createdById: text('created_by_id')
+		.notNull()
+		.references(() => users.id, { onDelete: 'cascade' }),
+	date: timestamp('date'),
+	notes: text('notes'),
+	archivedAt: timestamp('archived_at'),
+	createdAt: timestamp('created_at').notNull().defaultNow(),
+	updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, (table) => ({
+	tenantAssigneeIdx: index('worksheets_tenant_assignee_idx').on(table.tenantId, table.assigneeId),
+	tenantDateIdx: index('worksheets_tenant_date_idx').on(table.tenantId, table.date),
+	tenantStatusIdx: index('worksheets_tenant_status_idx').on(table.tenantId, table.status),
+}));
+
+// Tasks table (individual work items)
+export const tasks = pgTable('tasks', {
+	id: text('id').primaryKey(),
+	tenantId: text('tenant_id')
+		.notNull()
+		.references(() => tenants.id, { onDelete: 'cascade' }),
+	title: text('title').notNull(),
+	description: text('description'),
+	status: text('status').notNull().default('todo'),
+	priority: text('priority').notNull().default('normal'),
+	assigneeId: text('assignee_id').references(() => users.id, { onDelete: 'set null' }),
+	createdById: text('created_by_id')
+		.notNull()
+		.references(() => users.id, { onDelete: 'cascade' }),
+	dueDate: timestamp('due_date'),
+	entityType: text('entity_type'),
+	entityId: text('entity_id'),
+	worksheetId: text('worksheet_id').references(() => worksheets.id, { onDelete: 'set null' }),
+	sortOrder: integer('sort_order').notNull().default(0),
+	completedAt: timestamp('completed_at'),
+	completedById: text('completed_by_id').references(() => users.id, { onDelete: 'set null' }),
+	archivedAt: timestamp('archived_at'),
+	createdAt: timestamp('created_at').notNull().defaultNow(),
+	updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, (table) => ({
+	tenantStatusIdx: index('tasks_tenant_status_idx').on(table.tenantId, table.status),
+	tenantAssigneeIdx: index('tasks_tenant_assignee_idx').on(table.tenantId, table.assigneeId),
+	tenantDueDateIdx: index('tasks_tenant_due_date_idx').on(table.tenantId, table.dueDate),
+	entityIdx: index('tasks_entity_idx').on(table.entityType, table.entityId),
+	worksheetIdx: index('tasks_worksheet_idx').on(table.worksheetId),
+}));
+
+// ============================================
 // EMAIL INTEGRATION TABLES
 // ============================================
 

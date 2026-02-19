@@ -1,6 +1,6 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { useDashboardQuery, type DashboardStats } from '@/hooks/use-dashboard';
-import { AlertCircle, Clock, Calendar, FileWarning, Loader2 } from 'lucide-react';
+import { AlertCircle, Clock, Calendar, FileWarning, Loader2, ListChecks } from 'lucide-react';
 
 type StatCardProps = {
 	title: string;
@@ -54,8 +54,8 @@ export function StatsCards() {
 
 	if (isLoading) {
 		return (
-			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-				{[...Array(4)].map((_, i) => (
+			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+				{[...Array(5)].map((_, i) => (
 					<Card key={i} className="py-4">
 						<CardContent className="flex items-center justify-center h-20">
 							<Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -75,9 +75,11 @@ export function StatsCards() {
 	const awaitingDecision = stats.quotes.awaitingDecision;
 	const upcomingInstallations = stats.jobs.upcomingInstallations;
 	const expiringSoon = stats.quotes.expiringSoon;
+	const myOpenTasks = stats.tasks?.myOpenCount || 0;
+	const myOverdueTasks = stats.tasks?.myOverdueCount || 0;
 
 	return (
-		<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+		<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
 			<StatCard
 				title="Overdue Payments"
 				icon={<AlertCircle className="h-5 w-5" />}
@@ -105,6 +107,13 @@ export function StatsCards() {
 				primary={expiringSoon.toString()}
 				secondary={expiringSoon > 0 ? `${expiringSoon === 1 ? 'quote expires' : 'quotes expire'} in 14 days` : 'No quotes expiring'}
 				variant={expiringSoon > 0 ? 'warning' : 'default'}
+			/>
+			<StatCard
+				title="My Open Tasks"
+				icon={<ListChecks className="h-5 w-5" />}
+				primary={myOpenTasks.toString()}
+				secondary={myOverdueTasks > 0 ? `${myOverdueTasks} overdue` : 'All tasks on track'}
+				variant={myOverdueTasks > 0 ? 'danger' : 'default'}
 			/>
 		</div>
 	);

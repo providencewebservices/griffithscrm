@@ -12,9 +12,11 @@ import type {
 	letteringTechniques,
 	letteringColors,
 	sundries,
+	tasks,
+	worksheets,
 } from '../db/schema';
 
-import { PRODUCT_OPTION_TYPES } from '../db/schema';
+import { PRODUCT_OPTION_TYPES, TASK_STATUSES, TASK_PRIORITIES, WORKSHEET_STATUSES, TASK_ENTITY_TYPES } from '../db/schema';
 
 // Role types
 export const USER_ROLES = ['app_admin', 'manager', 'tenant_user'] as const;
@@ -59,7 +61,7 @@ export type CustomerListItem = Customer & {
 // ============================================
 
 // Re-export constants for use in other packages
-export { PRODUCT_OPTION_TYPES };
+export { PRODUCT_OPTION_TYPES, TASK_STATUSES, TASK_PRIORITIES, WORKSHEET_STATUSES, TASK_ENTITY_TYPES };
 
 // Product option type enum
 export type ProductOptionType = (typeof PRODUCT_OPTION_TYPES)[number];
@@ -90,3 +92,15 @@ export type ProductWithRelations = Product & {
 	category: ProductCategory | null;
 	options: ProductOptionWithChoices[];
 };
+
+// ============================================
+// TASK & WORKSHEET TYPES
+// ============================================
+
+export type TaskStatus = (typeof TASK_STATUSES)[number];
+export type TaskPriority = (typeof TASK_PRIORITIES)[number];
+export type TaskEntityType = (typeof TASK_ENTITY_TYPES)[number];
+export type WorksheetStatus = (typeof WORKSHEET_STATUSES)[number];
+
+export type Task = InferSelectModel<typeof tasks>;
+export type Worksheet = InferSelectModel<typeof worksheets>;
