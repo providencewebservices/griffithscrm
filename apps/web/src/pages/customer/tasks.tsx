@@ -31,7 +31,7 @@ import {
 	DialogTitle,
 	DialogFooter,
 } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
@@ -579,28 +579,28 @@ function CreateTaskDialog({ open, onClose }: { open: boolean; onClose: () => voi
 				<DialogHeader>
 					<DialogTitle>New Task</DialogTitle>
 				</DialogHeader>
-				<div className="space-y-4">
-					<div>
-						<Label>Title</Label>
+				<FieldGroup>
+					<Field>
+						<FieldLabel>Title</FieldLabel>
 						<Input
 							value={title}
 							onChange={(e) => setTitle(e.target.value)}
 							placeholder="What needs to be done?"
 							autoFocus
 						/>
-					</div>
-					<div>
-						<Label>Description</Label>
+					</Field>
+					<Field>
+						<FieldLabel>Description</FieldLabel>
 						<Textarea
 							value={description}
 							onChange={(e) => setDescription(e.target.value)}
 							placeholder="Optional details..."
 							rows={3}
 						/>
-					</div>
+					</Field>
 					<div className="grid grid-cols-2 gap-4">
-						<div>
-							<Label>Priority</Label>
+						<Field>
+							<FieldLabel>Priority</FieldLabel>
 							<Select value={priority} onValueChange={(v) => setPriority(v as TaskPriority)}>
 								<SelectTrigger>
 									<SelectValue />
@@ -611,9 +611,9 @@ function CreateTaskDialog({ open, onClose }: { open: boolean; onClose: () => voi
 									))}
 								</SelectContent>
 							</Select>
-						</div>
-						<div>
-							<Label>Assignee</Label>
+						</Field>
+						<Field>
+							<FieldLabel>Assignee</FieldLabel>
 							<Select value={assigneeId || ALL_VALUE} onValueChange={(v) => setAssigneeId(v === ALL_VALUE ? '' : v)}>
 								<SelectTrigger>
 									<SelectValue placeholder="Unassigned" />
@@ -625,17 +625,17 @@ function CreateTaskDialog({ open, onClose }: { open: boolean; onClose: () => voi
 									))}
 								</SelectContent>
 							</Select>
-						</div>
+						</Field>
 					</div>
-					<div>
-						<Label>Due Date</Label>
+					<Field>
+						<FieldLabel>Due Date</FieldLabel>
 						<Input
 							type="date"
 							value={dueDate}
 							onChange={(e) => setDueDate(e.target.value)}
 						/>
-					</div>
-				</div>
+					</Field>
+				</FieldGroup>
 				<DialogFooter>
 					<Button variant="outline" onClick={onClose}>Cancel</Button>
 					<Button onClick={handleSubmit} disabled={!title.trim() || createTask.isPending}>
@@ -681,28 +681,28 @@ function CreateWorksheetDialog({ open, onClose }: { open: boolean; onClose: () =
 				<DialogHeader>
 					<DialogTitle>New Worksheet</DialogTitle>
 				</DialogHeader>
-				<div className="space-y-4">
-					<div>
-						<Label>Title</Label>
+				<FieldGroup>
+					<Field>
+						<FieldLabel>Title</FieldLabel>
 						<Input
 							value={title}
 							onChange={(e) => setTitle(e.target.value)}
 							placeholder="e.g. Monday Workshop - Dave"
 							autoFocus
 						/>
-					</div>
-					<div>
-						<Label>Description</Label>
+					</Field>
+					<Field>
+						<FieldLabel>Description</FieldLabel>
 						<Textarea
 							value={description}
 							onChange={(e) => setDescription(e.target.value)}
 							placeholder="Optional description..."
 							rows={2}
 						/>
-					</div>
+					</Field>
 					<div className="grid grid-cols-2 gap-4">
-						<div>
-							<Label>Assignee</Label>
+						<Field>
+							<FieldLabel>Assignee</FieldLabel>
 							<Select value={assigneeId || ALL_VALUE} onValueChange={(v) => setAssigneeId(v === ALL_VALUE ? '' : v)}>
 								<SelectTrigger>
 									<SelectValue placeholder="Unassigned" />
@@ -714,17 +714,17 @@ function CreateWorksheetDialog({ open, onClose }: { open: boolean; onClose: () =
 									))}
 								</SelectContent>
 							</Select>
-						</div>
-						<div>
-							<Label>Date</Label>
+						</Field>
+						<Field>
+							<FieldLabel>Date</FieldLabel>
 							<Input
 								type="date"
 								value={date}
 								onChange={(e) => setDate(e.target.value)}
 							/>
-						</div>
+						</Field>
 					</div>
-				</div>
+				</FieldGroup>
 				<DialogFooter>
 					<Button variant="outline" onClick={onClose}>Cancel</Button>
 					<Button onClick={handleSubmit} disabled={!title.trim() || createWorksheet.isPending}>

@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Label } from '@/components/ui/label';
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import {
 	Select,
 	SelectContent,
@@ -190,19 +190,19 @@ function CreateJobTaskDialog({
 				<DialogHeader>
 					<DialogTitle>New Task for this Job</DialogTitle>
 				</DialogHeader>
-				<div className="space-y-4">
-					<div>
-						<Label>Title</Label>
+				<FieldGroup>
+					<Field>
+						<FieldLabel>Title</FieldLabel>
 						<Input
 							value={title}
 							onChange={(e) => setTitle(e.target.value)}
 							placeholder="What needs to be done?"
 							autoFocus
 						/>
-					</div>
+					</Field>
 					<div className="grid grid-cols-2 gap-4">
-						<div>
-							<Label>Priority</Label>
+						<Field>
+							<FieldLabel>Priority</FieldLabel>
 							<Select value={priority} onValueChange={(v) => setPriority(v as TaskPriority)}>
 								<SelectTrigger>
 									<SelectValue />
@@ -213,9 +213,9 @@ function CreateJobTaskDialog({
 									))}
 								</SelectContent>
 							</Select>
-						</div>
-						<div>
-							<Label>Assignee</Label>
+						</Field>
+						<Field>
+							<FieldLabel>Assignee</FieldLabel>
 							<Select value={assigneeId || NONE_VALUE} onValueChange={(v) => setAssigneeId(v === NONE_VALUE ? '' : v)}>
 								<SelectTrigger>
 									<SelectValue placeholder="Unassigned" />
@@ -227,17 +227,17 @@ function CreateJobTaskDialog({
 									))}
 								</SelectContent>
 							</Select>
-						</div>
+						</Field>
 					</div>
-					<div>
-						<Label>Due Date</Label>
+					<Field>
+						<FieldLabel>Due Date</FieldLabel>
 						<Input
 							type="date"
 							value={dueDate}
 							onChange={(e) => setDueDate(e.target.value)}
 						/>
-					</div>
-				</div>
+					</Field>
+				</FieldGroup>
 				<DialogFooter>
 					<Button variant="outline" onClick={onClose}>Cancel</Button>
 					<Button onClick={handleSubmit} disabled={!title.trim() || createTask.isPending}>
