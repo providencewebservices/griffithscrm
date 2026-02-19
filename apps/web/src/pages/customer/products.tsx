@@ -51,8 +51,7 @@ type DisplayMode = 'table' | 'cards';
 
 export function ProductsPage() {
 	const navigate = useNavigate();
-	const [searchQuery, setSearchQuery] = useState('');
-	const [debouncedSearch, setDebouncedSearch] = useState('');
+	const [search, setSearch] = useState('');
 	const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
 	const [statusFilter, setStatusFilter] = useState<StatusFilter>('true');
 	const [includeArchived, setIncludeArchived] = useState(false);
@@ -61,19 +60,22 @@ export function ProductsPage() {
 	const [formDialogOpen, setFormDialogOpen] = useState(false);
 	const [mutationError, setMutationError] = useState<string | null>(null);
 
-	// Debounce search
-	useMemo(() => {
-		const timer = setTimeout(() => {
-			setDebouncedSearch(searchQuery);
-			setPage(1); // Reset to first page on search
-		}, 300);
-		return () => clearTimeout(timer);
-	}, [searchQuery]);
+	// Debounce search - returns a stable callback that delays updating search state
+	const debouncedSearch = useMemo(() => {
+		let timeout: ReturnType<typeof setTimeout>;
+		return (value: string) => {
+			clearTimeout(timeout);
+			timeout = setTimeout(() => {
+				setSearch(value);
+				setPage(1);
+			}, 300);
+		};
+	}, []);
 
 	const params: ProductListParams = {
 		page,
 		limit: 20,
-		search: debouncedSearch || undefined,
+		search: search || undefined,
 		categoryId: categoryFilter || undefined,
 		isActive: statusFilter,
 		includeArchived: includeArchived ? 'true' : 'false',
@@ -187,8 +189,7 @@ export function ProductsPage() {
 						<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
 						<Input
 							placeholder="Search by name or SKU..."
-							value={searchQuery}
-							onChange={(e) => setSearchQuery(e.target.value)}
+							onChange={(e) => debouncedSearch(e.target.value)}
 							className="pl-9"
 						/>
 					</div>
@@ -267,7 +268,7 @@ export function ProductsPage() {
 			{products.length === 0 ? (
 				<div className="text-center py-12 text-muted-foreground border rounded-lg">
 					<Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
-					{searchQuery || categoryFilter || statusFilter !== 'true'
+					{search || categoryFilter || statusFilter !== 'true'
 						? 'No products found matching your filters.'
 						: 'No products yet. Add your first product to get started.'}
 				</div>

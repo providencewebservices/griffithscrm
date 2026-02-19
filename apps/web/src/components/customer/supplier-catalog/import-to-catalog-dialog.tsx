@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { CategorySelect } from '@/components/customer/products/category-select';
+import { ImageUpload } from '@/components/ui/image-upload';
 import type { SupplierProduct } from '@/hooks/use-supplier-products';
 
 type ImportToCatalogDialogProps = {
@@ -43,6 +44,8 @@ export function ImportToCatalogDialog({
 	const [description, setDescription] = useState('');
 	const [categoryId, setCategoryId] = useState<string | null>(null);
 	const [basePrice, setBasePrice] = useState('');
+	const [imageUrl, setImageUrl] = useState<string | null>(null);
+	const [uploadEntityId, setUploadEntityId] = useState('');
 
 	useEffect(() => {
 		if (open && product) {
@@ -51,6 +54,8 @@ export function ImportToCatalogDialog({
 			setDescription(product.description || '');
 			setCategoryId(null);
 			setBasePrice('');
+			setImageUrl(null);
+			setUploadEntityId(crypto.randomUUID());
 		}
 	}, [open, product]);
 
@@ -61,6 +66,7 @@ export function ImportToCatalogDialog({
 			description: description || null,
 			categoryId: categoryId || null,
 			basePrice: basePrice || null,
+			imageUrl,
 		});
 	};
 
@@ -153,6 +159,16 @@ export function ImportToCatalogDialog({
 							onChange={(e) => setDescription(e.target.value)}
 							placeholder="Optional description"
 							rows={3}
+						/>
+					</Field>
+
+					<Field>
+						<FieldLabel>Image (optional)</FieldLabel>
+						<ImageUpload
+							value={imageUrl}
+							onChange={setImageUrl}
+							category="products"
+							entityId={uploadEntityId}
 						/>
 					</Field>
 				</FieldGroup>
