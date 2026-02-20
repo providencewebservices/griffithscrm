@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { eq, and, asc, count } from 'drizzle-orm';
 import { requireAuth, requireTenant } from '../middleware/auth';
 import { db } from '../lib/auth';
-import { materialSections, materials } from '@griffiths-crm/shared/db/schema';
+import { materialSections, materials, suppliers } from '@griffiths-crm/shared/db/schema';
 
 // Validation schemas
 const createSchema = z.object({
@@ -69,8 +69,21 @@ const materialSectionsRoutes = new Hono()
 
 		// Get associated materials
 		const sectionMaterials = await db
-			.select()
+			.select({
+				id: materials.id,
+				tenantId: materials.tenantId,
+				sectionId: materials.sectionId,
+				supplierId: materials.supplierId,
+				name: materials.name,
+				imageUrl: materials.imageUrl,
+				isActive: materials.isActive,
+				sortOrder: materials.sortOrder,
+				createdAt: materials.createdAt,
+				updatedAt: materials.updatedAt,
+				supplierName: suppliers.businessName,
+			})
 			.from(materials)
+			.leftJoin(suppliers, eq(materials.supplierId, suppliers.id))
 			.where(eq(materials.sectionId, id))
 			.orderBy(asc(materials.sortOrder), asc(materials.name));
 
