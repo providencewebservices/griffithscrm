@@ -58,6 +58,7 @@ export function ProductsPage() {
 	const [statusFilter, setStatusFilter] = useState<StatusFilter>('true');
 	const [includeArchived, setIncludeArchived] = useState(false);
 	const [page, setPage] = useState(1);
+	const [limit, setLimit] = useState(20);
 	const [displayMode, setDisplayMode] = useState<DisplayMode>('cards');
 	const [formDialogOpen, setFormDialogOpen] = useState(false);
 	const [mutationError, setMutationError] = useState<string | null>(null);
@@ -76,7 +77,7 @@ export function ProductsPage() {
 
 	const params: ProductListParams = {
 		page,
-		limit: 20,
+		limit,
 		search: search || undefined,
 		categoryId: categoryFilter || undefined,
 		isActive: statusFilter,
@@ -281,177 +282,154 @@ export function ProductsPage() {
 						: 'No products yet. Add your first product to get started.'}
 				</div>
 			) : displayMode === 'table' ? (
-				<>
-					<div className="border rounded-lg">
-						<Table>
-							<TableHeader>
-								<TableRow>
-									<TableHead>SKU</TableHead>
-									<TableHead>Name</TableHead>
-									<TableHead>Category</TableHead>
-									<TableHead>Base Price</TableHead>
-									<TableHead>Options</TableHead>
-									<TableHead>Status</TableHead>
-									<TableHead className="w-[70px]"></TableHead>
-								</TableRow>
-							</TableHeader>
-							<TableBody>
-								{products.map((product) => (
-									<TableRow
-										key={product.id}
-										className={product.archivedAt ? 'opacity-60' : ''}
-									>
-										<TableCell className="font-mono text-sm">
-											{product.sku}
-										</TableCell>
-										<TableCell className="font-medium">
-											<Link
-												to={`/app/products/${product.id}`}
-												className="hover:underline"
-											>
-												{product.name}
-											</Link>
-										</TableCell>
-										<TableCell>
-											{product.category?.name || (
-												<span className="text-muted-foreground">-</span>
-											)}
-										</TableCell>
-										<TableCell>{formatPrice(product.basePrice)}</TableCell>
-										<TableCell>
-											{product.optionCount || 0}
-										</TableCell>
-										<TableCell>
-											{product.archivedAt ? (
-												<Badge variant="outline">Archived</Badge>
-											) : product.isActive ? (
-												<Badge variant="default">Active</Badge>
-											) : (
-												<Badge variant="secondary">Inactive</Badge>
-											)}
-										</TableCell>
-										<TableCell>
-											<DropdownMenu>
-												<DropdownMenuTrigger asChild>
-													<Button variant="ghost" size="icon-sm">
-														<MoreHorizontal className="h-4 w-4" />
-													</Button>
-												</DropdownMenuTrigger>
-												<DropdownMenuContent align="end">
-													<DropdownMenuItem asChild>
-														<Link to={`/app/products/${product.id}`}>
-															View Details
-														</Link>
-													</DropdownMenuItem>
+				<div className="border rounded-lg">
+					<Table>
+						<TableHeader>
+							<TableRow>
+								<TableHead>SKU</TableHead>
+								<TableHead>Name</TableHead>
+								<TableHead>Category</TableHead>
+								<TableHead>Base Price</TableHead>
+								<TableHead>Options</TableHead>
+								<TableHead>Status</TableHead>
+								<TableHead className="w-[70px]"></TableHead>
+							</TableRow>
+						</TableHeader>
+						<TableBody>
+							{products.map((product) => (
+								<TableRow
+									key={product.id}
+									className={product.archivedAt ? 'opacity-60' : ''}
+								>
+									<TableCell className="font-mono text-sm">
+										{product.sku}
+									</TableCell>
+									<TableCell className="font-medium">
+										<Link
+											to={`/app/products/${product.id}`}
+											className="hover:underline"
+										>
+											{product.name}
+										</Link>
+									</TableCell>
+									<TableCell>
+										{product.category?.name || (
+											<span className="text-muted-foreground">-</span>
+										)}
+									</TableCell>
+									<TableCell>{formatPrice(product.basePrice)}</TableCell>
+									<TableCell>
+										{product.optionCount || 0}
+									</TableCell>
+									<TableCell>
+										{product.archivedAt ? (
+											<Badge variant="outline">Archived</Badge>
+										) : product.isActive ? (
+											<Badge variant="default">Active</Badge>
+										) : (
+											<Badge variant="secondary">Inactive</Badge>
+										)}
+									</TableCell>
+									<TableCell>
+										<DropdownMenu>
+											<DropdownMenuTrigger asChild>
+												<Button variant="ghost" size="icon-sm">
+													<MoreHorizontal className="h-4 w-4" />
+												</Button>
+											</DropdownMenuTrigger>
+											<DropdownMenuContent align="end">
+												<DropdownMenuItem asChild>
+													<Link to={`/app/products/${product.id}`}>
+														View Details
+													</Link>
+												</DropdownMenuItem>
+												<DropdownMenuItem
+													onClick={() => handleDuplicate(product.id)}
+												>
+													Duplicate
+												</DropdownMenuItem>
+												<DropdownMenuSeparator />
+												{product.archivedAt ? (
 													<DropdownMenuItem
-														onClick={() => handleDuplicate(product.id)}
+														onClick={() => handleUnarchive(product.id)}
 													>
-														Duplicate
+														Restore
 													</DropdownMenuItem>
-													<DropdownMenuSeparator />
-													{product.archivedAt ? (
-														<DropdownMenuItem
-															onClick={() => handleUnarchive(product.id)}
-														>
-															Restore
-														</DropdownMenuItem>
-													) : (
-														<DropdownMenuItem
-															className="text-destructive"
-															onClick={() => handleArchive(product.id)}
-														>
-															Archive
-														</DropdownMenuItem>
-													)}
-												</DropdownMenuContent>
-											</DropdownMenu>
-										</TableCell>
-									</TableRow>
-								))}
-							</TableBody>
-						</Table>
-					</div>
-
-					{/* Pagination */}
-					{pagination && pagination.totalPages > 1 && (
-						<div className="flex items-center justify-between mt-4">
-							<div className="text-sm text-muted-foreground">
-								Showing {(pagination.page - 1) * pagination.limit + 1} to{' '}
-								{Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
-								{pagination.total} products
-							</div>
-							<div className="flex items-center gap-2">
-								<Button
-									variant="outline"
-									size="sm"
-									onClick={() => setPage((p) => Math.max(1, p - 1))}
-									disabled={pagination.page <= 1}
-								>
-									<ChevronLeft className="h-4 w-4" />
-									Previous
-								</Button>
-								<span className="text-sm">
-									Page {pagination.page} of {pagination.totalPages}
-								</span>
-								<Button
-									variant="outline"
-									size="sm"
-									onClick={() => setPage((p) => p + 1)}
-									disabled={pagination.page >= pagination.totalPages}
-								>
-									Next
-									<ChevronRight className="h-4 w-4" />
-								</Button>
-							</div>
-						</div>
-					)}
-				</>
+												) : (
+													<DropdownMenuItem
+														className="text-destructive"
+														onClick={() => handleArchive(product.id)}
+													>
+														Archive
+													</DropdownMenuItem>
+												)}
+											</DropdownMenuContent>
+										</DropdownMenu>
+									</TableCell>
+								</TableRow>
+							))}
+						</TableBody>
+					</Table>
+				</div>
 			) : (
-				<>
-					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-						{products.map((product) => (
-							<ProductCard
-								key={product.id}
-								product={product}
-								signedImageUrl={product.imageUrl ? signedUrls?.get(product.imageUrl) : undefined}
-							/>
-						))}
-					</div>
+				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+					{products.map((product) => (
+						<ProductCard
+							key={product.id}
+							product={product}
+							signedImageUrl={product.imageUrl ? signedUrls?.get(product.imageUrl) : undefined}
+						/>
+					))}
+				</div>
+			)}
 
-					{/* Pagination */}
-					{pagination && pagination.totalPages > 1 && (
-						<div className="flex items-center justify-between mt-4">
-							<div className="text-sm text-muted-foreground">
-								Showing {(pagination.page - 1) * pagination.limit + 1} to{' '}
-								{Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
-								{pagination.total} products
-							</div>
-							<div className="flex items-center gap-2">
-								<Button
-									variant="outline"
-									size="sm"
-									onClick={() => setPage((p) => Math.max(1, p - 1))}
-									disabled={pagination.page <= 1}
-								>
-									<ChevronLeft className="h-4 w-4" />
-									Previous
-								</Button>
-								<span className="text-sm">
-									Page {pagination.page} of {pagination.totalPages}
-								</span>
-								<Button
-									variant="outline"
-									size="sm"
-									onClick={() => setPage((p) => p + 1)}
-									disabled={pagination.page >= pagination.totalPages}
-								>
-									Next
-									<ChevronRight className="h-4 w-4" />
-								</Button>
-							</div>
-						</div>
-					)}
-				</>
+			{pagination && products.length > 0 && (
+				<div className="flex items-center justify-between mt-4">
+					<div className="text-sm text-muted-foreground">
+						Showing {(pagination.page - 1) * pagination.limit + 1} to{' '}
+						{Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
+						{pagination.total} products
+					</div>
+					<div className="flex items-center gap-2">
+						<Select
+							value={String(limit)}
+							onValueChange={(val) => {
+								setLimit(Number(val));
+								setPage(1);
+							}}
+						>
+							<SelectTrigger className="w-20 h-8">
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="10">10</SelectItem>
+								<SelectItem value="20">20</SelectItem>
+								<SelectItem value="50">50</SelectItem>
+							</SelectContent>
+						</Select>
+						<Button
+							variant="outline"
+							size="sm"
+							onClick={() => setPage((p) => Math.max(1, p - 1))}
+							disabled={pagination.page <= 1}
+						>
+							<ChevronLeft className="h-4 w-4" />
+							Previous
+						</Button>
+						<span className="text-sm">
+							Page {pagination.page} of {pagination.totalPages}
+						</span>
+						<Button
+							variant="outline"
+							size="sm"
+							onClick={() => setPage((p) => p + 1)}
+							disabled={pagination.page >= pagination.totalPages}
+						>
+							Next
+							<ChevronRight className="h-4 w-4" />
+						</Button>
+					</div>
+				</div>
 			)}
 
 			<ProductFormDialog
