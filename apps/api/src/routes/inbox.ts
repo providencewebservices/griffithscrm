@@ -315,12 +315,14 @@ const inboxRoutes = new Hono()
 				.update(emailMessages)
 				.set({ isUnread: false, updatedAt: new Date() })
 				.where(eq(emailMessages.threadId, threadId));
-
-			await db
-				.update(emailThreads)
-				.set({ isUnread: false, updatedAt: new Date() })
-				.where(eq(emailThreads.id, threadId));
 		}
+
+		// Always update thread status — even if messages were already marked read
+		// (e.g. by a sync that updated messages but not the thread)
+		await db
+			.update(emailThreads)
+			.set({ isUnread: false, updatedAt: new Date() })
+			.where(eq(emailThreads.id, threadId));
 
 		return c.json({ success: true });
 	})

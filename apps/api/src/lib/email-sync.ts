@@ -256,6 +256,7 @@ export async function doSync(integrationId: string, tenantId: string) {
 		}
 
 		// Process label modifications (unread status)
+		const affectedThreadIds = new Set<string>();
 		for (const mod of syncResult.labelsModified) {
 			const isNowUnread = mod.addedLabels.includes('UNREAD');
 			const isNowRead = mod.removedLabels.includes('UNREAD');
@@ -269,7 +270,41 @@ export async function doSync(integrationId: string, tenantId: string) {
 							eq(emailMessages.providerMessageId, mod.providerMessageId)
 						)
 					);
+
+				// Look up the thread for this message so we can recalculate thread read status
+				const [msg] = await db
+					.select({ threadId: emailMessages.threadId })
+					.from(emailMessages)
+					.where(
+						and(
+							eq(emailMessages.integrationId, integrationId),
+							eq(emailMessages.providerMessageId, mod.providerMessageId)
+						)
+					)
+					.limit(1);
+				if (msg) {
+					affectedThreadIds.add(msg.threadId);
+				}
 			}
+		}
+
+		// Recalculate thread isUnread for affected threads
+		for (const affectedThreadId of affectedThreadIds) {
+			const [unreadMsg] = await db
+				.select({ id: emailMessages.id })
+				.from(emailMessages)
+				.where(
+					and(
+						eq(emailMessages.threadId, affectedThreadId),
+						eq(emailMessages.isUnread, true)
+					)
+				)
+				.limit(1);
+
+			await db
+				.update(emailThreads)
+				.set({ isUnread: !!unreadMsg, updatedAt: new Date() })
+				.where(eq(emailThreads.id, affectedThreadId));
 		}
 
 		// Update sync state
