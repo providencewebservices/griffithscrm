@@ -723,7 +723,6 @@ async function seedProductCatalog() {
 				sectionId: createdRecords.materialSections[m.section],
 				supplierId: faker.helpers.arrayElement(createdRecords.suppliers),
 				name: m.name,
-				supplierCost: m.cost,
 			});
 			createdRecords.materials.push(materialId);
 		}

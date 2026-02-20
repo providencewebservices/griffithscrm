@@ -400,7 +400,6 @@ export function SupplierDetailPage() {
 								<TableHeader>
 									<TableRow>
 										<TableHead>Name</TableHead>
-										<TableHead className="text-right">Supplier Cost</TableHead>
 										<TableHead>Status</TableHead>
 									</TableRow>
 								</TableHeader>
@@ -409,9 +408,6 @@ export function SupplierDetailPage() {
 										<TableRow key={material.id}>
 											<TableCell className="font-medium">
 												{material.name}
-											</TableCell>
-											<TableCell className="text-right">
-												{formatCurrency(material.supplierCost)}
 											</TableCell>
 											<TableCell>
 												<Badge variant={material.isActive ? 'default' : 'secondary'}>

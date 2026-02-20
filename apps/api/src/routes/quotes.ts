@@ -828,7 +828,7 @@ const quotesRoutes = new Hono()
 						.limit(1);
 				}
 
-				const supplierCost = parseFloat(material.supplierCost);
+				const supplierCost = 0;
 				const markupPercent = pricingSettings.defaultMarkupPercent;
 				const unitPrice = calculateRetailPrice(supplierCost, markupPercent);
 				const lineTotal = unitPrice * comp.quantity;
@@ -1199,7 +1199,7 @@ const quotesRoutes = new Hono()
 						.limit(1);
 				}
 
-				const supplierCost = parseFloat(material.supplierCost);
+				const supplierCost = 0;
 				const markupPercent = pricingSettings.defaultMarkupPercent;
 				const unitPrice = calculateRetailPrice(supplierCost, markupPercent);
 				const lineTotal = unitPrice * comp.quantity;
@@ -2202,7 +2202,7 @@ ${tenantName}
 						.limit(1);
 				}
 
-				const supplierCost = parseFloat(material.supplierCost);
+				const supplierCost = 0;
 				const markupPercent = pricingSettings.defaultMarkupPercent;
 				const unitPrice = calculateRetailPrice(supplierCost, markupPercent);
 				const lineTotal = unitPrice * comp.quantity;

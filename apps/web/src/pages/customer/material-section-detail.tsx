@@ -71,7 +71,6 @@ export function MaterialSectionDetailPage() {
 
 	// Material form state (for adding new materials)
 	const [materialName, setMaterialName] = useState('');
-	const [materialSupplierCost, setMaterialSupplierCost] = useState('0');
 	const [materialImageUrl, setMaterialImageUrl] = useState<string | null>(null);
 	const [materialEntityId, setMaterialEntityId] = useState('');
 	const [materialSupplierId, setMaterialSupplierId] = useState<string | null>(null);
@@ -117,7 +116,6 @@ export function MaterialSectionDetailPage() {
 
 	const handleAddMaterial = () => {
 		setMaterialName('');
-		setMaterialSupplierCost('0');
 		setMaterialImageUrl(null);
 		setMaterialEntityId(crypto.randomUUID());
 		setMaterialSupplierId(null);
@@ -133,7 +131,6 @@ export function MaterialSectionDetailPage() {
 			const data: CreateMaterialInput = {
 				sectionId: id,
 				name: materialName,
-				supplierCost: parseFloat(materialSupplierCost) || 0,
 				imageUrl: materialImageUrl,
 				supplierId: materialSupplierId,
 			};
@@ -248,7 +245,6 @@ export function MaterialSectionDetailPage() {
 											<TableRow>
 												<TableHead>Name</TableHead>
 												<TableHead>Supplier</TableHead>
-												<TableHead>Supplier Cost</TableHead>
 												<TableHead>Status</TableHead>
 												<TableHead className="w-[80px]"></TableHead>
 											</TableRow>
@@ -276,7 +272,6 @@ export function MaterialSectionDetailPage() {
 															<span className="text-muted-foreground">-</span>
 														)}
 													</TableCell>
-													<TableCell>£{material.supplierCost}</TableCell>
 													<TableCell>
 														<Badge variant={material.isActive ? 'default' : 'secondary'}>
 															{material.isActive ? 'Active' : 'Inactive'}
@@ -424,19 +419,7 @@ export function MaterialSectionDetailPage() {
 							</Select>
 						</Field>
 
-						<Field>
-							<FieldLabel htmlFor="supplierCost">Supplier Cost (£)</FieldLabel>
-							<Input
-								id="supplierCost"
-								type="number"
-								min="0"
-								step="0.01"
-								value={materialSupplierCost}
-								onChange={(e) => setMaterialSupplierCost(e.target.value)}
-								placeholder="0.00"
-							/>
-						</Field>
-
+	
 						<Field>
 							<FieldLabel>Image (optional)</FieldLabel>
 							<ImageUpload

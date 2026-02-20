@@ -9,7 +9,6 @@ export type Material = {
 	supplierId: string | null;
 	name: string;
 	imageUrl: string | null;
-	supplierCost: string;
 	isActive: boolean;
 	sortOrder: number;
 	createdAt: string;
@@ -22,7 +21,6 @@ export type CreateMaterialInput = {
 	supplierId?: string | null;
 	name: string;
 	imageUrl?: string | null;
-	supplierCost: number;
 	isActive?: boolean;
 };
 
@@ -30,7 +28,6 @@ export type UpdateMaterialInput = {
 	name?: string;
 	supplierId?: string | null;
 	imageUrl?: string | null;
-	supplierCost?: number;
 	isActive?: boolean;
 };
 

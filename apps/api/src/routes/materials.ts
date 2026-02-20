@@ -12,7 +12,6 @@ const createSchema = z.object({
 	supplierId: z.string().nullable().optional(),
 	name: z.string().min(1, 'Name is required'),
 	imageUrl: z.string().nullable().optional(),
-	supplierCost: z.number().min(0).default(0),
 	isActive: z.boolean().optional().default(true),
 });
 
@@ -20,7 +19,6 @@ const updateSchema = z.object({
 	name: z.string().min(1, 'Name is required').optional(),
 	supplierId: z.string().nullable().optional(),
 	imageUrl: z.string().nullable().optional(),
-	supplierCost: z.number().min(0).optional(),
 	isActive: z.boolean().optional(),
 });
 
@@ -42,7 +40,6 @@ const materialsRoutes = new Hono()
 				supplierId: materials.supplierId,
 				name: materials.name,
 				imageUrl: materials.imageUrl,
-				supplierCost: materials.supplierCost,
 				isActive: materials.isActive,
 				sortOrder: materials.sortOrder,
 				createdAt: materials.createdAt,
@@ -71,7 +68,6 @@ const materialsRoutes = new Hono()
 				supplierId: materials.supplierId,
 				name: materials.name,
 				imageUrl: materials.imageUrl,
-				supplierCost: materials.supplierCost,
 				isActive: materials.isActive,
 				sortOrder: materials.sortOrder,
 				createdAt: materials.createdAt,
@@ -125,7 +121,6 @@ const materialsRoutes = new Hono()
 				supplierId: data.supplierId || null,
 				name: data.name,
 				imageUrl: data.imageUrl || null,
-				supplierCost: String(data.supplierCost),
 				isActive: data.isActive ?? true,
 				sortOrder: maxSortOrder + 1,
 			})
@@ -156,7 +151,6 @@ const materialsRoutes = new Hono()
 		if (data.name !== undefined) updateData.name = data.name;
 		if (data.supplierId !== undefined) updateData.supplierId = data.supplierId;
 		if (data.imageUrl !== undefined) updateData.imageUrl = data.imageUrl;
-		if (data.supplierCost !== undefined) updateData.supplierCost = String(data.supplierCost);
 		if (data.isActive !== undefined) updateData.isActive = data.isActive;
 
 		const [updated] = await db

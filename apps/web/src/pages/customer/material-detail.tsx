@@ -56,7 +56,6 @@ export function MaterialDetailPage() {
 
 	// Form state
 	const [formName, setFormName] = useState('');
-	const [formSupplierCost, setFormSupplierCost] = useState('0');
 	const [formImageUrl, setFormImageUrl] = useState<string | null>(null);
 	const [formSupplierId, setFormSupplierId] = useState<string | null>(null);
 
@@ -71,7 +70,6 @@ export function MaterialDetailPage() {
 	const handleEdit = () => {
 		if (!material) return;
 		setFormName(material.name);
-		setFormSupplierCost(material.supplierCost);
 		setFormImageUrl(material.imageUrl);
 		setFormSupplierId(material.supplierId);
 		setMutationError(null);
@@ -85,7 +83,6 @@ export function MaterialDetailPage() {
 			await updateMutation.mutateAsync({
 				id,
 				name: formName,
-				supplierCost: parseFloat(formSupplierCost) || 0,
 				imageUrl: formImageUrl,
 				supplierId: formSupplierId,
 			});
@@ -136,10 +133,6 @@ export function MaterialDetailPage() {
 		} catch {
 			// Error handled by mutation
 		}
-	};
-
-	const formatPrice = (price: string) => {
-		return `£${parseFloat(price).toFixed(2)}`;
 	};
 
 	const formatDate = (dateString: string) => {
@@ -349,11 +342,6 @@ export function MaterialDetailPage() {
 							</div>
 							<Separator />
 							<div>
-								<p className="text-sm font-medium text-muted-foreground">Supplier Cost</p>
-								<p className="text-lg font-semibold">{formatPrice(material.supplierCost)}</p>
-							</div>
-							<Separator />
-							<div>
 								<p className="text-sm font-medium text-muted-foreground">Status</p>
 								<p>{material.isActive ? 'Active' : 'Inactive'}</p>
 							</div>
@@ -418,19 +406,6 @@ export function MaterialDetailPage() {
 									))}
 								</SelectContent>
 							</Select>
-						</Field>
-
-						<Field>
-							<FieldLabel htmlFor="supplierCost">Supplier Cost (£)</FieldLabel>
-							<Input
-								id="supplierCost"
-								type="number"
-								min="0"
-								step="0.01"
-								value={formSupplierCost}
-								onChange={(e) => setFormSupplierCost(e.target.value)}
-								placeholder="0.00"
-							/>
 						</Field>
 
 						<Field>

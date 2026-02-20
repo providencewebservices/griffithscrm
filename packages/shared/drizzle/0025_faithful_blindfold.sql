@@ -1,0 +1,1 @@
+ALTER TABLE "materials" DROP COLUMN "supplier_cost";

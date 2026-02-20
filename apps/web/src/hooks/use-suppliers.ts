@@ -121,7 +121,6 @@ export type SupplierSearchParams = {
 export type SupplierMaterial = {
 	id: string;
 	name: string;
-	supplierCost: string;
 	isActive: boolean;
 };
 

@@ -768,7 +768,6 @@ export const materials = pgTable('materials', {
 	supplierId: text('supplier_id').references(() => suppliers.id, { onDelete: 'set null' }),
 	name: text('name').notNull(),
 	imageUrl: text('image_url'),
-	supplierCost: numeric('supplier_cost', { precision: 10, scale: 2 }).notNull().default('0'),
 	isActive: boolean('is_active').notNull().default(true),
 	sortOrder: integer('sort_order').notNull().default(0),
 	createdAt: timestamp('created_at').notNull().defaultNow(),

@@ -319,7 +319,7 @@ export function QuoteNewPage() {
 		if (!materialSections) return [];
 		return materialSections.map((section) => ({
 			...section,
-			materials: [] as { id: string; name: string; supplierCost: string }[],
+			materials: [] as { id: string; name: string }[],
 		}));
 	}, [materialSections]);
 
