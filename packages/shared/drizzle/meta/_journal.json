@@ -183,6 +183,13 @@
       "when": 1771596783553,
       "tag": "0025_faithful_blindfold",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1771604098566,
+      "tag": "0026_motionless_christian_walker",
+      "breakpoints": true
     }
   ]
 }
