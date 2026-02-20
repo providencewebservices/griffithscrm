@@ -110,6 +110,9 @@ export type PaymentScheduleItem = {
 	paidAt: string | null;
 	paymentMethod: string | null;
 	externalPaymentId: string | null;
+	takepaymentsCrossReference: string | null;
+	takepaymentsStatusCode: number | null;
+	cardLastFour: string | null;
 	sortOrder: number;
 	notes: string | null;
 	createdAt: string;
@@ -566,6 +569,59 @@ export function useDeleteAttachmentMutation() {
 		onSuccess: (_, { jobId }) => {
 			queryClient.invalidateQueries({ queryKey: ['attachments', jobId] });
 		},
+	});
+}
+
+// ============================================
+// PAYMENT INTEGRATION TYPES AND HOOKS
+// ============================================
+
+export type InitiatePaymentResponse = {
+	formAction: string;
+	formFields: Record<string, string>;
+};
+
+export type GeneratePaymentLinkResponse = {
+	paymentUrl: string;
+};
+
+async function initiatePayment(milestoneId: string): Promise<InitiatePaymentResponse> {
+	const response = await fetch(`${API_URL}/api/payments/initiate`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		credentials: 'include',
+		body: JSON.stringify({ milestoneId }),
+	});
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.error || 'Failed to initiate payment');
+	}
+	return response.json();
+}
+
+async function generatePaymentLink(milestoneId: string): Promise<GeneratePaymentLinkResponse> {
+	const response = await fetch(`${API_URL}/api/payments/generate-link`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		credentials: 'include',
+		body: JSON.stringify({ milestoneId }),
+	});
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.error || 'Failed to generate payment link');
+	}
+	return response.json();
+}
+
+export function useInitiatePaymentMutation() {
+	return useMutation({
+		mutationFn: (milestoneId: string) => initiatePayment(milestoneId),
+	});
+}
+
+export function useGeneratePaymentLinkMutation() {
+	return useMutation({
+		mutationFn: (milestoneId: string) => generatePaymentLink(milestoneId),
 	});
 }
 

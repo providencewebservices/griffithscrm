@@ -42,6 +42,9 @@ import { inboxRoutes } from './routes/inbox';
 import { inboxWebhookRoutes } from './routes/inbox-webhook';
 import { tasksRoutes } from './routes/tasks';
 import { worksheetsRoutes } from './routes/worksheets';
+import { takepaymentsSettingsRoutes } from './routes/takepayments-settings';
+import { paymentsRoutes } from './routes/payments';
+import { publicPaymentsRoutes } from './routes/public-payments';
 import { startEmailSyncScheduler } from './lib/email-sync-scheduler';
 
 const app = new Hono();
@@ -67,6 +70,7 @@ app.on(['POST', 'GET'], '/api/auth/*', (c) => auth.handler(c.req.raw));
 
 // Public routes (no auth required)
 app.route('/api/public/quotes', publicQuotesRoutes);
+app.route('/api/public/payments', publicPaymentsRoutes);
 
 // API routes
 const api = new Hono()
@@ -124,6 +128,10 @@ app.route('/api/tenant/material-sections', materialSectionsRoutes);
 app.route('/api/tenant/materials', materialsRoutes);
 app.route('/api/tenant/finishes', finishesRoutes);
 app.route('/api/tenant/pricing-settings', tenantPricingSettingsRoutes);
+app.route('/api/tenant/takepayments-settings', takepaymentsSettingsRoutes);
+
+// Payment routes (for tenant users)
+app.route('/api/payments', paymentsRoutes);
 
 // Quote routes (for tenant users)
 app.route('/api/quotes', quotesRoutes);

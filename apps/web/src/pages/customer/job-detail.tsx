@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import {
 	Card,
@@ -46,6 +47,7 @@ import {
 	usePresignAttachmentMutation,
 	useConfirmAttachmentMutation,
 	useDeleteAttachmentMutation,
+	useGeneratePaymentLinkMutation,
 	formatJobStatus,
 	getNextJobStatus,
 	getNextStatusButtonLabel,
@@ -76,6 +78,7 @@ import {
 	Image,
 	Upload,
 	X,
+	Link2,
 } from 'lucide-react';
 import { DocumentsCard } from '@/components/documents';
 import { JobTasksSection } from '@/components/tasks/job-tasks-section';
@@ -148,6 +151,7 @@ export function JobDetailPage() {
 	const presignMutation = usePresignAttachmentMutation();
 	const confirmMutation = useConfirmAttachmentMutation();
 	const deleteAttachmentMutation = useDeleteAttachmentMutation();
+	const generateLinkMutation = useGeneratePaymentLinkMutation();
 
 	// Initialize notes when job loads
 	if (job && !notesInitialized) {
@@ -286,6 +290,16 @@ export function JobDetailPage() {
 		const paidAmount = parseFloat(item.paidAmount);
 		const amount = parseFloat(item.amount);
 		return paidAmount >= amount;
+	};
+
+	const handleGeneratePaymentLink = async (milestoneId: string) => {
+		try {
+			const result = await generateLinkMutation.mutateAsync(milestoneId);
+			await navigator.clipboard.writeText(result.paymentUrl);
+			toast.success('Payment link copied to clipboard!');
+		} catch (err) {
+			toast.error(err instanceof Error ? err.message : 'Failed to generate payment link');
+		}
 	};
 
 	// File upload handlers
@@ -838,24 +852,48 @@ export function JobDetailPage() {
 																{isPaid && item.paidAt && (
 																	<span>Paid: {formatDate(item.paidAt)}</span>
 																)}
+																{isPaid && item.cardLastFour && (
+																	<span className="flex items-center gap-1">
+																		<CreditCard className="h-3.5 w-3.5" />
+																		****{item.cardLastFour}
+																	</span>
+																)}
 															</div>
 														</div>
 														<div className="flex items-center gap-2">
 															{!isPaid && (
-																<Button
-																	onClick={() => handleMarkAsPaid(item)}
-																	disabled={updatePaymentMutation.isPending}
-																	size="sm"
-																>
-																	{updatePaymentMutation.isPending ? (
-																		<Loader2 className="h-4 w-4 animate-spin" />
-																	) : (
-																		<>
-																			<Check className="h-4 w-4 mr-1" />
-																			Mark Paid
-																		</>
-																	)}
-																</Button>
+																<>
+																	<Button
+																		variant="outline"
+																		size="sm"
+																		onClick={() => handleGeneratePaymentLink(item.id)}
+																		disabled={generateLinkMutation.isPending}
+																		title="Copy payment link"
+																	>
+																		{generateLinkMutation.isPending ? (
+																			<Loader2 className="h-4 w-4 animate-spin" />
+																		) : (
+																			<>
+																				<Link2 className="h-4 w-4 mr-1" />
+																				Payment Link
+																			</>
+																		)}
+																	</Button>
+																	<Button
+																		onClick={() => handleMarkAsPaid(item)}
+																		disabled={updatePaymentMutation.isPending}
+																		size="sm"
+																	>
+																		{updatePaymentMutation.isPending ? (
+																			<Loader2 className="h-4 w-4 animate-spin" />
+																		) : (
+																			<>
+																				<Check className="h-4 w-4 mr-1" />
+																				Mark Paid
+																			</>
+																		)}
+																	</Button>
+																</>
 															)}
 															{item.description !== 'Deposit' && item.description !== 'Balance' && (
 																<Button

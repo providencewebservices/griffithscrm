@@ -41,6 +41,9 @@ import { TaskDetailPage } from './pages/customer/task-detail';
 import { WorksheetDetailPage } from './pages/customer/worksheet-detail';
 import { InboxPage } from './pages/customer/inbox';
 import { PublicPackageViewPage } from './pages/public/package-view';
+import { PaymentPage } from './pages/public/payment';
+import { PaymentSuccessPage } from './pages/public/payment-success';
+import { PaymentFailurePage } from './pages/public/payment-failure';
 import { ProtectedRoute } from './components/protected-route';
 import { RoleBasedRedirect } from './components/role-based-redirect';
 
@@ -52,8 +55,11 @@ function App() {
 				<Route path="/login" element={<LoginPage />} />
 				<Route path="/reset-password" element={<ResetPasswordPage />} />
 
-				{/* Public quote view (no auth required) */}
+				{/* Public routes (no auth required) */}
 				<Route path="/quote/:token" element={<PublicPackageViewPage />} />
+				<Route path="/pay/:token" element={<PaymentPage />} />
+				<Route path="/payment/success" element={<PaymentSuccessPage />} />
+				<Route path="/payment/failure" element={<PaymentFailurePage />} />
 
 				{/* Role-based redirect from root */}
 				<Route path="/" element={<RoleBasedRedirect />} />

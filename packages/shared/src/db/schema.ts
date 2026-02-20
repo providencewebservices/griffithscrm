@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, boolean, primaryKey, integer, numeric, uniqueIndex, index } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, boolean, primaryKey, integer, numeric, uniqueIndex, index, jsonb } from 'drizzle-orm/pg-core';
 
 // Tenants table (must be defined before users due to foreign key)
 export const tenants = pgTable('tenants', {
@@ -1112,6 +1112,9 @@ export const jobPaymentScheduleItems = pgTable('job_payment_schedule_items', {
 	paidAt: timestamp('paid_at'), // When fully paid
 	paymentMethod: text('payment_method'), // "manual", "card", "bank_transfer" - for future Stripe integration
 	externalPaymentId: text('external_payment_id'), // Stripe payment intent ID - for future
+	takepaymentsCrossReference: text('takepayments_cross_reference'), // TakePayments CrossReference from last successful payment
+	takepaymentsStatusCode: integer('takepayments_status_code'), // TakePayments StatusCode (0=success)
+	cardLastFour: text('card_last_four'), // Last 4 digits of card used
 	sortOrder: integer('sort_order').notNull().default(0),
 	notes: text('notes'),
 	createdAt: timestamp('created_at').notNull().defaultNow(),
@@ -1464,4 +1467,58 @@ export const emailEntityLinks = pgTable('email_entity_links', {
 }, (table) => ({
 	uniqueLink: uniqueIndex('email_entity_links_unique_idx')
 		.on(table.threadId, table.entityType, table.entityId),
+}));
+
+// ============================================
+// TAKEPAYMENTS INTEGRATION TABLES
+// ============================================
+
+// TakePayments gateway settings (one per tenant)
+export const takepaymentsSettings = pgTable('takepayments_settings', {
+	id: text('id').primaryKey(),
+	tenantId: text('tenant_id')
+		.notNull()
+		.unique()
+		.references(() => tenants.id, { onDelete: 'cascade' }),
+	merchantId: text('merchant_id').notNull(), // PAYZON-XXXXXXX
+	gatewayPasswordEncrypted: text('gateway_password_encrypted').notNull(), // AES-256-GCM encrypted
+	preSharedKeyEncrypted: text('pre_shared_key_encrypted').notNull(), // AES-256-GCM encrypted
+	hashMethod: text('hash_method').notNull().default('SHA1'), // 'SHA1' or 'HMACSHA1'
+	isActive: boolean('is_active').notNull().default(true),
+	createdAt: timestamp('created_at').notNull().defaultNow(),
+	updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// Payment attempt statuses
+export const PAYMENT_ATTEMPT_STATUSES = ['pending', 'success', 'failed', 'error'] as const;
+
+// Payment attempts (tracks each payment attempt through TakePayments)
+export const paymentAttempts = pgTable('payment_attempts', {
+	id: text('id').primaryKey(),
+	tenantId: text('tenant_id')
+		.notNull()
+		.references(() => tenants.id, { onDelete: 'cascade' }),
+	milestoneId: text('milestone_id')
+		.notNull()
+		.references(() => jobPaymentScheduleItems.id, { onDelete: 'cascade' }),
+	jobId: text('job_id')
+		.notNull()
+		.references(() => jobs.id, { onDelete: 'cascade' }),
+	orderId: text('order_id').notNull().unique(), // JOB-{jobNumber}-MS-{milestoneId}-{shortUUID}
+	amount: integer('amount').notNull(), // Amount in pence
+	statusCode: integer('status_code'), // TakePayments StatusCode (0=success)
+	message: text('message'), // TakePayments Message
+	crossReference: text('cross_reference'), // TakePayments CrossReference
+	cardLastFour: text('card_last_four'),
+	cardType: text('card_type'), // e.g., VISA, MASTERCARD
+	threeDSecureResult: text('three_d_secure_result'),
+	rawResponse: jsonb('raw_response'), // Full POST body from server result
+	hashVerified: boolean('hash_verified'),
+	status: text('status').notNull().default('pending'), // From PAYMENT_ATTEMPT_STATUSES
+	serverResultReceivedAt: timestamp('server_result_received_at'),
+	callbackReceivedAt: timestamp('callback_received_at'),
+	createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (table) => ({
+	orderIdIdx: index('payment_attempts_order_id_idx').on(table.orderId),
+	milestoneIdIdx: index('payment_attempts_milestone_id_idx').on(table.milestoneId),
 }));
