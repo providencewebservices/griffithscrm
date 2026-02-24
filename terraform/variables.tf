@@ -134,6 +134,19 @@ variable "gmail_webhook_token" {
   default     = ""
 }
 
+# TakePayments
+variable "takepayments_encryption_key" {
+  description = "TakePayments AES-256-GCM encryption key (32-byte hex, generate with: openssl rand -hex 32)"
+  type        = string
+  sensitive   = true
+}
+
+variable "payment_token_secret" {
+  description = "Payment token HMAC-SHA256 secret (32-byte hex, generate with: openssl rand -hex 32)"
+  type        = string
+  sensitive   = true
+}
+
 # VPC CIDR
 variable "vpc_cidr" {
   description = "CIDR block for the VPC"

@@ -226,6 +226,14 @@ resource "aws_ecs_task_definition" "api" {
         {
           name  = "EMAIL_FROM"
           value = var.ses_from_email
+        },
+        {
+          name  = "API_BASE_URL"
+          value = "https://${var.api_domain}"
+        },
+        {
+          name  = "APP_URL"
+          value = "https://${var.web_domain}"
         }
       ]
 
@@ -237,37 +245,45 @@ resource "aws_ecs_task_definition" "api" {
         {
           name      = "BETTER_AUTH_SECRET"
           valueFrom = aws_ssm_parameter.better_auth_secret.arn
-        }
-      ],
-      var.google_client_id != "" ? [
-        {
-          name      = "GOOGLE_CLIENT_ID"
-          valueFrom = aws_ssm_parameter.google_client_id[0].arn
         },
         {
-          name      = "GOOGLE_CLIENT_SECRET"
-          valueFrom = aws_ssm_parameter.google_client_secret[0].arn
-        }
-      ] : [],
-      var.microsoft_client_id != "" ? [
-        {
-          name      = "MICROSOFT_CLIENT_ID"
-          valueFrom = aws_ssm_parameter.microsoft_client_id[0].arn
+          name      = "TAKEPAYMENTS_ENCRYPTION_KEY"
+          valueFrom = aws_ssm_parameter.takepayments_encryption_key.arn
         },
         {
-          name      = "MICROSOFT_CLIENT_SECRET"
-          valueFrom = aws_ssm_parameter.microsoft_client_secret[0].arn
+          name      = "PAYMENT_TOKEN_SECRET"
+          valueFrom = aws_ssm_parameter.payment_token_secret.arn
         }
-      ] : [],
-      var.google_pubsub_topic != "" ? [
-        {
-          name      = "GOOGLE_PUBSUB_TOPIC"
-          valueFrom = aws_ssm_parameter.google_pubsub_topic[0].arn
-        },
-        {
-          name      = "GMAIL_WEBHOOK_TOKEN"
-          valueFrom = aws_ssm_parameter.gmail_webhook_token[0].arn
-        }
+        ],
+        var.google_client_id != "" ? [
+          {
+            name      = "GOOGLE_CLIENT_ID"
+            valueFrom = aws_ssm_parameter.google_client_id[0].arn
+          },
+          {
+            name      = "GOOGLE_CLIENT_SECRET"
+            valueFrom = aws_ssm_parameter.google_client_secret[0].arn
+          }
+        ] : [],
+        var.microsoft_client_id != "" ? [
+          {
+            name      = "MICROSOFT_CLIENT_ID"
+            valueFrom = aws_ssm_parameter.microsoft_client_id[0].arn
+          },
+          {
+            name      = "MICROSOFT_CLIENT_SECRET"
+            valueFrom = aws_ssm_parameter.microsoft_client_secret[0].arn
+          }
+        ] : [],
+        var.google_pubsub_topic != "" ? [
+          {
+            name      = "GOOGLE_PUBSUB_TOPIC"
+            valueFrom = aws_ssm_parameter.google_pubsub_topic[0].arn
+          },
+          {
+            name      = "GMAIL_WEBHOOK_TOKEN"
+            valueFrom = aws_ssm_parameter.gmail_webhook_token[0].arn
+          }
       ] : [])
 
       logConfiguration = {
@@ -363,6 +379,23 @@ resource "aws_ssm_parameter" "gmail_webhook_token" {
   value       = var.gmail_webhook_token
 
   tags = local.tags
+}
+
+# TakePayments
+resource "aws_ssm_parameter" "takepayments_encryption_key" {
+  name        = "/${local.name}/app/takepayments-encryption-key"
+  description = "TakePayments AES-256-GCM encryption key"
+  type        = "SecureString"
+  value       = var.takepayments_encryption_key
+  tags        = local.tags
+}
+
+resource "aws_ssm_parameter" "payment_token_secret" {
+  name        = "/${local.name}/app/payment-token-secret"
+  description = "Payment token HMAC-SHA256 secret"
+  type        = "SecureString"
+  value       = var.payment_token_secret
+  tags        = local.tags
 }
 
 # ECS Service
