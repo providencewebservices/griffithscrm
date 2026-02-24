@@ -1,0 +1,1 @@
+ALTER TABLE "quote_packages" ADD COLUMN "relation_to_deceased" text;

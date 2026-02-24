@@ -872,6 +872,7 @@ export const quotePackages = pgTable('quote_packages', {
 
 	// SHARED CONTEXT (shared across all options in package)
 	customerId: text('customer_id').references(() => customers.id, { onDelete: 'set null' }),
+	relationToDeceased: text('relation_to_deceased'),
 	payerType: text('payer_type'), // 'customer' | 'funeral_director' | null (backwards compat)
 
 	// Memorial context - shared across all options

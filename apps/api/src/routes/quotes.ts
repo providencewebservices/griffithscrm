@@ -415,6 +415,7 @@ const createQuoteSchema = z.object({
 	payerId: z.string().optional(), // ID of customer or funeral director
 	payerType: z.enum(PAYER_TYPES).optional(), // 'customer' | 'funeral_director'
 	referralFuneralDirectorId: z.string().optional(), // Only when payer is customer
+	relationToDeceased: z.string().optional(),
 	// Legacy field for backwards compatibility (deprecated, use payerId + payerType instead)
 	customerId: z.string().optional(),
 	funeralDirectorId: z.string().optional(), // Memorial context (deprecated)
@@ -1038,6 +1039,7 @@ const quotesRoutes = new Hono()
 			tenantId,
 			packageNumber: quoteNumber, // Use first quote number as package identifier
 			customerId: finalCustomerId,
+			relationToDeceased: data.relationToDeceased || null,
 			payerType,
 			quoteType: data.quoteType,
 			source: data.source || null,

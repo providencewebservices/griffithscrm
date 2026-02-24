@@ -117,6 +117,7 @@ export function QuoteNewPage() {
 	// Referral funeral director (only shown when payer is customer)
 	const [referralFuneralDirectorId, setReferralFuneralDirectorId] = useState<string>('');
 	const [referralFuneralDirectorComboOpen, setReferralFuneralDirectorComboOpen] = useState(false);
+	const [relationToDeceased, setRelationToDeceased] = useState('');
 	// Legacy state for backwards compat (used internally)
 	const [customerId, setCustomerId] = useState<string>('');
 	const [customerComboOpen, setCustomerComboOpen] = useState(false);
@@ -345,6 +346,7 @@ export function QuoteNewPage() {
 			payerId: payerId || undefined,
 			payerType: payerType || undefined,
 			referralFuneralDirectorId: payerType === 'customer' && referralFuneralDirectorId ? referralFuneralDirectorId : undefined,
+			relationToDeceased: relationToDeceased || undefined,
 			// Memorial context
 			memorialSiteId: memorialSiteId || undefined,
 			memorialLocation: memorialLocation || undefined,
@@ -1600,6 +1602,16 @@ export function QuoteNewPage() {
 								</Popover>
 							</div>
 						)}
+
+						{/* Relation to Deceased */}
+						<div className="space-y-2">
+							<FieldLabel className="text-sm font-medium">Relation to Deceased</FieldLabel>
+							<Input
+								placeholder="e.g. Son, Daughter, Wife"
+								value={relationToDeceased}
+								onChange={(e) => setRelationToDeceased(e.target.value)}
+							/>
+						</div>
 
 						{/* Memorial Site */}
 						<div className="space-y-2">

@@ -153,6 +153,7 @@ export type QuotePackage = {
 	status: QuoteStatus;
 	quoteType: QuoteType;
 	customerId: string | null;
+	relationToDeceased: string | null;
 	payerType: PayerType | null;
 	funeralDirectorId: string | null;
 	councilId: string | null;
@@ -261,6 +262,7 @@ export type CreateQuoteInput = {
 	payerId?: string;
 	payerType?: PayerType;
 	referralFuneralDirectorId?: string;
+	relationToDeceased?: string;
 	// Legacy fields for backwards compatibility
 	customerId?: string;
 	funeralDirectorId?: string;
@@ -1190,11 +1192,11 @@ export const QUOTE_TYPE_SECTION_CONFIG: Record<
 	},
 	ashes: {
 		showProductSelection: true,
-		showComponents: true,
+		showComponents: false,
 		showFlowerHoles: false,
-		showProposedInscription: true,
+		showProposedInscription: false,
 		showLettering: true,
-		showSundries: true,
+		showSundries: false,
 		showExistingMemorial: false,
 		showRelatedJob: false,
 	},

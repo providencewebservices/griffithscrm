@@ -906,6 +906,12 @@ function SharedContextCard({
 							)}
 						</p>
 					</div>
+					{pkg.relationToDeceased && (
+						<div>
+							<p className="text-sm font-medium text-muted-foreground">Relation to Deceased</p>
+							<p>{pkg.relationToDeceased}</p>
+						</div>
+					)}
 					{pkg.quoteType && (
 						<div>
 							<p className="text-sm font-medium text-muted-foreground">Quote Type</p>
