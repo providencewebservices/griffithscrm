@@ -8,3 +8,5 @@ dist/
 deploy-frontend.sh
 deploy-backend.sh
 check-ecs-deploy.sh
+
+docs/hosted-form-integration-guide.pdf
