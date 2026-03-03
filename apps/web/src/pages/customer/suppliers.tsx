@@ -208,7 +208,7 @@ function SupplierCard({ supplier }: { supplier: SupplierListItem }) {
 	const hasLocation = supplier.primaryAddress?.formattedAddress;
 
 	return (
-		<Card className="hover:shadow-md transition-shadow">
+		<Card className="hover:shadow-md transition-shadow flex flex-col h-full">
 			<CardHeader className="pb-3">
 				<div className="flex items-start justify-between">
 					<div className="space-y-1">
@@ -224,8 +224,8 @@ function SupplierCard({ supplier }: { supplier: SupplierListItem }) {
 					)}
 				</div>
 			</CardHeader>
-			<CardContent className="space-y-3">
-				<div className="flex flex-col gap-1.5 text-sm text-muted-foreground">
+			<CardContent className="space-y-3 flex-1 flex flex-col">
+				<div className="flex flex-col gap-1.5 text-sm text-muted-foreground flex-1">
 					{supplier.primaryEmail?.value && (
 						<div className="flex items-center gap-2">
 							<Mail className="h-3.5 w-3.5" />
