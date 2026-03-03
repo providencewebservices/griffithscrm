@@ -18,6 +18,7 @@ import { CategoryDetailPage } from './pages/customer/category-detail';
 import { LetteringTechniqueDetailPage } from './pages/customer/lettering-technique-detail';
 import { MaterialSectionDetailPage } from './pages/customer/material-section-detail';
 import { MaterialDetailPage } from './pages/customer/material-detail';
+import { SundryDetailPage } from './pages/customer/sundry-detail';
 import { SettingsPage } from './pages/customer/settings';
 import { QuotesPage } from './pages/customer/quotes';
 import { QuoteDetailPage } from './pages/customer/quote-detail';
@@ -104,6 +105,7 @@ function App() {
 					<Route path="lettering-techniques/:id" element={<LetteringTechniqueDetailPage />} />
 					<Route path="material-sections/:id" element={<MaterialSectionDetailPage />} />
 					<Route path="materials/:id" element={<MaterialDetailPage />} />
+					<Route path="sundries/:id" element={<SundryDetailPage />} />
 					<Route path="funeral-directors/new" element={<FuneralDirectorFormPage />} />
 					<Route path="funeral-directors/:id" element={<FuneralDirectorDetailPage />} />
 					<Route path="funeral-directors/:id/edit" element={<FuneralDirectorFormPage />} />

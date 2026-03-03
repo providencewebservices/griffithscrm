@@ -80,7 +80,7 @@ import {
 	type QuotePackageWithOptions,
 	type QuoteLettering,
 } from '@/hooks/use-quotes';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useCustomerView } from '@/contexts/customer-view-context';
 import {
 	ArrowLeft,
 	Send,
@@ -218,8 +218,6 @@ function EditableNumber({
 	);
 }
 
-type ViewMode = 'internal' | 'customer';
-
 export function QuoteDetailPage() {
 	const { id } = useParams<{ id: string }>();
 	const navigate = useNavigate();
@@ -230,7 +228,7 @@ export function QuoteDetailPage() {
 	const [addOptionDialogOpen, setAddOptionDialogOpen] = useState(false);
 	const [customMessage, setCustomMessage] = useState('');
 	const [mutationError, setMutationError] = useState<string | null>(null);
-	const [viewMode, setViewMode] = useState<ViewMode>('internal');
+	const { isCustomerView } = useCustomerView();
 	const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
 
 	const { data: pkg, isLoading, error } = useQuoteQuery(id);
@@ -574,30 +572,11 @@ export function QuoteDetailPage() {
 				<div className="bg-destructive/10 text-destructive px-4 py-2 rounded mb-4">{mutationError}</div>
 			)}
 
-			{/* View Mode Toggle */}
-			<div className="flex items-center justify-between mb-6">
-				<Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
-					<TabsList>
-						<TabsTrigger value="internal" className="gap-2">
-							<Eye className="h-4 w-4" />
-							Internal View
-						</TabsTrigger>
-						<TabsTrigger value="customer" className="gap-2">
-							<EyeOff className="h-4 w-4" />
-							Customer View
-						</TabsTrigger>
-					</TabsList>
-				</Tabs>
-				{viewMode === 'internal' && (
-					<div className="text-sm text-muted-foreground">Showing internal pricing details</div>
-				)}
-			</div>
-
 			{/* Customer View */}
-			{viewMode === 'customer' && <CustomerView pkg={pkg} formatCurrency={formatCurrency} formatDate={formatDate} />}
+			{isCustomerView && <CustomerView pkg={pkg} formatCurrency={formatCurrency} formatDate={formatDate} />}
 
 			{/* Internal View */}
-			{viewMode === 'internal' && (
+			{!isCustomerView && (
 				<div className="space-y-6">
 					{/* Shared Context Card */}
 					<SharedContextCard pkg={pkg} formatDate={formatDate} />

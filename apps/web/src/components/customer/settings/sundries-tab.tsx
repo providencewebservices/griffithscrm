@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Textarea } from '@/components/ui/textarea';
 import {
 	Table,
 	TableBody,
@@ -19,22 +18,11 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from '@/components/ui/dialog';
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
-import { ImageUpload } from '@/components/ui/image-upload';
-import { MoreHorizontal, Plus, ImageIcon } from 'lucide-react';
+import { Plus, ImageIcon } from 'lucide-react';
 import {
 	useSundriesQuery,
 	useCreateSundryMutation,
-	useUpdateSundryMutation,
-	useDeleteSundryMutation,
-	type Sundry,
 	type CreateSundryInput,
 } from '@/hooks/use-sundries';
 import { useSuppliersQuery } from '@/hooks/use-suppliers';
@@ -54,96 +42,41 @@ export function SundriesTab() {
 	const sundryImageUrls = sundries?.map((s) => s.imageUrl) || [];
 	const { data: signedSundryImages } = useSignedUrls(sundryImageUrls);
 	const createMutation = useCreateSundryMutation();
-	const updateMutation = useUpdateSundryMutation();
-	const deleteMutation = useDeleteSundryMutation();
 
 	const [formDialogOpen, setFormDialogOpen] = useState(false);
-	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-	const [selectedItem, setSelectedItem] = useState<Sundry | null>(null);
 	const [mutationError, setMutationError] = useState<string | null>(null);
 
 	// Form state
 	const [formName, setFormName] = useState('');
-	const [formDescription, setFormDescription] = useState('');
 	const [formPrice, setFormPrice] = useState('0');
-	const [formImageUrl, setFormImageUrl] = useState<string | null>(null);
 	const [formSupplierId, setFormSupplierId] = useState<string | null>(null);
-
-	const isEditing = !!selectedItem;
 
 	const resetForm = () => {
 		setFormName('');
-		setFormDescription('');
 		setFormPrice('0');
-		setFormImageUrl(null);
 		setFormSupplierId(null);
 		setMutationError(null);
 	};
 
 	const handleCreate = () => {
-		setSelectedItem(null);
 		resetForm();
 		setFormDialogOpen(true);
-	};
-
-	const handleEdit = (item: Sundry) => {
-		setSelectedItem(item);
-		setFormName(item.name);
-		setFormDescription(item.description || '');
-		setFormPrice(item.price);
-		setFormImageUrl(item.imageUrl);
-		setFormSupplierId(item.supplierId);
-		setMutationError(null);
-		setFormDialogOpen(true);
-	};
-
-	const handleDelete = (item: Sundry) => {
-		setSelectedItem(item);
-		setDeleteDialogOpen(true);
-	};
-
-	const handleToggleActive = async (item: Sundry) => {
-		try {
-			await updateMutation.mutateAsync({
-				id: item.id,
-				isActive: !item.isActive,
-			});
-		} catch (err) {
-			// Error handled by mutation
-		}
 	};
 
 	const handleFormSubmit = async () => {
 		setMutationError(null);
 		const data: CreateSundryInput = {
 			name: formName,
-			description: formDescription || undefined,
 			price: parseFloat(formPrice) || 0,
-			imageUrl: formImageUrl,
 			supplierId: formSupplierId,
 		};
 
 		try {
-			if (isEditing && selectedItem) {
-				await updateMutation.mutateAsync({ id: selectedItem.id, ...data });
-			} else {
-				await createMutation.mutateAsync(data);
-			}
+			await createMutation.mutateAsync(data);
 			setFormDialogOpen(false);
 			resetForm();
 		} catch (err) {
 			setMutationError(err instanceof Error ? err.message : 'An error occurred');
-		}
-	};
-
-	const handleDeleteConfirm = async () => {
-		if (!selectedItem) return;
-		try {
-			await deleteMutation.mutateAsync(selectedItem.id);
-			setDeleteDialogOpen(false);
-			setSelectedItem(null);
-		} catch (err) {
-			// Error handled by mutation
 		}
 	};
 
@@ -227,34 +160,16 @@ export function SundriesTab() {
 									<TableCell className="max-w-[200px] truncate">
 										{item.description || <span className="text-muted-foreground">-</span>}
 									</TableCell>
-									<TableCell>£{item.price}</TableCell>
+									<TableCell>&pound;{item.price}</TableCell>
 									<TableCell>
 										<Badge variant={item.isActive ? 'default' : 'secondary'}>
 											{item.isActive ? 'Active' : 'Inactive'}
 										</Badge>
 									</TableCell>
 									<TableCell>
-										<DropdownMenu>
-											<DropdownMenuTrigger asChild>
-												<Button variant="ghost" size="icon-sm">
-													<MoreHorizontal className="h-4 w-4" />
-												</Button>
-											</DropdownMenuTrigger>
-											<DropdownMenuContent align="end">
-												<DropdownMenuItem onClick={() => handleEdit(item)}>
-													Edit
-												</DropdownMenuItem>
-												<DropdownMenuItem onClick={() => handleToggleActive(item)}>
-													{item.isActive ? 'Deactivate' : 'Activate'}
-												</DropdownMenuItem>
-												<DropdownMenuItem
-													className="text-destructive"
-													onClick={() => handleDelete(item)}
-												>
-													Delete
-												</DropdownMenuItem>
-											</DropdownMenuContent>
-										</DropdownMenu>
+										<Link to={`/app/sundries/${item.id}`}>
+											<Button variant="ghost" size="sm">View</Button>
+										</Link>
 									</TableCell>
 								</TableRow>
 							))}
@@ -263,17 +178,13 @@ export function SundriesTab() {
 				</div>
 			)}
 
-			{/* Form Dialog */}
+			{/* Create Dialog */}
 			<Dialog open={formDialogOpen} onOpenChange={setFormDialogOpen}>
 				<DialogContent className="max-w-lg">
 					<DialogHeader>
-						<DialogTitle>
-							{isEditing ? 'Edit Sundry' : 'Add Sundry'}
-						</DialogTitle>
+						<DialogTitle>Add Sundry</DialogTitle>
 						<DialogDescription>
-							{isEditing
-								? 'Update the sundry details.'
-								: 'Add a new sundry item with pricing.'}
+							Add a new sundry item with pricing.
 						</DialogDescription>
 					</DialogHeader>
 
@@ -317,18 +228,7 @@ export function SundriesTab() {
 						</Field>
 
 						<Field>
-							<FieldLabel htmlFor="description">Description</FieldLabel>
-							<Textarea
-								id="description"
-								value={formDescription}
-								onChange={(e) => setFormDescription(e.target.value)}
-								placeholder="Optional description"
-								rows={2}
-							/>
-						</Field>
-
-						<Field>
-							<FieldLabel htmlFor="price">Price (£)</FieldLabel>
+							<FieldLabel htmlFor="price">Price (&pound;)</FieldLabel>
 							<Input
 								id="price"
 								type="number"
@@ -339,18 +239,6 @@ export function SundriesTab() {
 								placeholder="0.00"
 							/>
 						</Field>
-
-						{isEditing && selectedItem && (
-							<Field>
-								<FieldLabel>Image</FieldLabel>
-								<ImageUpload
-									value={formImageUrl}
-									onChange={setFormImageUrl}
-									category="sundries"
-									entityId={selectedItem.id}
-								/>
-							</Field>
-						)}
 					</FieldGroup>
 
 					<DialogFooter>
@@ -359,27 +247,13 @@ export function SundriesTab() {
 						</Button>
 						<Button
 							onClick={handleFormSubmit}
-							disabled={!formName || createMutation.isPending || updateMutation.isPending}
+							disabled={!formName || createMutation.isPending}
 						>
-							{createMutation.isPending || updateMutation.isPending
-								? 'Saving...'
-								: isEditing
-									? 'Update'
-									: 'Create'}
+							{createMutation.isPending ? 'Creating...' : 'Create'}
 						</Button>
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>
-
-			{/* Delete Confirm Dialog */}
-			<DeleteConfirmDialog
-				open={deleteDialogOpen}
-				onOpenChange={setDeleteDialogOpen}
-				onConfirm={handleDeleteConfirm}
-				title="Delete Sundry"
-				description={`Are you sure you want to delete "${selectedItem?.name}"? This action cannot be undone.`}
-				isLoading={deleteMutation.isPending}
-			/>
 		</div>
 	);
 }

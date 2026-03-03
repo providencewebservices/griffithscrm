@@ -58,6 +58,39 @@ const sundriesRoutes = new Hono()
 		return c.json({ sundries: items });
 	})
 
+	// Get single sundry by id
+	.get('/:id', async (c) => {
+		const currentUser = c.get('user');
+		const tenantId = currentUser.tenantId!;
+		const id = c.req.param('id');
+
+		const [item] = await db
+			.select({
+				id: sundries.id,
+				tenantId: sundries.tenantId,
+				supplierId: sundries.supplierId,
+				name: sundries.name,
+				description: sundries.description,
+				price: sundries.price,
+				imageUrl: sundries.imageUrl,
+				isActive: sundries.isActive,
+				sortOrder: sundries.sortOrder,
+				createdAt: sundries.createdAt,
+				updatedAt: sundries.updatedAt,
+				supplierName: suppliers.businessName,
+			})
+			.from(sundries)
+			.leftJoin(suppliers, eq(sundries.supplierId, suppliers.id))
+			.where(and(eq(sundries.id, id), eq(sundries.tenantId, tenantId)))
+			.limit(1);
+
+		if (!item) {
+			return c.json({ error: 'Sundry not found' }, 404);
+		}
+
+		return c.json({ sundry: item });
+	})
+
 	// Create new sundry
 	.post('/', zValidator('json', createSchema), async (c) => {
 		const currentUser = c.get('user');

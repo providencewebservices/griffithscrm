@@ -13,6 +13,7 @@ import {
 	SidebarMenuItem,
 	SidebarRail,
 } from "@/components/ui/sidebar"
+import { useCustomerView } from "@/contexts/customer-view-context"
 
 const navItems = [
 	{ title: "Dashboard", url: "/app", icon: LayoutDashboard },
@@ -29,7 +30,14 @@ const navItems = [
 	{ title: "Settings", url: "/app/settings", icon: Settings },
 ]
 
+const customerViewItems = ["Quotes", "Products"]
+
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+	const { isCustomerView } = useCustomerView()
+	const items = isCustomerView
+		? navItems.filter((item) => customerViewItems.includes(item.title))
+		: navItems
+
 	return (
 		<Sidebar collapsible="icon" {...props}>
 			<SidebarHeader>
@@ -49,11 +57,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 				</SidebarMenu>
 			</SidebarHeader>
 			<SidebarContent>
-				<NavMain items={navItems} />
+				<NavMain items={items} />
 			</SidebarContent>
-			<SidebarFooter>
-				<NavUser />
-			</SidebarFooter>
+			{!isCustomerView && (
+				<SidebarFooter>
+					<NavUser />
+				</SidebarFooter>
+			)}
 			<SidebarRail />
 		</Sidebar>
 	)

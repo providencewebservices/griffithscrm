@@ -42,6 +42,20 @@ type ItemResponse = {
 	sundry: Sundry;
 };
 
+async function fetchSundry(id: string): Promise<Sundry> {
+	const response = await fetch(`${API_URL}/api/tenant/sundries/${id}`, {
+		credentials: 'include',
+	});
+
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.error || 'Failed to fetch sundry');
+	}
+
+	const data: ItemResponse = await response.json();
+	return data.sundry;
+}
+
 async function fetchSundries(): Promise<Sundry[]> {
 	const response = await fetch(`${API_URL}/api/tenant/sundries`, {
 		credentials: 'include',
@@ -112,6 +126,14 @@ export function useSundriesQuery() {
 	});
 }
 
+export function useSundryQuery(id: string | undefined) {
+	return useQuery({
+		queryKey: ['sundry', id],
+		queryFn: () => fetchSundry(id!),
+		enabled: !!id,
+	});
+}
+
 export function useCreateSundryMutation() {
 	const queryClient = useQueryClient();
 
@@ -128,8 +150,9 @@ export function useUpdateSundryMutation() {
 
 	return useMutation({
 		mutationFn: updateSundry,
-		onSuccess: () => {
+		onSuccess: (_data, variables) => {
 			queryClient.invalidateQueries({ queryKey: ['sundries'] });
+			queryClient.invalidateQueries({ queryKey: ['sundry', variables.id] });
 		},
 	});
 }
@@ -139,8 +162,9 @@ export function useDeleteSundryMutation() {
 
 	return useMutation({
 		mutationFn: deleteSundry,
-		onSuccess: () => {
+		onSuccess: (_data, id) => {
 			queryClient.invalidateQueries({ queryKey: ['sundries'] });
+			queryClient.invalidateQueries({ queryKey: ['sundry', id] });
 		},
 	});
 }

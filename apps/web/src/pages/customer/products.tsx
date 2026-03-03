@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useSignedUrls } from '@/hooks/use-uploads';
-import { Link, useNavigate } from 'react-router';
+import { Link, useNavigate, useSearchParams } from 'react-router';
 import {
 	Table,
 	TableBody,
@@ -19,6 +19,14 @@ import {
 	CardTitle,
 } from '@/components/ui/card';
 import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from '@/components/ui/dialog';
+import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
@@ -33,6 +41,7 @@ import {
 	SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { ProductFormDialog } from '@/components/customer/products/product-form-dialog';
 import { useProductCategoriesQuery } from '@/hooks/use-product-categories';
 import {
@@ -45,13 +54,22 @@ import {
 	type ProductListParams,
 	type Product,
 } from '@/hooks/use-products';
-import { Search, MoreHorizontal, Plus, Package, ChevronLeft, ChevronRight, List, LayoutGrid } from 'lucide-react';
+import {
+	useSundriesQuery,
+	useCreateSundryMutation,
+	type Sundry,
+	type CreateSundryInput,
+} from '@/hooks/use-sundries';
+import { useSuppliersQuery } from '@/hooks/use-suppliers';
+import { Search, MoreHorizontal, Plus, Package, ChevronLeft, ChevronRight, List, LayoutGrid, ImageIcon } from 'lucide-react';
 
 type StatusFilter = 'true' | 'false' | 'all';
 type DisplayMode = 'table' | 'cards';
+type ActiveView = 'products' | 'sundries';
 
 export function ProductsPage() {
 	const navigate = useNavigate();
+	const [searchParams, setSearchParams] = useSearchParams();
 	const { data: categories } = useProductCategoriesQuery();
 	const [search, setSearch] = useState('');
 	const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
@@ -63,7 +81,17 @@ export function ProductsPage() {
 	const [formDialogOpen, setFormDialogOpen] = useState(false);
 	const [mutationError, setMutationError] = useState<string | null>(null);
 
-	// Debounce search - returns a stable callback that delays updating search state
+	// Sundry create dialog state
+	const [sundryDialogOpen, setSundryDialogOpen] = useState(false);
+	const [sundryFormName, setSundryFormName] = useState('');
+	const [sundryFormPrice, setSundryFormPrice] = useState('0');
+	const [sundryFormSupplierId, setSundryFormSupplierId] = useState<string | null>(null);
+	const [sundryMutationError, setSundryMutationError] = useState<string | null>(null);
+
+	const activeView: ActiveView = searchParams.get('tab') === 'sundries' ? 'sundries' : 'products';
+	const isSundriesView = activeView === 'sundries';
+
+	// Debounce search
 	const debouncedSearch = useMemo(() => {
 		let timeout: ReturnType<typeof setTimeout>;
 		return (value: string) => {
@@ -75,6 +103,7 @@ export function ProductsPage() {
 		};
 	}, []);
 
+	// Products query
 	const params: ProductListParams = {
 		page,
 		limit,
@@ -84,20 +113,51 @@ export function ProductsPage() {
 		includeArchived: includeArchived ? 'true' : 'false',
 	};
 
-	const { data, isLoading, error } = useProductsQuery(params);
+	const { data, isLoading: productsLoading, error: productsError } = useProductsQuery(params);
 
-	// Get signed URLs for product images (S3 bucket is private)
+	// Sundries query
+	const { data: sundries, isLoading: sundriesLoading, error: sundriesError } = useSundriesQuery();
+	const { data: suppliers } = useSuppliersQuery({});
+
+	// Filtered sundries (client-side)
+	const filteredSundries = useMemo(() => {
+		if (!sundries) return [];
+		let filtered = sundries;
+
+		if (search) {
+			const lowerSearch = search.toLowerCase();
+			filtered = filtered.filter((s) => s.name.toLowerCase().includes(lowerSearch));
+		}
+
+		if (statusFilter === 'true') {
+			filtered = filtered.filter((s) => s.isActive);
+		} else if (statusFilter === 'false') {
+			filtered = filtered.filter((s) => !s.isActive);
+		}
+
+		return filtered;
+	}, [sundries, search, statusFilter]);
+
+	// Signed URLs for product images
 	const products = data?.products || [];
-	const imageUrls = useMemo(
+	const productImageUrls = useMemo(
 		() => products.map((p) => p.imageUrl).filter(Boolean),
 		[products]
 	);
-	const { data: signedUrls } = useSignedUrls(imageUrls);
+	const { data: signedUrls } = useSignedUrls(productImageUrls);
+
+	// Signed URLs for sundry images
+	const sundryImageUrls = useMemo(
+		() => filteredSundries.map((s) => s.imageUrl).filter(Boolean),
+		[filteredSundries]
+	);
+	const { data: signedSundryUrls } = useSignedUrls(sundryImageUrls);
 
 	const createMutation = useCreateProductMutation();
 	const archiveMutation = useArchiveProductMutation();
 	const unarchiveMutation = useUnarchiveProductMutation();
 	const duplicateMutation = useDuplicateProductMutation();
+	const createSundryMutation = useCreateSundryMutation();
 
 	const handleAddProduct = () => {
 		setMutationError(null);
@@ -140,14 +200,53 @@ export function ProductsPage() {
 		}
 	};
 
+	const handleAddSundry = () => {
+		setSundryFormName('');
+		setSundryFormPrice('0');
+		setSundryFormSupplierId(null);
+		setSundryMutationError(null);
+		setSundryDialogOpen(true);
+	};
+
+	const handleSundryFormSubmit = async () => {
+		setSundryMutationError(null);
+		const input: CreateSundryInput = {
+			name: sundryFormName,
+			price: parseFloat(sundryFormPrice) || 0,
+			supplierId: sundryFormSupplierId,
+		};
+
+		try {
+			const sundry = await createSundryMutation.mutateAsync(input);
+			setSundryDialogOpen(false);
+			navigate(`/app/sundries/${sundry.id}`);
+		} catch (err) {
+			setSundryMutationError(err instanceof Error ? err.message : 'An error occurred');
+		}
+	};
+
 	const formatPrice = (price: string | null) => {
 		if (!price) return '-';
 		return `£${parseFloat(price).toFixed(2)}`;
 	};
 
-	const pagination = data?.pagination;
+	const handleTabChange = (val: string) => {
+		if (val === 'sundries') {
+			setSearchParams({ tab: 'sundries' });
+			setCategoryFilter(null);
+		} else {
+			setSearchParams({});
+			setCategoryFilter(val === 'all' ? null : val);
+		}
+		setPage(1);
+	};
 
-	if (isLoading && !data) {
+	const pagination = data?.pagination;
+	const isLoading = isSundriesView ? sundriesLoading : productsLoading;
+	const error = isSundriesView ? sundriesError : productsError;
+	const displayItems = isSundriesView ? filteredSundries : products;
+
+	if (isLoading && !(isSundriesView ? sundries : data)) {
 		return (
 			<div>
 				<div className="mb-6">
@@ -156,7 +255,9 @@ export function ProductsPage() {
 						Manage your product catalog
 					</p>
 				</div>
-				<div className="text-muted-foreground">Loading products...</div>
+				<div className="text-muted-foreground">
+					{isSundriesView ? 'Loading sundries...' : 'Loading products...'}
+				</div>
 			</div>
 		);
 	}
@@ -171,7 +272,7 @@ export function ProductsPage() {
 					</p>
 				</div>
 				<div className="text-destructive">
-					Error loading products: {error.message}
+					Error: {error.message}
 				</div>
 			</div>
 		);
@@ -187,11 +288,8 @@ export function ProductsPage() {
 			</div>
 
 			<Tabs
-				value={categoryFilter || 'all'}
-				onValueChange={(val) => {
-					setCategoryFilter(val === 'all' ? null : val);
-					setPage(1);
-				}}
+				value={isSundriesView ? 'sundries' : (categoryFilter || 'all')}
+				onValueChange={handleTabChange}
 			>
 				<TabsList className="mb-4">
 					<TabsTrigger value="all">All</TabsTrigger>
@@ -200,6 +298,7 @@ export function ProductsPage() {
 							{cat.name}
 						</TabsTrigger>
 					))}
+					<TabsTrigger value="sundries">Sundries</TabsTrigger>
 				</TabsList>
 			</Tabs>
 
@@ -208,7 +307,7 @@ export function ProductsPage() {
 					<div className="relative flex-1 max-w-xs">
 						<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
 						<Input
-							placeholder="Search by name or SKU..."
+							placeholder={isSundriesView ? 'Search by name...' : 'Search by name or SKU...'}
 							onChange={(e) => debouncedSearch(e.target.value)}
 							className="pl-9"
 						/>
@@ -229,18 +328,20 @@ export function ProductsPage() {
 							<SelectItem value="all">All</SelectItem>
 						</SelectContent>
 					</Select>
-					<label className="flex items-center gap-2 text-sm whitespace-nowrap">
-						<input
-							type="checkbox"
-							checked={includeArchived}
-							onChange={(e) => {
-								setIncludeArchived(e.target.checked);
-								setPage(1);
-							}}
-							className="rounded border-gray-300"
-						/>
-						Archived
-					</label>
+					{!isSundriesView && (
+						<label className="flex items-center gap-2 text-sm whitespace-nowrap">
+							<input
+								type="checkbox"
+								checked={includeArchived}
+								onChange={(e) => {
+									setIncludeArchived(e.target.checked);
+									setPage(1);
+								}}
+								className="rounded border-gray-300"
+							/>
+							Archived
+						</label>
+					)}
 				</div>
 				<div className="flex items-center gap-2">
 					<div className="flex items-center border rounded-md">
@@ -261,26 +362,107 @@ export function ProductsPage() {
 							<LayoutGrid className="h-4 w-4" />
 						</Button>
 					</div>
-					<Button onClick={handleAddProduct}>
+					<Button onClick={isSundriesView ? handleAddSundry : handleAddProduct}>
 						<Plus className="h-4 w-4 mr-2" />
-						Add Product
+						{isSundriesView ? 'Add Sundry' : 'Add Product'}
 					</Button>
 				</div>
 			</div>
 
-			{mutationError && (
+			{(isSundriesView ? sundryMutationError : mutationError) && (
 				<div className="bg-destructive/10 text-destructive px-4 py-2 rounded mb-4">
-					{mutationError}
+					{isSundriesView ? sundryMutationError : mutationError}
 				</div>
 			)}
 
-			{products.length === 0 ? (
+			{displayItems.length === 0 ? (
 				<div className="text-center py-12 text-muted-foreground border rounded-lg">
 					<Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
-					{search || categoryFilter || statusFilter !== 'true'
-						? 'No products found matching your filters.'
-						: 'No products yet. Add your first product to get started.'}
+					{isSundriesView
+						? search || statusFilter !== 'true'
+							? 'No sundries found matching your filters.'
+							: 'No sundries yet. Add your first sundry to get started.'
+						: search || categoryFilter || statusFilter !== 'true'
+							? 'No products found matching your filters.'
+							: 'No products yet. Add your first product to get started.'}
 				</div>
+			) : isSundriesView ? (
+				displayMode === 'table' ? (
+					<div className="border rounded-lg">
+						<Table>
+							<TableHeader>
+								<TableRow>
+									<TableHead className="w-[60px]">Image</TableHead>
+									<TableHead>Name</TableHead>
+									<TableHead>Supplier</TableHead>
+									<TableHead>Price</TableHead>
+									<TableHead>Status</TableHead>
+									<TableHead className="w-[70px]"></TableHead>
+								</TableRow>
+							</TableHeader>
+							<TableBody>
+								{filteredSundries.map((item) => (
+									<TableRow key={item.id}>
+										<TableCell>
+											{item.imageUrl ? (
+												<img
+													src={signedSundryUrls?.get(item.imageUrl) || item.imageUrl}
+													alt={item.name}
+													className="w-10 h-10 object-cover rounded"
+												/>
+											) : (
+												<div className="w-10 h-10 bg-muted rounded flex items-center justify-center">
+													<ImageIcon className="w-4 h-4 text-muted-foreground" />
+												</div>
+											)}
+										</TableCell>
+										<TableCell className="font-medium">
+											<Link
+												to={`/app/sundries/${item.id}`}
+												className="hover:underline"
+											>
+												{item.name}
+											</Link>
+										</TableCell>
+										<TableCell>
+											{item.supplierName ? (
+												<Link
+													to={`/app/suppliers/${item.supplierId}`}
+													className="text-primary hover:underline"
+												>
+													{item.supplierName}
+												</Link>
+											) : (
+												<span className="text-muted-foreground">-</span>
+											)}
+										</TableCell>
+										<TableCell>£{parseFloat(item.price).toFixed(2)}</TableCell>
+										<TableCell>
+											<Badge variant={item.isActive ? 'default' : 'secondary'}>
+												{item.isActive ? 'Active' : 'Inactive'}
+											</Badge>
+										</TableCell>
+										<TableCell>
+											<Link to={`/app/sundries/${item.id}`}>
+												<Button variant="ghost" size="sm">View</Button>
+											</Link>
+										</TableCell>
+									</TableRow>
+								))}
+							</TableBody>
+						</Table>
+					</div>
+				) : (
+					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+						{filteredSundries.map((item) => (
+							<SundryCard
+								key={item.id}
+								sundry={item}
+								signedImageUrl={item.imageUrl ? signedSundryUrls?.get(item.imageUrl) : undefined}
+							/>
+						))}
+					</div>
+				)
 			) : displayMode === 'table' ? (
 				<div className="border rounded-lg">
 					<Table>
@@ -383,7 +565,7 @@ export function ProductsPage() {
 				</div>
 			)}
 
-			{pagination && products.length > 0 && (
+			{!isSundriesView && pagination && products.length > 0 && (
 				<div className="flex items-center justify-between mt-4">
 					<div className="text-sm text-muted-foreground">
 						Showing {(pagination.page - 1) * pagination.limit + 1} to{' '}
@@ -440,6 +622,83 @@ export function ProductsPage() {
 				isLoading={createMutation.isPending}
 				error={mutationError}
 			/>
+
+			{/* Create Sundry Dialog */}
+			<Dialog open={sundryDialogOpen} onOpenChange={setSundryDialogOpen}>
+				<DialogContent className="max-w-lg">
+					<DialogHeader>
+						<DialogTitle>Add Sundry</DialogTitle>
+						<DialogDescription>
+							Add a new sundry item with pricing.
+						</DialogDescription>
+					</DialogHeader>
+
+					{sundryMutationError && (
+						<div className="bg-destructive/10 text-destructive px-4 py-2 rounded">
+							{sundryMutationError}
+						</div>
+					)}
+
+					<FieldGroup>
+						<Field>
+							<FieldLabel htmlFor="sundry-name">Name</FieldLabel>
+							<Input
+								id="sundry-name"
+								value={sundryFormName}
+								onChange={(e) => setSundryFormName(e.target.value)}
+								placeholder="e.g., Ceramic Rose (Red), Oval Photo Plaque"
+							/>
+						</Field>
+
+						<Field>
+							<FieldLabel htmlFor="sundry-supplier">Supplier (optional)</FieldLabel>
+							<Select
+								value={sundryFormSupplierId || 'none'}
+								onValueChange={(value) =>
+									setSundryFormSupplierId(value === 'none' ? null : value)
+								}
+							>
+								<SelectTrigger id="sundry-supplier">
+									<SelectValue placeholder="Select a supplier" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="none">No supplier</SelectItem>
+									{suppliers?.map((supplier) => (
+										<SelectItem key={supplier.id} value={supplier.id}>
+											{supplier.tradingName || supplier.businessName}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</Field>
+
+						<Field>
+							<FieldLabel htmlFor="sundry-price">Price (&pound;)</FieldLabel>
+							<Input
+								id="sundry-price"
+								type="number"
+								min="0"
+								step="0.01"
+								value={sundryFormPrice}
+								onChange={(e) => setSundryFormPrice(e.target.value)}
+								placeholder="0.00"
+							/>
+						</Field>
+					</FieldGroup>
+
+					<DialogFooter>
+						<Button variant="outline" onClick={() => setSundryDialogOpen(false)}>
+							Cancel
+						</Button>
+						<Button
+							onClick={handleSundryFormSubmit}
+							disabled={!sundryFormName || createSundryMutation.isPending}
+						>
+							{createSundryMutation.isPending ? 'Creating...' : 'Create'}
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 		</div>
 	);
 }
@@ -500,6 +759,54 @@ function ProductCard({
 
 				<div className="pt-2">
 					<Link to={`/app/products/${product.id}`}>
+						<Button variant="outline" size="sm" className="w-full">
+							View Details
+						</Button>
+					</Link>
+				</div>
+			</CardContent>
+		</Card>
+	);
+}
+
+function SundryCard({
+	sundry,
+	signedImageUrl,
+}: {
+	sundry: Sundry;
+	signedImageUrl?: string;
+}) {
+	return (
+		<Card className="hover:shadow-md transition-shadow py-0 gap-3">
+			<div className="aspect-[4/3] bg-white flex items-center justify-center overflow-hidden rounded-t-xl">
+				{sundry.imageUrl ? (
+					<img
+						src={signedImageUrl || sundry.imageUrl}
+						alt={sundry.name}
+						className="w-full h-full object-contain"
+					/>
+				) : (
+					<Package className="h-12 w-12 text-muted-foreground" />
+				)}
+			</div>
+			<CardHeader className="pb-2 pt-3">
+				<div className="space-y-1">
+					<CardTitle className="text-base line-clamp-2">{sundry.name}</CardTitle>
+					{sundry.supplierName && (
+						<p className="text-sm text-muted-foreground">{sundry.supplierName}</p>
+					)}
+				</div>
+			</CardHeader>
+			<CardContent className="space-y-2 pb-4">
+				<div className="flex items-center justify-between">
+					<Badge variant={sundry.isActive ? 'default' : 'secondary'}>
+						{sundry.isActive ? 'Active' : 'Inactive'}
+					</Badge>
+					<span className="text-sm font-medium">£{parseFloat(sundry.price).toFixed(2)}</span>
+				</div>
+
+				<div className="pt-2">
+					<Link to={`/app/sundries/${sundry.id}`}>
 						<Button variant="outline" size="sm" className="w-full">
 							View Details
 						</Button>
