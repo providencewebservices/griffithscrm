@@ -1991,34 +1991,46 @@ ${tenantName}
 
 	// Add custom line item
 	.post(
-		'/:quoteId/line-items',
+		'/:id/options/:optionId/line-items',
 		zValidator('json', lineItemInputSchema),
 		async (c) => {
 			const currentUser = c.get('user');
 			const tenantId = currentUser.tenantId!;
-			const quoteId = c.req.param('quoteId');
+			const packageId = c.req.param('id');
+			const optionId = c.req.param('optionId');
 			const data = c.req.valid('json');
 
-			// Get quote and validate
-			const [quote] = await db
+			// Get package and validate
+			const [pkg] = await db
 				.select()
-				.from(quotes)
-				.where(and(eq(quotes.id, quoteId), eq(quotes.tenantId, tenantId)))
+				.from(quotePackages)
+				.where(and(eq(quotePackages.id, packageId), eq(quotePackages.tenantId, tenantId)))
 				.limit(1);
 
-			if (!quote) {
-				return c.json({ error: 'Quote not found' }, 404);
+			if (!pkg) {
+				return c.json({ error: 'Package not found' }, 404);
 			}
 
-			if (quote.status !== 'draft') {
+			if (pkg.status !== 'draft') {
 				return c.json({ error: 'Can only add line items to draft quotes' }, 400);
+			}
+
+			// Verify option exists and belongs to this package
+			const [option] = await db
+				.select()
+				.from(quotes)
+				.where(and(eq(quotes.id, optionId), eq(quotes.packageId, packageId)))
+				.limit(1);
+
+			if (!option) {
+				return c.json({ error: 'Option not found in this package' }, 404);
 			}
 
 			// Get max sort order
 			const [maxSort] = await db
 				.select({ maxOrder: sql<number>`COALESCE(MAX(${quoteLineItems.sortOrder}), -1)` })
 				.from(quoteLineItems)
-				.where(eq(quoteLineItems.quoteId, quoteId));
+				.where(eq(quoteLineItems.quoteId, optionId));
 
 			const sortOrder = (maxSort?.maxOrder ?? -1) + 1;
 
@@ -2027,7 +2039,7 @@ ${tenantName}
 				.insert(quoteLineItems)
 				.values({
 					id: crypto.randomUUID(),
-					quoteId,
+					quoteId: optionId,
 					description: data.description,
 					price: String(data.price),
 					vatExempt: data.vatExempt ?? false,
@@ -2038,45 +2050,57 @@ ${tenantName}
 				.returning();
 
 			// Recalculate quote totals
-			await recalculateQuoteTotals(quoteId);
+			await recalculateQuoteTotals(optionId);
 
-			// Return updated quote
-			const fullQuote = await getQuoteWithLineItems(quoteId, tenantId);
-			return c.json({ quote: fullQuote, lineItem }, 201);
+			// Return updated package
+			const fullPackage = await getPackageWithOptions(packageId, tenantId);
+			return c.json({ package: fullPackage, lineItem }, 201);
 		}
 	)
 
 	// Update custom line item
 	.put(
-		'/:quoteId/line-items/:itemId',
+		'/:id/options/:optionId/line-items/:itemId',
 		zValidator('json', updateLineItemSchema),
 		async (c) => {
 			const currentUser = c.get('user');
 			const tenantId = currentUser.tenantId!;
-			const quoteId = c.req.param('quoteId');
+			const packageId = c.req.param('id');
+			const optionId = c.req.param('optionId');
 			const itemId = c.req.param('itemId');
 			const data = c.req.valid('json');
 
-			// Get quote and validate
-			const [quote] = await db
+			// Get package and validate
+			const [pkg] = await db
 				.select()
-				.from(quotes)
-				.where(and(eq(quotes.id, quoteId), eq(quotes.tenantId, tenantId)))
+				.from(quotePackages)
+				.where(and(eq(quotePackages.id, packageId), eq(quotePackages.tenantId, tenantId)))
 				.limit(1);
 
-			if (!quote) {
-				return c.json({ error: 'Quote not found' }, 404);
+			if (!pkg) {
+				return c.json({ error: 'Package not found' }, 404);
 			}
 
-			if (quote.status !== 'draft') {
+			if (pkg.status !== 'draft') {
 				return c.json({ error: 'Can only edit line items on draft quotes' }, 400);
+			}
+
+			// Verify option exists and belongs to this package
+			const [option] = await db
+				.select()
+				.from(quotes)
+				.where(and(eq(quotes.id, optionId), eq(quotes.packageId, packageId)))
+				.limit(1);
+
+			if (!option) {
+				return c.json({ error: 'Option not found in this package' }, 404);
 			}
 
 			// Get line item
 			const [lineItem] = await db
 				.select()
 				.from(quoteLineItems)
-				.where(and(eq(quoteLineItems.id, itemId), eq(quoteLineItems.quoteId, quoteId)))
+				.where(and(eq(quoteLineItems.id, itemId), eq(quoteLineItems.quoteId, optionId)))
 				.limit(1);
 
 			if (!lineItem) {
@@ -2097,41 +2121,53 @@ ${tenantName}
 				.where(eq(quoteLineItems.id, itemId));
 
 			// Recalculate quote totals
-			await recalculateQuoteTotals(quoteId);
+			await recalculateQuoteTotals(optionId);
 
-			// Return updated quote
-			const fullQuote = await getQuoteWithLineItems(quoteId, tenantId);
-			return c.json({ quote: fullQuote });
+			// Return updated package
+			const fullPackage = await getPackageWithOptions(packageId, tenantId);
+			return c.json({ package: fullPackage });
 		}
 	)
 
 	// Delete custom line item
-	.delete('/:quoteId/line-items/:itemId', async (c) => {
+	.delete('/:id/options/:optionId/line-items/:itemId', async (c) => {
 		const currentUser = c.get('user');
 		const tenantId = currentUser.tenantId!;
-		const quoteId = c.req.param('quoteId');
+		const packageId = c.req.param('id');
+		const optionId = c.req.param('optionId');
 		const itemId = c.req.param('itemId');
 
-		// Get quote and validate
-		const [quote] = await db
+		// Get package and validate
+		const [pkg] = await db
 			.select()
-			.from(quotes)
-			.where(and(eq(quotes.id, quoteId), eq(quotes.tenantId, tenantId)))
+			.from(quotePackages)
+			.where(and(eq(quotePackages.id, packageId), eq(quotePackages.tenantId, tenantId)))
 			.limit(1);
 
-		if (!quote) {
-			return c.json({ error: 'Quote not found' }, 404);
+		if (!pkg) {
+			return c.json({ error: 'Package not found' }, 404);
 		}
 
-		if (quote.status !== 'draft') {
+		if (pkg.status !== 'draft') {
 			return c.json({ error: 'Can only delete line items from draft quotes' }, 400);
+		}
+
+		// Verify option exists and belongs to this package
+		const [option] = await db
+			.select()
+			.from(quotes)
+			.where(and(eq(quotes.id, optionId), eq(quotes.packageId, packageId)))
+			.limit(1);
+
+		if (!option) {
+			return c.json({ error: 'Option not found in this package' }, 404);
 		}
 
 		// Get line item
 		const [lineItem] = await db
 			.select()
 			.from(quoteLineItems)
-			.where(and(eq(quoteLineItems.id, itemId), eq(quoteLineItems.quoteId, quoteId)))
+			.where(and(eq(quoteLineItems.id, itemId), eq(quoteLineItems.quoteId, optionId)))
 			.limit(1);
 
 		if (!lineItem) {
@@ -2142,11 +2178,11 @@ ${tenantName}
 		await db.delete(quoteLineItems).where(eq(quoteLineItems.id, itemId));
 
 		// Recalculate quote totals
-		await recalculateQuoteTotals(quoteId);
+		await recalculateQuoteTotals(optionId);
 
-		// Return updated quote
-		const fullQuote = await getQuoteWithLineItems(quoteId, tenantId);
-		return c.json({ quote: fullQuote });
+		// Return updated package
+		const fullPackage = await getPackageWithOptions(packageId, tenantId);
+		return c.json({ package: fullPackage });
 	})
 
 	// ============================================
