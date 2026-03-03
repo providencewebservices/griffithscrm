@@ -84,9 +84,7 @@ export function QuotesPage() {
 	const getBillToInfo = (pkg: QuotePackageListItem): { name: string | null; type: 'customer' | 'funeral_director' | null } => {
 		// If payerType is funeral_director, show FD name
 		if (pkg.payerType === 'funeral_director' && pkg.funeralDirectorBusinessName) {
-			const name = pkg.funeralDirectorTradingName
-				? `${pkg.funeralDirectorBusinessName} (${pkg.funeralDirectorTradingName})`
-				: pkg.funeralDirectorBusinessName;
+			const name = pkg.funeralDirectorTradingName || pkg.funeralDirectorBusinessName;
 			return { name, type: 'funeral_director' };
 		}
 		// Otherwise show customer name (or null for walk-in)

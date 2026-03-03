@@ -657,7 +657,7 @@ const quotesRoutes = new Hono()
 			})),
 			...funeralDirectorRows.map((fd) => ({
 				id: fd.id,
-				displayName: fd.tradingName ? `${fd.businessName} (${fd.tradingName})` : fd.businessName,
+				displayName: fd.tradingName || fd.businessName,
 				entityType: 'funeral_director' as const,
 				businessName: fd.businessName,
 				tradingName: fd.tradingName,
