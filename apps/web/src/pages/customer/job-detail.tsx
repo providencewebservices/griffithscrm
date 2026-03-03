@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import {
 	Breadcrumb,
@@ -79,9 +80,17 @@ import {
 	Upload,
 	X,
 	Link2,
+	Printer,
+	ClipboardList,
 } from 'lucide-react';
 import { DocumentsCard } from '@/components/documents';
 import { JobTasksSection } from '@/components/tasks/job-tasks-section';
+import {
+	useMemorialWorksheetQuery,
+	useCreateMemorialWorksheetMutation,
+	useUpdateMemorialWorksheetMutation,
+	type MemorialWorksheet,
+} from '@/hooks/use-memorial-worksheet';
 
 // Job status order for progress calculation
 const JOB_STATUS_ORDER: JobStatus[] = [
@@ -139,9 +148,25 @@ export function JobDetailPage() {
 	const [uploadProgress, setUploadProgress] = useState<'idle' | 'uploading' | 'confirming'>('idle');
 	const [categoryFilter, setCategoryFilter] = useState<JobAttachmentCategory | 'all'>('all');
 
+	// Worksheet state
+	const [worksheetForm, setWorksheetForm] = useState<{
+		date: string;
+		deceasedName: string;
+		cemeteryChurchyard: string;
+		location: string;
+		existingDescription: string;
+		requirements: string;
+		inscription: string;
+	} | null>(null);
+	const [worksheetInitialized, setWorksheetInitialized] = useState(false);
+	const [worksheetSaved, setWorksheetSaved] = useState(false);
+
 	const { data: job, isLoading, error } = useJobQuery(id);
 	const { data: paymentData, isLoading: paymentLoading } = usePaymentScheduleQuery(id);
 	const { data: attachments, isLoading: attachmentsLoading } = useAttachmentsQuery(id);
+	const { data: worksheet, isLoading: worksheetLoading } = useMemorialWorksheetQuery(id);
+	const createWorksheetMutation = useCreateMemorialWorksheetMutation();
+	const updateWorksheetMutation = useUpdateMemorialWorksheetMutation();
 	const updateStatusMutation = useUpdateJobStatusMutation();
 	const updateNotesMutation = useUpdateJobNotesMutation();
 	const deleteMutation = useDeleteJobMutation();
@@ -157,6 +182,20 @@ export function JobDetailPage() {
 	if (job && !notesInitialized) {
 		setNotes(job.notes || '');
 		setNotesInitialized(true);
+	}
+
+	// Initialize worksheet form when worksheet loads
+	if (worksheet && !worksheetInitialized) {
+		setWorksheetForm({
+			date: worksheet.date ? new Date(worksheet.date).toISOString().split('T')[0] : '',
+			deceasedName: worksheet.deceasedName || '',
+			cemeteryChurchyard: worksheet.cemeteryChurchyard || '',
+			location: worksheet.location || '',
+			existingDescription: worksheet.existingDescription || '',
+			requirements: worksheet.requirements || '',
+			inscription: worksheet.inscription || '',
+		});
+		setWorksheetInitialized(true);
 	}
 
 	const formatCurrency = (value: string | number) => {
@@ -366,6 +405,48 @@ export function JobDetailPage() {
 		}
 	};
 
+	// Worksheet handlers
+	const handleCreateWorksheet = async () => {
+		if (!id) return;
+		setMutationError(null);
+		try {
+			const created = await createWorksheetMutation.mutateAsync(id);
+			setWorksheetForm({
+				date: created.date ? new Date(created.date).toISOString().split('T')[0] : '',
+				deceasedName: created.deceasedName || '',
+				cemeteryChurchyard: created.cemeteryChurchyard || '',
+				location: created.location || '',
+				existingDescription: created.existingDescription || '',
+				requirements: created.requirements || '',
+				inscription: created.inscription || '',
+			});
+			setWorksheetInitialized(true);
+		} catch (err) {
+			setMutationError(err instanceof Error ? err.message : 'Failed to create worksheet');
+		}
+	};
+
+	const handleSaveWorksheet = async () => {
+		if (!id || !worksheetForm) return;
+		setMutationError(null);
+		setWorksheetSaved(false);
+		try {
+			await updateWorksheetMutation.mutateAsync({
+				jobId: id,
+				input: worksheetForm,
+			});
+			setWorksheetSaved(true);
+			setTimeout(() => setWorksheetSaved(false), 2000);
+		} catch (err) {
+			setMutationError(err instanceof Error ? err.message : 'Failed to save worksheet');
+		}
+	};
+
+	const updateWorksheetField = (field: string, value: string) => {
+		setWorksheetForm((prev) => (prev ? { ...prev, [field]: value } : null));
+		setWorksheetSaved(false);
+	};
+
 	const getFileIcon = (contentType: string) => {
 		if (contentType.startsWith('image/')) {
 			return <Image className="h-5 w-5 text-blue-500" />;
@@ -510,6 +591,10 @@ export function JobDetailPage() {
 						{paymentData?.summary?.hasOverdue && (
 							<Badge variant="destructive" className="h-5 text-xs px-1.5">Late</Badge>
 						)}
+					</TabsTrigger>
+					<TabsTrigger value="worksheet" className="flex items-center gap-2">
+						<ClipboardList className="h-4 w-4" />
+						Worksheet
 					</TabsTrigger>
 					<TabsTrigger value="files" className="flex items-center gap-2">
 						<Paperclip className="h-4 w-4" />
@@ -997,6 +1082,160 @@ export function JobDetailPage() {
 								</CardContent>
 							</Card>
 						)}
+					</div>
+				</TabsContent>
+
+				<TabsContent value="worksheet" className="mt-6">
+					<div className="max-w-2xl space-y-6">
+						{worksheetLoading ? (
+							<div className="text-muted-foreground flex items-center gap-2">
+								<Loader2 className="h-4 w-4 animate-spin" />
+								Loading worksheet...
+							</div>
+						) : !worksheet ? (
+							<Card>
+								<CardContent className="pt-6">
+									<div className="text-center py-8">
+										<ClipboardList className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+										<p className="text-muted-foreground mb-4">
+											No memorial worksheet has been created for this job yet.
+										</p>
+										<Button
+											onClick={handleCreateWorksheet}
+											disabled={createWorksheetMutation.isPending}
+										>
+											{createWorksheetMutation.isPending ? (
+												<Loader2 className="h-4 w-4 mr-2 animate-spin" />
+											) : (
+												<Plus className="h-4 w-4 mr-2" />
+											)}
+											Create Memorial Worksheet
+										</Button>
+									</div>
+								</CardContent>
+							</Card>
+						) : worksheetForm ? (
+							<>
+								<Card>
+									<CardHeader>
+										<div className="flex items-center justify-between">
+											<div>
+												<CardTitle>Memorial Worksheet</CardTitle>
+												<CardDescription>
+													Reference: {job.jobNumber}
+												</CardDescription>
+											</div>
+											<div className="flex items-center gap-2">
+												{worksheetSaved && (
+													<span className="text-sm text-green-600 flex items-center gap-1">
+														<Check className="h-4 w-4" />
+														Saved
+													</span>
+												)}
+												<Button
+													variant="outline"
+													size="sm"
+													onClick={handleSaveWorksheet}
+													disabled={updateWorksheetMutation.isPending}
+												>
+													{updateWorksheetMutation.isPending ? (
+														<Loader2 className="h-4 w-4 mr-2 animate-spin" />
+													) : (
+														<Save className="h-4 w-4 mr-2" />
+													)}
+													Save
+												</Button>
+												<Link
+													to={`/app/jobs/${id}/worksheet/print`}
+													target="_blank"
+												>
+													<Button variant="outline" size="sm">
+														<Printer className="h-4 w-4 mr-2" />
+														Print
+													</Button>
+												</Link>
+											</div>
+										</div>
+									</CardHeader>
+									<CardContent className="space-y-4">
+										<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+											<div>
+												<Label htmlFor="ws-date">Date</Label>
+												<Input
+													id="ws-date"
+													type="date"
+													value={worksheetForm.date}
+													onChange={(e) => updateWorksheetField('date', e.target.value)}
+												/>
+											</div>
+											<div>
+												<Label htmlFor="ws-deceased">Memorial Of</Label>
+												<Input
+													id="ws-deceased"
+													placeholder="Name of deceased"
+													value={worksheetForm.deceasedName}
+													onChange={(e) => updateWorksheetField('deceasedName', e.target.value)}
+												/>
+											</div>
+										</div>
+
+										<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+											<div>
+												<Label htmlFor="ws-cemetery">Cemetery / Churchyard</Label>
+												<Input
+													id="ws-cemetery"
+													placeholder="Cemetery or churchyard name"
+													value={worksheetForm.cemeteryChurchyard}
+													onChange={(e) => updateWorksheetField('cemeteryChurchyard', e.target.value)}
+												/>
+											</div>
+											<div>
+												<Label htmlFor="ws-location">Location</Label>
+												<Input
+													id="ws-location"
+													placeholder="Location details"
+													value={worksheetForm.location}
+													onChange={(e) => updateWorksheetField('location', e.target.value)}
+												/>
+											</div>
+										</div>
+
+										<div>
+											<Label htmlFor="ws-existing">Existing Memorial Description</Label>
+											<Input
+												id="ws-existing"
+												placeholder="Description of existing memorial"
+												value={worksheetForm.existingDescription}
+												onChange={(e) => updateWorksheetField('existingDescription', e.target.value)}
+											/>
+										</div>
+
+										<div>
+											<Label htmlFor="ws-requirements">Requirements</Label>
+											<Textarea
+												id="ws-requirements"
+												placeholder="Describe the work required..."
+												value={worksheetForm.requirements}
+												onChange={(e) => updateWorksheetField('requirements', e.target.value)}
+												rows={6}
+											/>
+										</div>
+
+										<div>
+											<Label htmlFor="ws-inscription">Proposed Inscription</Label>
+											<Textarea
+												id="ws-inscription"
+												placeholder="Enter the proposed inscription text..."
+												value={worksheetForm.inscription}
+												onChange={(e) => updateWorksheetField('inscription', e.target.value)}
+												rows={6}
+												className="font-serif text-center"
+											/>
+										</div>
+									</CardContent>
+								</Card>
+							</>
+						) : null}
 					</div>
 				</TabsContent>
 

@@ -40,6 +40,7 @@ import { CalendarPage } from './pages/customer/calendar';
 import { TasksPage } from './pages/customer/tasks';
 import { TaskDetailPage } from './pages/customer/task-detail';
 import { WorksheetDetailPage } from './pages/customer/worksheet-detail';
+import { MemorialWorksheetPrintPage } from './pages/customer/memorial-worksheet-print';
 import { InboxPage } from './pages/customer/inbox';
 import { PublicPackageViewPage } from './pages/public/package-view';
 import { PaymentPage } from './pages/public/payment';
@@ -94,6 +95,7 @@ function App() {
 					<Route path="quotes/:id" element={<QuoteDetailPage />} />
 					<Route path="jobs" element={<JobsPage />} />
 					<Route path="jobs/:id" element={<JobDetailPage />} />
+					<Route path="jobs/:id/worksheet/print" element={<MemorialWorksheetPrintPage />} />
 					<Route path="team" element={<TeamPage />} />
 					<Route path="team/:id" element={<TeamMemberDetailPage />} />
 					<Route path="products" element={<ProductsPage />} />

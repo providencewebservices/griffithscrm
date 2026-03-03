@@ -1198,7 +1198,7 @@ export const QUOTE_TYPE_SECTION_CONFIG: Record<
 		showRelatedJob: true,
 	},
 	ashes: {
-		showProductSelection: true,
+		showProductSelection: false,
 		showComponents: false,
 		showFlowerHoles: false,
 		showProposedInscription: false,

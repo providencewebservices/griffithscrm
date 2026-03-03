@@ -16,6 +16,9 @@ import {
 	quoteLineItems,
 	jobPaymentScheduleItems,
 	jobAttachments,
+	memorialWorksheets,
+	memorialSites,
+	quotePackages,
 	JOB_STATUSES,
 	JOB_ATTACHMENT_CATEGORIES,
 } from '@griffiths-crm/shared/db/schema';
@@ -608,6 +611,212 @@ export const jobsRouter = new Hono()
 
 		return c.json({ success: true });
 	})
+
+	// ============================================
+	// MEMORIAL WORKSHEET ROUTES
+	// ============================================
+
+	// Get worksheet for a job
+	.get('/:id/worksheet', async (c) => {
+		const currentUser = c.get('user');
+		const tenantId = currentUser.tenantId!;
+		const jobId = c.req.param('id');
+
+		// Verify job exists and belongs to tenant
+		const [job] = await db
+			.select()
+			.from(jobs)
+			.where(and(eq(jobs.id, jobId), eq(jobs.tenantId, tenantId)))
+			.limit(1);
+
+		if (!job) {
+			return c.json({ error: 'Job not found' }, 404);
+		}
+
+		const [worksheet] = await db
+			.select()
+			.from(memorialWorksheets)
+			.where(eq(memorialWorksheets.jobId, jobId))
+			.limit(1);
+
+		if (!worksheet) {
+			return c.json({ error: 'Worksheet not found' }, 404);
+		}
+
+		return c.json({ worksheet: { ...worksheet, jobNumber: job.jobNumber } });
+	})
+
+	// Create worksheet for a job (auto-populate from quote/package data)
+	.post('/:id/worksheet', async (c) => {
+		const currentUser = c.get('user');
+		const tenantId = currentUser.tenantId!;
+		const jobId = c.req.param('id');
+
+		// Verify job exists and belongs to tenant
+		const [job] = await db
+			.select()
+			.from(jobs)
+			.where(and(eq(jobs.id, jobId), eq(jobs.tenantId, tenantId)))
+			.limit(1);
+
+		if (!job) {
+			return c.json({ error: 'Job not found' }, 404);
+		}
+
+		// Check if worksheet already exists
+		const [existing] = await db
+			.select()
+			.from(memorialWorksheets)
+			.where(eq(memorialWorksheets.jobId, jobId))
+			.limit(1);
+
+		if (existing) {
+			return c.json({ error: 'Worksheet already exists for this job' }, 409);
+		}
+
+		// Get quote for auto-population
+		const [quote] = await db
+			.select()
+			.from(quotes)
+			.where(eq(quotes.id, job.quoteId))
+			.limit(1);
+
+		let deceasedName = '';
+		let cemeteryChurchyard = '';
+		let location = '';
+		let existingDescription = '';
+		let inscription = '';
+
+		if (quote) {
+			deceasedName = quote.deceasedNames || '';
+			existingDescription = quote.existingMemorialDescription || '';
+			inscription = quote.proposedInscription || '';
+
+			// Try to get memorial site name
+			const siteId = quote.memorialSiteId;
+			if (siteId) {
+				const [site] = await db
+					.select({ name: memorialSites.name })
+					.from(memorialSites)
+					.where(eq(memorialSites.id, siteId))
+					.limit(1);
+				if (site) {
+					cemeteryChurchyard = site.name;
+				}
+			}
+
+			// Try to get location and other fields from package if available
+			if (quote.packageId) {
+				const [pkg] = await db
+					.select()
+					.from(quotePackages)
+					.where(eq(quotePackages.id, quote.packageId))
+					.limit(1);
+
+				if (pkg) {
+					location = pkg.memorialLocation || '';
+					if (!existingDescription && pkg.existingMemorialDescription) {
+						existingDescription = pkg.existingMemorialDescription;
+					}
+					if (!inscription && pkg.proposedInscription) {
+						inscription = pkg.proposedInscription;
+					}
+					// If no site from quote, try package
+					if (!cemeteryChurchyard && pkg.memorialSiteId) {
+						const [site] = await db
+							.select({ name: memorialSites.name })
+							.from(memorialSites)
+							.where(eq(memorialSites.id, pkg.memorialSiteId))
+							.limit(1);
+						if (site) {
+							cemeteryChurchyard = site.name;
+						}
+					}
+				}
+			}
+		}
+
+		const newWorksheet = {
+			id: crypto.randomUUID(),
+			tenantId,
+			jobId,
+			date: new Date(),
+			deceasedName,
+			cemeteryChurchyard,
+			location,
+			existingDescription,
+			requirements: '',
+			inscription,
+		};
+
+		const [created] = await db.insert(memorialWorksheets).values(newWorksheet).returning();
+
+		return c.json({ worksheet: { ...created, jobNumber: job.jobNumber } }, 201);
+	})
+
+	// Update worksheet
+	.put(
+		'/:id/worksheet',
+		zValidator(
+			'json',
+			z.object({
+				date: z.string().optional(),
+				deceasedName: z.string().optional(),
+				cemeteryChurchyard: z.string().optional(),
+				location: z.string().optional(),
+				existingDescription: z.string().optional(),
+				requirements: z.string().optional(),
+				inscription: z.string().optional(),
+			})
+		),
+		async (c) => {
+			const currentUser = c.get('user');
+			const tenantId = currentUser.tenantId!;
+			const jobId = c.req.param('id');
+			const data = c.req.valid('json');
+
+			// Verify job exists and belongs to tenant
+			const [job] = await db
+				.select()
+				.from(jobs)
+				.where(and(eq(jobs.id, jobId), eq(jobs.tenantId, tenantId)))
+				.limit(1);
+
+			if (!job) {
+				return c.json({ error: 'Job not found' }, 404);
+			}
+
+			const [existing] = await db
+				.select()
+				.from(memorialWorksheets)
+				.where(eq(memorialWorksheets.jobId, jobId))
+				.limit(1);
+
+			if (!existing) {
+				return c.json({ error: 'Worksheet not found' }, 404);
+			}
+
+			const updateData: Record<string, unknown> = { updatedAt: new Date() };
+
+			if (data.date !== undefined) updateData.date = new Date(data.date);
+			if (data.deceasedName !== undefined) updateData.deceasedName = data.deceasedName;
+			if (data.cemeteryChurchyard !== undefined)
+				updateData.cemeteryChurchyard = data.cemeteryChurchyard;
+			if (data.location !== undefined) updateData.location = data.location;
+			if (data.existingDescription !== undefined)
+				updateData.existingDescription = data.existingDescription;
+			if (data.requirements !== undefined) updateData.requirements = data.requirements;
+			if (data.inscription !== undefined) updateData.inscription = data.inscription;
+
+			const [updated] = await db
+				.update(memorialWorksheets)
+				.set(updateData)
+				.where(eq(memorialWorksheets.id, existing.id))
+				.returning();
+
+			return c.json({ worksheet: { ...updated, jobNumber: job.jobNumber } });
+		}
+	)
 
 	// ============================================
 	// ATTACHMENT ROUTES

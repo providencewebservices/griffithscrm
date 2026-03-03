@@ -1118,6 +1118,27 @@ export const jobs = pgTable('jobs', {
 	updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
+// Memorial worksheets (1:1 with jobs — printable job spec sheet for the workshop)
+export const memorialWorksheets = pgTable('memorial_worksheets', {
+	id: text('id').primaryKey(),
+	tenantId: text('tenant_id')
+		.notNull()
+		.references(() => tenants.id, { onDelete: 'cascade' }),
+	jobId: text('job_id')
+		.notNull()
+		.unique()
+		.references(() => jobs.id, { onDelete: 'cascade' }),
+	date: timestamp('date').notNull().defaultNow(),
+	deceasedName: text('deceased_name'),
+	cemeteryChurchyard: text('cemetery_churchyard'),
+	location: text('location'),
+	existingDescription: text('existing_description'),
+	requirements: text('requirements'),
+	inscription: text('inscription'),
+	createdAt: timestamp('created_at').notNull().defaultNow(),
+	updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
 // Job payment schedule items (installment payments for a job)
 export const jobPaymentScheduleItems = pgTable('job_payment_schedule_items', {
 	id: text('id').primaryKey(),
