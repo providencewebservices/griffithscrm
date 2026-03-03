@@ -687,6 +687,23 @@ export const letteringColors = pgTable('lettering_colors', {
 	updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
+// Fonts (tenant-scoped font library for inscription rendering)
+export const fonts = pgTable('fonts', {
+	id: text('id').primaryKey(),
+	tenantId: text('tenant_id')
+		.notNull()
+		.references(() => tenants.id, { onDelete: 'cascade' }),
+	name: text('name').notNull(),
+	filename: text('filename').notNull(),
+	s3Key: text('s3_key').notNull(),
+	contentType: text('content_type').notNull(),
+	fileSize: integer('file_size'),
+	isActive: boolean('is_active').notNull().default(true),
+	sortOrder: integer('sort_order').notNull().default(0),
+	createdAt: timestamp('created_at').notNull().defaultNow(),
+	updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
 // Sundries - add-on items like ceramic flowers, photo plaques (tenant-scoped)
 export const sundries = pgTable('sundries', {
 	id: text('id').primaryKey(),
@@ -1022,6 +1039,10 @@ export const quoteLettering = pgTable('quote_lettering', {
 	// Descriptive snapshots
 	techniqueName: text('technique_name'),
 	colorName: text('color_name'),
+	// Font snapshots (for rendering inscriptions in custom fonts)
+	fontId: text('font_id').references(() => fonts.id, { onDelete: 'set null' }),
+	fontName: text('font_name'),
+	fontS3Key: text('font_s3_key'),
 	notes: text('notes'),
 	sortOrder: integer('sort_order').notNull().default(0),
 	createdAt: timestamp('created_at').notNull().defaultNow(),

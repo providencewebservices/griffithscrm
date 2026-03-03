@@ -177,7 +177,7 @@ export function QuoteNewPage() {
 	// Fetch reference data
 	const { data: customers } = useCustomersQuery();
 	const { data: billableEntities } = useBillableEntitiesQuery();
-	const { data: productsData } = useProductsQuery({ isActive: 'true' });
+	const { data: productsData } = useProductsQuery({ isActive: 'true', limit: 100 });
 	const { data: dimensionCombos } = useDimensionCombosQuery(productId || undefined);
 	const { data: selectedCombo } = useDimensionComboQuery(dimensionComboId || undefined);
 	const { data: materialSections } = useMaterialSectionsQuery();

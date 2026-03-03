@@ -20,6 +20,7 @@ import {
 	letteringTechniques,
 	letteringColors,
 	letteringCosts,
+	fonts,
 	sundries,
 	tenantPricingSettings,
 	dimensionCombos,
@@ -379,6 +380,7 @@ const componentInputSchema = z.object({
 const letteringInputSchema = z.object({
 	techniqueId: z.string().min(1),
 	colorId: z.string().optional(),
+	fontId: z.string().optional(),
 	text: z.string().min(1),
 	appliesTo: z.enum(LETTERING_COST_APPLIES_TO).default('new_memorial'),
 	notes: z.string().optional(),
@@ -467,6 +469,7 @@ const updateLineItemPricingSchema = z.object({
 const addLetteringItemSchema = z.object({
 	techniqueId: z.string().min(1),
 	colorId: z.string().optional(),
+	fontId: z.string().optional(),
 	text: z.string().min(1),
 	appliesTo: z.enum(LETTERING_COST_APPLIES_TO).optional().default('new_memorial'),
 	notes: z.string().optional(),
@@ -480,6 +483,7 @@ const updateLetteringItemSchema = z.object({
 	// Content fields (new)
 	techniqueId: z.string().min(1).optional(),
 	colorId: z.string().optional().nullable(),
+	fontId: z.string().optional().nullable(),
 	text: z.string().min(1).optional(),
 	appliesTo: z.enum(LETTERING_COST_APPLIES_TO).optional(),
 	notes: z.string().optional().nullable(),
@@ -880,6 +884,16 @@ const quotesRoutes = new Hono()
 						.limit(1);
 				}
 
+				// Get font if specified
+				let font = null;
+				if (lett.fontId) {
+					[font] = await db
+						.select()
+						.from(fonts)
+						.where(and(eq(fonts.id, lett.fontId), eq(fonts.tenantId, tenantId)))
+						.limit(1);
+				}
+
 				// Find cost rule using priority: specific color + appliesTo > specific color + 'both' > default + appliesTo > default + 'both'
 				let activeCostRule = null;
 
@@ -952,6 +966,9 @@ const quotesRoutes = new Hono()
 					id: crypto.randomUUID(),
 					techniqueId: lett.techniqueId,
 					colorId: lett.colorId || null,
+					fontId: font?.id || null,
+					fontName: font?.name || null,
+					fontS3Key: font?.s3Key || null,
 					text: lett.text,
 					letterCount,
 					appliesTo: lett.appliesTo,
@@ -1251,6 +1268,16 @@ const quotesRoutes = new Hono()
 						.limit(1);
 				}
 
+				// Get font if specified
+				let font = null;
+				if (lett.fontId) {
+					[font] = await db
+						.select()
+						.from(fonts)
+						.where(and(eq(fonts.id, lett.fontId), eq(fonts.tenantId, tenantId)))
+						.limit(1);
+				}
+
 				// Find cost rule using priority: specific color + appliesTo > specific color + 'both' > default + appliesTo > default + 'both'
 				let activeCostRule = null;
 
@@ -1323,6 +1350,9 @@ const quotesRoutes = new Hono()
 					id: crypto.randomUUID(),
 					techniqueId: lett.techniqueId,
 					colorId: lett.colorId || null,
+					fontId: font?.id || null,
+					fontName: font?.name || null,
+					fontS3Key: font?.s3Key || null,
 					text: lett.text,
 					letterCount,
 					appliesTo: lett.appliesTo,
@@ -2234,6 +2264,7 @@ ${tenantName}
 		const letteringInput = sourceOption?.lettering?.map((l) => ({
 			techniqueId: l.techniqueId!,
 			colorId: l.colorId || undefined,
+			fontId: l.fontId || undefined,
 			text: l.text!,
 			appliesTo: (l.appliesTo as (typeof LETTERING_COST_APPLIES_TO)[number]) || 'new_memorial',
 			notes: l.notes || undefined,
@@ -2262,6 +2293,16 @@ ${tenantName}
 						.limit(1);
 				}
 
+				// Get font if specified
+				let font = null;
+				if (lett.fontId) {
+					[font] = await db
+						.select()
+						.from(fonts)
+						.where(and(eq(fonts.id, lett.fontId), eq(fonts.tenantId, tenantId)))
+						.limit(1);
+				}
+
 				// Find cost rule (simplified - use default)
 				const [activeCostRule] = await db
 					.select()
@@ -2281,6 +2322,9 @@ ${tenantName}
 					id: crypto.randomUUID(),
 					techniqueId: lett.techniqueId,
 					colorId: lett.colorId || null,
+					fontId: font?.id || null,
+					fontName: font?.name || null,
+					fontS3Key: font?.s3Key || null,
 					text: lett.text,
 					letterCount,
 					appliesTo: lett.appliesTo,
@@ -2480,6 +2524,9 @@ ${tenantName}
 			id: crypto.randomUUID(),
 			techniqueId: l.techniqueId,
 			colorId: l.colorId,
+			fontId: l.fontId,
+			fontName: l.fontName,
+			fontS3Key: l.fontS3Key,
 			text: l.text,
 			letterCount: l.letterCount,
 			appliesTo: l.appliesTo,
@@ -2677,6 +2724,16 @@ ${tenantName}
 					.limit(1);
 			}
 
+			// Get font if specified
+			let font = null;
+			if (data.fontId) {
+				[font] = await db
+					.select()
+					.from(fonts)
+					.where(and(eq(fonts.id, data.fontId), eq(fonts.tenantId, tenantId)))
+					.limit(1);
+			}
+
 			// Find cost rule using priority
 			let activeCostRule = null;
 
@@ -2760,6 +2817,9 @@ ${tenantName}
 				quoteId: optionId,
 				techniqueId: data.techniqueId,
 				colorId: data.colorId || null,
+				fontId: font?.id || null,
+				fontName: font?.name || null,
+				fontS3Key: font?.s3Key || null,
 				text: data.text,
 				letterCount,
 				appliesTo: data.appliesTo,
@@ -2843,6 +2903,9 @@ ${tenantName}
 
 			let techniqueName = existing.techniqueName;
 			let colorName = existing.colorName;
+			let fontId = data.fontId !== undefined ? data.fontId : existing.fontId;
+			let fontName = existing.fontName;
+			let fontS3Key = existing.fontS3Key;
 			let supplierCost = data.supplierCost ?? parseFloat(existing.supplierCost);
 			let markupPercent = data.markupPercent ?? parseFloat(existing.markupPercent);
 			const letterCount = text?.replace(/\s/g, '').length || 0;
@@ -2941,6 +3004,23 @@ ${tenantName}
 				}
 			}
 
+			// Get font snapshot if fontId changed
+			if (data.fontId !== undefined) {
+				if (data.fontId) {
+					const [fontRecord] = await db
+						.select()
+						.from(fonts)
+						.where(and(eq(fonts.id, data.fontId), eq(fonts.tenantId, tenantId)))
+						.limit(1);
+					fontName = fontRecord?.name || null;
+					fontS3Key = fontRecord?.s3Key || null;
+				} else {
+					fontId = null;
+					fontName = null;
+					fontS3Key = null;
+				}
+			}
+
 			// Calculate new pricing
 			const unitPrice = calculateRetailPrice(supplierCost, markupPercent);
 			const lineTotal = letterCount * unitPrice;
@@ -2951,6 +3031,9 @@ ${tenantName}
 				.set({
 					techniqueId,
 					colorId,
+					fontId,
+					fontName,
+					fontS3Key,
 					text,
 					letterCount,
 					appliesTo,

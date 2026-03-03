@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useParams } from 'react-router';
+import { InscriptionText } from '@/components/inscription-text';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -62,6 +63,9 @@ type PublicOption = {
 		lineTotal: string;
 		techniqueName: string | null;
 		colorName: string | null;
+		fontId: string | null;
+		fontName: string | null;
+		fontS3Key: string | null;
 	}[];
 	sundries: {
 		quantity: number;
@@ -71,8 +75,9 @@ type PublicOption = {
 	}[];
 	lineItems: {
 		description: string;
-		price: string;
+		price: string | null;
 		vatExempt: boolean;
+		priceHidden: boolean;
 	}[];
 };
 
@@ -613,7 +618,7 @@ function OptionCard({
 							)}
 						</CardTitle>
 						{option.product && (
-							<CardDescription>{option.product.name}</CardDescription>
+							<p className="text-lg font-medium mt-1">{option.product.name}</p>
 						)}
 					</div>
 					<div className="text-right">
@@ -663,15 +668,26 @@ function OptionCard({
 						{option.lettering.length > 0 && (
 							<div>
 								<h4 className="font-medium mb-2">Lettering</h4>
-								<div className="space-y-1 text-sm">
+								<div className="space-y-2 text-sm">
 									{option.lettering.map((lett, idx) => (
-										<div key={idx} className="flex justify-between">
-											<span>
-												{lett.techniqueName}
-												{lett.colorName && ` - ${lett.colorName}`}
-												{' '}({lett.letterCount} letters)
-											</span>
-											<span>{formatCurrency(lett.lineTotal)}</span>
+										<div key={idx} className="space-y-1">
+											<div className="flex justify-between">
+												<span>
+													{lett.techniqueName}
+													{lett.colorName && ` - ${lett.colorName}`}
+													{' '}({lett.letterCount} letters)
+												</span>
+												<span>{formatCurrency(lett.lineTotal)}</span>
+											</div>
+											{lett.text && (
+												<InscriptionText
+													text={`"${lett.text}"`}
+													fontId={lett.fontId}
+													fontName={lett.fontName}
+													fontS3Key={lett.fontS3Key}
+													className="italic text-muted-foreground"
+												/>
+											)}
 										</div>
 									))}
 								</div>
@@ -703,7 +719,9 @@ function OptionCard({
 									{option.lineItems.map((li, idx) => (
 										<div key={idx} className="flex justify-between">
 											<span>{li.description}</span>
-											<span>{formatCurrency(li.price)}</span>
+											{!li.priceHidden && li.price != null && (
+												<span>{formatCurrency(li.price)}</span>
+											)}
 										</div>
 									))}
 								</div>

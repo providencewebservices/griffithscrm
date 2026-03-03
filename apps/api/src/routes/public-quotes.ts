@@ -110,6 +110,9 @@ const publicQuotesRoutes = new Hono()
 						lineTotal: lett.lineTotal,
 						techniqueName: lett.techniqueName,
 						colorName: lett.colorName,
+						fontId: lett.fontId,
+						fontName: lett.fontName,
+						fontS3Key: lett.fontS3Key,
 					})),
 					sundries: sundryItems.map((s) => ({
 						quantity: s.quantity,

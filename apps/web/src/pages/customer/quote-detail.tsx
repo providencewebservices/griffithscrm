@@ -103,6 +103,8 @@ import { useLineItemPresetsQuery } from '@/hooks/use-line-item-presets';
 import { AddOptionDialog } from '@/components/quote/add-option-dialog';
 import { useLetteringTechniquesQuery } from '@/hooks/use-lettering-techniques';
 import { useLetteringColorsQuery } from '@/hooks/use-lettering-colors';
+import { useFontsQuery } from '@/hooks/use-fonts';
+import { InscriptionText } from '@/components/inscription-text';
 
 // Editable number component for inline editing
 function EditableNumber({
@@ -1520,19 +1522,23 @@ function LetteringSection({
 	// New lettering form state
 	const [newTechniqueId, setNewTechniqueId] = useState('');
 	const [newColorId, setNewColorId] = useState('');
+	const [newFontId, setNewFontId] = useState('');
 	const [newText, setNewText] = useState('');
 
 	// Edit form state
 	const [editTechniqueId, setEditTechniqueId] = useState('');
 	const [editColorId, setEditColorId] = useState('');
+	const [editFontId, setEditFontId] = useState('');
 	const [editText, setEditText] = useState('');
 
-	// Fetch techniques and colors
+	// Fetch techniques, colors, and fonts
 	const { data: techniques } = useLetteringTechniquesQuery();
 	const { data: colors } = useLetteringColorsQuery();
+	const { data: fontsList } = useFontsQuery();
 
 	const activeTechniques = techniques?.filter((t) => t.isActive) || [];
 	const activeColors = colors?.filter((c) => c.isActive) || [];
+	const activeFonts = fontsList?.filter((f) => f.isActive) || [];
 
 	const handleAddLettering = async () => {
 		if (!newTechniqueId || !newText.trim()) return;
@@ -1542,12 +1548,14 @@ function LetteringSection({
 			optionId: option.id,
 			techniqueId: newTechniqueId,
 			colorId: newColorId || undefined,
+			fontId: newFontId || undefined,
 			text: newText.trim(),
 		});
 
 		// Reset form
 		setNewTechniqueId('');
 		setNewColorId('');
+		setNewFontId('');
 		setNewText('');
 		setShowAddForm(false);
 	};
@@ -1556,6 +1564,7 @@ function LetteringSection({
 		setEditingId(lett.id);
 		setEditTechniqueId(lett.techniqueId || '');
 		setEditColorId(lett.colorId || '');
+		setEditFontId(lett.fontId || '');
 		setEditText(lett.text || '');
 	};
 
@@ -1568,6 +1577,7 @@ function LetteringSection({
 			itemId,
 			techniqueId: editTechniqueId,
 			colorId: editColorId || null,
+			fontId: editFontId || null,
 			text: editText.trim(),
 		});
 
@@ -1578,6 +1588,7 @@ function LetteringSection({
 		setEditingId(null);
 		setEditTechniqueId('');
 		setEditColorId('');
+		setEditFontId('');
 		setEditText('');
 	};
 
@@ -1639,6 +1650,22 @@ function LetteringSection({
 								</SelectContent>
 							</Select>
 						</div>
+						<div>
+							<Label className="text-sm mb-1 block">Font</Label>
+							<Select value={newFontId || '_none'} onValueChange={(v) => setNewFontId(v === '_none' ? '' : v)}>
+								<SelectTrigger>
+									<SelectValue placeholder="Default font" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="_none">Default font</SelectItem>
+									{activeFonts.map((f) => (
+										<SelectItem key={f.id} value={f.id}>
+											{f.name}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</div>
 						<div className="md:col-span-3">
 							<Label className="text-sm mb-1 block">
 								Text * ({newText.replace(/\s/g, '').length} letters)
@@ -1650,6 +1677,17 @@ function LetteringSection({
 								rows={2}
 							/>
 						</div>
+						{newText && newFontId && (
+							<div className="md:col-span-3 border rounded p-3 bg-background">
+								<Label className="text-xs text-muted-foreground mb-1 block">Preview</Label>
+								<InscriptionText
+									text={newText}
+									fontId={newFontId}
+									fontName={activeFonts.find((f) => f.id === newFontId)?.name}
+									className="text-sm"
+								/>
+							</div>
+						)}
 					</div>
 					<div className="flex justify-end gap-2">
 						<Button
@@ -1659,6 +1697,7 @@ function LetteringSection({
 								setShowAddForm(false);
 								setNewTechniqueId('');
 								setNewColorId('');
+								setNewFontId('');
 								setNewText('');
 							}}
 						>
@@ -1754,11 +1793,24 @@ function LetteringSection({
 												</Select>
 											</TableCell>
 											<TableCell>
-												<Input
-													value={editText}
-													onChange={(e) => setEditText(e.target.value)}
-													className="h-8"
-												/>
+												<div className="space-y-1">
+													<Input
+														value={editText}
+														onChange={(e) => setEditText(e.target.value)}
+														className="h-8"
+													/>
+													<Select value={editFontId || '_none'} onValueChange={(v) => setEditFontId(v === '_none' ? '' : v)}>
+														<SelectTrigger className="h-7 text-xs">
+															<SelectValue placeholder="Font" />
+														</SelectTrigger>
+														<SelectContent>
+															<SelectItem value="_none">Default font</SelectItem>
+															{activeFonts.map((f) => (
+																<SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+															))}
+														</SelectContent>
+													</Select>
+												</div>
 											</TableCell>
 											<TableCell className="text-center">
 												{editText.replace(/\s/g, '').length}
@@ -1936,9 +1988,9 @@ function CustomerView({
 							{/* Product Details */}
 							<div className="space-y-4">
 								{currentOption.product && (
-									<div>
+									<div className="text-center">
 										<p className="text-sm text-muted-foreground">Product</p>
-										<p className="font-semibold text-lg">{currentOption.product.name}</p>
+										<p className="font-bold text-2xl">{currentOption.product.name}</p>
 									</div>
 								)}
 
@@ -1973,9 +2025,9 @@ function CustomerView({
 
 								{/* Inscription */}
 								{pkg.proposedInscription && (
-									<div className="space-y-1">
-										<p className="text-sm font-medium">Proposed Inscription</p>
-										<p className="whitespace-pre-wrap bg-muted p-3 rounded font-mono text-sm">
+									<div className="space-y-1 text-center">
+										<p className="text-sm font-medium text-muted-foreground">Proposed Inscription</p>
+										<p className="whitespace-pre-wrap italic text-lg py-3">
 											{pkg.proposedInscription}
 										</p>
 									</div>
@@ -1983,15 +2035,23 @@ function CustomerView({
 
 								{/* Lettering */}
 								{currentOption.lettering.length > 0 && (
-									<div className="space-y-2">
+									<div className="space-y-4">
 										<p className="text-sm font-medium">Lettering</p>
 										{currentOption.lettering.map((lett) => (
-											<div key={lett.id} className="text-sm">
-												<p className="italic">"{lett.text}"</p>
+											<div key={lett.id} className="space-y-2">
 												<p className="text-muted-foreground text-xs">
 													{lett.techniqueName}
-													{lett.colorName && ` with ${lett.colorName}`} - {lett.letterCount} letters
+													{lett.colorName && ` with ${lett.colorName}`} · {lett.letterCount} letters
 												</p>
+												{lett.text && (
+													<InscriptionText
+														text={`"${lett.text}"`}
+														fontId={lett.fontId}
+														fontName={lett.fontName}
+														fontS3Key={lett.fontS3Key}
+														className="italic text-sm"
+													/>
+												)}
 											</div>
 										))}
 									</div>

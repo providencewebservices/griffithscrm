@@ -52,6 +52,9 @@ export type QuoteLettering = {
 	lineTotal: string;
 	techniqueName: string | null;
 	colorName: string | null;
+	fontId: string | null;
+	fontName: string | null;
+	fontS3Key: string | null;
 	notes: string | null;
 	sortOrder: number;
 	createdAt: string;
@@ -693,6 +696,7 @@ export type AddLetteringInput = {
 	optionId: string;
 	techniqueId: string;
 	colorId?: string;
+	fontId?: string;
 	text: string;
 	appliesTo?: 'new_memorial' | 'refurbishment' | 'both';
 	notes?: string;
@@ -704,6 +708,7 @@ export type UpdateLetteringInput = {
 	itemId: string;
 	techniqueId?: string;
 	colorId?: string | null;
+	fontId?: string | null;
 	text?: string;
 	appliesTo?: 'new_memorial' | 'refurbishment' | 'both';
 	notes?: string | null;
@@ -950,6 +955,7 @@ async function addLettering({
 	optionId,
 	techniqueId,
 	colorId,
+	fontId,
 	text,
 	appliesTo,
 	notes,
@@ -958,7 +964,7 @@ async function addLettering({
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		credentials: 'include',
-		body: JSON.stringify({ techniqueId, colorId, text, appliesTo, notes }),
+		body: JSON.stringify({ techniqueId, colorId, fontId, text, appliesTo, notes }),
 	});
 
 	if (!response.ok) {
@@ -976,6 +982,7 @@ async function updateLettering({
 	itemId,
 	techniqueId,
 	colorId,
+	fontId,
 	text,
 	appliesTo,
 	notes,
@@ -988,7 +995,7 @@ async function updateLettering({
 			method: 'PUT',
 			headers: { 'Content-Type': 'application/json' },
 			credentials: 'include',
-			body: JSON.stringify({ techniqueId, colorId, text, appliesTo, notes, supplierCost, markupPercent }),
+			body: JSON.stringify({ techniqueId, colorId, fontId, text, appliesTo, notes, supplierCost, markupPercent }),
 		}
 	);
 
