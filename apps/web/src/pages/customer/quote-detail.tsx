@@ -440,10 +440,13 @@ export function QuoteDetailPage() {
 	const firstQuoteNumber = pkg.options?.[0]?.quoteNumber || 'Draft';
 	const optionCount = pkg.options?.length || 0;
 
-	// Get customer name
-	const customerName = pkg.customer
-		? `${pkg.customer.firstName} ${pkg.customer.lastName}`
-		: 'Walk-in Customer';
+	// Get customer/payer name
+	const customerName =
+		pkg.payerType === 'funeral_director' && pkg.funeralDirector
+			? pkg.funeralDirector.tradingName || pkg.funeralDirector.businessName
+			: pkg.customer
+				? `${pkg.customer.firstName} ${pkg.customer.lastName}`
+				: 'Walk-in Customer';
 
 	// Calculate price range
 	const priceRange =
@@ -876,9 +879,15 @@ function SharedContextCard({
 			<CardContent>
 				<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
 					<div>
-						<p className="text-sm font-medium text-muted-foreground">Customer</p>
+						<p className="text-sm font-medium text-muted-foreground">
+							{pkg.payerType === 'funeral_director' ? 'Funeral Director (Payer)' : 'Customer'}
+						</p>
 						<p>
-							{pkg.customer ? (
+							{pkg.payerType === 'funeral_director' && pkg.funeralDirector ? (
+								<Link to={`/app/funeral-directors/${pkg.funeralDirectorId}`} className="text-primary hover:underline">
+									{pkg.funeralDirector.tradingName || pkg.funeralDirector.businessName}
+								</Link>
+							) : pkg.customer ? (
 								<Link to={`/app/contacts/${pkg.customerId}`} className="text-primary hover:underline">
 									{pkg.customer.firstName} {pkg.customer.lastName}
 								</Link>
@@ -905,10 +914,14 @@ function SharedContextCard({
 							<p>{formatDate(pkg.validUntil)}</p>
 						</div>
 					)}
-					{pkg.funeralDirector && (
+					{pkg.funeralDirector && pkg.payerType !== 'funeral_director' && (
 						<div>
 							<p className="text-sm font-medium text-muted-foreground">Funeral Director</p>
-							<p>{pkg.funeralDirector.name}</p>
+							<p>
+								<Link to={`/app/funeral-directors/${pkg.funeralDirectorId}`} className="text-primary hover:underline">
+									{pkg.funeralDirector.tradingName || pkg.funeralDirector.businessName}
+								</Link>
+							</p>
 						</div>
 					)}
 					{pkg.council && (

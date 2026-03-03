@@ -104,7 +104,8 @@ export type QuoteProduct = {
 
 export type QuoteFuneralDirector = {
 	id: string;
-	name: string;
+	businessName: string;
+	tradingName: string | null;
 };
 
 export type QuoteCouncil = {
