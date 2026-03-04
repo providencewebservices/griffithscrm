@@ -2,7 +2,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
-export type UploadCategory = 'products' | 'options' | 'sundries' | 'categories' | 'materials';
+export type UploadCategory = 'products' | 'options' | 'sundries' | 'categories' | 'materials' | 'branding';
 
 // Cache for signed URLs to avoid re-fetching
 const signedUrlCache = new Map<string, { url: string; expiry: number }>();

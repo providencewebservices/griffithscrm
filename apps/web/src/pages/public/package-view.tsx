@@ -97,7 +97,7 @@ type PublicPackage = {
 		customerDecisionAt: string | null;
 	};
 	customer: { firstName: string; lastName: string } | null;
-	tenant: { name: string } | null;
+	tenant: { id: string; name: string; hasLogo: boolean } | null;
 	options: PublicOption[];
 };
 
@@ -289,11 +289,20 @@ export function PublicPackageViewPage() {
 			<div className="bg-white border-b">
 				<div className="max-w-5xl mx-auto px-4 py-6">
 					<div className="flex items-center justify-between">
-						<div>
-							<h1 className="text-2xl font-bold">{tenant?.name || 'Quote Package'}</h1>
-							<p className="text-muted-foreground mt-1">
-								Package {pkg.packageNumber}
-							</p>
+						<div className="flex items-center gap-4">
+							{tenant?.hasLogo && (
+								<img
+									src={`${API_URL}/api/logo/${tenant.id}`}
+									alt={tenant.name}
+									className="h-12 max-w-[160px] object-contain"
+								/>
+							)}
+							<div>
+								<h1 className="text-2xl font-bold">{tenant?.name || 'Quote Package'}</h1>
+								<p className="text-muted-foreground mt-1">
+									Package {pkg.packageNumber}
+								</p>
+							</div>
 						</div>
 						{pkg.status === 'accepted' && (
 							<Badge className="bg-green-100 text-green-800 border-green-200">

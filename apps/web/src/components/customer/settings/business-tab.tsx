@@ -19,6 +19,7 @@ import {
 	useUpdateTenantSettingsMutation,
 	type AddressInput,
 } from '@/hooks/use-tenant-settings';
+import { ImageUpload } from '@/components/ui/image-upload';
 
 const COUNTRIES = [
 	{ value: 'US', label: 'United States', flag: '🇺🇸' },
@@ -38,6 +39,8 @@ export function BusinessTab() {
 	const updateMutation = useUpdateTenantSettingsMutation();
 
 	const [name, setName] = useState('');
+	const [logoUrl, setLogoUrl] = useState<string | null>(null);
+	const [logoPreview, setLogoPreview] = useState<string | null>(null);
 	const [address, setAddress] = useState<AddressInput>({
 		streetNumber: '',
 		route: '',
@@ -53,6 +56,8 @@ export function BusinessTab() {
 	useEffect(() => {
 		if (settings) {
 			setName(settings.name);
+			setLogoUrl(settings.logoUrl);
+			setLogoPreview(settings.logoSignedUrl);
 			if (settings.address) {
 				setAddress({
 					streetNumber: settings.address.streetNumber || '',
@@ -99,10 +104,14 @@ export function BusinessTab() {
 
 	const handleSave = async () => {
 		try {
-			const payload: { name?: string; address?: AddressInput | null } = {};
+			const payload: { name?: string; logoUrl?: string | null; address?: AddressInput | null } = {};
 
 			if (name !== settings?.name) {
 				payload.name = name;
+			}
+
+			if (logoUrl !== settings?.logoUrl) {
+				payload.logoUrl = logoUrl;
 			}
 
 			if (hasAddress && address.formattedAddress) {
@@ -150,6 +159,23 @@ export function BusinessTab() {
 							/>
 						</Field>
 					</FieldGroup>
+				</div>
+
+				{/* Business Logo */}
+				<div className="border rounded-lg p-6">
+					<h3 className="text-lg font-semibold mb-4">Business Logo</h3>
+					<ImageUpload
+						value={logoPreview}
+						onChange={(url) => {
+							setLogoUrl(url);
+							if (!url) setLogoPreview(null);
+						}}
+						category="branding"
+						entityId={settings?.id || 'logo'}
+					/>
+					<p className="text-sm text-muted-foreground mt-2">
+						This logo will appear on customer-facing quotes and emails.
+					</p>
 				</div>
 
 				{/* Business Address */}

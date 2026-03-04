@@ -166,7 +166,7 @@ const publicQuotesRoutes = new Hono()
 			},
 			options,
 			customer,
-			tenant: tenant ? { name: tenant.name } : null,
+			tenant: tenant ? { id: tenant.id, name: tenant.name, hasLogo: !!tenant.logoUrl } : null,
 		});
 	})
 

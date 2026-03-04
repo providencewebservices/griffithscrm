@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useTenantSettingsQuery } from '@/hooks/use-tenant-settings';
 import { useParams, useNavigate, Link } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -112,6 +113,8 @@ import { useLetteringTechniquesQuery } from '@/hooks/use-lettering-techniques';
 import { useLetteringColorsQuery } from '@/hooks/use-lettering-colors';
 import { useFontsQuery } from '@/hooks/use-fonts';
 import { InscriptionText } from '@/components/inscription-text';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 // Editable number component for inline editing
 function EditableNumber({
@@ -240,6 +243,7 @@ export function QuoteDetailPage() {
 	const { isCustomerView } = useCustomerView();
 	const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
 
+	const { data: settings } = useTenantSettingsQuery();
 	const { data: pkg, isLoading, error } = useQuoteQuery(id);
 	const updateStatusMutation = useUpdateQuoteStatusMutation();
 	const deleteMutation = useDeleteQuoteMutation();
@@ -411,7 +415,7 @@ export function QuoteDetailPage() {
 	const canReject = pkg.status === 'presented';
 	const canExpire = pkg.status === 'presented';
 	const canDelete = pkg.status === 'draft';
-	const canSendEmail = ['ready', 'presented'].includes(pkg.status) && !!pkg.customerId;
+	const canSendEmail = ['ready', 'presented'].includes(pkg.status) && !!(pkg.customerId || pkg.funeralDirectorId);
 	const canAddOptions = pkg.status === 'draft';
 
 	// Get first quote number for display
@@ -463,6 +467,13 @@ export function QuoteDetailPage() {
 							<ArrowLeft className="h-4 w-4" />
 						</Button>
 					</Link>
+					{settings?.logoUrl && (
+						<img
+							src={`${API_URL}/api/logo/${settings.id}`}
+							alt={settings.name}
+							className="h-12 max-w-[160px] object-contain"
+						/>
+					)}
 					<div>
 						<div className="flex items-center gap-3">
 							<h2 className="text-2xl font-bold">

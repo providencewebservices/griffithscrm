@@ -26,6 +26,8 @@ export type TenantSettings = {
 	id: string;
 	name: string;
 	slug: string;
+	logoUrl: string | null;
+	logoSignedUrl: string | null;
 	address: Address | null;
 	createdAt: string;
 	updatedAt: string;
@@ -49,6 +51,7 @@ export type AddressInput = {
 
 export type UpdateTenantSettingsInput = {
 	name?: string;
+	logoUrl?: string | null;
 	address?: AddressInput | null;
 };
 

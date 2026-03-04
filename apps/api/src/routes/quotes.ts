@@ -34,6 +34,7 @@ import {
 	jobs,
 	jobPaymentScheduleItems,
 	funeralDirectors,
+	funeralDirectorContactInfo,
 	councils,
 	memorialSites,
 	QUOTE_STATUSES,
@@ -1834,8 +1835,26 @@ const quotesRoutes = new Hono()
 				toEmail = primaryEmail[0]?.value;
 			}
 
+			// Fall back to funeral director's email
+			if (!toEmail && pkg.funeralDirectorId) {
+				const fdEmail = await db
+					.select({ value: contactInfo.value })
+					.from(funeralDirectorContactInfo)
+					.innerJoin(contactInfo, eq(contactInfo.id, funeralDirectorContactInfo.contactInfoId))
+					.where(
+						and(
+							eq(funeralDirectorContactInfo.funeralDirectorId, pkg.funeralDirectorId),
+							eq(contactInfo.type, 'email'),
+							eq(contactInfo.isPrimary, true)
+						)
+					)
+					.limit(1);
+
+				toEmail = fdEmail[0]?.value;
+			}
+
 			if (!toEmail) {
-				return c.json({ error: 'No email address available for this customer' }, 400);
+				return c.json({ error: 'No email address available for this customer or funeral director' }, 400);
 			}
 
 			// Generate secure access token
@@ -1844,7 +1863,7 @@ const quotesRoutes = new Hono()
 			// Get tenant info for email
 			const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId)).limit(1);
 
-			// Get customer name
+			// Get recipient name
 			let customerName = 'Valued Customer';
 			if (pkg.customerId) {
 				const [customer] = await db
@@ -1854,6 +1873,15 @@ const quotesRoutes = new Hono()
 					.limit(1);
 				if (customer) {
 					customerName = `${customer.firstName} ${customer.lastName}`;
+				}
+			} else if (pkg.funeralDirectorId) {
+				const [fd] = await db
+					.select()
+					.from(funeralDirectors)
+					.where(eq(funeralDirectors.id, pkg.funeralDirectorId))
+					.limit(1);
+				if (fd) {
+					customerName = fd.tradingName || fd.businessName;
 				}
 			}
 
@@ -1880,6 +1908,10 @@ const quotesRoutes = new Hono()
 			const optionsText = options.length > 1 ? ` (${options.length} options)` : '';
 
 			const tenantName = tenant?.name || 'Our Company';
+			const apiBaseUrl = process.env.API_BASE_URL || 'http://localhost:3000';
+			const logoHtml = tenant?.logoUrl
+				? `<img src="${apiBaseUrl}/api/logo/${tenantId}" alt="${tenantName}" style="max-height: 60px; max-width: 200px; margin-bottom: 10px;" /><br>`
+				: '';
 
 			// Build email HTML
 			const emailHtml = `
@@ -1892,7 +1924,7 @@ const quotesRoutes = new Hono()
 </head>
 <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
   <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-    <h1 style="color: #1a1a1a; margin: 0 0 10px 0; font-size: 24px;">${tenantName}</h1>
+    ${logoHtml}<h1 style="color: #1a1a1a; margin: 0 0 10px 0; font-size: 24px;">${tenantName}</h1>
     <p style="color: #666; margin: 0;">Quote Reference: <strong>${firstQuoteNumber}${optionsText}</strong></p>
   </div>
 

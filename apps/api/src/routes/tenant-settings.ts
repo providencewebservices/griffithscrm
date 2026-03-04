@@ -5,10 +5,12 @@ import { eq } from 'drizzle-orm';
 import { requireAuth, requireTenant } from '../middleware/auth';
 import { db } from '../lib/auth';
 import { tenants, addresses } from '@griffiths-crm/shared/db/schema';
+import { getSignedImageUrl } from '../lib/s3';
 
 // Validation schema for updating tenant settings
 const updateSettingsSchema = z.object({
 	name: z.string().min(1, 'Name is required').optional(),
+	logoUrl: z.string().nullable().optional(),
 	address: z
 		.object({
 			streetNumber: z.string().optional(),
@@ -61,11 +63,15 @@ const tenantSettingsRoutes = new Hono()
 			address = addr || null;
 		}
 
+		const logoSignedUrl = await getSignedImageUrl(tenant.logoUrl);
+
 		return c.json({
 			tenant: {
 				id: tenant.id,
 				name: tenant.name,
 				slug: tenant.slug,
+				logoUrl: tenant.logoUrl,
+				logoSignedUrl,
 				address,
 				createdAt: tenant.createdAt,
 				updatedAt: tenant.updatedAt,
@@ -77,7 +83,7 @@ const tenantSettingsRoutes = new Hono()
 	.put('/', zValidator('json', updateSettingsSchema), async (c) => {
 		const currentUser = c.get('user');
 		const tenantId = currentUser.tenantId!;
-		const { name, address } = c.req.valid('json');
+		const { name, logoUrl, address } = c.req.valid('json');
 
 		// Get current tenant
 		const [tenant] = await db
@@ -125,12 +131,16 @@ const tenantSettingsRoutes = new Hono()
 		}
 
 		// Update tenant
-		const updateData: { name?: string; addressId?: string | null; updatedAt: Date } = {
+		const updateData: { name?: string; logoUrl?: string | null; addressId?: string | null; updatedAt: Date } = {
 			updatedAt: new Date(),
 		};
 
 		if (name !== undefined) {
 			updateData.name = name;
+		}
+
+		if (logoUrl !== undefined) {
+			updateData.logoUrl = logoUrl;
 		}
 
 		if (addressId !== tenant.addressId) {
@@ -154,11 +164,15 @@ const tenantSettingsRoutes = new Hono()
 			updatedAddress = addr || null;
 		}
 
+		const updatedLogoSignedUrl = await getSignedImageUrl(updated.logoUrl);
+
 		return c.json({
 			tenant: {
 				id: updated.id,
 				name: updated.name,
 				slug: updated.slug,
+				logoUrl: updated.logoUrl,
+				logoSignedUrl: updatedLogoSignedUrl,
 				address: updatedAddress,
 				createdAt: updated.createdAt,
 				updatedAt: updated.updatedAt,

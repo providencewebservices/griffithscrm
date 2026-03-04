@@ -19,7 +19,7 @@ const ALLOWED_CONTENT_TYPES = [
 
 // Validation schema for presigned URL request
 const presignRequestSchema = z.object({
-	category: z.enum(['products', 'options', 'sundries', 'categories', 'materials']),
+	category: z.enum(['products', 'options', 'sundries', 'categories', 'materials', 'branding']),
 	entityId: z.string().min(1, 'Entity ID is required'),
 	filename: z.string().min(1, 'Filename is required'),
 	contentType: z.enum(ALLOWED_CONTENT_TYPES, {

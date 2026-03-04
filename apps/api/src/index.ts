@@ -47,6 +47,7 @@ import { paymentsRoutes } from './routes/payments';
 import { publicPaymentsRoutes } from './routes/public-payments';
 import { fontsRoutes } from './routes/fonts';
 import { fontProxyRoutes } from './routes/font-proxy';
+import { logoProxyRoutes } from './routes/logo-proxy';
 import { startEmailSyncScheduler } from './lib/email-sync-scheduler';
 
 const app = new Hono();
@@ -74,6 +75,7 @@ app.on(['POST', 'GET'], '/api/auth/*', (c) => auth.handler(c.req.raw));
 app.route('/api/public/quotes', publicQuotesRoutes);
 app.route('/api/public/payments', publicPaymentsRoutes);
 app.route('/api/fonts', fontProxyRoutes);
+app.route('/api/logo', logoProxyRoutes);
 
 // API routes
 const api = new Hono()
