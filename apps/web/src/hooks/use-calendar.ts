@@ -2,20 +2,25 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type {
 	CalendarEvent,
 	CalendarSettings,
+	EventSource,
 } from '@/components/calendar/types';
 import { DEFAULT_CALENDAR_SETTINGS } from '@/components/calendar/types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 // Fetch calendar events for a date range
-export function useCalendarEventsQuery(start: Date, end: Date) {
+export function useCalendarEventsQuery(start: Date, end: Date, types?: EventSource[]) {
 	return useQuery({
-		queryKey: ['calendar-events', start.toISOString(), end.toISOString()],
+		queryKey: ['calendar-events', start.toISOString(), end.toISOString(), types],
 		queryFn: async (): Promise<CalendarEvent[]> => {
 			const params = new URLSearchParams({
 				start: start.toISOString(),
 				end: end.toISOString(),
 			});
+
+			if (types && types.length < 5) {
+				params.set('types', types.join(','));
+			}
 
 			const response = await fetch(
 				`${API_URL}/api/calendar/events?${params}`,

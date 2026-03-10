@@ -7,6 +7,9 @@ import { db } from '../lib/auth';
 import {
 	tasks,
 	users,
+	jobs,
+	quotePackages,
+	customers,
 	TASK_STATUSES,
 	TASK_PRIORITIES,
 	TASK_ENTITY_TYPES,
@@ -108,9 +111,18 @@ export const tasksRoutes = new Hono()
 				createdAt: tasks.createdAt,
 				updatedAt: tasks.updatedAt,
 				assigneeName: users.name,
+				entityName: sql<string | null>`CASE
+					WHEN ${tasks.entityType} = 'job' THEN ${jobs.jobNumber}
+					WHEN ${tasks.entityType} = 'quote' THEN ${quotePackages.packageNumber}
+					WHEN ${tasks.entityType} = 'customer' THEN CONCAT(${customers.firstName}, ' ', ${customers.lastName})
+					ELSE NULL
+				END`.as('entity_name'),
 			})
 			.from(tasks)
 			.leftJoin(users, eq(tasks.assigneeId, users.id))
+			.leftJoin(jobs, and(eq(tasks.entityType, 'job'), eq(tasks.entityId, jobs.id)))
+			.leftJoin(quotePackages, and(eq(tasks.entityType, 'quote'), eq(tasks.entityId, quotePackages.id)))
+			.leftJoin(customers, and(eq(tasks.entityType, 'customer'), eq(tasks.entityId, customers.id)))
 			.where(and(...conditions))
 			.orderBy(
 				sql`CASE ${tasks.priority} WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 WHEN 'normal' THEN 2 WHEN 'low' THEN 3 END`,
@@ -233,9 +245,18 @@ export const tasksRoutes = new Hono()
 				createdAt: tasks.createdAt,
 				updatedAt: tasks.updatedAt,
 				assigneeName: users.name,
+				entityName: sql<string | null>`CASE
+					WHEN ${tasks.entityType} = 'job' THEN ${jobs.jobNumber}
+					WHEN ${tasks.entityType} = 'quote' THEN ${quotePackages.packageNumber}
+					WHEN ${tasks.entityType} = 'customer' THEN CONCAT(${customers.firstName}, ' ', ${customers.lastName})
+					ELSE NULL
+				END`.as('entity_name'),
 			})
 			.from(tasks)
 			.leftJoin(users, eq(tasks.assigneeId, users.id))
+			.leftJoin(jobs, and(eq(tasks.entityType, 'job'), eq(tasks.entityId, jobs.id)))
+			.leftJoin(quotePackages, and(eq(tasks.entityType, 'quote'), eq(tasks.entityId, quotePackages.id)))
+			.leftJoin(customers, and(eq(tasks.entityType, 'customer'), eq(tasks.entityId, customers.id)))
 			.where(and(eq(tasks.id, id), eq(tasks.tenantId, tenantId)))
 			.limit(1);
 

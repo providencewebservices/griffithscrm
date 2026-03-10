@@ -29,6 +29,7 @@ export type TaskListItem = {
 	createdAt: string;
 	updatedAt: string;
 	assigneeName: string | null;
+	entityName: string | null;
 };
 
 export type TaskDetail = TaskListItem & {

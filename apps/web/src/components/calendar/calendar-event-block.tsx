@@ -7,6 +7,8 @@ type CalendarEventBlockProps = {
 	top: number;
 	height: number;
 	onClick?: (event: CalendarEvent) => void;
+	onEditEvent?: (event: CalendarEvent) => void;
+	onDeleteEvent?: (eventId: string) => void;
 };
 
 export function CalendarEventBlock({
@@ -14,6 +16,8 @@ export function CalendarEventBlock({
 	top,
 	height,
 	onClick,
+	onEditEvent,
+	onDeleteEvent,
 }: CalendarEventBlockProps) {
 	const startTime = parseISO(event.start);
 	const endTime = event.end ? parseISO(event.end) : null;
@@ -42,7 +46,7 @@ export function CalendarEventBlock({
 					className="text-xs font-medium truncate leading-tight"
 					style={{ color: event.color }}
 				>
-					{format(startTime, 'h:mm')} {event.title}
+					{format(startTime, 'h:mm a')} {event.title}
 				</div>
 			) : (
 				<>
@@ -63,5 +67,13 @@ export function CalendarEventBlock({
 		</button>
 	);
 
-	return <EventDetailPopover event={event}>{blockContent}</EventDetailPopover>;
+	return (
+		<EventDetailPopover
+			event={event}
+			onEdit={onEditEvent}
+			onDelete={onDeleteEvent}
+		>
+			{blockContent}
+		</EventDetailPopover>
+	);
 }

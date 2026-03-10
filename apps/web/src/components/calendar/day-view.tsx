@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import {
 	getEventsForDay,
@@ -18,20 +18,34 @@ type DayViewProps = {
 	currentDate: Date;
 	events: CalendarEvent[];
 	onTimeSlotClick: (date: Date, hour: number) => void;
+	onEditEvent?: (event: CalendarEvent) => void;
+	onDeleteEvent?: (eventId: string) => void;
 };
 
 export function DayView({
 	currentDate,
 	events,
 	onTimeSlotClick,
+	onEditEvent,
+	onDeleteEvent,
 }: DayViewProps) {
 	const dayEvents = getEventsForDay(events, currentDate);
 	const allDayEvents = dayEvents.filter((e) => e.allDay);
 	const timedEvents = dayEvents.filter((e) => !e.allDay);
 	const today = isToday(currentDate);
+	const scrollRef = useRef<HTMLDivElement>(null);
+
+	// Auto-scroll to current time on mount/date change
+	useEffect(() => {
+		if (scrollRef.current) {
+			const currentHour = new Date().getHours();
+			const scrollTarget = Math.max(0, (currentHour - 1) * HOUR_HEIGHT);
+			scrollRef.current.scrollTop = scrollTarget;
+		}
+	}, [currentDate]);
 
 	return (
-		<div className="flex-1 overflow-auto">
+		<div className="flex-1 overflow-auto" ref={scrollRef}>
 			<div className="min-w-[300px]">
 				{/* Day header */}
 				<div className="border-b bg-background py-3 px-4 sticky top-0 z-20">
@@ -67,7 +81,12 @@ export function DayView({
 							</div>
 							<div className="p-2 space-y-1">
 								{allDayEvents.map((event) => (
-									<EventDetailPopover key={event.id} event={event}>
+									<EventDetailPopover
+										key={event.id}
+										event={event}
+										onEdit={onEditEvent}
+										onDelete={onDeleteEvent}
+									>
 										<button
 											type="button"
 											onClick={(e) => e.stopPropagation()}
@@ -98,6 +117,8 @@ export function DayView({
 							timedEvents={timedEvents}
 							today={today}
 							onTimeSlotClick={onTimeSlotClick}
+							onEditEvent={onEditEvent}
+							onDeleteEvent={onDeleteEvent}
 						/>
 					))}
 				</div>
@@ -113,6 +134,8 @@ function HourRow({
 	timedEvents,
 	today,
 	onTimeSlotClick,
+	onEditEvent,
+	onDeleteEvent,
 }: {
 	hour: number;
 	hourIndex: number;
@@ -120,6 +143,8 @@ function HourRow({
 	timedEvents: CalendarEvent[];
 	today: boolean;
 	onTimeSlotClick: (date: Date, hour: number) => void;
+	onEditEvent?: (event: CalendarEvent) => void;
+	onDeleteEvent?: (eventId: string) => void;
 }) {
 	const hourEvents = timedEvents.filter((event) => {
 		const eventHour = new Date(event.start).getHours();
@@ -130,7 +155,7 @@ function HourRow({
 		<>
 			{/* Time label cell */}
 			<div
-				className="border-r border-b text-[11px] text-muted-foreground text-right pr-2 relative bg-background"
+				className="border-r border-b border-border/50 text-[11px] text-muted-foreground text-right pr-2 relative bg-background"
 				style={{ height: HOUR_HEIGHT }}
 			>
 				{hourIndex > 0 && (
@@ -143,7 +168,7 @@ function HourRow({
 			{/* Day cell for this hour */}
 			<div
 				className={cn(
-					'border-b relative hover:bg-muted/30 transition-colors cursor-pointer',
+					'border-b border-border/50 relative hover:bg-muted/30 transition-colors cursor-pointer',
 					today && 'bg-primary/5'
 				)}
 				style={{ height: HOUR_HEIGHT }}
@@ -160,6 +185,8 @@ function HourRow({
 							event={event}
 							top={relativeTop}
 							height={height}
+							onEditEvent={onEditEvent}
+							onDeleteEvent={onDeleteEvent}
 						/>
 					);
 				})}

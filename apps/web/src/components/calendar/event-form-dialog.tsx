@@ -18,7 +18,8 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select';
-import { format, addHours } from 'date-fns';
+import { format, addHours, parseISO } from 'date-fns';
+import type { CalendarEvent } from './types';
 
 type EventFormData = {
 	title: string;
@@ -45,6 +46,8 @@ type EventFormDialogProps = {
 	initialDate?: Date;
 	initialHour?: number;
 	isLoading?: boolean;
+	mode?: 'create' | 'edit';
+	event?: CalendarEvent;
 };
 
 export function EventFormDialog({
@@ -54,8 +57,27 @@ export function EventFormDialog({
 	initialDate,
 	initialHour,
 	isLoading = false,
+	mode = 'create',
+	event,
 }: EventFormDialogProps) {
 	const getInitialFormData = (): EventFormData => {
+		// Edit mode: pre-fill from event
+		if (mode === 'edit' && event) {
+			const start = parseISO(event.start);
+			const end = event.end ? parseISO(event.end) : addHours(start, 1);
+			return {
+				title: event.title,
+				description: event.description || '',
+				startDate: format(start, 'yyyy-MM-dd'),
+				startTime: format(start, 'HH:mm'),
+				endDate: format(end, 'yyyy-MM-dd'),
+				endTime: format(end, 'HH:mm'),
+				isAllDay: event.allDay,
+				recurrencePattern: (event.recurrencePattern as EventFormData['recurrencePattern']) || 'none',
+			};
+		}
+
+		// Create mode
 		const startDate = initialDate || new Date();
 		const startHour = initialHour ?? 9;
 		const startDateTime = new Date(startDate);
@@ -83,7 +105,7 @@ export function EventFormDialog({
 			setFormData(getInitialFormData());
 			setError(null);
 		}
-	}, [open, initialDate, initialHour]);
+	}, [open, initialDate, initialHour, mode, event?.id]);
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -124,15 +146,17 @@ export function EventFormDialog({
 
 			onOpenChange(false);
 		} catch (err) {
-			setError(err instanceof Error ? err.message : 'Failed to create event');
+			setError(err instanceof Error ? err.message : mode === 'edit' ? 'Failed to update event' : 'Failed to create event');
 		}
 	};
+
+	const isEdit = mode === 'edit';
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent>
 				<DialogHeader>
-					<DialogTitle>Create Event</DialogTitle>
+					<DialogTitle>{isEdit ? 'Edit Event' : 'Create Event'}</DialogTitle>
 				</DialogHeader>
 
 				<form onSubmit={handleSubmit} className="space-y-4">
@@ -297,7 +321,9 @@ export function EventFormDialog({
 							Cancel
 						</Button>
 						<Button type="submit" disabled={isLoading}>
-							{isLoading ? 'Creating...' : 'Create Event'}
+							{isLoading
+								? isEdit ? 'Saving...' : 'Creating...'
+								: isEdit ? 'Save Changes' : 'Create Event'}
 						</Button>
 					</DialogFooter>
 				</form>

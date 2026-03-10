@@ -17,6 +17,8 @@ type UpcomingEventsListProps = {
 	events: CalendarEvent[];
 	currentDate: Date;
 	view: CalendarView;
+	onEditEvent?: (event: CalendarEvent) => void;
+	onDeleteEvent?: (eventId: string) => void;
 };
 
 const MAX_EVENTS = 12;
@@ -66,6 +68,8 @@ export function UpcomingEventsList({
 	events,
 	currentDate,
 	view,
+	onEditEvent,
+	onDeleteEvent,
 }: UpcomingEventsListProps) {
 	const upcoming = useMemo(
 		() => getUpcomingEvents(events, currentDate, view),
@@ -79,20 +83,20 @@ export function UpcomingEventsList({
 
 	if (upcoming.length === 0) {
 		return (
-			<div className="bg-card rounded-xl border shadow-sm px-4 py-6 text-center text-sm text-muted-foreground">
+			<div className="bg-card rounded-xl border shadow-sm px-4 py-6 text-center text-sm text-muted-foreground h-full flex items-center justify-center">
 				No upcoming events
 			</div>
 		);
 	}
 
 	return (
-		<div className="bg-card rounded-xl border shadow-sm">
-			<div className="px-4 py-2">
+		<div className="bg-card rounded-xl border shadow-sm h-full flex flex-col">
+			<div className="px-4 py-2 shrink-0">
 				<h3 className="text-sm font-medium text-muted-foreground">
 					{view === 'day' ? 'Events' : 'Upcoming'}
 				</h3>
 			</div>
-			<div className="px-4 pb-3 space-y-3 max-h-80 overflow-y-auto">
+			<div className="px-4 pb-3 space-y-3 flex-1 overflow-y-auto">
 				{grouped.map((group) => (
 					<div key={group.label}>
 						{view !== 'day' && (
@@ -100,34 +104,46 @@ export function UpcomingEventsList({
 								{group.label}
 							</div>
 						)}
-						<div className="space-y-1">
+						<div className="space-y-0.5">
 							{group.events.map((event) => (
-								<EventDetailPopover key={event.id} event={event}>
+								<EventDetailPopover
+									key={event.id}
+									event={event}
+									onEdit={onEditEvent}
+									onDelete={onDeleteEvent}
+								>
 									<button
 										type="button"
-										className="w-full flex items-center gap-3 px-2 py-1.5 rounded-md text-left hover:bg-muted/50 transition-colors cursor-pointer"
+										className="w-full flex flex-col gap-0.5 px-2 py-1.5 rounded-md text-left hover:bg-muted/50 transition-colors cursor-pointer"
 									>
-										<span
-											className="w-2 h-2 rounded-full shrink-0"
-											style={{ backgroundColor: event.color }}
-										/>
-										<span className="text-xs text-muted-foreground w-28 shrink-0">
-											{formatEventTime(event)}
+										<span className="flex items-center gap-2 min-w-0">
+											<span
+												className="w-2 h-2 rounded-full shrink-0"
+												style={{ backgroundColor: event.color }}
+											/>
+											<span className="text-sm truncate">
+												{event.title}
+											</span>
 										</span>
-										<span className="text-sm truncate flex-1">
-											{event.title}
+										<span className="flex items-center gap-1.5 pl-4">
+											{!event.allDay && (
+												<span className="text-xs text-muted-foreground">
+													{formatEventTime(event)}
+													{' \u00b7 '}
+												</span>
+											)}
+											<Badge
+												variant="outline"
+												className="text-[10px] shrink-0"
+												style={{
+													backgroundColor: `${event.color}10`,
+													color: event.color,
+													borderColor: `${event.color}40`,
+												}}
+											>
+												{getEventSourceLabel(event.sourceType)}
+											</Badge>
 										</span>
-										<Badge
-											variant="outline"
-											className="text-[10px] shrink-0"
-											style={{
-												backgroundColor: `${event.color}10`,
-												color: event.color,
-												borderColor: `${event.color}40`,
-											}}
-										>
-											{getEventSourceLabel(event.sourceType)}
-										</Badge>
 									</button>
 								</EventDetailPopover>
 							))}

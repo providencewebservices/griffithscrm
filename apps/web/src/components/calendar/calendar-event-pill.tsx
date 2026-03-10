@@ -5,11 +5,13 @@ import type { CalendarEvent } from './types';
 type CalendarEventPillProps = {
 	event: CalendarEvent;
 	onClick?: (event: CalendarEvent) => void;
+	onEditEvent?: (event: CalendarEvent) => void;
+	onDeleteEvent?: (eventId: string) => void;
 };
 
-export function CalendarEventPill({ event, onClick }: CalendarEventPillProps) {
+export function CalendarEventPill({ event, onClick, onEditEvent, onDeleteEvent }: CalendarEventPillProps) {
 	const startTime = parseISO(event.start);
-	const timeDisplay = event.allDay ? '' : format(startTime, 'h:mm ');
+	const timeDisplay = event.allDay ? '' : format(startTime, 'h:mm a') + ' ';
 
 	const pillContent = (
 		<button
@@ -18,9 +20,9 @@ export function CalendarEventPill({ event, onClick }: CalendarEventPillProps) {
 				e.stopPropagation();
 				onClick?.(event);
 			}}
-			className="w-full text-left text-xs px-2 py-0.5 rounded-md truncate transition-opacity hover:opacity-80 cursor-pointer"
+			className="w-full text-left text-xs font-medium px-2 py-1 rounded-md truncate transition-opacity hover:opacity-80 cursor-pointer"
 			style={{
-				backgroundColor: `${event.color}20`,
+				backgroundColor: `${event.color}30`,
 				color: event.color,
 				borderLeft: `3px solid ${event.color}`,
 			}}
@@ -31,5 +33,13 @@ export function CalendarEventPill({ event, onClick }: CalendarEventPillProps) {
 		</button>
 	);
 
-	return <EventDetailPopover event={event}>{pillContent}</EventDetailPopover>;
+	return (
+		<EventDetailPopover
+			event={event}
+			onEdit={onEditEvent}
+			onDelete={onDeleteEvent}
+		>
+			{pillContent}
+		</EventDetailPopover>
+	);
 }

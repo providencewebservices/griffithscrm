@@ -44,13 +44,13 @@ import {
 } from '@/hooks/use-tasks';
 import { useTeamQuery } from '@/hooks/use-team';
 import {
-	ArrowLeft,
 	Save,
 	Loader2,
 	Trash2,
 	CheckCircle2,
 	Circle,
 	Clock,
+	AlertTriangle,
 	ExternalLink,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -145,12 +145,17 @@ export function TaskDetailPage() {
 	}
 
 	const isOverdue = task.dueDate && task.status !== 'done' && new Date(task.dueDate) < new Date();
+	const isDone = task.status === 'done';
 
 	const entityLink = task.entityType && task.entityId
 		? task.entityType === 'job' ? `/app/jobs/${task.entityId}`
 		: task.entityType === 'quote' ? `/app/quotes/${task.entityId}`
 		: task.entityType === 'customer' ? `/app/customers/${task.entityId}`
 		: null
+		: null;
+
+	const entityDisplayName = task.entityType && task.entityId
+		? task.entityName || task.entityId.slice(0, 8)
 		: null;
 
 	return (
@@ -170,28 +175,56 @@ export function TaskDetailPage() {
 				</BreadcrumbList>
 			</Breadcrumb>
 
+			{/* Overdue banner */}
+			{isOverdue && (
+				<div className="flex items-center gap-2 rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-destructive text-sm">
+					<AlertTriangle className="h-4 w-4 shrink-0" />
+					<span>
+						This task is overdue — due{' '}
+						{new Date(task.dueDate!).toLocaleDateString('en-GB', {
+							weekday: 'short',
+							day: 'numeric',
+							month: 'short',
+							year: 'numeric',
+						})}
+					</span>
+				</div>
+			)}
+
+			{/* Completed banner */}
+			{isDone && (
+				<div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-green-800 text-sm">
+					<CheckCircle2 className="h-4 w-4 shrink-0" />
+					<span>
+						Completed{' '}
+						{task.completedAt
+							? new Date(task.completedAt).toLocaleDateString('en-GB', {
+								day: 'numeric',
+								month: 'short',
+								year: 'numeric',
+								hour: '2-digit',
+								minute: '2-digit',
+							})
+							: ''}
+					</span>
+				</div>
+			)}
+
 			{/* Header */}
 			<div className="flex items-start justify-between gap-4">
-				<div className="flex items-start gap-3">
-					<Link to="/app/tasks">
-						<Button variant="ghost" size="icon">
-							<ArrowLeft className="h-4 w-4" />
-						</Button>
-					</Link>
-					<div>
-						<div className="flex items-center gap-2 mb-1">
-							<h1 className="text-2xl font-bold">{task.title}</h1>
-							<Badge variant={getTaskPriorityVariant(task.priority as TaskPriority)}>
-								{formatTaskPriority(task.priority as TaskPriority)}
-							</Badge>
-							<Badge variant={getTaskStatusVariant(task.status as TaskStatus)}>
-								{formatTaskStatus(task.status as TaskStatus)}
-							</Badge>
-						</div>
-						{task.description && (
-							<p className="text-muted-foreground">{task.description}</p>
-						)}
+				<div>
+					<div className="flex items-center gap-2 mb-1">
+						<h1 className={`text-2xl font-bold ${isDone ? 'text-muted-foreground line-through' : ''}`}>{task.title}</h1>
+						<Badge variant={getTaskPriorityVariant(task.priority as TaskPriority)}>
+							{formatTaskPriority(task.priority as TaskPriority)}
+						</Badge>
+						<Badge variant={getTaskStatusVariant(task.status as TaskStatus)}>
+							{formatTaskStatus(task.status as TaskStatus)}
+						</Badge>
 					</div>
+					{task.description && (
+						<p className="text-muted-foreground">{task.description}</p>
+					)}
 				</div>
 				<div className="flex gap-2">
 					{task.status !== 'done' && (
@@ -220,7 +253,7 @@ export function TaskDetailPage() {
 			<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 				{/* Main content */}
 				<div className="lg:col-span-2 space-y-6">
-					<Card>
+					<Card className={isDone ? 'opacity-60' : ''}>
 						<CardHeader className="flex flex-row items-center justify-between">
 							<CardTitle>Details</CardTitle>
 							{!isEditing ? (
@@ -316,28 +349,12 @@ export function TaskDetailPage() {
 					<Card>
 						<CardContent className="pt-6 space-y-4">
 							<div>
-								<Label className="text-muted-foreground text-xs">Status</Label>
-								<div className="mt-1">
-									<Badge variant={getTaskStatusVariant(task.status as TaskStatus)}>
-										{formatTaskStatus(task.status as TaskStatus)}
-									</Badge>
-								</div>
-							</div>
-							<div>
-								<Label className="text-muted-foreground text-xs">Priority</Label>
-								<div className="mt-1">
-									<Badge variant={getTaskPriorityVariant(task.priority as TaskPriority)}>
-										{formatTaskPriority(task.priority as TaskPriority)}
-									</Badge>
-								</div>
-							</div>
-							<div>
 								<Label className="text-muted-foreground text-xs">Assignee</Label>
 								<p className="mt-1 text-sm">{task.assigneeName || 'Unassigned'}</p>
 							</div>
 							<div>
 								<Label className="text-muted-foreground text-xs">Due Date</Label>
-								<p className={`mt-1 text-sm ${isOverdue ? 'text-red-600 font-medium' : ''}`}>
+								<p className="mt-1 text-sm">
 									{task.dueDate
 										? new Date(task.dueDate).toLocaleDateString('en-GB', {
 											weekday: 'short',
@@ -346,7 +363,6 @@ export function TaskDetailPage() {
 											year: 'numeric',
 										})
 										: 'No due date'}
-									{isOverdue && ' (Overdue)'}
 								</p>
 							</div>
 
@@ -355,14 +371,12 @@ export function TaskDetailPage() {
 									<Label className="text-muted-foreground text-xs">Linked {formatEntityType(task.entityType)}</Label>
 									<div className="mt-1">
 										{entityLink ? (
-											<Link to={entityLink}>
-												<Button variant="outline" size="sm">
-													<ExternalLink className="h-3 w-3 mr-1" />
-													View {formatEntityType(task.entityType)}
-												</Button>
+											<Link to={entityLink} className="text-sm font-medium text-primary hover:underline inline-flex items-center gap-1">
+												<ExternalLink className="h-3 w-3" />
+												{entityDisplayName}
 											</Link>
 										) : (
-											<span className="text-sm">{task.entityId}</span>
+											<span className="text-sm">{entityDisplayName}</span>
 										)}
 									</div>
 								</div>
@@ -382,26 +396,11 @@ export function TaskDetailPage() {
 								</div>
 							)}
 
-							{task.completedAt && (
-								<div>
-									<Label className="text-muted-foreground text-xs">Completed</Label>
-									<p className="mt-1 text-sm">
-										{new Date(task.completedAt).toLocaleDateString('en-GB', {
-											day: 'numeric',
-											month: 'short',
-											year: 'numeric',
-											hour: '2-digit',
-											minute: '2-digit',
-										})}
-									</p>
-								</div>
-							)}
-
 							<div className="pt-2 border-t">
 								<Button
-									variant="destructive"
+									variant="ghost"
 									size="sm"
-									className="w-full"
+									className="w-full text-muted-foreground hover:text-destructive"
 									onClick={() => setShowDeleteDialog(true)}
 								>
 									<Trash2 className="h-4 w-4 mr-2" />

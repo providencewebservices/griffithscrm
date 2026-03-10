@@ -1,4 +1,4 @@
-import { useMemo, useEffect, useState } from 'react';
+import { useMemo, useEffect, useState, useRef, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import {
 	getWeekDays,
@@ -19,24 +19,50 @@ type WeekViewProps = {
 	currentDate: Date;
 	events: CalendarEvent[];
 	onTimeSlotClick: (date: Date, hour: number) => void;
+	onEditEvent?: (event: CalendarEvent) => void;
+	onDeleteEvent?: (eventId: string) => void;
 };
 
 export function WeekView({
 	currentDate,
 	events,
 	onTimeSlotClick,
+	onEditEvent,
+	onDeleteEvent,
 }: WeekViewProps) {
 	const days = useMemo(() => getWeekDays(currentDate), [currentDate]);
+	const scrollRef = useRef<HTMLDivElement>(null);
+	const allDaySectionRef = useRef<HTMLDivElement>(null);
+	const [allDayHeight, setAllDayHeight] = useState(0);
 
 	const allDayEvents = events.filter((e) => e.allDay);
 	const timedEvents = events.filter((e) => !e.allDay);
 
+	// Auto-scroll to current time on mount/date change
+	useEffect(() => {
+		if (scrollRef.current) {
+			const currentHour = new Date().getHours();
+			const scrollTarget = Math.max(0, (currentHour - 1) * HOUR_HEIGHT);
+			scrollRef.current.scrollTop = scrollTarget;
+		}
+	}, [currentDate]);
+
+	// Measure all-day section height for sticky header positioning
+	useEffect(() => {
+		if (allDaySectionRef.current) {
+			const height = allDaySectionRef.current.getBoundingClientRect().height;
+			setAllDayHeight(height);
+		} else {
+			setAllDayHeight(0);
+		}
+	}, [allDayEvents.length]);
+
 	return (
-		<div className="flex-1 overflow-auto">
+		<div className="flex-1 overflow-auto" ref={scrollRef}>
 			<div className="min-w-[600px]">
 				{/* All-day events section */}
 				{allDayEvents.length > 0 && (
-					<div className="border-b bg-muted/30 sticky top-0 z-20">
+					<div ref={allDaySectionRef} className="border-b bg-muted/30 sticky top-0 z-20">
 						<div className="grid grid-cols-[60px_repeat(7,1fr)]">
 							<div className="border-r bg-background flex items-center justify-end pr-2">
 								<span className="text-[10px] text-muted-foreground font-medium">
@@ -56,7 +82,12 @@ export function WeekView({
 										)}
 									>
 										{dayAllDayEvents.slice(0, 2).map((event) => (
-											<EventDetailPopover key={event.id} event={event}>
+											<EventDetailPopover
+												key={event.id}
+												event={event}
+												onEdit={onEditEvent}
+												onDelete={onDeleteEvent}
+											>
 												<button
 													type="button"
 													onClick={(e) => e.stopPropagation()}
@@ -86,7 +117,7 @@ export function WeekView({
 				{/* Day headers - sticky */}
 				<div
 					className="grid grid-cols-[60px_repeat(7,1fr)] border-b bg-background sticky z-20"
-					style={{ top: allDayEvents.length > 0 ? 'auto' : 0 }}
+					style={{ top: allDayEvents.length > 0 ? allDayHeight : 0 }}
 				>
 					<div className="border-r" />
 					{days.map((day) => (
@@ -123,6 +154,8 @@ export function WeekView({
 							days={days}
 							timedEvents={timedEvents}
 							onTimeSlotClick={onTimeSlotClick}
+							onEditEvent={onEditEvent}
+							onDeleteEvent={onDeleteEvent}
 						/>
 					))}
 				</div>
@@ -137,18 +170,22 @@ function HourRow({
 	days,
 	timedEvents,
 	onTimeSlotClick,
+	onEditEvent,
+	onDeleteEvent,
 }: {
 	hour: number;
 	hourIndex: number;
 	days: Date[];
 	timedEvents: CalendarEvent[];
 	onTimeSlotClick: (date: Date, hour: number) => void;
+	onEditEvent?: (event: CalendarEvent) => void;
+	onDeleteEvent?: (eventId: string) => void;
 }) {
 	return (
 		<>
 			{/* Time label cell */}
 			<div
-				className="border-r border-b text-[11px] text-muted-foreground text-right pr-2 relative bg-background"
+				className="border-r border-b border-border/50 text-[11px] text-muted-foreground text-right pr-2 relative bg-background"
 				style={{ height: HOUR_HEIGHT }}
 			>
 				{hourIndex > 0 && (
@@ -169,7 +206,7 @@ function HourRow({
 					<div
 						key={day.toISOString()}
 						className={cn(
-							'border-r border-b relative hover:bg-muted/30 transition-colors cursor-pointer',
+							'border-r border-b border-border/50 relative hover:bg-muted/30 transition-colors cursor-pointer',
 							isToday(day) && 'bg-primary/5'
 						)}
 						style={{ height: HOUR_HEIGHT }}
@@ -186,6 +223,8 @@ function HourRow({
 									event={event}
 									top={relativeTop}
 									height={height}
+									onEditEvent={onEditEvent}
+									onDeleteEvent={onDeleteEvent}
 								/>
 							);
 						})}
