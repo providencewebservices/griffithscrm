@@ -1,10 +1,13 @@
 @import 'tailwindcss';
 @import "tw-animate-css";
+@import "@fontsource-variable/playfair-display";
+@import "@fontsource-variable/source-serif-4";
+@import "@fontsource-variable/jetbrains-mono";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-	--font-display: "Playfair Display", Georgia, serif;
+	--font-display: var(--font-heading);
 	--color-background: var(--background);
 	--color-foreground: var(--foreground);
 	--color-card: var(--card);
@@ -36,6 +39,12 @@
 	--color-sidebar-primary: var(--sidebar-primary);
 	--color-sidebar-foreground: var(--sidebar-foreground);
 	--color-sidebar: var(--sidebar);
+	--font-heading: var(--font-playfair-display);
+	--font-body: var(--font-source-serif-4);
+	--font-mono: var(--font-jetbrains-mono);
+	--font-playfair-display: Playfair Display;
+	--font-source-serif-4: Source Serif 4;
+	--font-jetbrains-mono: JetBrains Mono;
 }
 
 :root {
@@ -110,5 +119,37 @@ body {
 	}
   body {
     @apply bg-background text-foreground;
+	}
+  h1 {
+    font-family: var(--font-heading);
+    font-size: 2.25rem;
+    line-height: 1.2;
+    letter-spacing: -0.025em;
+    font-weight: 700;
+	}
+  h2 {
+    font-family: var(--font-heading);
+    font-size: 1.875rem;
+    line-height: 1.25;
+    letter-spacing: -0.02em;
+    font-weight: 600;
+	}
+  h3 {
+    font-family: var(--font-heading);
+    font-size: 1.5rem;
+    line-height: 1.3;
+    letter-spacing: -0.015em;
+    font-weight: 600;
+	}
+  h4, h5, h6 {
+    font-family: var(--font-heading);
+    letter-spacing: -0.01em;
+	}
+  body, p {
+    font-family: var(--font-body);
+    line-height: 1.65;
+	}
+  code, pre {
+    font-family: var(--font-mono);
 	}
 }
