@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
-import { eq, and, desc, asc, sql, notExists, like } from 'drizzle-orm';
+import { eq, and, desc, asc, sql, notExists, like, or, count } from 'drizzle-orm';
 import crypto from 'crypto';
 import { requireAuth, requireTenant } from '../middleware/auth';
 import { db } from '../lib/auth';
@@ -513,6 +513,8 @@ const listQuerySchema = z.object({
 	customerId: z.string().optional(),
 	search: z.string().optional(),
 	latestOnly: z.enum(['true', 'false']).optional().default('true'),
+	page: z.coerce.number().min(1).optional().default(1),
+	limit: z.coerce.number().min(1).max(100).optional().default(20),
 });
 
 // ============================================
@@ -527,10 +529,10 @@ const quotesRoutes = new Hono()
 	.get('/', zValidator('query', listQuerySchema), async (c) => {
 		const currentUser = c.get('user');
 		const tenantId = currentUser.tenantId!;
-		const { status, quoteType, customerId, search } = c.req.valid('query');
+		const { status, quoteType, customerId, search, page, limit } = c.req.valid('query');
 
 		// Build filter conditions for packages
-		const conditions = [eq(quotePackages.tenantId, tenantId)];
+		const conditions: ReturnType<typeof eq>[] = [eq(quotePackages.tenantId, tenantId)];
 
 		if (status) {
 			conditions.push(eq(quotePackages.status, status));
@@ -544,7 +546,27 @@ const quotesRoutes = new Hono()
 			conditions.push(eq(quotePackages.customerId, customerId));
 		}
 
-		// Get packages with customer and funeral director info
+		// Search filter at SQL level - search by quote number or customer name
+		if (search && search.trim()) {
+			const searchTerm = `%${search.trim().toLowerCase()}%`;
+			conditions.push(
+				or(
+					sql`EXISTS (SELECT 1 FROM ${quotes} WHERE ${quotes.packageId} = ${quotePackages.id} AND LOWER(${quotes.quoteNumber}) LIKE ${searchTerm})`,
+					sql`LOWER(CONCAT(COALESCE(${customers.firstName}, ''), ' ', COALESCE(${customers.lastName}, ''))) LIKE ${searchTerm}`
+				)!
+			);
+		}
+
+		// Get total count
+		const [totalResult] = await db
+			.select({ count: count() })
+			.from(quotePackages)
+			.leftJoin(customers, eq(quotePackages.customerId, customers.id))
+			.where(and(...conditions));
+		const total = Number(totalResult.count);
+
+		// Get paginated packages with customer and funeral director info
+		const offset = (page - 1) * limit;
 		const packages = await db
 			.select({
 				id: quotePackages.id,
@@ -567,7 +589,9 @@ const quotesRoutes = new Hono()
 			.leftJoin(customers, eq(quotePackages.customerId, customers.id))
 			.leftJoin(funeralDirectors, eq(quotePackages.funeralDirectorId, funeralDirectors.id))
 			.where(and(...conditions))
-			.orderBy(desc(quotePackages.createdAt));
+			.orderBy(desc(quotePackages.createdAt))
+			.limit(limit)
+			.offset(offset);
 
 		// Get options for each package and calculate price ranges
 		const packagesWithOptions = await Promise.all(
@@ -603,15 +627,15 @@ const quotesRoutes = new Hono()
 			})
 		);
 
-		// Apply search filter (search by quote number)
-		let filteredPackages = packagesWithOptions;
-		if (search) {
-			filteredPackages = packagesWithOptions.filter((pkg) =>
-				pkg.firstQuoteNumber?.toLowerCase().includes(search.toLowerCase())
-			);
-		}
-
-		return c.json({ packages: filteredPackages });
+		return c.json({
+			packages: packagesWithOptions,
+			pagination: {
+				page,
+				limit,
+				total,
+				totalPages: Math.ceil(total / limit),
+			},
+		});
 	})
 
 	// Get billable entities (combined customers and funeral directors for payer selection)

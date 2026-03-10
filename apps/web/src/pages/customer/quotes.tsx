@@ -16,7 +16,6 @@ import {
 	CardContent,
 	CardHeader,
 	CardTitle,
-	CardDescription,
 } from '@/components/ui/card';
 import {
 	Select,
@@ -38,7 +37,7 @@ import {
 	type QuotePackageListItem,
 } from '@/hooks/use-quotes';
 import { QUOTE_STATUSES } from '@griffiths-crm/shared/db/schema';
-import { Search, Plus, List, LayoutGrid, Calendar, User, Layers, Building2 } from 'lucide-react';
+import { Search, Plus, List, LayoutGrid, Calendar, User, Layers, Building2, ChevronLeft, ChevronRight } from 'lucide-react';
 
 type DisplayMode = 'table' | 'cards';
 
@@ -53,6 +52,8 @@ export function QuotesPage() {
 	const [typeFilter, setTypeFilter] = useState<QuoteType | 'all'>('all');
 	const [displayMode, setDisplayMode] = useState<DisplayMode>('cards');
 	const [debouncedSearch, setDebouncedSearch] = useState('');
+	const [page, setPage] = useState(1);
+	const [limit, setLimit] = useState(20);
 
 	// Debounce search
 	useEffect(() => {
@@ -62,16 +63,26 @@ export function QuotesPage() {
 		return () => clearTimeout(timer);
 	}, [searchQuery]);
 
-	const { data: packages, isLoading, error } = useQuotesQuery({
+	// Reset page when filters change
+	useEffect(() => {
+		setPage(1);
+	}, [debouncedSearch, statusFilter, typeFilter]);
+
+	const { data, isLoading, error } = useQuotesQuery({
 		search: debouncedSearch || undefined,
 		status: statusFilter !== 'all' ? statusFilter : undefined,
 		quoteType: typeFilter !== 'all' ? typeFilter : undefined,
+		page,
+		limit,
 	});
 
+	const packages = data?.packages;
+	const pagination = data?.pagination;
+
 	const formatDate = (dateString: string) => {
-		return new Date(dateString).toLocaleDateString('en-US', {
-			month: 'short',
+		return new Date(dateString).toLocaleDateString('en-GB', {
 			day: 'numeric',
+			month: 'short',
 			year: 'numeric',
 		});
 	};
@@ -102,9 +113,6 @@ export function QuotesPage() {
 			<div>
 				<div className="mb-6">
 					<h2 className="text-2xl font-bold">Quotes</h2>
-					<p className="text-muted-foreground mt-1">
-						Create and manage customer quotes
-					</p>
 				</div>
 				<div className="text-muted-foreground">Loading quotes...</div>
 			</div>
@@ -116,9 +124,6 @@ export function QuotesPage() {
 			<div>
 				<div className="mb-6">
 					<h2 className="text-2xl font-bold">Quotes</h2>
-					<p className="text-muted-foreground mt-1">
-						Create and manage customer quotes
-					</p>
 				</div>
 				<div className="text-destructive">
 					Error loading quotes: {error.message}
@@ -131,9 +136,6 @@ export function QuotesPage() {
 		<div>
 			<div className="mb-6">
 				<h2 className="text-2xl font-bold">Quotes</h2>
-				<p className="text-muted-foreground mt-1">
-					Create and manage customer quotes
-				</p>
 			</div>
 
 			<div className="flex justify-between items-center mb-4 gap-4">
@@ -301,6 +303,55 @@ export function QuotesPage() {
 					))}
 				</div>
 			)}
+
+			{pagination && packages && packages.length > 0 && (
+				<div className="flex items-center justify-between mt-4">
+					<div className="text-sm text-muted-foreground">
+						Showing {(pagination.page - 1) * pagination.limit + 1} to{' '}
+						{Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
+						{pagination.total} quotes
+					</div>
+					<div className="flex items-center gap-2">
+						<Select
+							value={String(limit)}
+							onValueChange={(val) => {
+								setLimit(Number(val));
+								setPage(1);
+							}}
+						>
+							<SelectTrigger className="w-20 h-8">
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="10">10</SelectItem>
+								<SelectItem value="20">20</SelectItem>
+								<SelectItem value="50">50</SelectItem>
+							</SelectContent>
+						</Select>
+						<Button
+							variant="outline"
+							size="sm"
+							onClick={() => setPage((p) => Math.max(1, p - 1))}
+							disabled={pagination.page <= 1}
+						>
+							<ChevronLeft className="h-4 w-4" />
+							Previous
+						</Button>
+						<span className="text-sm">
+							Page {pagination.page} of {pagination.totalPages}
+						</span>
+						<Button
+							variant="outline"
+							size="sm"
+							onClick={() => setPage((p) => p + 1)}
+							disabled={pagination.page >= pagination.totalPages}
+						>
+							Next
+							<ChevronRight className="h-4 w-4" />
+						</Button>
+					</div>
+				</div>
+			)}
 		</div>
 	);
 }
@@ -316,65 +367,59 @@ function QuoteCard({
 }) {
 	const billTo = getBillToInfo(pkg);
 	return (
-		<Card className="hover:shadow-md transition-shadow">
-			<CardHeader className="pb-3">
-				<div className="flex items-start justify-between">
-					<div className="space-y-1">
-						<CardTitle className="text-base flex items-center gap-2">
-							{formatQuoteNumberWithOptions(pkg.firstQuoteNumber, pkg.optionCount)}
-							{pkg.optionCount > 1 && (
-								<Layers className="h-3.5 w-3.5 text-muted-foreground" />
-							)}
-						</CardTitle>
-						<CardDescription className="flex items-center gap-1.5">
-							{billTo.type === 'funeral_director' ? (
-								<Building2 className="h-3.5 w-3.5" />
-							) : (
-								<User className="h-3.5 w-3.5" />
-							)}
-							<span className={billTo.name ? 'font-display' : ''}>
-								{billTo.name || 'Walk-in'}
-							</span>
-						</CardDescription>
-					</div>
-					<div className="flex flex-col items-end gap-1">
-						<Badge variant={getQuoteStatusVariant(pkg.status)}>
-							{formatQuoteStatus(pkg.status)}
-						</Badge>
-						{pkg.quoteType && pkg.quoteType !== 'new_memorial' && (
-							<Badge variant="outline" className="text-xs">
-								{QUOTE_TYPE_LABELS[pkg.quoteType]}
+		<Link to={`/app/quotes/${pkg.id}`} className="block">
+			<Card className="hover:shadow-md transition-shadow">
+				<CardHeader className="pb-3">
+					<div className="flex items-start justify-between">
+						<div className="space-y-1">
+							<CardTitle className="text-base flex items-center gap-2">
+								{formatQuoteNumberWithOptions(pkg.firstQuoteNumber, pkg.optionCount)}
+								{pkg.optionCount > 1 && (
+									<Layers className="h-3.5 w-3.5 text-muted-foreground" />
+								)}
+							</CardTitle>
+							<div className="flex items-center gap-1.5 text-base font-medium">
+								{billTo.type === 'funeral_director' ? (
+									<Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+								) : (
+									<User className="h-3.5 w-3.5 text-muted-foreground" />
+								)}
+								<span className={billTo.name ? 'font-display' : 'text-muted-foreground'}>
+									{billTo.name || 'Walk-in'}
+								</span>
+							</div>
+						</div>
+						<div className="flex flex-col items-end gap-1">
+							<Badge variant={getQuoteStatusVariant(pkg.status)}>
+								{formatQuoteStatus(pkg.status)}
 							</Badge>
-						)}
+							{pkg.quoteType && pkg.quoteType !== 'new_memorial' && (
+								<Badge variant="outline" className="text-xs">
+									{QUOTE_TYPE_LABELS[pkg.quoteType]}
+								</Badge>
+							)}
+						</div>
 					</div>
-				</div>
-			</CardHeader>
-			<CardContent className="space-y-3">
-				<div className="flex items-center justify-between">
-					<span className="text-2xl font-bold">
-						{formatPriceRange(pkg.priceRange)}
-					</span>
-				</div>
-
-				{pkg.optionCount > 1 && (
-					<div className="text-sm text-muted-foreground">
-						{pkg.optionCount} pricing options
+				</CardHeader>
+				<CardContent className="space-y-3">
+					<div className="flex items-center justify-between">
+						<span className="text-base font-medium text-muted-foreground">
+							{formatPriceRange(pkg.priceRange)}
+						</span>
 					</div>
-				)}
 
-				<div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-					<Calendar className="h-3.5 w-3.5" />
-					<span>{formatDate(pkg.createdAt)}</span>
-				</div>
+					{pkg.optionCount > 1 && (
+						<div className="text-sm text-muted-foreground">
+							{pkg.optionCount} pricing options
+						</div>
+					)}
 
-				<div className="pt-2">
-					<Link to={`/app/quotes/${pkg.id}`}>
-						<Button variant="outline" size="sm" className="w-full">
-							View Details
-						</Button>
-					</Link>
-				</div>
-			</CardContent>
-		</Card>
+					<div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+						<Calendar className="h-3.5 w-3.5" />
+						<span>{formatDate(pkg.createdAt)}</span>
+					</div>
+				</CardContent>
+			</Card>
+		</Link>
 	);
 }

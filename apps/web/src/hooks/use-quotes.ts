@@ -318,11 +318,27 @@ export type QuoteSearchParams = {
 	quoteType?: QuoteType;
 	customerId?: string;
 	search?: string;
+	page?: number;
+	limit?: number;
+};
+
+// Pagination type
+export type Pagination = {
+	page: number;
+	limit: number;
+	total: number;
+	totalPages: number;
 };
 
 // Response types
+export type QuotesListResponse = {
+	packages: QuotePackageListItem[];
+	pagination: Pagination;
+};
+
 type PackagesResponse = {
 	packages: QuotePackageListItem[];
+	pagination: Pagination;
 };
 
 type PackageResponse = {
@@ -330,12 +346,14 @@ type PackageResponse = {
 };
 
 // Fetch functions
-async function fetchQuotes(params?: QuoteSearchParams): Promise<QuotePackageListItem[]> {
+async function fetchQuotes(params?: QuoteSearchParams): Promise<QuotesListResponse> {
 	const searchParams = new URLSearchParams();
 	if (params?.status) searchParams.set('status', params.status);
 	if (params?.quoteType) searchParams.set('quoteType', params.quoteType);
 	if (params?.customerId) searchParams.set('customerId', params.customerId);
 	if (params?.search) searchParams.set('search', params.search);
+	if (params?.page) searchParams.set('page', String(params.page));
+	if (params?.limit) searchParams.set('limit', String(params.limit));
 
 	const url = `${API_URL}/api/quotes${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
 
@@ -349,7 +367,7 @@ async function fetchQuotes(params?: QuoteSearchParams): Promise<QuotePackageList
 	}
 
 	const data: PackagesResponse = await response.json();
-	return data.packages;
+	return data;
 }
 
 async function fetchQuote(id: string): Promise<QuotePackageWithOptions> {
@@ -539,6 +557,7 @@ export function useQuotesQuery(params?: QuoteSearchParams) {
 	return useQuery({
 		queryKey: ['quotes', params],
 		queryFn: () => fetchQuotes(params),
+		placeholderData: (prev) => prev,
 	});
 }
 
@@ -1093,18 +1112,18 @@ export function formatQuoteStatus(status: QuoteStatus): string {
 // Helper: Get status color for badges
 export function getQuoteStatusVariant(
 	status: QuoteStatus
-): 'default' | 'secondary' | 'destructive' | 'outline' {
+): 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning' {
 	switch (status) {
 		case 'draft':
-			return 'secondary';
+			return 'warning';
 		case 'review':
 			return 'outline';
 		case 'ready':
-			return 'outline';
+			return 'secondary';
 		case 'presented':
 			return 'default';
 		case 'accepted':
-			return 'default';
+			return 'success';
 		case 'rejected':
 			return 'destructive';
 		case 'expired':
@@ -1166,6 +1185,9 @@ export const QUOTE_TYPE_SECTION_CONFIG: Record<
 		showSundries: boolean;
 		showExistingMemorial: boolean;
 		showRelatedJob: boolean;
+		showMemorialSite: boolean;
+		showMemorialLocation: boolean;
+		showRelationToDeceased: boolean;
 	}
 > = {
 	new_memorial: {
@@ -1177,6 +1199,9 @@ export const QUOTE_TYPE_SECTION_CONFIG: Record<
 		showSundries: true,
 		showExistingMemorial: false,
 		showRelatedJob: false,
+		showMemorialSite: true,
+		showMemorialLocation: true,
+		showRelationToDeceased: true,
 	},
 	additional_inscription: {
 		showProductSelection: false,
@@ -1187,6 +1212,9 @@ export const QUOTE_TYPE_SECTION_CONFIG: Record<
 		showSundries: true,
 		showExistingMemorial: true,
 		showRelatedJob: true,
+		showMemorialSite: true,
+		showMemorialLocation: true,
+		showRelationToDeceased: true,
 	},
 	refurbishment: {
 		showProductSelection: false,
@@ -1197,6 +1225,9 @@ export const QUOTE_TYPE_SECTION_CONFIG: Record<
 		showSundries: true,
 		showExistingMemorial: true,
 		showRelatedJob: true,
+		showMemorialSite: true,
+		showMemorialLocation: true,
+		showRelationToDeceased: true,
 	},
 	ashes: {
 		showProductSelection: false,
@@ -1207,6 +1238,9 @@ export const QUOTE_TYPE_SECTION_CONFIG: Record<
 		showSundries: false,
 		showExistingMemorial: false,
 		showRelatedJob: false,
+		showMemorialSite: true,
+		showMemorialLocation: false,
+		showRelationToDeceased: true,
 	},
 	sundry_only: {
 		showProductSelection: false,
@@ -1217,6 +1251,9 @@ export const QUOTE_TYPE_SECTION_CONFIG: Record<
 		showSundries: true,
 		showExistingMemorial: false,
 		showRelatedJob: false,
+		showMemorialSite: false,
+		showMemorialLocation: false,
+		showRelationToDeceased: false,
 	},
 };
 

@@ -568,7 +568,7 @@ export function CustomerDetailPage() {
 				<CardContent>
 					{quotesLoading ? (
 						<p className="text-muted-foreground">Loading history...</p>
-					) : !customerQuotes || customerQuotes.length === 0 ? (
+					) : !customerQuotes?.packages || customerQuotes.packages.length === 0 ? (
 						<div className="text-center py-8">
 							<FileText className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
 							<p className="text-muted-foreground">No quotes yet</p>
@@ -590,7 +590,7 @@ export function CustomerDetailPage() {
 								</TableRow>
 							</TableHeader>
 							<TableBody>
-								{customerQuotes.map((quote) => (
+								{customerQuotes.packages.map((quote) => (
 									<TableRow key={quote.id}>
 										<TableCell className="font-medium">
 											{formatQuoteNumberWithOptions(quote.firstQuoteNumber, quote.optionCount)}

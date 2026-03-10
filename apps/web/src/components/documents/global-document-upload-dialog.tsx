@@ -247,8 +247,8 @@ export function GlobalDocumentUploadDialog({
 		}
 
 		if (activeCategory === 'work') {
-			if (quotes) {
-				quotes.forEach((q) => {
+			if (quotes?.packages) {
+				quotes.packages.forEach((q) => {
 					const customerName =
 						q.customerFirstName && q.customerLastName
 							? `${q.customerFirstName} ${q.customerLastName}`

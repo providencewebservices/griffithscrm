@@ -59,7 +59,7 @@ import { useCustomersQuery } from '@/hooks/use-customers';
 import { useBillableEntitiesQuery, type BillableEntity } from '@/hooks/use-billable-entities';
 import { useProductsQuery } from '@/hooks/use-products';
 import { useDimensionCombosQuery, useDimensionComboQuery, type DimensionCombo } from '@/hooks/use-dimension-combos';
-import { useMaterialSectionsQuery, useMaterialSectionQuery } from '@/hooks/use-material-sections';
+import { useMaterialSectionsQuery } from '@/hooks/use-material-sections';
 import { useMaterialsQuery } from '@/hooks/use-materials';
 import { useFinishesQuery } from '@/hooks/use-finishes';
 import { useSundriesQuery } from '@/hooks/use-sundries';
@@ -86,7 +86,7 @@ import {
 import { cn } from '@/lib/utils';
 
 // Types for form state
-type ComponentFormItem = ComponentInput & { id: string };
+type ComponentFormItem = ComponentInput & { id: string; sectionId?: string };
 type SundryFormItem = SundryInput & { id: string };
 type EnquirySource = (typeof ENQUIRY_SOURCES)[number];
 
@@ -171,9 +171,6 @@ export function QuoteNewPage() {
 
 	const [mutationError, setMutationError] = useState<string | null>(null);
 
-	// For loading materials under a section
-	const [selectedSectionId, setSelectedSectionId] = useState<string>('');
-
 	// Fetch reference data
 	const { data: customers } = useCustomersQuery();
 	const { data: billableEntities } = useBillableEntitiesQuery();
@@ -182,7 +179,6 @@ export function QuoteNewPage() {
 	const { data: selectedCombo } = useDimensionComboQuery(dimensionComboId || undefined);
 	const { data: materialSections } = useMaterialSectionsQuery();
 	const { data: allMaterials } = useMaterialsQuery();
-	const { data: selectedSection } = useMaterialSectionQuery(selectedSectionId || undefined);
 	const { data: finishes } = useFinishesQuery();
 	const { data: sundryItems } = useSundriesQuery();
 	const { data: funeralDirectors } = useFuneralDirectorsQuery();
@@ -238,6 +234,7 @@ export function QuoteNewPage() {
 				width: v.dimension2 ? parseFloat(v.dimension2) : undefined,
 				depth: v.dimension3 ? parseFloat(v.dimension3) : undefined,
 				quantity: v.componentQuantity || 1,
+				sectionId: '',
 			}));
 			setComponents(autoComponents);
 		}
@@ -282,6 +279,7 @@ export function QuoteNewPage() {
 				componentType: 'headstone',
 				materialId: '',
 				quantity: 1,
+				sectionId: '',
 			},
 		]);
 	};
@@ -315,14 +313,35 @@ export function QuoteNewPage() {
 		setSundries(sundries.filter((s) => s.id !== id));
 	};
 
-	// Get all materials from all sections for display
-	const allSectionMaterials = useMemo(() => {
-		if (!materialSections) return [];
-		return materialSections.map((section) => ({
-			...section,
-			materials: [] as { id: string; name: string }[],
-		}));
-	}, [materialSections]);
+	// Clear sidebar fields when quote type changes and config hides them
+	useEffect(() => {
+		const config = QUOTE_TYPE_SECTION_CONFIG[quoteType];
+		if (!config.showMemorialSite) setMemorialSiteId('');
+		if (!config.showMemorialLocation) setMemorialLocation('');
+		if (!config.showRelationToDeceased) setRelationToDeceased('');
+	}, [quoteType]);
+
+	// Summary items for sidebar indicator
+	const summaryItems = useMemo(() => {
+		const items: { label: string; value: string }[] = [];
+		if (sectionConfig?.showComponents && components.length > 0) {
+			items.push({ label: 'Components', value: String(components.length) });
+		}
+		if (sectionConfig?.showSundries && sundries.length > 0) {
+			items.push({ label: 'Sundries', value: String(sundries.length) });
+		}
+		if (sectionConfig?.showProposedInscription && proposedInscription) {
+			items.push({ label: 'Inscription', value: `${proposedInscription.length} chars` });
+		}
+		if (sectionConfig?.showProductSelection && productId) {
+			const product = productsData?.products?.find((p) => p.id === productId);
+			items.push({ label: 'Product', value: product?.name || 'Selected' });
+		}
+		if (sectionConfig?.showExistingMemorial && existingMemorialDescription) {
+			items.push({ label: 'Existing memorial', value: 'Noted' });
+		}
+		return items;
+	}, [sectionConfig, components.length, sundries.length, proposedInscription, productId, productsData, existingMemorialDescription]);
 
 	// Validate form based on quote type
 	const canSubmit = useMemo(() => {
@@ -371,7 +390,7 @@ export function QuoteNewPage() {
 			deceasedNames: deceasedNames || undefined,
 			intermentDate: intermentDate || undefined,
 			intermentTime: intermentTime || undefined,
-			components: components.map(({ id, ...c }) => ({
+			components: components.map(({ id, sectionId, ...c }) => ({
 				...c,
 				quantity: c.quantity || 1,
 			})),
@@ -444,7 +463,7 @@ export function QuoteNewPage() {
 			{/* Main Content - Left Column */}
 			<div className="flex-1 min-w-0 space-y-6">
 				{/* Quote Type Selector */}
-				<Card>
+				<Card className="border-l-4 border-l-primary">
 					<CardHeader>
 						<CardTitle>Quote Type</CardTitle>
 						<CardDescription>Select the type of work for this quote</CardDescription>
@@ -495,6 +514,9 @@ export function QuoteNewPage() {
 								})}
 							</SelectContent>
 						</Select>
+						<p className="text-sm text-muted-foreground mt-3">
+							{QUOTE_TYPE_DESCRIPTIONS[quoteType]}
+						</p>
 					</CardContent>
 				</Card>
 
@@ -1097,8 +1119,8 @@ export function QuoteNewPage() {
 													<Field>
 														<FieldLabel>Material Section</FieldLabel>
 														<Select
-															value={selectedSectionId}
-															onValueChange={setSelectedSectionId}
+															value={comp.sectionId || ''}
+															onValueChange={(v) => updateComponent(comp.id, { sectionId: v, materialId: '' })}
 														>
 															<SelectTrigger>
 																<SelectValue placeholder="Select section" />
@@ -1124,8 +1146,8 @@ export function QuoteNewPage() {
 															</SelectTrigger>
 															<SelectContent>
 																<SelectItem value={NONE_VALUE}>Select material</SelectItem>
-																{selectedSection?.materials
-																	?.filter((m) => m.isActive)
+																{allMaterials
+																	?.filter((m) => m.isActive && m.sectionId === comp.sectionId)
 																	.map((material) => (
 																		<SelectItem key={material.id} value={material.id}>
 																			{material.name}
@@ -1533,6 +1555,8 @@ export function QuoteNewPage() {
 						</Select>
 					</div>
 
+					{(payerType === 'customer' || sectionConfig?.showRelationToDeceased ||
+					sectionConfig?.showMemorialSite || sectionConfig?.showMemorialLocation) && (
 					<div className="border-t pt-4 space-y-4">
 						{/* Referred By Funeral Director - only shown when payer is a customer */}
 						{payerType === 'customer' && (
@@ -1604,6 +1628,7 @@ export function QuoteNewPage() {
 						)}
 
 						{/* Relation to Deceased */}
+						{sectionConfig?.showRelationToDeceased && (
 						<div className="space-y-2">
 							<FieldLabel className="text-sm font-medium">Relation to Deceased</FieldLabel>
 							<Input
@@ -1612,8 +1637,10 @@ export function QuoteNewPage() {
 								onChange={(e) => setRelationToDeceased(e.target.value)}
 							/>
 						</div>
+						)}
 
 						{/* Memorial Site */}
+						{sectionConfig?.showMemorialSite && (
 						<div className="space-y-2">
 							<FieldLabel className="text-sm font-medium">Memorial Site</FieldLabel>
 							<Popover open={memorialSiteComboOpen} onOpenChange={setMemorialSiteComboOpen}>
@@ -1688,8 +1715,10 @@ export function QuoteNewPage() {
 								</div>
 							)}
 						</div>
+						)}
 
 						{/* Memorial Location */}
+						{sectionConfig?.showMemorialLocation && (
 						<div className="space-y-2">
 							<FieldLabel className="text-sm font-medium">Memorial Location</FieldLabel>
 							<Textarea
@@ -1703,7 +1732,9 @@ export function QuoteNewPage() {
 								Describe where the memorial is located at the site
 							</p>
 						</div>
+						)}
 					</div>
+					)}
 
 					{/* Valid Until */}
 					<div className="border-t pt-4">
@@ -1716,6 +1747,33 @@ export function QuoteNewPage() {
 								className="h-9 text-sm"
 							/>
 						</div>
+					</div>
+
+					{/* Quote Summary */}
+					{summaryItems.length > 0 && (
+					<div className="border-t pt-4">
+						<p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
+							Quote Summary
+						</p>
+						<div className="space-y-1.5">
+							{summaryItems.map((item) => (
+								<div key={item.label} className="flex items-center justify-between text-sm">
+									<span className="text-muted-foreground">{item.label}</span>
+									<span className="font-medium">{item.value}</span>
+								</div>
+							))}
+						</div>
+					</div>
+					)}
+
+					{/* Submit Actions */}
+					<div className="border-t pt-4 flex flex-col gap-2">
+						<Button onClick={handleSubmit} disabled={!canSubmit || createMutation.isPending} className="w-full">
+							{createMutation.isPending ? 'Creating...' : 'Create Quote'}
+						</Button>
+						<Link to="/app/quotes">
+							<Button variant="outline" className="w-full">Cancel</Button>
+						</Link>
 					</div>
 				</div>
 			</div>

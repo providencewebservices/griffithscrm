@@ -1,11 +1,5 @@
 import { Outlet } from 'react-router'
 import { AppSidebar } from "@/components/app-sidebar"
-import {
-	Breadcrumb,
-	BreadcrumbItem,
-	BreadcrumbList,
-	BreadcrumbPage,
-} from "@/components/ui/breadcrumb"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import {
@@ -42,13 +36,6 @@ function CustomerLayoutInner() {
 					<div className="flex flex-1 items-center gap-2 px-4">
 						<SidebarTrigger className="-ml-1" />
 						<Separator orientation="vertical" className="mr-2 h-4" />
-						<Breadcrumb>
-							<BreadcrumbList>
-								<BreadcrumbItem>
-									<BreadcrumbPage>Dashboard</BreadcrumbPage>
-								</BreadcrumbItem>
-							</BreadcrumbList>
-						</Breadcrumb>
 					</div>
 					<div className="flex items-center gap-2 px-4">
 						<Tooltip>
