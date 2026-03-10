@@ -1,41 +1,35 @@
-import { useState } from 'react';
 import { Link } from 'react-router';
 import { Button } from '@/components/ui/button';
-import { PipelineBoard } from '@/components/dashboard/pipeline-board';
 import { StatsCards } from '@/components/dashboard/StatsCards';
 import { MyTasksWidget } from '@/components/tasks/my-tasks-widget';
-import { Calendar } from '@/components/calendar/calendar';
-import { Plus, UserPlus, CalendarDays, LayoutGrid } from 'lucide-react';
+import { AttentionBanner } from '@/components/dashboard/attention-banner';
+import { PipelineSummary } from '@/components/dashboard/pipeline-summary';
+import { RecentActivity } from '@/components/dashboard/recent-activity';
+import { UpcomingEvents } from '@/components/dashboard/upcoming-events';
+import { Plus, UserPlus } from 'lucide-react';
 
 export function CustomerDashboard() {
-	const [showCalendar, setShowCalendar] = useState(false);
-
 	return (
 		<div className="space-y-6">
-			<DashboardHeader
-				showCalendar={showCalendar}
-				onToggleView={() => setShowCalendar(!showCalendar)}
-			/>
-			{showCalendar ? (
-				<Calendar />
-			) : (
-				<>
-					<StatsCards />
-					<MyTasksWidget />
-					<PipelineBoard />
-				</>
-			)}
+			<DashboardHeader />
+			<AttentionBanner />
+			<StatsCards />
+			<MyTasksWidget />
+			<div className="grid lg:grid-cols-5 gap-6">
+				<div className="lg:col-span-3">
+					<RecentActivity />
+				</div>
+				<div className="lg:col-span-2">
+					<UpcomingEvents />
+				</div>
+			</div>
+			<PipelineSummary />
 		</div>
 	);
 }
 
 // Dashboard Header Component
-interface DashboardHeaderProps {
-	showCalendar: boolean;
-	onToggleView: () => void;
-}
-
-function DashboardHeader({ showCalendar, onToggleView }: DashboardHeaderProps) {
+function DashboardHeader() {
 	return (
 		<div className="flex items-center justify-between">
 			<div>
@@ -57,19 +51,6 @@ function DashboardHeader({ showCalendar, onToggleView }: DashboardHeaderProps) {
 						New Customer
 					</Button>
 				</Link>
-				<Button variant="outline" onClick={onToggleView}>
-					{showCalendar ? (
-						<>
-							<LayoutGrid className="h-4 w-4 mr-2" />
-							View Pipelines
-						</>
-					) : (
-						<>
-							<CalendarDays className="h-4 w-4 mr-2" />
-							View Calendar
-						</>
-					)}
-				</Button>
 			</div>
 		</div>
 	);

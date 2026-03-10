@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 import {
 	Table,
 	TableBody,
@@ -43,8 +43,13 @@ import { Search, Plus, List, LayoutGrid, Calendar, User, Layers, Building2 } fro
 type DisplayMode = 'table' | 'cards';
 
 export function QuotesPage() {
+	const [searchParams] = useSearchParams();
+	const initialStatus = searchParams.get('status') as QuoteStatus | null;
+
 	const [searchQuery, setSearchQuery] = useState('');
-	const [statusFilter, setStatusFilter] = useState<QuoteStatus | 'all'>('all');
+	const [statusFilter, setStatusFilter] = useState<QuoteStatus | 'all'>(
+		initialStatus && QUOTE_STATUSES.includes(initialStatus) ? initialStatus : 'all'
+	);
 	const [typeFilter, setTypeFilter] = useState<QuoteType | 'all'>('all');
 	const [displayMode, setDisplayMode] = useState<DisplayMode>('cards');
 	const [debouncedSearch, setDebouncedSearch] = useState('');

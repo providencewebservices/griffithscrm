@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Link } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -39,8 +39,13 @@ type DisplayMode = 'table' | 'cards';
 const ALL_STATUS_VALUE = '_all';
 
 export function JobsPage() {
+	const [searchParams] = useSearchParams();
+	const initialStatus = searchParams.get('status') as JobStatus | null;
+
 	const [search, setSearch] = useState('');
-	const [statusFilter, setStatusFilter] = useState<JobStatus | ''>('');
+	const [statusFilter, setStatusFilter] = useState<JobStatus | ''>(
+		initialStatus && JOB_STATUSES.includes(initialStatus) ? initialStatus : ''
+	);
 	const [displayMode, setDisplayMode] = useState<DisplayMode>('cards');
 
 	// Debounce search
