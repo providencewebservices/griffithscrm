@@ -1283,5 +1283,33 @@ export function formatQuoteNumberWithOptions(
 	return `${firstQuoteNumber} (+${optionCount - 1})`;
 }
 
+// Helper: Get next quote status in workflow
+export function getNextQuoteStatus(current: QuoteStatus): QuoteStatus | null {
+	const transitions: Record<QuoteStatus, QuoteStatus | null> = {
+		draft: 'ready',
+		review: 'ready',
+		ready: 'presented',
+		presented: null,
+		accepted: null,
+		rejected: null,
+		expired: null,
+	};
+	return transitions[current];
+}
+
+// Helper: Get button label for next quote status
+export function getNextQuoteStatusLabel(current: QuoteStatus): string | null {
+	const labels: Record<QuoteStatus, string | null> = {
+		draft: 'Mark Ready',
+		review: 'Mark Ready',
+		ready: 'Present to Customer',
+		presented: null,
+		accepted: null,
+		rejected: null,
+		expired: null,
+	};
+	return labels[current];
+}
+
 // Re-export for convenience
 export { FLOWER_HOLE_CHOICES, FLOWER_TOP_COLOR_CHOICES, QUOTE_TYPES };
