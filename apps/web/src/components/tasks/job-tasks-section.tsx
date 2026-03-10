@@ -46,13 +46,15 @@ import { toast } from 'sonner';
 
 const NONE_VALUE = '_none';
 
-export function JobTasksSection({ jobId }: { jobId: string }) {
+export function JobTasksSection({ jobId, tasks }: { jobId: string; tasks?: TaskListItem[] }) {
 	const [showCreateDialog, setShowCreateDialog] = useState(false);
 
-	const { data: jobTasks, isLoading } = useTasksQuery({
+	const { data: fetchedTasks, isLoading: isFetching } = useTasksQuery({
 		entityType: 'job',
 		entityId: jobId,
 	});
+	const jobTasks = tasks ?? fetchedTasks;
+	const isLoading = !tasks && isFetching;
 	const updateStatus = useUpdateTaskStatusMutation();
 
 	const handleToggle = async (task: TaskListItem) => {

@@ -159,7 +159,7 @@ export function GlobalDocumentUploadDialog({
 	const { data: funeralDirectors } = useFuneralDirectorsQuery();
 	const { data: suppliers } = useSuppliersQuery();
 	const { data: quotes } = useQuotesQuery({});
-	const { data: jobs } = useJobsQuery({});
+	const { data: jobsData } = useJobsQuery({});
 	const { data: memorialSites } = useMemorialSitesQuery();
 	const { data: productsData } = useProductsQuery();
 
@@ -261,8 +261,8 @@ export function GlobalDocumentUploadDialog({
 					});
 				});
 			}
-			if (jobs) {
-				jobs.forEach((j) => {
+			if (jobsData?.jobs) {
+				jobsData.jobs.forEach((j) => {
 					const customerName =
 						j.customerFirstName && j.customerLastName
 							? `${j.customerFirstName} ${j.customerLastName}`
@@ -320,7 +320,7 @@ export function GlobalDocumentUploadDialog({
 		funeralDirectors,
 		suppliers,
 		quotes,
-		jobs,
+		jobsData,
 		memorialSites,
 		productsData,
 		entitySearch,

@@ -52,12 +52,20 @@ import {
 	formatJobStatus,
 	getNextJobStatus,
 	getNextStatusButtonLabel,
+	getJobStatusSequence,
 	formatAttachmentCategory,
 	type JobStatus,
 	type PaymentScheduleItem,
 	type JobAttachment,
 	type JobAttachmentCategory,
 } from '@/hooks/use-jobs';
+import {
+	QUOTE_TYPE_LABELS,
+	QUOTE_TYPE_SECTION_CONFIG,
+	getQuoteTypeVariant,
+	type QuoteType,
+} from '@/hooks/use-quotes';
+import { useTasksQuery, type TaskListItem } from '@/hooks/use-tasks';
 import {
 	ArrowLeft,
 	Package,
@@ -82,8 +90,8 @@ import {
 	Link2,
 	Printer,
 	ClipboardList,
+	Blocks,
 } from 'lucide-react';
-import { DocumentsCard } from '@/components/documents';
 import { JobTasksSection } from '@/components/tasks/job-tasks-section';
 import {
 	useMemorialWorksheetQuery,
@@ -91,16 +99,6 @@ import {
 	useUpdateMemorialWorksheetMutation,
 	type MemorialWorksheet,
 } from '@/hooks/use-memorial-worksheet';
-
-// Job status order for progress calculation
-const JOB_STATUS_ORDER: JobStatus[] = [
-	'pending',
-	'materials_ordered',
-	'in_production',
-	'ready_for_install',
-	'installed',
-	'completed',
-];
 
 // Status icons mapping
 const STATUS_ICONS: Record<JobStatus, React.ElementType> = {
@@ -165,6 +163,7 @@ export function JobDetailPage() {
 	const { data: paymentData, isLoading: paymentLoading } = usePaymentScheduleQuery(id);
 	const { data: attachments, isLoading: attachmentsLoading } = useAttachmentsQuery(id);
 	const { data: worksheet, isLoading: worksheetLoading } = useMemorialWorksheetQuery(id);
+	const { data: jobTasks } = useTasksQuery({ entityType: 'job', entityId: id });
 	const createWorksheetMutation = useCreateMemorialWorksheetMutation();
 	const updateWorksheetMutation = useUpdateMemorialWorksheetMutation();
 	const updateStatusMutation = useUpdateJobStatusMutation();
@@ -488,10 +487,36 @@ export function JobDetailPage() {
 		);
 	}
 
-	const nextStatus = getNextJobStatus(job.status);
-	const nextStatusLabel = getNextStatusButtonLabel(job.status);
+	const quoteType = job.quote.quoteType as QuoteType;
+	const sectionConfig = QUOTE_TYPE_SECTION_CONFIG[quoteType];
+	const statusSequence = getJobStatusSequence(quoteType);
+	const nextStatus = getNextJobStatus(job.status, quoteType);
+	const nextStatusLabel = getNextStatusButtonLabel(job.status, quoteType);
 	const canDelete = job.status === 'pending';
 	const hasNotesChanged = notes !== (job.notes || '');
+
+	// Task counts for summary strip
+	const tasksDone = jobTasks?.filter((t) => t.status === 'done').length ?? 0;
+	const tasksTotal = jobTasks?.length ?? 0;
+
+	// Memorial details heading per type
+	const memorialHeadings: Record<string, string> = {
+		new_memorial: 'Memorial Specifications',
+		additional_inscription: 'Inscription Details',
+		refurbishment: 'Refurbishment Scope',
+		ashes: 'Interment Details',
+		sundry_only: 'Order Items',
+	};
+	const memorialHeading = memorialHeadings[quoteType] || 'Memorial Details';
+
+	// Check if specifications tab would have content
+	const hasSpecifications = (sectionConfig?.showComponents && job.quote.components.length > 0) ||
+		(sectionConfig?.showLettering && job.quote.lettering.length > 0) ||
+		(sectionConfig?.showProposedInscription && job.quote.proposedInscription) ||
+		(sectionConfig?.showSundries && job.quote.sundries.length > 0) ||
+		(sectionConfig?.showFlowerHoles && job.quote.flowerHoles) ||
+		(sectionConfig?.showExistingMemorial && job.quote.existingMemorialDescription) ||
+		(sectionConfig?.showRelatedJob && job.quote.relatedJobId);
 
 	// Get the icon for next status
 	const NextStatusIcon = nextStatus ? STATUS_ICONS[nextStatus] : null;
@@ -522,7 +547,10 @@ export function JobDetailPage() {
 						</Button>
 					</Link>
 					<div>
-						<h2 className="text-2xl font-bold">{job.jobNumber}</h2>
+						<div className="flex items-center gap-2">
+							<h2 className="text-2xl font-bold">{job.jobNumber}</h2>
+							<Badge variant={getQuoteTypeVariant(quoteType)}>{QUOTE_TYPE_LABELS[quoteType]}</Badge>
+						</div>
 						<p className="text-sm text-muted-foreground">
 							Created {formatDate(job.createdAt)}
 						</p>
@@ -533,9 +561,9 @@ export function JobDetailPage() {
 								<span className="font-medium">{formatJobStatus(job.status)}</span>
 							</div>
 							<div className="flex items-center gap-1.5">
-								{JOB_STATUS_ORDER.map((status, index) => {
-									const currentIndex = JOB_STATUS_ORDER.indexOf(job.status);
-									const isFilled = index <= currentIndex;
+								{statusSequence.map((status, index) => {
+									const currentIndex = statusSequence.indexOf(job.status);
+									const isFilled = currentIndex === -1 ? false : index <= currentIndex;
 									return (
 										<div
 											key={status}
@@ -545,7 +573,7 @@ export function JobDetailPage() {
 								})}
 							</div>
 							<span className="text-xs text-muted-foreground">
-								Step {JOB_STATUS_ORDER.indexOf(job.status) + 1} of 6
+								Step {Math.max(statusSequence.indexOf(job.status) + 1, 1)} of {statusSequence.length}
 							</span>
 						</div>
 					</div>
@@ -582,9 +610,57 @@ export function JobDetailPage() {
 				</div>
 			)}
 
+			{/* At-a-Glance Summary Strip */}
+			<div className="flex flex-wrap items-center gap-4 py-3 px-4 bg-muted/50 rounded-lg mb-4">
+				{/* Payment Summary */}
+				<div className="flex items-center gap-1.5 text-sm">
+					<CreditCard className="h-4 w-4 text-muted-foreground" />
+					{paymentData?.summary ? (
+						parseFloat(paymentData.summary.outstandingAmount) <= 0 ? (
+							<span className="text-green-600 font-medium">Fully Paid</span>
+						) : (
+							<span className={paymentData.summary.hasOverdue ? 'text-red-600 font-medium' : ''}>
+								{formatCurrency(paymentData.summary.paidAmount)} / {formatCurrency(paymentData.summary.totalAmount)}
+								{paymentData.summary.hasOverdue && ' (overdue)'}
+							</span>
+						)
+					) : (
+						<span className="text-muted-foreground">No payments</span>
+					)}
+				</div>
+				<div className="w-px h-4 bg-border" />
+				{/* Tasks */}
+				<div className="flex items-center gap-1.5 text-sm">
+					<CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+					<span>Tasks: {tasksDone}/{tasksTotal}</span>
+				</div>
+				{/* Worksheet - hide for sundry_only */}
+				{quoteType !== 'sundry_only' && (
+					<>
+						<div className="w-px h-4 bg-border" />
+						<div className="flex items-center gap-1.5 text-sm">
+							<ClipboardList className="h-4 w-4 text-muted-foreground" />
+							<span>{worksheet ? 'Worksheet created' : 'No worksheet'}</span>
+						</div>
+					</>
+				)}
+				<div className="w-px h-4 bg-border" />
+				{/* Files */}
+				<div className="flex items-center gap-1.5 text-sm">
+					<Paperclip className="h-4 w-4 text-muted-foreground" />
+					<span>Files: {attachments?.length ?? 0}</span>
+				</div>
+			</div>
+
 			<Tabs defaultValue="overview" className="mt-4">
 				<TabsList>
 					<TabsTrigger value="overview">Overview</TabsTrigger>
+					{hasSpecifications && (
+						<TabsTrigger value="specifications" className="flex items-center gap-2">
+							<Blocks className="h-4 w-4" />
+							Specifications
+						</TabsTrigger>
+					)}
 					<TabsTrigger value="payments" className="flex items-center gap-2">
 						<CreditCard className="h-4 w-4" />
 						Payments
@@ -592,10 +668,12 @@ export function JobDetailPage() {
 							<Badge variant="destructive" className="h-5 text-xs px-1.5">Late</Badge>
 						)}
 					</TabsTrigger>
-					<TabsTrigger value="worksheet" className="flex items-center gap-2">
-						<ClipboardList className="h-4 w-4" />
-						Worksheet
-					</TabsTrigger>
+					{quoteType !== 'sundry_only' && (
+						<TabsTrigger value="worksheet" className="flex items-center gap-2">
+							<ClipboardList className="h-4 w-4" />
+							Worksheet
+						</TabsTrigger>
+					)}
 					<TabsTrigger value="files" className="flex items-center gap-2">
 						<Paperclip className="h-4 w-4" />
 						Files
@@ -635,12 +713,14 @@ export function JobDetailPage() {
 									: 'Walk-in Customer'}
 							</p>
 						</div>
-						<div>
-							<p className="text-sm text-muted-foreground">Product</p>
-							<p className="font-medium">
-								{job.quote.product?.name || '—'}
-							</p>
-						</div>
+						{sectionConfig?.showProductSelection && (
+							<div>
+								<p className="text-sm text-muted-foreground">Product</p>
+								<p className="font-medium">
+									{job.quote.product?.name || '—'}
+								</p>
+							</div>
+						)}
 						<div className="flex justify-between border-t pt-3">
 							<span className="font-medium">Total</span>
 							<span className="text-lg font-bold">{formatCurrency(job.quote.total)}</span>
@@ -695,128 +775,150 @@ export function JobDetailPage() {
 				</Card>
 			</div>
 
-			{/* Memorial Details Card */}
-			{(job.quote.components.length > 0 ||
-				job.quote.lettering.length > 0 ||
-				job.quote.sundries.length > 0 ||
-				job.quote.proposedInscription ||
-				job.quote.flowerHoles) && (
-				<Card className="mt-6">
-					<CardHeader>
-						<CardTitle>Memorial Details</CardTitle>
-						<CardDescription>
-							Specifications for this job
-						</CardDescription>
-					</CardHeader>
-					<CardContent className="space-y-6">
-						{/* Components */}
-						{job.quote.components.length > 0 && (
-							<div>
-								<h4 className="text-sm font-medium text-muted-foreground mb-2">COMPONENTS</h4>
-								<div className="space-y-2">
-									{job.quote.components.map((comp) => (
-										<div key={comp.id} className="bg-muted/50 rounded-lg p-3">
-											<div className="font-medium">
-												{comp.componentType.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
-												{comp.materialName && ` • ${comp.materialName}`}
-												{comp.finishName && ` (${comp.finishName})`}
-											</div>
-											{(comp.height || comp.width || comp.depth) && (
-												<div className="text-sm text-muted-foreground mt-1">
-													{[comp.height, comp.width, comp.depth].filter(Boolean).join('" × ')}"
-													{comp.quantity > 1 && ` × ${comp.quantity}`}
+				{/* Tasks Section */}
+				<div className="mt-6">
+					<JobTasksSection jobId={id!} tasks={jobTasks} />
+				</div>
+
+				{/* Collapsible Details Section */}
+				<Collapsible open={detailsOpen} onOpenChange={setDetailsOpen} className="mt-6">
+					<CollapsibleTrigger asChild>
+						<Button variant="ghost" className="w-full justify-between text-muted-foreground hover:text-foreground">
+							<span className="text-sm">Details</span>
+							<ChevronDown className={`h-4 w-4 transition-transform ${detailsOpen ? 'rotate-180' : ''}`} />
+						</Button>
+					</CollapsibleTrigger>
+					<CollapsibleContent>
+						<div className="flex items-center gap-6 py-3 px-4 text-sm text-muted-foreground border-t">
+							<span>Job ID: <span className="font-mono text-xs">{job.id}</span></span>
+							<span>•</span>
+							<span>Created: {formatDate(job.createdAt)}</span>
+							<span>•</span>
+							<span>Updated: {formatDate(job.updatedAt)}</span>
+						</div>
+					</CollapsibleContent>
+				</Collapsible>
+			</TabsContent>
+
+			{/* Specifications Tab */}
+			{hasSpecifications && (
+				<TabsContent value="specifications" className="mt-6">
+					<Card>
+						<CardHeader>
+							<CardTitle>{memorialHeading}</CardTitle>
+							<CardDescription>
+								Specifications from source quote
+							</CardDescription>
+						</CardHeader>
+						<CardContent className="space-y-6">
+							{/* Existing Memorial Description */}
+							{sectionConfig?.showExistingMemorial && job.quote.existingMemorialDescription && (
+								<div>
+									<h4 className="text-sm font-medium text-muted-foreground mb-2">EXISTING MEMORIAL</h4>
+									<div className="bg-muted/50 rounded-lg p-3 text-sm">
+										{job.quote.existingMemorialDescription}
+									</div>
+								</div>
+							)}
+
+							{/* Related Job */}
+							{sectionConfig?.showRelatedJob && job.quote.relatedJobId && (
+								<div>
+									<h4 className="text-sm font-medium text-muted-foreground mb-2">RELATED JOB</h4>
+									<Link to={`/app/jobs/${job.quote.relatedJobId}`}>
+										<Button variant="outline" size="sm">
+											<ExternalLink className="h-4 w-4 mr-2" />
+											View Related Job
+										</Button>
+									</Link>
+								</div>
+							)}
+
+							{/* Components */}
+							{sectionConfig?.showComponents && job.quote.components.length > 0 && (
+								<div>
+									<h4 className="text-sm font-medium text-muted-foreground mb-2">COMPONENTS</h4>
+									<div className="space-y-2">
+										{job.quote.components.map((comp) => (
+											<div key={comp.id} className="bg-muted/50 rounded-lg p-3">
+												<div className="font-medium">
+													{comp.componentType.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+													{comp.materialName && ` • ${comp.materialName}`}
+													{comp.finishName && ` (${comp.finishName})`}
 												</div>
-											)}
-										</div>
-									))}
-								</div>
-							</div>
-						)}
-
-						{/* Lettering */}
-						{job.quote.lettering.length > 0 && (
-							<div>
-								<h4 className="text-sm font-medium text-muted-foreground mb-2">LETTERING</h4>
-								<div className="space-y-2">
-									{job.quote.lettering.map((lett) => (
-										<div key={lett.id} className="bg-muted/50 rounded-lg p-3">
-											{lett.text && (
-												<div className="font-medium">"{lett.text}"</div>
-											)}
-											<div className="text-sm text-muted-foreground mt-1">
-												{lett.techniqueName}
-												{lett.colorName && ` • ${lett.colorName}`}
-												{` • ${lett.letterCount} letters`}
+												{(comp.height || comp.width || comp.depth) && (
+													<div className="text-sm text-muted-foreground mt-1">
+														{[comp.height, comp.width, comp.depth].filter(Boolean).join('" × ')}"
+														{comp.quantity > 1 && ` × ${comp.quantity}`}
+													</div>
+												)}
 											</div>
-										</div>
-									))}
+										))}
+									</div>
 								</div>
-							</div>
-						)}
+							)}
 
-						{/* Proposed Inscription */}
-						{job.quote.proposedInscription && (
-							<div>
-								<h4 className="text-sm font-medium text-muted-foreground mb-2">INSCRIPTION</h4>
-								<div className="bg-muted/50 rounded-lg p-4 font-mono text-sm whitespace-pre-wrap">
-									{job.quote.proposedInscription}
+							{/* Lettering */}
+							{sectionConfig?.showLettering && job.quote.lettering.length > 0 && (
+								<div>
+									<h4 className="text-sm font-medium text-muted-foreground mb-2">LETTERING</h4>
+									<div className="space-y-2">
+										{job.quote.lettering.map((lett) => (
+											<div key={lett.id} className="bg-muted/50 rounded-lg p-3">
+												{lett.text && (
+													<div className="font-medium">"{lett.text}"</div>
+												)}
+												<div className="text-sm text-muted-foreground mt-1">
+													{lett.techniqueName}
+													{lett.colorName && ` • ${lett.colorName}`}
+													{` • ${lett.letterCount} letters`}
+												</div>
+											</div>
+										))}
+									</div>
 								</div>
-							</div>
-						)}
+							)}
 
-						{/* Sundries */}
-						{job.quote.sundries.length > 0 && (
-							<div>
-								<h4 className="text-sm font-medium text-muted-foreground mb-2">ADDITIONAL ITEMS</h4>
-								<ul className="space-y-1">
-									{job.quote.sundries.map((sundry) => (
-										<li key={sundry.id} className="flex items-center gap-2 text-sm">
-											<span className="w-1.5 h-1.5 rounded-full bg-muted-foreground" />
-											{sundry.sundryName}
-											{sundry.quantity > 1 && ` × ${sundry.quantity}`}
-										</li>
-									))}
-								</ul>
-							</div>
-						)}
-
-						{/* Flower Holes */}
-						{job.quote.flowerHoles && (
-							<div>
-								<h4 className="text-sm font-medium text-muted-foreground mb-2">FLOWER HOLES</h4>
-								<div className="text-sm">
-									{job.quote.flowerHoles.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+							{/* Proposed Inscription */}
+							{sectionConfig?.showProposedInscription && job.quote.proposedInscription && (
+								<div>
+									<h4 className="text-sm font-medium text-muted-foreground mb-2">INSCRIPTION</h4>
+									<div className="bg-muted/50 rounded-lg p-4 font-mono text-sm text-center whitespace-pre-wrap">
+										{job.quote.proposedInscription}
+									</div>
 								</div>
-							</div>
-						)}
-					</CardContent>
-				</Card>
+							)}
+
+							{/* Sundries */}
+							{sectionConfig?.showSundries && job.quote.sundries.length > 0 && (
+								<div>
+									<h4 className="text-sm font-medium text-muted-foreground mb-2">ADDITIONAL ITEMS</h4>
+									<ul className="space-y-1">
+										{job.quote.sundries.map((sundry) => (
+											<li key={sundry.id} className="flex items-center gap-2 text-sm">
+												<span className="w-1.5 h-1.5 rounded-full bg-muted-foreground" />
+												{sundry.sundryName}
+												{sundry.quantity > 1 && ` × ${sundry.quantity}`}
+											</li>
+										))}
+									</ul>
+								</div>
+							)}
+
+							{/* Flower Holes */}
+							{sectionConfig?.showFlowerHoles && job.quote.flowerHoles && (
+								<div>
+									<h4 className="text-sm font-medium text-muted-foreground mb-2">FLOWER HOLES</h4>
+									<div className="text-sm">
+										{job.quote.flowerHoles.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+									</div>
+								</div>
+							)}
+						</CardContent>
+					</Card>
+				</TabsContent>
 			)}
 
-					{/* Collapsible Details Section */}
-					<Collapsible open={detailsOpen} onOpenChange={setDetailsOpen} className="mt-6">
-						<CollapsibleTrigger asChild>
-							<Button variant="ghost" className="w-full justify-between text-muted-foreground hover:text-foreground">
-								<span className="text-sm">Details</span>
-								<ChevronDown className={`h-4 w-4 transition-transform ${detailsOpen ? 'rotate-180' : ''}`} />
-							</Button>
-						</CollapsibleTrigger>
-						<CollapsibleContent>
-							<div className="flex items-center gap-6 py-3 px-4 text-sm text-muted-foreground border-t">
-								<span>Job ID: <span className="font-mono text-xs">{job.id}</span></span>
-								<span>•</span>
-								<span>Created: {formatDate(job.createdAt)}</span>
-								<span>•</span>
-								<span>Updated: {formatDate(job.updatedAt)}</span>
-							</div>
-						</CollapsibleContent>
-					</Collapsible>
-
-					{/* Tasks Section */}
-					<div className="mt-6">
-						<JobTasksSection jobId={id!} />
-					</div>
-				</TabsContent>
 
 				<TabsContent value="payments" className="mt-6">
 					<div className="max-w-2xl space-y-6">
@@ -1432,16 +1534,6 @@ export function JobDetailPage() {
 					</div>
 				</TabsContent>
 			</Tabs>
-
-			{/* Documents */}
-			<div className="mt-6">
-				<DocumentsCard
-					entityType="job"
-					entityId={job.id}
-					title="Documents"
-					description="Files and documents for this job"
-				/>
-			</div>
 
 			{/* Delete Confirmation Dialog */}
 			<DeleteConfirmDialog

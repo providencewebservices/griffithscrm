@@ -1,8 +1,10 @@
 import { useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
 	Card,
 	CardContent,
@@ -37,6 +39,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import {
 	useTasksQuery,
+	useTaskSummaryQuery,
 	useCreateTaskMutation,
 	useUpdateTaskStatusMutation,
 	formatTaskStatus,
@@ -75,6 +78,7 @@ import {
 import { toast } from 'sonner';
 
 const ALL_VALUE = '_all';
+const NONE_VALUE = '_none';
 
 export function TasksPage() {
 	const [activeTab, setActiveTab] = useState('tasks');
@@ -117,6 +121,7 @@ function TasksTab() {
 	const [showCreateDialog, setShowCreateDialog] = useState(false);
 
 	const { data: teamMembers } = useTeamQuery();
+	const { data: summary } = useTaskSummaryQuery();
 
 	const debouncedSearch = useMemo(() => {
 		let timeout: ReturnType<typeof setTimeout>;
@@ -131,6 +136,8 @@ function TasksTab() {
 		assigneeId: assigneeFilter || undefined,
 		search: search || undefined,
 	});
+
+	const hasFilters = !!search || !!statusFilter || !!assigneeFilter;
 
 	return (
 		<div className="space-y-4">
@@ -206,14 +213,92 @@ function TasksTab() {
 				</div>
 			</div>
 
+			{/* Summary line */}
+			{summary && (
+				<div className="text-sm text-muted-foreground">
+					{summary.myOpenCount} open
+					{summary.myOverdueCount > 0 && (
+						<>
+							{' · '}
+							<span className="text-red-600 font-medium">{summary.myOverdueCount} overdue</span>
+						</>
+					)}
+					{summary.myDueTodayCount > 0 && (
+						<>
+							{' · '}
+							{summary.myDueTodayCount} due today
+						</>
+					)}
+				</div>
+			)}
+
 			{/* Loading */}
-			{isLoading && <div className="text-muted-foreground">Loading tasks...</div>}
+			{isLoading && (
+				displayMode === 'cards' ? (
+					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+						{Array.from({ length: 6 }).map((_, i) => (
+							<Card key={i}>
+								<CardHeader className="pb-3">
+									<div className="flex items-start justify-between gap-2">
+										<div className="flex items-start gap-2 flex-1">
+											<Skeleton className="h-5 w-5 rounded-full shrink-0 mt-0.5" />
+											<Skeleton className="h-5 w-3/4" />
+										</div>
+										<Skeleton className="h-5 w-16 rounded-full" />
+									</div>
+								</CardHeader>
+								<CardContent className="space-y-3">
+									<div className="flex flex-col gap-1.5">
+										<Skeleton className="h-4 w-24" />
+										<Skeleton className="h-4 w-20" />
+									</div>
+								</CardContent>
+							</Card>
+						))}
+					</div>
+				) : (
+					<div className="border rounded-lg">
+						<Table>
+							<TableHeader>
+								<TableRow>
+									<TableHead className="w-[40px]"></TableHead>
+									<TableHead>Title</TableHead>
+									<TableHead>Priority</TableHead>
+									<TableHead>Assignee</TableHead>
+									<TableHead>Due</TableHead>
+									<TableHead>Status</TableHead>
+									<TableHead className="w-[80px]"></TableHead>
+								</TableRow>
+							</TableHeader>
+							<TableBody>
+								{Array.from({ length: 5 }).map((_, i) => (
+									<TableRow key={i}>
+										<TableCell><Skeleton className="h-5 w-5 rounded-full" /></TableCell>
+										<TableCell><Skeleton className="h-4 w-40" /></TableCell>
+										<TableCell><Skeleton className="h-5 w-16 rounded-full" /></TableCell>
+										<TableCell><Skeleton className="h-4 w-20" /></TableCell>
+										<TableCell><Skeleton className="h-4 w-16" /></TableCell>
+										<TableCell><Skeleton className="h-5 w-20 rounded-full" /></TableCell>
+										<TableCell><Skeleton className="h-8 w-14 rounded-md" /></TableCell>
+									</TableRow>
+								))}
+							</TableBody>
+						</Table>
+					</div>
+				)
+			)}
 
 			{/* Empty state */}
 			{!isLoading && tasksList?.length === 0 && (
 				<div className="text-center py-12 text-muted-foreground border rounded-lg">
-					<p>No tasks found.</p>
-					<p className="text-sm mt-1">Create a task to get started.</p>
+					{hasFilters ? (
+						<p>No tasks match your filters.</p>
+					) : (
+						<>
+							<p>No tasks found.</p>
+							<p className="text-sm mt-1">Create a task to get started.</p>
+						</>
+					)}
 				</div>
 			)}
 
@@ -289,7 +374,9 @@ function TasksTable({ tasks }: { tasks: TaskListItem[] }) {
 								</button>
 							</TableCell>
 							<TableCell className={task.status === 'done' ? 'line-through text-muted-foreground' : ''}>
-								{task.title}
+								<Link to={`/app/tasks/${task.id}`} className="hover:underline">
+									{task.title}
+								</Link>
 							</TableCell>
 							<TableCell>
 								<Badge variant={getTaskPriorityVariant(task.priority as TaskPriority)}>
@@ -323,6 +410,8 @@ function TaskCard({ task }: { task: TaskListItem }) {
 	const updateStatus = useUpdateTaskStatusMutation();
 
 	const isOverdue = task.dueDate && task.status !== 'done' && new Date(task.dueDate) < new Date();
+	const isUrgent = task.priority === 'urgent';
+	const isHigh = task.priority === 'high';
 
 	const formatDate = (dateString: string | null) => {
 		if (!dateString) return null;
@@ -333,63 +422,66 @@ function TaskCard({ task }: { task: TaskListItem }) {
 	};
 
 	return (
-		<Card className="hover:shadow-md transition-shadow">
-			<CardHeader className="pb-3">
-				<div className="flex items-start justify-between gap-2">
-					<div className="flex items-start gap-2 flex-1 min-w-0">
-						<button
-							onClick={() => updateStatus.mutate({
-								id: task.id,
-								status: task.status === 'done' ? 'todo' : 'done',
-							})}
-							className="mt-0.5 text-muted-foreground hover:text-foreground shrink-0"
-						>
-							{task.status === 'done' ? (
-								<CheckCircle2 className="h-5 w-5 text-green-600" />
-							) : (
-								<Circle className="h-5 w-5" />
-							)}
-						</button>
-						<CardTitle className={`text-base font-semibold leading-tight ${task.status === 'done' ? 'line-through text-muted-foreground' : ''}`}>
-							{task.title}
-						</CardTitle>
+		<Link to={`/app/tasks/${task.id}`} className="block">
+			<Card className={cn(
+				'hover:shadow-md transition-shadow',
+				(isOverdue || isUrgent) && 'border-l-4 border-l-red-500',
+				isHigh && !isOverdue && !isUrgent && 'border-l-4 border-l-amber-500',
+			)}>
+				<CardHeader className="pb-3">
+					<div className="flex items-start justify-between gap-2">
+						<div className="flex items-start gap-2 flex-1 min-w-0">
+							<button
+								onClick={(e) => {
+									e.preventDefault();
+									e.stopPropagation();
+									updateStatus.mutate({
+										id: task.id,
+										status: task.status === 'done' ? 'todo' : 'done',
+									});
+								}}
+								className="mt-0.5 text-muted-foreground hover:text-foreground shrink-0"
+							>
+								{task.status === 'done' ? (
+									<CheckCircle2 className="h-5 w-5 text-green-600" />
+								) : (
+									<Circle className="h-5 w-5" />
+								)}
+							</button>
+							<CardTitle className={`text-base font-semibold leading-tight ${task.status === 'done' ? 'line-through text-muted-foreground' : ''}`}>
+								{task.title}
+							</CardTitle>
+						</div>
+						<Badge variant={getTaskPriorityVariant(task.priority as TaskPriority)} className="shrink-0">
+							{formatTaskPriority(task.priority as TaskPriority)}
+						</Badge>
 					</div>
-					<Badge variant={getTaskPriorityVariant(task.priority as TaskPriority)} className="shrink-0">
-						{formatTaskPriority(task.priority as TaskPriority)}
-					</Badge>
-				</div>
-			</CardHeader>
-			<CardContent className="space-y-3">
-				<div className="flex flex-col gap-1.5 text-sm text-muted-foreground">
-					{task.assigneeName && (
-						<div className="flex items-center gap-2">
-							<User className="h-3.5 w-3.5" />
-							<span>{task.assigneeName}</span>
-						</div>
-					)}
-					{task.dueDate && (
-						<div className={`flex items-center gap-2 ${isOverdue ? 'text-red-600 font-medium' : ''}`}>
-							<Calendar className="h-3.5 w-3.5" />
-							<span>{formatDate(task.dueDate)}</span>
-							{isOverdue && <span className="text-xs">Overdue</span>}
-						</div>
-					)}
-					{task.status === 'in_progress' && (
-						<div className="flex items-center gap-2 text-blue-600">
-							<Clock className="h-3.5 w-3.5" />
-							<span>In Progress</span>
-						</div>
-					)}
-				</div>
-				<div className="pt-2">
-					<Link to={`/app/tasks/${task.id}`}>
-						<Button variant="outline" size="sm" className="w-full">
-							View Details
-						</Button>
-					</Link>
-				</div>
-			</CardContent>
-		</Card>
+				</CardHeader>
+				<CardContent>
+					<div className="flex flex-col gap-1.5 text-sm text-muted-foreground">
+						{task.assigneeName && (
+							<div className="flex items-center gap-2">
+								<User className="h-3.5 w-3.5" />
+								<span>{task.assigneeName}</span>
+							</div>
+						)}
+						{task.dueDate && (
+							<div className={`flex items-center gap-2 ${isOverdue ? 'text-red-600 font-medium' : ''}`}>
+								<Calendar className="h-3.5 w-3.5" />
+								<span>{formatDate(task.dueDate)}</span>
+								{isOverdue && <span className="text-xs">Overdue</span>}
+							</div>
+						)}
+						{task.status === 'in_progress' && (
+							<div className="flex items-center gap-2 text-blue-600">
+								<Clock className="h-3.5 w-3.5" />
+								<span>In Progress</span>
+							</div>
+						)}
+					</div>
+				</CardContent>
+			</Card>
+		</Link>
 	);
 }
 
@@ -450,7 +542,33 @@ function WorksheetsTab() {
 			</div>
 
 			{/* Loading */}
-			{isLoading && <div className="text-muted-foreground">Loading worksheets...</div>}
+			{isLoading && (
+				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+					{Array.from({ length: 6 }).map((_, i) => (
+						<Card key={i}>
+							<CardHeader className="pb-3">
+								<div className="flex items-center justify-between">
+									<Skeleton className="h-5 w-2/3" />
+									<Skeleton className="h-5 w-16 rounded-full" />
+								</div>
+							</CardHeader>
+							<CardContent className="space-y-3">
+								<div className="flex flex-col gap-1.5">
+									<Skeleton className="h-4 w-24" />
+									<Skeleton className="h-4 w-28" />
+								</div>
+								<div className="space-y-1">
+									<div className="flex justify-between">
+										<Skeleton className="h-4 w-16" />
+										<Skeleton className="h-4 w-12" />
+									</div>
+									<Skeleton className="h-2 w-full rounded-full" />
+								</div>
+							</CardContent>
+						</Card>
+					))}
+				</div>
+			)}
 
 			{/* Empty state */}
 			{!isLoading && worksheetsList?.length === 0 && (
@@ -494,50 +612,44 @@ function WorksheetCard({ worksheet }: { worksheet: WorksheetListItem }) {
 	};
 
 	return (
-		<Card className="hover:shadow-md transition-shadow">
-			<CardHeader className="pb-3">
-				<div className="flex items-center justify-between">
-					<CardTitle className="text-base font-semibold">{worksheet.title}</CardTitle>
-					<Badge variant={getWorksheetStatusVariant(worksheet.status as WorksheetStatus)}>
-						{formatWorksheetStatus(worksheet.status as WorksheetStatus)}
-					</Badge>
-				</div>
-			</CardHeader>
-			<CardContent className="space-y-3">
-				<div className="flex flex-col gap-1.5 text-sm text-muted-foreground">
-					{worksheet.assigneeName && (
-						<div className="flex items-center gap-2">
-							<User className="h-3.5 w-3.5" />
-							<span>{worksheet.assigneeName}</span>
-						</div>
-					)}
-					{worksheet.date && (
-						<div className="flex items-center gap-2">
-							<Calendar className="h-3.5 w-3.5" />
-							<span>{formatDate(worksheet.date)}</span>
-						</div>
-					)}
-				</div>
-
-				{worksheet.taskCount > 0 && (
-					<div className="space-y-1">
-						<div className="flex justify-between text-sm">
-							<span className="text-muted-foreground">Progress</span>
-							<span className="font-medium">{worksheet.taskDoneCount} of {worksheet.taskCount}</span>
-						</div>
-						<Progress value={progress} className="h-2" />
+		<Link to={`/app/tasks/worksheets/${worksheet.id}`} className="block">
+			<Card className="hover:shadow-md transition-shadow">
+				<CardHeader className="pb-3">
+					<div className="flex items-center justify-between">
+						<CardTitle className="text-base font-semibold">{worksheet.title}</CardTitle>
+						<Badge variant={getWorksheetStatusVariant(worksheet.status as WorksheetStatus)}>
+							{formatWorksheetStatus(worksheet.status as WorksheetStatus)}
+						</Badge>
 					</div>
-				)}
+				</CardHeader>
+				<CardContent className="space-y-3">
+					<div className="flex flex-col gap-1.5 text-sm text-muted-foreground">
+						{worksheet.assigneeName && (
+							<div className="flex items-center gap-2">
+								<User className="h-3.5 w-3.5" />
+								<span>{worksheet.assigneeName}</span>
+							</div>
+						)}
+						{worksheet.date && (
+							<div className="flex items-center gap-2">
+								<Calendar className="h-3.5 w-3.5" />
+								<span>{formatDate(worksheet.date)}</span>
+							</div>
+						)}
+					</div>
 
-				<div className="pt-2">
-					<Link to={`/app/tasks/worksheets/${worksheet.id}`}>
-						<Button variant="outline" size="sm" className="w-full">
-							View
-						</Button>
-					</Link>
-				</div>
-			</CardContent>
-		</Card>
+					{worksheet.taskCount > 0 && (
+						<div className="space-y-1">
+							<div className="flex justify-between text-sm">
+								<span className="text-muted-foreground">Progress</span>
+								<span className="font-medium">{worksheet.taskDoneCount} of {worksheet.taskCount}</span>
+							</div>
+							<Progress value={progress} className="h-2" />
+						</div>
+					)}
+				</CardContent>
+			</Card>
+		</Link>
 	);
 }
 
@@ -614,12 +726,12 @@ function CreateTaskDialog({ open, onClose }: { open: boolean; onClose: () => voi
 						</Field>
 						<Field>
 							<FieldLabel>Assignee</FieldLabel>
-							<Select value={assigneeId || ALL_VALUE} onValueChange={(v) => setAssigneeId(v === ALL_VALUE ? '' : v)}>
+							<Select value={assigneeId || NONE_VALUE} onValueChange={(v) => setAssigneeId(v === NONE_VALUE ? '' : v)}>
 								<SelectTrigger>
 									<SelectValue placeholder="Unassigned" />
 								</SelectTrigger>
 								<SelectContent>
-									<SelectItem value={ALL_VALUE}>Unassigned</SelectItem>
+									<SelectItem value={NONE_VALUE}>Unassigned</SelectItem>
 									{teamMembers?.map((m) => (
 										<SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
 									))}
@@ -703,12 +815,12 @@ function CreateWorksheetDialog({ open, onClose }: { open: boolean; onClose: () =
 					<div className="grid grid-cols-2 gap-4">
 						<Field>
 							<FieldLabel>Assignee</FieldLabel>
-							<Select value={assigneeId || ALL_VALUE} onValueChange={(v) => setAssigneeId(v === ALL_VALUE ? '' : v)}>
+							<Select value={assigneeId || NONE_VALUE} onValueChange={(v) => setAssigneeId(v === NONE_VALUE ? '' : v)}>
 								<SelectTrigger>
 									<SelectValue placeholder="Unassigned" />
 								</SelectTrigger>
 								<SelectContent>
-									<SelectItem value={ALL_VALUE}>Unassigned</SelectItem>
+									<SelectItem value={NONE_VALUE}>Unassigned</SelectItem>
 									{teamMembers?.map((m) => (
 										<SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
 									))}

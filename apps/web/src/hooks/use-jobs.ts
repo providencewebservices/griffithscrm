@@ -42,6 +42,9 @@ export type JobQuoteLineItem = {
 export type JobQuoteSummary = {
 	id: string;
 	quoteNumber: string;
+	quoteType: string;
+	existingMemorialDescription: string | null;
+	relatedJobId: string | null;
 	total: string;
 	proposedInscription: string | null;
 	flowerHoles: string | null;
@@ -96,6 +99,15 @@ export type JobWithQuoteSummary = Job & {
 export type JobSearchParams = {
 	status?: JobStatus;
 	search?: string;
+	page?: number;
+	limit?: number;
+};
+
+export type Pagination = {
+	page: number;
+	limit: number;
+	total: number;
+	totalPages: number;
 };
 
 // Payment schedule types
@@ -151,6 +163,7 @@ export type UpdatePaymentScheduleItemInput = {
 // Response types
 type JobsResponse = {
 	jobs: JobListItem[];
+	pagination: Pagination;
 };
 
 type JobResponse = {
@@ -158,10 +171,12 @@ type JobResponse = {
 };
 
 // Fetch functions
-async function fetchJobs(params?: JobSearchParams): Promise<JobListItem[]> {
+async function fetchJobs(params?: JobSearchParams): Promise<JobsResponse> {
 	const searchParams = new URLSearchParams();
 	if (params?.status) searchParams.set('status', params.status);
 	if (params?.search) searchParams.set('search', params.search);
+	if (params?.page) searchParams.set('page', String(params.page));
+	if (params?.limit) searchParams.set('limit', String(params.limit));
 
 	const url = `${API_URL}/api/jobs${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
 
@@ -175,7 +190,7 @@ async function fetchJobs(params?: JobSearchParams): Promise<JobListItem[]> {
 	}
 
 	const data: JobsResponse = await response.json();
-	return data.jobs;
+	return data;
 }
 
 async function fetchJob(id: string): Promise<JobWithQuoteSummary> {
@@ -322,6 +337,7 @@ export function useJobsQuery(params?: JobSearchParams) {
 	return useQuery({
 		queryKey: ['jobs', params],
 		queryFn: () => fetchJobs(params),
+		placeholderData: (prev) => prev,
 	});
 }
 
@@ -651,49 +667,121 @@ export function formatJobStatus(status: JobStatus): string {
 // Helper: Get status color for badges
 export function getJobStatusVariant(
 	status: JobStatus
-): 'default' | 'secondary' | 'destructive' | 'outline' {
+): 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning' {
 	switch (status) {
 		case 'pending':
-			return 'secondary';
+			return 'warning';
 		case 'materials_ordered':
 			return 'outline';
 		case 'in_production':
-			return 'outline';
+			return 'default';
 		case 'ready_for_install':
-			return 'default';
+			return 'secondary';
 		case 'installed':
-			return 'default';
+			return 'success';
 		case 'completed':
-			return 'default';
+			return 'success';
 		default:
 			return 'secondary';
 	}
 }
 
-// Helper: Get next status in workflow
-export function getNextJobStatus(currentStatus: JobStatus): JobStatus | null {
-	const transitions: Record<JobStatus, JobStatus | null> = {
-		pending: 'materials_ordered',
-		materials_ordered: 'in_production',
-		in_production: 'ready_for_install',
-		ready_for_install: 'installed',
-		installed: 'completed',
-		completed: null,
-	};
-	return transitions[currentStatus];
+// Helper: Get additional className for status badges to distinguish similar variants
+export function getJobStatusClassName(status: JobStatus): string {
+	switch (status) {
+		case 'completed':
+			return 'bg-emerald-600 text-white border-transparent';
+		default:
+			return '';
+	}
 }
 
-// Helper: Get button label for next status
-export function getNextStatusButtonLabel(currentStatus: JobStatus): string | null {
-	const labels: Record<JobStatus, string | null> = {
+// Type-aware status sequences
+export const JOB_STATUS_SEQUENCES: Record<string, JobStatus[]> = {
+	new_memorial: ['pending', 'materials_ordered', 'in_production', 'ready_for_install', 'installed', 'completed'],
+	additional_inscription: ['pending', 'in_production', 'ready_for_install', 'installed', 'completed'],
+	refurbishment: ['pending', 'in_production', 'ready_for_install', 'installed', 'completed'],
+	ashes: ['pending', 'ready_for_install', 'installed', 'completed'],
+	sundry_only: ['pending', 'ready_for_install', 'completed'],
+};
+
+const DEFAULT_SEQUENCE: JobStatus[] = JOB_STATUS_SEQUENCES['new_memorial'];
+
+// Get the status sequence for a given quote type
+export function getJobStatusSequence(quoteType?: string): JobStatus[] {
+	if (quoteType && JOB_STATUS_SEQUENCES[quoteType]) {
+		return JOB_STATUS_SEQUENCES[quoteType];
+	}
+	return DEFAULT_SEQUENCE;
+}
+
+// Helper: Get next status in workflow (type-aware)
+export function getNextJobStatus(currentStatus: JobStatus, quoteType?: string): JobStatus | null {
+	const sequence = getJobStatusSequence(quoteType);
+	const currentIndex = sequence.indexOf(currentStatus);
+	// If current status isn't in the sequence, find nearest subsequent status
+	if (currentIndex === -1) {
+		const allStatuses: JobStatus[] = ['pending', 'materials_ordered', 'in_production', 'ready_for_install', 'installed', 'completed'];
+		const currentGlobalIndex = allStatuses.indexOf(currentStatus);
+		for (let i = currentGlobalIndex + 1; i < allStatuses.length; i++) {
+			if (sequence.includes(allStatuses[i])) {
+				return allStatuses[i];
+			}
+		}
+		return null;
+	}
+	if (currentIndex >= sequence.length - 1) return null;
+	return sequence[currentIndex + 1];
+}
+
+// Status-specific button labels
+const STATUS_BUTTON_LABELS: Record<string, Record<JobStatus, string | null>> = {
+	default: {
 		pending: 'Order Materials',
 		materials_ordered: 'Start Production',
 		in_production: 'Mark Ready for Install',
 		ready_for_install: 'Mark Installed',
 		installed: 'Complete Job',
 		completed: null,
-	};
-	return labels[currentStatus];
+	},
+	sundry_only: {
+		pending: 'Mark Ready',
+		materials_ordered: null,
+		in_production: null,
+		ready_for_install: 'Complete Order',
+		installed: null,
+		completed: null,
+	},
+	ashes: {
+		pending: 'Mark Ready for Interment',
+		materials_ordered: null,
+		in_production: null,
+		ready_for_install: 'Mark Interred',
+		installed: 'Complete Job',
+		completed: null,
+	},
+	additional_inscription: {
+		pending: 'Start Work',
+		materials_ordered: null,
+		in_production: 'Mark Ready for Install',
+		ready_for_install: 'Mark Installed',
+		installed: 'Complete Job',
+		completed: null,
+	},
+	refurbishment: {
+		pending: 'Start Work',
+		materials_ordered: null,
+		in_production: 'Mark Ready for Install',
+		ready_for_install: 'Mark Installed',
+		installed: 'Complete Job',
+		completed: null,
+	},
+};
+
+// Helper: Get button label for next status (type-aware)
+export function getNextStatusButtonLabel(currentStatus: JobStatus, quoteType?: string): string | null {
+	const labels = (quoteType && STATUS_BUTTON_LABELS[quoteType]) || STATUS_BUTTON_LABELS['default'];
+	return labels[currentStatus] ?? STATUS_BUTTON_LABELS['default'][currentStatus] ?? null;
 }
 
 // Re-export for convenience

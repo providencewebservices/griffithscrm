@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
-import { eq, and, like, desc, asc, sql } from 'drizzle-orm';
+import { eq, and, like, desc, asc, sql, or, count, exists } from 'drizzle-orm';
 import { requireAuth, requireTenant } from '../middleware/auth';
 import { db } from '../lib/auth';
 import { generatePresignedUploadUrl, isS3Configured } from '../lib/s3';
@@ -27,6 +27,8 @@ import {
 const searchQuerySchema = z.object({
 	status: z.enum(JOB_STATUSES).optional(),
 	search: z.string().optional(),
+	page: z.coerce.number().int().min(1).default(1),
+	limit: z.coerce.number().int().min(1).max(100).default(20),
 });
 
 const updateStatusSchema = z.object({
@@ -83,15 +85,25 @@ const confirmAttachmentSchema = z.object({
 	notes: z.string().optional(),
 });
 
-// Status transition rules
-const STATUS_TRANSITIONS: Record<string, string[]> = {
-	pending: ['materials_ordered'],
-	materials_ordered: ['in_production'],
-	in_production: ['ready_for_install'],
-	ready_for_install: ['installed'],
-	installed: ['completed'],
-	completed: [], // Terminal state
+// Type-aware status sequences
+const STATUS_SEQUENCES: Record<string, string[]> = {
+	new_memorial: ['pending', 'materials_ordered', 'in_production', 'ready_for_install', 'installed', 'completed'],
+	additional_inscription: ['pending', 'in_production', 'ready_for_install', 'installed', 'completed'],
+	refurbishment: ['pending', 'in_production', 'ready_for_install', 'installed', 'completed'],
+	ashes: ['pending', 'ready_for_install', 'installed', 'completed'],
+	sundry_only: ['pending', 'ready_for_install', 'completed'],
 };
+
+// Default full sequence for backward compatibility
+const DEFAULT_SEQUENCE = STATUS_SEQUENCES['new_memorial'];
+
+// Get allowed next statuses for a given current status and quote type
+function getAllowedTransitions(currentStatus: string, quoteType?: string): string[] {
+	const sequence = quoteType && STATUS_SEQUENCES[quoteType] ? STATUS_SEQUENCES[quoteType] : DEFAULT_SEQUENCE;
+	const currentIndex = sequence.indexOf(currentStatus);
+	if (currentIndex === -1 || currentIndex >= sequence.length - 1) return [];
+	return [sequence[currentIndex + 1]];
+}
 
 // Helper function to get job with quote summary
 async function getJobWithQuoteSummary(jobId: string, tenantId: string) {
@@ -149,6 +161,9 @@ async function getJobWithQuoteSummary(jobId: string, tenantId: string) {
 		quote: {
 			id: quote.id,
 			quoteNumber: quote.quoteNumber,
+			quoteType: quote.quoteType,
+			existingMemorialDescription: quote.existingMemorialDescription,
+			relatedJobId: quote.relatedJobId,
 			total: quote.total,
 			proposedInscription: quote.proposedInscription,
 			flowerHoles: quote.flowerHoles,
@@ -220,7 +235,7 @@ export const jobsRouter = new Hono()
 	.get('/', zValidator('query', searchQuerySchema), async (c) => {
 		const currentUser = c.get('user');
 		const tenantId = currentUser.tenantId!;
-		const { status, search } = c.req.valid('query');
+		const { status, search, page, limit } = c.req.valid('query');
 
 		// Build query conditions
 		const conditions = [eq(jobs.tenantId, tenantId)];
@@ -230,15 +245,47 @@ export const jobsRouter = new Hono()
 		}
 
 		if (search) {
-			conditions.push(like(jobs.jobNumber, `%${search}%`));
+			const searchPattern = `%${search}%`;
+			// Search by job number OR customer name (via quotes → customers)
+			conditions.push(
+				or(
+					like(jobs.jobNumber, searchPattern),
+					exists(
+						db
+							.select({ one: sql`1` })
+							.from(quotes)
+							.innerJoin(customers, eq(quotes.customerId, customers.id))
+							.where(
+								and(
+									eq(quotes.id, jobs.quoteId),
+									or(
+										like(customers.firstName, searchPattern),
+										like(customers.lastName, searchPattern),
+										like(sql`${customers.firstName} || ' ' || ${customers.lastName}`, searchPattern)
+									)
+								)
+							)
+					)
+				)!
+			);
 		}
 
-		// Get jobs
+		// Get total count
+		const [{ total }] = await db
+			.select({ total: count() })
+			.from(jobs)
+			.where(and(...conditions));
+
+		const totalPages = Math.ceil(total / limit);
+
+		// Get paginated jobs
 		const jobsList = await db
 			.select()
 			.from(jobs)
 			.where(and(...conditions))
-			.orderBy(desc(jobs.createdAt));
+			.orderBy(desc(jobs.createdAt))
+			.limit(limit)
+			.offset((page - 1) * limit);
 
 		// Get quote summaries and payment status for each job
 		const jobsWithSummaries = await Promise.all(
@@ -307,7 +354,10 @@ export const jobsRouter = new Hono()
 			})
 		);
 
-		return c.json({ jobs: jobsWithSummaries });
+		return c.json({
+			jobs: jobsWithSummaries,
+			pagination: { page, limit, total, totalPages },
+		});
 	})
 
 	// Get single job with quote summary
@@ -343,8 +393,17 @@ export const jobsRouter = new Hono()
 			return c.json({ error: 'Job not found' }, 404);
 		}
 
-		// Validate status transition
-		const allowedTransitions = STATUS_TRANSITIONS[job.status] || [];
+		// Look up quote type for type-aware transition validation
+		const [jobQuote] = await db
+			.select({ quoteType: quotes.quoteType })
+			.from(quotes)
+			.where(eq(quotes.id, job.quoteId))
+			.limit(1);
+
+		const quoteType = jobQuote?.quoteType;
+
+		// Validate status transition using type-aware sequences
+		const allowedTransitions = getAllowedTransitions(job.status, quoteType);
 		if (!allowedTransitions.includes(newStatus)) {
 			return c.json(
 				{

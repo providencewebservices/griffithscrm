@@ -187,9 +187,10 @@ export function QuoteNewPage() {
 	const { data: pricingSettings } = useTenantPricingSettingsQuery();
 	// Fetch completed jobs for related job selector (only when needed)
 	const sectionConfig = QUOTE_TYPE_SECTION_CONFIG[quoteType];
-	const { data: completedJobs } = useJobsQuery(
+	const { data: completedJobsData } = useJobsQuery(
 		sectionConfig?.showRelatedJob ? { status: 'completed' } : undefined
 	);
+	const completedJobs = completedJobsData?.jobs;
 
 	const createMutation = useCreateQuoteMutation();
 
