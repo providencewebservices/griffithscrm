@@ -1,4 +1,4 @@
-import { parseISO, format } from './calendar-utils';
+import { parseISO, format, getContrastTextColor } from './calendar-utils';
 import { EventDetailPopover } from './event-detail-popover';
 import type { CalendarEvent } from './types';
 
@@ -9,9 +9,15 @@ type CalendarEventPillProps = {
 	onDeleteEvent?: (eventId: string) => void;
 };
 
-export function CalendarEventPill({ event, onClick, onEditEvent, onDeleteEvent }: CalendarEventPillProps) {
+export function CalendarEventPill({
+	event,
+	onClick,
+	onEditEvent,
+	onDeleteEvent,
+}: CalendarEventPillProps) {
 	const startTime = parseISO(event.start);
 	const timeDisplay = event.allDay ? '' : format(startTime, 'h:mm a') + ' ';
+	const textColor = getContrastTextColor(event.color);
 
 	const pillContent = (
 		<button
@@ -21,11 +27,7 @@ export function CalendarEventPill({ event, onClick, onEditEvent, onDeleteEvent }
 				onClick?.(event);
 			}}
 			className="w-full text-left text-xs font-medium px-2 py-1 rounded-md truncate transition-opacity hover:opacity-80 cursor-pointer"
-			style={{
-				backgroundColor: `${event.color}30`,
-				color: event.color,
-				borderLeft: `3px solid ${event.color}`,
-			}}
+			style={{ backgroundColor: event.color, color: textColor }}
 			title={event.title}
 		>
 			{timeDisplay}

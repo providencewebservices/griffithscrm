@@ -139,6 +139,118 @@ export function calculateEventPosition(
 	};
 }
 
+// Calculate relative luminance for WCAG contrast
+function getLuminance(hex: string): number {
+	const r = parseInt(hex.slice(1, 3), 16) / 255;
+	const g = parseInt(hex.slice(3, 5), 16) / 255;
+	const b = parseInt(hex.slice(5, 7), 16) / 255;
+
+	const toLinear = (c: number) =>
+		c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+
+	return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
+}
+
+// Get text color with sufficient WCAG contrast against a background color
+export function getContrastTextColor(bgColor: string): string {
+	try {
+		const luminance = getLuminance(bgColor);
+		return luminance > 0.35 ? '#1a1a1a' : '#ffffff';
+	} catch {
+		return '#ffffff';
+	}
+}
+
+// Calculate column layout for overlapping timed events
+export function calculateOverlapColumns(
+	events: CalendarEvent[]
+): Map<string, { column: number; totalColumns: number }> {
+	const result = new Map<
+		string,
+		{ column: number; totalColumns: number }
+	>();
+	if (events.length === 0) return result;
+
+	const parsed = events
+		.map((e) => ({
+			id: e.id,
+			start: parseISO(e.start).getTime(),
+			end: e.end
+				? parseISO(e.end).getTime()
+				: parseISO(e.start).getTime() + 3600000,
+		}))
+		.sort((a, b) => {
+			if (a.start !== b.start) return a.start - b.start;
+			return b.end - b.start - (a.end - a.start);
+		});
+
+	// Greedy column assignment
+	const placed: { id: string; end: number; column: number }[] = [];
+
+	for (const event of parsed) {
+		const occupied = new Set<number>();
+		for (const p of placed) {
+			if (p.end > event.start) {
+				occupied.add(p.column);
+			}
+		}
+
+		let column = 0;
+		while (occupied.has(column)) column++;
+
+		result.set(event.id, { column, totalColumns: 1 });
+		placed.push({ id: event.id, end: event.end, column });
+	}
+
+	// Union-find to group overlapping events for totalColumns
+	const parent = new Map<string, string>();
+	for (const e of parsed) parent.set(e.id, e.id);
+
+	function find(x: string): string {
+		while (parent.get(x) !== x) {
+			parent.set(x, parent.get(parent.get(x)!)!);
+			x = parent.get(x)!;
+		}
+		return x;
+	}
+
+	for (let i = 0; i < parsed.length; i++) {
+		for (let j = i + 1; j < parsed.length; j++) {
+			if (
+				parsed[i].end > parsed[j].start &&
+				parsed[j].end > parsed[i].start
+			) {
+				const ri = find(parsed[i].id);
+				const rj = find(parsed[j].id);
+				if (ri !== rj) parent.set(ri, rj);
+			}
+		}
+	}
+
+	const groups = new Map<string, string[]>();
+	for (const e of parsed) {
+		const root = find(e.id);
+		if (!groups.has(root)) groups.set(root, []);
+		groups.get(root)!.push(e.id);
+	}
+
+	for (const group of groups.values()) {
+		let maxCol = 0;
+		for (const id of group) {
+			maxCol = Math.max(maxCol, result.get(id)!.column);
+		}
+		for (const id of group) {
+			result.get(id)!.totalColumns = maxCol + 1;
+		}
+	}
+
+	return result;
+}
+
+// Business hours
+export const BUSINESS_HOURS_START = 7;
+export const BUSINESS_HOURS_END = 19;
+
 // Format helpers
 export function formatMonthYear(date: Date): string {
 	return format(date, 'MMMM yyyy');
