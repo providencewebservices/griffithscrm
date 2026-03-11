@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { Label } from '@/components/ui/label';
 import {
 	Select,
@@ -12,7 +13,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select';
-import { Loader2, Shield, TestTube2 } from 'lucide-react';
+import { Loader2, Shield } from 'lucide-react';
 import {
 	useTakepaymentsSettingsQuery,
 	useUpdateTakepaymentsSettingsMutation,
@@ -58,34 +59,38 @@ export function PaymentsTab() {
 			});
 			setGatewayPassword('');
 			setPreSharedKey('');
-			toast.success('Payment settings saved');
+
+			if (settings?.isConfigured) {
+				toast.success('Settings saved — testing connection…');
+				try {
+					const result = await testMutation.mutateAsync();
+					if (result.success) {
+						toast.success(result.message || 'Connection test passed');
+					}
+				} catch (err) {
+					toast.error(err instanceof Error ? err.message : 'Connection test failed');
+				}
+			} else {
+				toast.success('Payment settings saved');
+			}
 		} catch (err) {
 			toast.error(err instanceof Error ? err.message : 'Failed to save settings');
 		}
 	};
 
-	const handleTest = async () => {
-		try {
-			const result = await testMutation.mutateAsync();
-			if (result.success) {
-				toast.success(result.message || 'Connection test passed');
-			}
-		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Connection test failed');
-		}
-	};
-
 	if (isLoading) {
 		return (
-			<div className="space-y-4">
+			<div className="max-w-2xl space-y-4">
 				<div className="h-8 w-48 bg-muted animate-pulse rounded" />
 				<div className="h-32 bg-muted animate-pulse rounded" />
 			</div>
 		);
 	}
 
+	const isSaving = updateMutation.isPending || testMutation.isPending;
+
 	return (
-		<div className="space-y-6">
+		<div className="max-w-2xl space-y-6">
 			<div>
 				<h3 className="text-lg font-semibold">TakePayments Gateway</h3>
 				<p className="text-sm text-muted-foreground mt-1">
@@ -95,24 +100,31 @@ export function PaymentsTab() {
 
 			<Card>
 				<CardHeader>
-					<div className="flex items-center justify-between">
-						<div className="flex items-center gap-3">
-							<div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
-								<Shield className="h-5 w-5 text-primary" />
-							</div>
-							<div>
-								<CardTitle className="text-base">Payment Gateway</CardTitle>
-								<CardDescription>TakePayments Hosted Payment Form</CardDescription>
-							</div>
-						</div>
+					<CardTitle className="text-base flex items-center gap-2">
+						<Shield className="h-5 w-5 text-primary" />
+						TakePayments
 						{settings?.isConfigured ? (
-							<Badge className="bg-green-100 text-green-800">Connected</Badge>
+							<Badge variant="success">Connected</Badge>
 						) : (
 							<Badge variant="secondary">Not Configured</Badge>
 						)}
-					</div>
+					</CardTitle>
 				</CardHeader>
 				<CardContent className="space-y-4">
+					{!settings?.isConfigured && (
+						<div className="space-y-3 pb-4 border-b mb-4">
+							<p className="text-sm font-medium">What you'll need</p>
+							<p className="text-sm text-muted-foreground">
+								Gather these from your TakePayments Merchant Management System (MMS):
+							</p>
+							<ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+								<li>Merchant ID — Account Admin → Gateway Account Admin</li>
+								<li>Gateway Password — can be reset in MMS</li>
+								<li>Pre-Shared Key — Account Admin → Gateway Account Settings</li>
+							</ul>
+						</div>
+					)}
+
 					<div className="space-y-2">
 						<Label htmlFor="merchantId">Merchant ID</Label>
 						<Input
@@ -128,9 +140,8 @@ export function PaymentsTab() {
 
 					<div className="space-y-2">
 						<Label htmlFor="gatewayPassword">Gateway Password</Label>
-						<Input
+						<PasswordInput
 							id="gatewayPassword"
-							type="password"
 							value={gatewayPassword}
 							onChange={(e) => setGatewayPassword(e.target.value)}
 							placeholder={settings?.hasPassword ? '••••••••  (unchanged)' : 'Enter gateway password'}
@@ -141,10 +152,9 @@ export function PaymentsTab() {
 					</div>
 
 					<div className="space-y-2">
-						<Label htmlFor="preSharedKey">Pre Shared Key</Label>
-						<Input
+						<Label htmlFor="preSharedKey">Pre-Shared Key</Label>
+						<PasswordInput
 							id="preSharedKey"
-							type="password"
 							value={preSharedKey}
 							onChange={(e) => setPreSharedKey(e.target.value)}
 							placeholder={settings?.hasPreSharedKey ? '••••••••  (unchanged)' : 'Enter pre-shared key'}
@@ -165,30 +175,19 @@ export function PaymentsTab() {
 								<SelectItem value="HMACSHA1">HMACSHA1</SelectItem>
 							</SelectContent>
 						</Select>
+						<p className="text-xs text-muted-foreground">
+							Leave as SHA1 unless instructed otherwise by TakePayments support.
+						</p>
 					</div>
 
 					<div className="flex items-center gap-3 pt-2">
 						<Button
 							onClick={handleSave}
-							disabled={updateMutation.isPending}
+							disabled={isSaving}
 						>
-							{updateMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-							Save Settings
+							{isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+							{settings?.isConfigured ? 'Save & Test Connection' : 'Save Settings'}
 						</Button>
-						{settings?.isConfigured && (
-							<Button
-								variant="outline"
-								onClick={handleTest}
-								disabled={testMutation.isPending}
-							>
-								{testMutation.isPending ? (
-									<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-								) : (
-									<TestTube2 className="mr-2 h-4 w-4" />
-								)}
-								Test Connection
-							</Button>
-						)}
 					</div>
 				</CardContent>
 			</Card>
