@@ -9,6 +9,7 @@ export type MaterialSection = {
 	name: string;
 	sortOrder: number;
 	materialCount: number;
+	materialNames: string[];
 	createdAt: string;
 	updatedAt: string;
 };

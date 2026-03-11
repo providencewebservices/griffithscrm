@@ -43,9 +43,24 @@ const materialSectionsRoutes = new Hono()
 
 		const countMap = new Map(materialCounts.map((mc) => [mc.sectionId, Number(mc.count)]));
 
+		// Get material name previews per section
+		const materialPreviews = await db
+			.select({ sectionId: materials.sectionId, name: materials.name })
+			.from(materials)
+			.where(eq(materials.tenantId, tenantId))
+			.orderBy(asc(materials.sortOrder), asc(materials.name));
+
+		const previewMap = new Map<string, string[]>();
+		for (const m of materialPreviews) {
+			const arr = previewMap.get(m.sectionId) || [];
+			if (arr.length < 3) arr.push(m.name);
+			previewMap.set(m.sectionId, arr);
+		}
+
 		const sectionsWithCounts = sections.map((s) => ({
 			...s,
 			materialCount: countMap.get(s.id) || 0,
+			materialNames: previewMap.get(s.id) || [],
 		}));
 
 		return c.json({ materialSections: sectionsWithCounts });

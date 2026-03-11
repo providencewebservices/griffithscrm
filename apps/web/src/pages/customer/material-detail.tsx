@@ -44,7 +44,14 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select';
-import { ArrowLeft, ImageIcon, Upload, X, Loader2 } from 'lucide-react';
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { ArrowLeft, ImageIcon, MoreHorizontal, Upload, X, Loader2 } from 'lucide-react';
 
 export function MaterialDetailPage() {
 	const { id } = useParams<{ id: string }>();
@@ -221,19 +228,29 @@ export function MaterialDetailPage() {
 								{material.isActive ? 'Active' : 'Inactive'}
 							</Badge>
 						</div>
-						{section && (
-							<p className="text-muted-foreground">{section.name}</p>
-						)}
 					</div>
 				</div>
 				<div className="flex items-center gap-2">
-					<Button variant="outline" onClick={handleToggleActive}>
-						{material.isActive ? 'Deactivate' : 'Activate'}
-					</Button>
 					<Button onClick={handleEdit}>Edit</Button>
-					<Button variant="destructive" onClick={() => setDeleteDialogOpen(true)}>
-						Delete
-					</Button>
+					<DropdownMenu>
+						<DropdownMenuTrigger asChild>
+							<Button variant="outline" size="icon">
+								<MoreHorizontal className="h-4 w-4" />
+							</Button>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent align="end">
+							<DropdownMenuItem onClick={handleToggleActive}>
+								{material.isActive ? 'Deactivate' : 'Activate'}
+							</DropdownMenuItem>
+							<DropdownMenuSeparator />
+							<DropdownMenuItem
+								className="text-destructive"
+								onClick={() => setDeleteDialogOpen(true)}
+							>
+								Delete
+							</DropdownMenuItem>
+						</DropdownMenuContent>
+					</DropdownMenu>
 				</div>
 			</div>
 
@@ -300,6 +317,7 @@ export function MaterialDetailPage() {
 									onChange={handleImageChange}
 									category="materials"
 									entityId={material.id}
+									compact
 								/>
 							)}
 						</CardContent>
@@ -350,6 +368,7 @@ export function MaterialDetailPage() {
 								<p className="text-sm font-medium text-muted-foreground">Created</p>
 								<p>{formatDate(material.createdAt)}</p>
 							</div>
+							<Separator />
 							<div>
 								<p className="text-sm font-medium text-muted-foreground">Updated</p>
 								<p>{formatDate(material.updatedAt)}</p>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -34,6 +34,12 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from '@/components/ui/dialog';
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
 import { ImageUpload } from '@/components/ui/image-upload';
@@ -48,6 +54,7 @@ import {
 	type CreateMaterialInput,
 } from '@/hooks/use-materials';
 import { useSuppliersQuery } from '@/hooks/use-suppliers';
+import { useSignedUrls } from '@/hooks/use-uploads';
 import {
 	Select,
 	SelectContent,
@@ -55,7 +62,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select';
-import { ArrowLeft, Plus } from 'lucide-react';
+import { ArrowLeft, Plus, MoreHorizontal, ImageIcon } from 'lucide-react';
 
 export function MaterialSectionDetailPage() {
 	const { id } = useParams<{ id: string }>();
@@ -80,6 +87,12 @@ export function MaterialSectionDetailPage() {
 	const updateMutation = useUpdateMaterialSectionMutation();
 	const deleteMutation = useDeleteMaterialSectionMutation();
 	const createMaterialMutation = useCreateMaterialMutation();
+
+	const materialImageUrls = useMemo(
+		() => section?.materials.map((m) => m.imageUrl).filter(Boolean) || [],
+		[section?.materials]
+	);
+	const { data: signedUrls } = useSignedUrls(materialImageUrls);
 
 	const handleEdit = () => {
 		if (!section) return;
@@ -208,17 +221,24 @@ export function MaterialSectionDetailPage() {
 				</div>
 				<div className="flex items-center gap-2">
 					<Button onClick={handleEdit}>Edit</Button>
-					<Button variant="destructive" onClick={() => setDeleteDialogOpen(true)}>
-						Delete
-					</Button>
+					<DropdownMenu>
+						<DropdownMenuTrigger asChild>
+							<Button variant="outline" size="icon">
+								<MoreHorizontal className="h-4 w-4" />
+							</Button>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent align="end">
+							<DropdownMenuItem className="text-destructive" onClick={() => setDeleteDialogOpen(true)}>
+								Delete
+							</DropdownMenuItem>
+						</DropdownMenuContent>
+					</DropdownMenu>
 				</div>
 			</div>
 
-			<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-				{/* Main Content */}
-				<div className="lg:col-span-2 space-y-6">
-					{/* Materials */}
-					<Card>
+			<div className="space-y-6">
+				{/* Materials */}
+				<Card>
 						<CardHeader>
 							<div className="flex items-center justify-between">
 								<div>
@@ -243,6 +263,7 @@ export function MaterialSectionDetailPage() {
 									<Table>
 										<TableHeader>
 											<TableRow>
+												<TableHead className="w-[50px]"></TableHead>
 												<TableHead>Name</TableHead>
 												<TableHead>Supplier</TableHead>
 												<TableHead>Status</TableHead>
@@ -252,13 +273,21 @@ export function MaterialSectionDetailPage() {
 										<TableBody>
 											{section.materials.map((material) => (
 												<TableRow key={material.id}>
+													<TableCell>
+														{material.imageUrl ? (
+															<img
+																src={signedUrls?.get(material.imageUrl) || material.imageUrl}
+																alt={material.name}
+																className="w-10 h-10 object-cover rounded"
+															/>
+														) : (
+															<div className="w-10 h-10 bg-muted rounded flex items-center justify-center">
+																<ImageIcon className="w-4 h-4 text-muted-foreground" />
+															</div>
+														)}
+													</TableCell>
 													<TableCell className="font-medium">
-														<Link
-															to={`/app/materials/${material.id}`}
-															className="hover:underline"
-														>
-															{material.name}
-														</Link>
+														{material.name}
 													</TableCell>
 													<TableCell>
 														{material.supplierName ? (
@@ -292,30 +321,6 @@ export function MaterialSectionDetailPage() {
 							)}
 						</CardContent>
 					</Card>
-				</div>
-
-				{/* Sidebar */}
-				<div className="space-y-6">
-					<Card>
-						<CardHeader>
-							<CardTitle>Details</CardTitle>
-						</CardHeader>
-						<CardContent className="space-y-4">
-							<div>
-								<p className="text-sm font-medium text-muted-foreground">Materials</p>
-								<p>{section.materials.length}</p>
-							</div>
-							<div>
-								<p className="text-sm font-medium text-muted-foreground">Created</p>
-								<p>{new Date(section.createdAt).toLocaleDateString()}</p>
-							</div>
-							<div>
-								<p className="text-sm font-medium text-muted-foreground">Updated</p>
-								<p>{new Date(section.updatedAt).toLocaleDateString()}</p>
-							</div>
-						</CardContent>
-					</Card>
-				</div>
 			</div>
 
 			{/* Edit Section Dialog */}

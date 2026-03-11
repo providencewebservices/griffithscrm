@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -19,6 +19,8 @@ import {
 	DialogTitle,
 } from '@/components/ui/dialog';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Plus } from 'lucide-react';
 import {
 	useMaterialSectionsQuery,
@@ -26,7 +28,27 @@ import {
 	type CreateMaterialSectionInput,
 } from '@/hooks/use-material-sections';
 
+const colorSwatchMap: Record<string, string> = {
+	white: 'bg-white border border-gray-200',
+	black: 'bg-gray-900',
+	grey: 'bg-gray-400',
+	gray: 'bg-gray-400',
+	blue: 'bg-blue-500',
+	green: 'bg-green-600',
+	red: 'bg-amber-700',
+	brown: 'bg-amber-700',
+};
+
+function getSwatchClass(name: string): string {
+	const lower = name.toLowerCase();
+	for (const [key, value] of Object.entries(colorSwatchMap)) {
+		if (lower.includes(key)) return value;
+	}
+	return 'bg-muted';
+}
+
 export function MaterialSectionsTab() {
+	const navigate = useNavigate();
 	const { data: sections, isLoading, error } = useMaterialSectionsQuery();
 	const createMutation = useCreateMaterialSectionMutation();
 
@@ -62,7 +84,49 @@ export function MaterialSectionsTab() {
 	};
 
 	if (isLoading) {
-		return <div className="text-muted-foreground">Loading material sections...</div>;
+		return (
+			<div className="space-y-4">
+				<div className="flex justify-between items-center">
+					<div>
+						<Skeleton className="h-6 w-48" />
+						<Skeleton className="h-4 w-80 mt-2" />
+					</div>
+					<Skeleton className="h-9 w-28" />
+				</div>
+				<div className="border rounded-lg">
+					<Table>
+						<TableHeader>
+							<TableRow>
+								<TableHead>Name</TableHead>
+								<TableHead>Materials</TableHead>
+								<TableHead className="w-[80px]"></TableHead>
+							</TableRow>
+						</TableHeader>
+						<TableBody>
+							{Array.from({ length: 4 }).map((_, i) => (
+								<TableRow key={i}>
+									<TableCell>
+										<div className="flex items-center gap-2">
+											<Skeleton className="h-4 w-4 rounded-full" />
+											<Skeleton className="h-4 w-32" />
+										</div>
+									</TableCell>
+									<TableCell>
+										<div className="flex items-center gap-2">
+											<Skeleton className="h-5 w-20" />
+											<Skeleton className="h-4 w-40" />
+										</div>
+									</TableCell>
+									<TableCell>
+										<Skeleton className="h-8 w-12" />
+									</TableCell>
+								</TableRow>
+							))}
+						</TableBody>
+					</Table>
+				</div>
+			</div>
+		);
 	}
 
 	if (error) {
@@ -104,16 +168,28 @@ export function MaterialSectionsTab() {
 						</TableHeader>
 						<TableBody>
 							{sections?.map((item) => (
-								<TableRow key={item.id}>
+								<TableRow key={item.id} className="cursor-pointer" onClick={() => navigate(`/app/material-sections/${item.id}`)}>
 									<TableCell className="font-medium">
-										<Link
-											to={`/app/material-sections/${item.id}`}
-											className="hover:underline"
-										>
+										<div className="flex items-center gap-2">
+											<span className={`h-4 w-4 rounded-full shrink-0 ${getSwatchClass(item.name)}`} />
 											{item.name}
-										</Link>
+										</div>
 									</TableCell>
-									<TableCell>{item.materialCount}</TableCell>
+									<TableCell>
+										<div className="flex items-center gap-2">
+											<Badge variant="secondary">
+												{item.materialCount} {item.materialCount === 1 ? 'material' : 'materials'}
+											</Badge>
+											{item.materialNames.length > 0 && (
+												<span className="text-sm text-muted-foreground">
+													{item.materialNames.join(', ')}
+													{item.materialCount > item.materialNames.length && (
+														<> +{item.materialCount - item.materialNames.length} more</>
+													)}
+												</span>
+											)}
+										</div>
+									</TableCell>
 									<TableCell>
 										<Link to={`/app/material-sections/${item.id}`}>
 											<Button variant="ghost" size="sm">
