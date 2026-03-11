@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Field, FieldGroup, FieldLabel, FieldDescription } from '@/components/ui/field';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Field, FieldGroup, FieldLabel, FieldDescription, FieldSeparator } from '@/components/ui/field';
 import {
 	useTenantPricingSettingsQuery,
 	useUpdateTenantPricingSettingsMutation,
@@ -28,6 +29,17 @@ export function PricingTab() {
 			setQuoteValidityDays(String(settings.quoteValidityDays ?? 30));
 		}
 	}, [settings]);
+
+	// Dirty state tracking
+	const isDirty = useMemo(() => {
+		if (!settings) return false;
+		if (defaultMarkupPercent !== settings.defaultMarkupPercent) return true;
+		const settingsVatPercent = String(parseFloat(settings.vatRate) * 100);
+		if (vatRate !== settingsVatPercent) return true;
+		if (defaultDepositPercent !== settings.defaultDepositPercent) return true;
+		if (quoteValidityDays !== String(settings.quoteValidityDays ?? 30)) return true;
+		return false;
+	}, [settings, defaultMarkupPercent, vatRate, defaultDepositPercent, quoteValidityDays]);
 
 	const handleSave = async () => {
 		try {
@@ -69,11 +81,24 @@ export function PricingTab() {
 		}
 	};
 
-	// Calculate example retail price
+	// Calculate example values
 	const markupNum = parseFloat(defaultMarkupPercent) || 0;
 	const multiplier = 1 + markupNum / 100;
 	const exampleCost = 100;
 	const exampleRetail = exampleCost * multiplier;
+
+	const vatNum = parseFloat(vatRate) || 0;
+	const exampleVatBase = 1000;
+	const exampleVatTotal = exampleVatBase * (1 + vatNum / 100);
+
+	const validityDays = parseInt(quoteValidityDays) || 30;
+	const exampleExpiryDate = new Date();
+	exampleExpiryDate.setDate(exampleExpiryDate.getDate() + validityDays);
+	const formattedExpiryDate = exampleExpiryDate.toLocaleDateString('en-GB', {
+		day: 'numeric',
+		month: 'long',
+		year: 'numeric',
+	});
 
 	if (isLoading) {
 		return <div className="text-muted-foreground">Loading pricing settings...</div>;
@@ -89,113 +114,102 @@ export function PricingTab() {
 
 	return (
 		<div className="space-y-8">
-			<div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-				{/* Default Markup */}
-				<div className="border rounded-lg p-6">
-					<h3 className="text-lg font-semibold mb-4">Default Markup</h3>
+			<Card>
+				<CardHeader>
+					<CardTitle>Pricing & Defaults</CardTitle>
+				</CardHeader>
+				<CardContent>
 					<FieldGroup>
+						{/* Default Markup */}
 						<Field>
 							<FieldLabel htmlFor="defaultMarkup">Default Markup Percentage</FieldLabel>
 							<FieldDescription>
 								The default markup percentage applied to supplier costs. 100% markup means the retail price is 2x the supplier cost.
 							</FieldDescription>
-							<div className="flex items-center gap-2 mt-2">
+							<div className="flex items-center border border-input rounded-md w-32 focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-[3px]">
 								<Input
 									id="defaultMarkup"
 									type="number"
 									min="0"
-									step="1"
+									step="any"
 									value={defaultMarkupPercent}
 									onChange={(e) => setDefaultMarkupPercent(e.target.value)}
-									className="w-24"
+									className="border-0 shadow-none focus-visible:ring-0 w-full"
 								/>
-								<span className="text-muted-foreground">%</span>
+								<span className="text-muted-foreground text-sm px-3 border-l border-input bg-muted/50 h-9 flex items-center shrink-0">%</span>
+							</div>
+							<div className="mt-3 p-3 bg-muted/50 rounded-lg">
+								<p className="text-sm text-muted-foreground">
+									<strong>Example:</strong> A supplier cost of {'\u00A3'}{exampleCost.toFixed(2)} with {markupNum}% markup = {'\u00A3'}{exampleRetail.toFixed(2)} retail price (multiplier: {multiplier.toFixed(2)}x)
+								</p>
 							</div>
 						</Field>
-					</FieldGroup>
 
-					<div className="mt-4 p-4 bg-muted/50 rounded-lg">
-						<p className="text-sm text-muted-foreground">
-							<strong>Example:</strong> A supplier cost of {'\u00A3'}{exampleCost.toFixed(2)} with {markupNum}% markup = {'\u00A3'}{exampleRetail.toFixed(2)} retail price
-						</p>
-						<p className="text-xs text-muted-foreground mt-1">
-							Multiplier: {multiplier.toFixed(2)}x
-						</p>
-					</div>
-				</div>
+						<FieldSeparator />
 
-				{/* VAT Rate */}
-				<div className="border rounded-lg p-6">
-					<h3 className="text-lg font-semibold mb-4">VAT Settings</h3>
-					<FieldGroup>
+						{/* VAT Rate */}
 						<Field>
 							<FieldLabel htmlFor="vatRate">VAT Rate</FieldLabel>
 							<FieldDescription>
 								The default VAT rate applied to quotes. Standard UK rate is 20%.
 							</FieldDescription>
-							<div className="flex items-center gap-2 mt-2">
+							<div className="flex items-center border border-input rounded-md w-32 focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-[3px]">
 								<Input
 									id="vatRate"
 									type="number"
 									min="0"
 									max="100"
-									step="0.1"
+									step="any"
 									value={vatRate}
 									onChange={(e) => setVatRate(e.target.value)}
-									className="w-24"
+									className="border-0 shadow-none focus-visible:ring-0 w-full"
 								/>
-								<span className="text-muted-foreground">%</span>
+								<span className="text-muted-foreground text-sm px-3 border-l border-input bg-muted/50 h-9 flex items-center shrink-0">%</span>
+							</div>
+							<div className="mt-3 p-3 bg-muted/50 rounded-lg">
+								<p className="text-sm text-muted-foreground">
+									<strong>Example:</strong> {'\u00A3'}{exampleVatBase.toLocaleString('en-GB', { minimumFractionDigits: 2 })} + {vatNum}% VAT = {'\u00A3'}{exampleVatTotal.toLocaleString('en-GB', { minimumFractionDigits: 2 })} total
+								</p>
 							</div>
 						</Field>
-					</FieldGroup>
-				</div>
 
-				{/* Payment Settings */}
-				<div className="border rounded-lg p-6">
-					<h3 className="text-lg font-semibold mb-4">Payment Settings</h3>
-					<FieldGroup>
+						<FieldSeparator />
+
+						{/* Deposit Percentage */}
 						<Field>
 							<FieldLabel htmlFor="depositPercent">Default Deposit Percentage</FieldLabel>
 							<FieldDescription>
 								The default deposit percentage for new jobs. When a quote is accepted and a job is created, this percentage of the total will be set as the initial deposit payment.
 							</FieldDescription>
-							<div className="flex items-center gap-2 mt-2">
+							<div className="flex items-center border border-input rounded-md w-32 focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-[3px]">
 								<Input
 									id="depositPercent"
 									type="number"
 									min="0"
 									max="100"
-									step="1"
+									step="any"
 									value={defaultDepositPercent}
 									onChange={(e) => setDefaultDepositPercent(e.target.value)}
-									className="w-24"
+									className="border-0 shadow-none focus-visible:ring-0 w-full"
 								/>
-								<span className="text-muted-foreground">%</span>
+								<span className="text-muted-foreground text-sm px-3 border-l border-input bg-muted/50 h-9 flex items-center shrink-0">%</span>
+							</div>
+							<div className="mt-3 p-3 bg-muted/50 rounded-lg">
+								<p className="text-sm text-muted-foreground">
+									<strong>Example:</strong> For a {'\u00A3'}1,000 job with {defaultDepositPercent}% deposit — Deposit: {'\u00A3'}{(1000 * parseFloat(defaultDepositPercent || '0') / 100).toFixed(2)}, Balance: {'\u00A3'}{(1000 * (1 - parseFloat(defaultDepositPercent || '0') / 100)).toFixed(2)}
+								</p>
 							</div>
 						</Field>
-					</FieldGroup>
 
-					<div className="mt-4 p-4 bg-muted/50 rounded-lg">
-						<p className="text-sm text-muted-foreground">
-							<strong>Example:</strong> For a {'\u00A3'}1,000 job with {defaultDepositPercent}% deposit, the payment schedule will be:
-						</p>
-						<ul className="text-sm text-muted-foreground mt-2 space-y-1">
-							<li>• Deposit: {'\u00A3'}{(1000 * parseFloat(defaultDepositPercent || '0') / 100).toFixed(2)}</li>
-							<li>• Balance: {'\u00A3'}{(1000 * (1 - parseFloat(defaultDepositPercent || '0') / 100)).toFixed(2)}</li>
-						</ul>
-					</div>
-				</div>
+						<FieldSeparator />
 
-				{/* Quote Settings */}
-				<div className="border rounded-lg p-6">
-					<h3 className="text-lg font-semibold mb-4">Quote Settings</h3>
-					<FieldGroup>
+						{/* Quote Validity */}
 						<Field>
 							<FieldLabel htmlFor="quoteValidity">Default Quote Validity</FieldLabel>
 							<FieldDescription>
 								How many days a quote remains valid by default. This will be used to automatically set the "Valid Until" date when creating new quotes.
 							</FieldDescription>
-							<div className="flex items-center gap-2 mt-2">
+							<div className="flex items-center border border-input rounded-md w-36 focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-[3px]">
 								<Input
 									id="quoteValidity"
 									type="number"
@@ -204,18 +218,29 @@ export function PricingTab() {
 									step="1"
 									value={quoteValidityDays}
 									onChange={(e) => setQuoteValidityDays(e.target.value)}
-									className="w-24"
+									className="border-0 shadow-none focus-visible:ring-0 w-full"
 								/>
-								<span className="text-muted-foreground">days</span>
+								<span className="text-muted-foreground text-sm px-3 border-l border-input bg-muted/50 h-9 flex items-center shrink-0">days</span>
+							</div>
+							<div className="mt-3 p-3 bg-muted/50 rounded-lg">
+								<p className="text-sm text-muted-foreground">
+									<strong>Example:</strong> A quote created today would expire on {formattedExpiryDate}
+								</p>
 							</div>
 						</Field>
 					</FieldGroup>
-				</div>
-			</div>
+				</CardContent>
+			</Card>
 
 			{/* Save Button */}
-			<div className="flex justify-end">
-				<Button onClick={handleSave} disabled={updateMutation.isPending}>
+			<div className="flex items-center justify-end gap-3">
+				{isDirty && (
+					<span className="text-sm text-muted-foreground">Unsaved changes</span>
+				)}
+				<Button
+					onClick={handleSave}
+					disabled={!isDirty || updateMutation.isPending}
+				>
 					{updateMutation.isPending ? 'Saving...' : 'Save Pricing Settings'}
 				</Button>
 			</div>
