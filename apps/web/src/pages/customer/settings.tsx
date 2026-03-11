@@ -6,7 +6,6 @@ import {
 	Layers,
 	Paintbrush,
 	Type,
-	Package,
 	List,
 	Mail,
 	CreditCard,
@@ -24,7 +23,6 @@ import { cn } from '@/lib/utils';
 import { BusinessTab } from '@/components/customer/settings/business-tab';
 import { PricingTab } from '@/components/customer/settings/pricing-tab';
 import { LetteringTab } from '@/components/customer/settings/lettering-tab';
-import { SundriesTab } from '@/components/customer/settings/sundries-tab';
 import { LineItemsTab } from '@/components/customer/settings/line-items-tab';
 import { ProductCategoriesTab } from '@/components/customer/settings/product-categories-tab';
 import { MaterialSectionsTab } from '@/components/customer/settings/material-sections-tab';
@@ -39,7 +37,6 @@ type SettingsTab =
 	| 'materials'
 	| 'finishes'
 	| 'lettering'
-	| 'sundries'
 	| 'line-items'
 	| 'integrations'
 	| 'payments';
@@ -61,7 +58,6 @@ const TAB_GROUPS: { label: string | null; items: TabItem[] }[] = [
 			{ value: 'materials', label: 'Materials', icon: Layers },
 			{ value: 'finishes', label: 'Finishes', icon: Paintbrush },
 			{ value: 'lettering', label: 'Lettering', icon: Type },
-			{ value: 'sundries', label: 'Sundries', icon: Package },
 			{ value: 'line-items', label: 'Line Items', icon: List },
 		],
 	},
@@ -90,8 +86,6 @@ function SettingsContent({ tab }: { tab: SettingsTab }) {
 			return <FinishesTab />;
 		case 'lettering':
 			return <LetteringTab />;
-		case 'sundries':
-			return <SundriesTab />;
 		case 'line-items':
 			return <LineItemsTab />;
 		case 'integrations':
