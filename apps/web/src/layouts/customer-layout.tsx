@@ -7,11 +7,6 @@ import {
 	SidebarProvider,
 	SidebarTrigger,
 } from "@/components/ui/sidebar"
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
-} from "@/components/ui/tooltip"
 import { Eye, EyeOff } from "lucide-react"
 import { CustomerViewProvider, useCustomerView } from "@/contexts/customer-view-context"
 
@@ -38,20 +33,14 @@ function CustomerLayoutInner() {
 						<Separator orientation="vertical" className="mr-2 h-4" />
 					</div>
 					<div className="flex items-center gap-2 px-4">
-						<Tooltip>
-							<TooltipTrigger asChild>
-								<Button
-									variant={isCustomerView ? "default" : "ghost"}
-									size="icon-sm"
-									onClick={toggleCustomerView}
-								>
-									{isCustomerView ? <EyeOff /> : <Eye />}
-								</Button>
-							</TooltipTrigger>
-							<TooltipContent>
-								{isCustomerView ? "Exit Customer View" : "Enter Customer View"}
-							</TooltipContent>
-						</Tooltip>
+						<Button
+							variant={isCustomerView ? "default" : "outline"}
+							size="sm"
+							onClick={toggleCustomerView}
+						>
+							{isCustomerView ? <EyeOff /> : <Eye />}
+							{isCustomerView ? "Exit Customer View" : "Customer View"}
+						</Button>
 					</div>
 				</header>
 				<main className="flex-1 p-4 pt-0">
