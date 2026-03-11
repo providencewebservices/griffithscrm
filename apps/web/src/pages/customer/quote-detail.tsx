@@ -369,13 +369,6 @@ export function QuoteDetailPage() {
 							<ArrowLeft className="h-4 w-4" />
 						</Button>
 					</Link>
-					{settings?.logoUrl && (
-						<img
-							src={`${API_URL}/api/logo/${settings.id}`}
-							alt={settings.name}
-							className="h-12 max-w-[160px] object-contain"
-						/>
-					)}
 					<div>
 						<div className="flex items-center gap-3">
 							<h2 className="text-2xl font-bold">{firstQuoteNumber}</h2>
@@ -471,7 +464,7 @@ export function QuoteDetailPage() {
 			)}
 
 			{/* Customer View */}
-			{isCustomerView && <CustomerView pkg={pkg} formatCurrency={formatCurrency} formatDate={formatDate} />}
+			{isCustomerView && <CustomerView pkg={pkg} settings={settings} formatCurrency={formatCurrency} formatDate={formatDate} />}
 
 			{/* Internal View */}
 			{!isCustomerView && (
