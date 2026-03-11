@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
 	Table,
 	TableBody,
@@ -18,15 +19,9 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from '@/components/ui/dialog';
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
-import { MoreHorizontal, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import {
 	useFinishesQuery,
 	useCreateFinishMutation,
@@ -70,17 +65,15 @@ export function FinishesTab() {
 		setDialogOpen(true);
 	};
 
-	const handleDelete = (finish: Finish) => {
-		setSelectedFinish(finish);
-		setDeleteDialogOpen(true);
-	};
-
-	const handleToggleActive = async (finish: Finish) => {
+	const handleToggleActive = async () => {
+		if (!selectedFinish) return;
 		try {
 			await updateMutation.mutateAsync({
-				id: finish.id,
-				isActive: !finish.isActive,
+				id: selectedFinish.id,
+				isActive: !selectedFinish.isActive,
 			});
+			setDialogOpen(false);
+			resetForm();
 		} catch {
 			// Error handled by mutation
 		}
@@ -110,6 +103,7 @@ export function FinishesTab() {
 		try {
 			await deleteMutation.mutateAsync(selectedFinish.id);
 			setDeleteDialogOpen(false);
+			setDialogOpen(false);
 			setSelectedFinish(null);
 		} catch {
 			// Error handled by mutation
@@ -117,7 +111,43 @@ export function FinishesTab() {
 	};
 
 	if (isLoading) {
-		return <div className="text-muted-foreground">Loading finishes...</div>;
+		return (
+			<div className="space-y-4">
+				<div className="flex justify-between items-center">
+					<div>
+						<Skeleton className="h-6 w-32" />
+						<Skeleton className="h-4 w-80 mt-2" />
+					</div>
+					<Skeleton className="h-9 w-28" />
+				</div>
+				<div className="border rounded-lg">
+					<Table>
+						<TableHeader>
+							<TableRow>
+								<TableHead>Name</TableHead>
+								<TableHead>Usage</TableHead>
+								<TableHead className="w-[80px]"></TableHead>
+							</TableRow>
+						</TableHeader>
+						<TableBody>
+							{Array.from({ length: 4 }).map((_, i) => (
+								<TableRow key={i}>
+									<TableCell>
+										<Skeleton className="h-4 w-32" />
+									</TableCell>
+									<TableCell>
+										<Skeleton className="h-5 w-20" />
+									</TableCell>
+									<TableCell>
+										<Skeleton className="h-8 w-12" />
+									</TableCell>
+								</TableRow>
+							))}
+						</TableBody>
+					</Table>
+				</div>
+			</div>
+		);
 	}
 
 	if (error) {
@@ -151,41 +181,41 @@ export function FinishesTab() {
 						<TableHeader>
 							<TableRow>
 								<TableHead>Name</TableHead>
-								<TableHead>Status</TableHead>
+								<TableHead>Usage</TableHead>
 								<TableHead className="w-[80px]"></TableHead>
 							</TableRow>
 						</TableHeader>
 						<TableBody>
 							{finishes?.map((item) => (
-								<TableRow key={item.id}>
-									<TableCell className="font-medium">{item.name}</TableCell>
+								<TableRow
+									key={item.id}
+									className="cursor-pointer"
+									onClick={() => handleEdit(item)}
+								>
+									<TableCell className="font-medium">
+										{item.name}
+										{!item.isActive && (
+											<Badge variant="secondary" className="ml-2">
+												Inactive
+											</Badge>
+										)}
+									</TableCell>
 									<TableCell>
-										<Badge variant={item.isActive ? 'default' : 'secondary'}>
-											{item.isActive ? 'Active' : 'Inactive'}
+										<Badge variant="secondary">
+											{item.usageCount} {item.usageCount === 1 ? 'quote' : 'quotes'}
 										</Badge>
 									</TableCell>
 									<TableCell>
-										<DropdownMenu>
-											<DropdownMenuTrigger asChild>
-												<Button variant="ghost" size="icon">
-													<MoreHorizontal className="h-4 w-4" />
-												</Button>
-											</DropdownMenuTrigger>
-											<DropdownMenuContent align="end">
-												<DropdownMenuItem onClick={() => handleEdit(item)}>
-													Edit
-												</DropdownMenuItem>
-												<DropdownMenuItem onClick={() => handleToggleActive(item)}>
-													{item.isActive ? 'Deactivate' : 'Activate'}
-												</DropdownMenuItem>
-												<DropdownMenuItem
-													className="text-destructive"
-													onClick={() => handleDelete(item)}
-												>
-													Delete
-												</DropdownMenuItem>
-											</DropdownMenuContent>
-										</DropdownMenu>
+										<Button
+											variant="ghost"
+											size="sm"
+											onClick={(e) => {
+												e.stopPropagation();
+												handleEdit(item);
+											}}
+										>
+											Edit
+										</Button>
 									</TableCell>
 								</TableRow>
 							))}
@@ -224,7 +254,26 @@ export function FinishesTab() {
 						</Field>
 					</FieldGroup>
 
-					<DialogFooter>
+					<DialogFooter className="flex-col sm:flex-row gap-2">
+						{isEditing && selectedFinish && (
+							<div className="flex gap-2 mr-auto">
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={handleToggleActive}
+									disabled={updateMutation.isPending}
+								>
+									{selectedFinish.isActive ? 'Deactivate' : 'Activate'}
+								</Button>
+								<Button
+									variant="destructive"
+									size="sm"
+									onClick={() => setDeleteDialogOpen(true)}
+								>
+									Delete
+								</Button>
+							</div>
+						)}
 						<Button variant="outline" onClick={() => setDialogOpen(false)}>
 							Cancel
 						</Button>

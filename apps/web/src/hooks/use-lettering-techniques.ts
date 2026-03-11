@@ -10,6 +10,9 @@ export type LetteringTechnique = {
 	isActive: boolean;
 	sortOrder: number;
 	costCount: number;
+	priceMin: string | null;
+	priceMax: string | null;
+	colorCount: number;
 	createdAt: string;
 	updatedAt: string;
 };

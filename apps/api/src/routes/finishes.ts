@@ -1,10 +1,10 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
-import { eq, and, asc } from 'drizzle-orm';
+import { eq, and, asc, count, inArray, isNotNull } from 'drizzle-orm';
 import { requireAuth, requireTenant } from '../middleware/auth';
 import { db } from '../lib/auth';
-import { finishes } from '@griffiths-crm/shared/db/schema';
+import { finishes, quoteComponents } from '@griffiths-crm/shared/db/schema';
 
 // Validation schemas
 const createSchema = z.object({
@@ -33,7 +33,34 @@ const finishesRoutes = new Hono()
 			.where(eq(finishes.tenantId, tenantId))
 			.orderBy(asc(finishes.sortOrder), asc(finishes.name));
 
-		return c.json({ finishes: allFinishes });
+		const finishIds = allFinishes.map((f) => f.id);
+		const usageCounts =
+			finishIds.length > 0
+				? await db
+						.select({
+							finishId: quoteComponents.finishId,
+							count: count(),
+						})
+						.from(quoteComponents)
+						.where(
+							and(
+								isNotNull(quoteComponents.finishId),
+								inArray(quoteComponents.finishId, finishIds)
+							)
+						)
+						.groupBy(quoteComponents.finishId)
+				: [];
+
+		const countMap = new Map(
+			usageCounts.map((uc) => [uc.finishId, Number(uc.count)])
+		);
+
+		const finishesWithCounts = allFinishes.map((f) => ({
+			...f,
+			usageCount: countMap.get(f.id) ?? 0,
+		}));
+
+		return c.json({ finishes: finishesWithCounts });
 	})
 
 	// Get single finish

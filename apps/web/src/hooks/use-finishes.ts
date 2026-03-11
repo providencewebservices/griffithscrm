@@ -8,6 +8,7 @@ export type Finish = {
 	name: string;
 	isActive: boolean;
 	sortOrder: number;
+	usageCount: number;
 	createdAt: string;
 	updatedAt: string;
 };

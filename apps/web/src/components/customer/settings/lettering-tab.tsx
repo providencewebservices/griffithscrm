@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
 	Table,
@@ -20,16 +21,10 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from '@/components/ui/dialog';
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { InscriptionText } from '@/components/inscription-text';
-import { MoreHorizontal, Plus, Upload } from 'lucide-react';
+import { Plus, Upload } from 'lucide-react';
 import {
 	useLetteringTechniquesQuery,
 	useCreateLetteringTechniqueMutation,
@@ -118,7 +113,40 @@ function TechniquesSection() {
 	};
 
 	if (isLoading) {
-		return <div className="text-muted-foreground">Loading techniques...</div>;
+		return (
+			<div className="space-y-4">
+				<div className="flex justify-between items-center">
+					<Skeleton className="h-4 w-80" />
+					<Skeleton className="h-9 w-32" />
+				</div>
+				<div className="border rounded-lg">
+					<Table>
+						<TableHeader>
+							<TableRow>
+								<TableHead>Name</TableHead>
+								<TableHead>Pricing</TableHead>
+								<TableHead className="w-[80px]"></TableHead>
+							</TableRow>
+						</TableHeader>
+						<TableBody>
+							{Array.from({ length: 3 }).map((_, i) => (
+								<TableRow key={i}>
+									<TableCell>
+										<Skeleton className="h-4 w-32" />
+									</TableCell>
+									<TableCell>
+										<Skeleton className="h-4 w-40" />
+									</TableCell>
+									<TableCell>
+										<Skeleton className="h-8 w-12" />
+									</TableCell>
+								</TableRow>
+							))}
+						</TableBody>
+					</Table>
+				</div>
+			</div>
+		);
 	}
 
 	if (error) {
@@ -133,9 +161,9 @@ function TechniquesSection() {
 		<div className="space-y-4">
 			<div className="flex justify-between items-center">
 				<p className="text-sm text-muted-foreground">
-					Carving methods. Click "View" to set pricing rules per color.
+					Carving methods and their per-letter pricing rules
 				</p>
-				<Button onClick={handleCreate}>
+				<Button variant="outline" onClick={handleCreate}>
 					<Plus className="h-4 w-4 mr-2" />
 					Add Technique
 				</Button>
@@ -151,21 +179,38 @@ function TechniquesSection() {
 						<TableHeader>
 							<TableRow>
 								<TableHead>Name</TableHead>
-								<TableHead>Status</TableHead>
-								<TableHead>Cost Rules</TableHead>
+								<TableHead>Pricing</TableHead>
 								<TableHead className="w-[80px]"></TableHead>
 							</TableRow>
 						</TableHeader>
 						<TableBody>
 							{techniques?.map((item) => (
 								<TableRow key={item.id}>
-									<TableCell className="font-medium">{item.name}</TableCell>
-									<TableCell>
-										<Badge variant={item.isActive ? 'default' : 'secondary'}>
-											{item.isActive ? 'Active' : 'Inactive'}
-										</Badge>
+									<TableCell className="font-medium">
+										{item.name}
+										{!item.isActive && (
+											<Badge variant="secondary" className="ml-2">
+												Inactive
+											</Badge>
+										)}
 									</TableCell>
-									<TableCell>{item.costCount}</TableCell>
+									<TableCell className="text-sm">
+										{item.costCount === 0 ? (
+											<span className="italic text-muted-foreground">No rules</span>
+										) : (
+											<span>
+												{item.priceMin === item.priceMax
+													? `£${item.priceMin}/letter`
+													: `£${item.priceMin} – £${item.priceMax}/letter`}
+												{item.colorCount > 0 && (
+													<span className="text-muted-foreground">
+														{' '}
+														· {item.colorCount} {item.colorCount === 1 ? 'color' : 'colors'}
+													</span>
+												)}
+											</span>
+										)}
+									</TableCell>
 									<TableCell>
 										<Link to={`/app/lettering-techniques/${item.id}`}>
 											<Button variant="ghost" size="sm">
@@ -230,7 +275,7 @@ function ColorsSection() {
 	const updateMutation = useUpdateLetteringColorMutation();
 	const deleteMutation = useDeleteLetteringColorMutation();
 
-	const [formDialogOpen, setFormDialogOpen] = useState(false);
+	const [dialogOpen, setDialogOpen] = useState(false);
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 	const [selectedItem, setSelectedItem] = useState<LetteringColor | null>(null);
 	const [mutationError, setMutationError] = useState<string | null>(null);
@@ -240,34 +285,32 @@ function ColorsSection() {
 
 	const resetForm = () => {
 		setFormName('');
+		setSelectedItem(null);
 		setMutationError(null);
 	};
 
 	const handleCreate = () => {
-		setSelectedItem(null);
 		resetForm();
-		setFormDialogOpen(true);
+		setDialogOpen(true);
 	};
 
 	const handleEdit = (item: LetteringColor) => {
 		setSelectedItem(item);
 		setFormName(item.name);
 		setMutationError(null);
-		setFormDialogOpen(true);
+		setDialogOpen(true);
 	};
 
-	const handleDelete = (item: LetteringColor) => {
-		setSelectedItem(item);
-		setDeleteDialogOpen(true);
-	};
-
-	const handleToggleActive = async (item: LetteringColor) => {
+	const handleToggleActive = async () => {
+		if (!selectedItem) return;
 		try {
 			await updateMutation.mutateAsync({
-				id: item.id,
-				isActive: !item.isActive,
+				id: selectedItem.id,
+				isActive: !selectedItem.isActive,
 			});
-		} catch (err) {
+			setDialogOpen(false);
+			resetForm();
+		} catch {
 			// Error handled by mutation
 		}
 	};
@@ -284,7 +327,7 @@ function ColorsSection() {
 			} else {
 				await createMutation.mutateAsync(data);
 			}
-			setFormDialogOpen(false);
+			setDialogOpen(false);
 			resetForm();
 		} catch (err) {
 			setMutationError(err instanceof Error ? err.message : 'An error occurred');
@@ -296,14 +339,44 @@ function ColorsSection() {
 		try {
 			await deleteMutation.mutateAsync(selectedItem.id);
 			setDeleteDialogOpen(false);
+			setDialogOpen(false);
 			setSelectedItem(null);
-		} catch (err) {
+		} catch {
 			// Error handled by mutation
 		}
 	};
 
 	if (isLoading) {
-		return <div className="text-muted-foreground">Loading colors...</div>;
+		return (
+			<div className="space-y-4">
+				<div className="flex justify-between items-center">
+					<Skeleton className="h-4 w-80" />
+					<Skeleton className="h-9 w-28" />
+				</div>
+				<div className="border rounded-lg">
+					<Table>
+						<TableHeader>
+							<TableRow>
+								<TableHead>Name</TableHead>
+								<TableHead className="w-[80px]"></TableHead>
+							</TableRow>
+						</TableHeader>
+						<TableBody>
+							{Array.from({ length: 3 }).map((_, i) => (
+								<TableRow key={i}>
+									<TableCell>
+										<Skeleton className="h-4 w-32" />
+									</TableCell>
+									<TableCell>
+										<Skeleton className="h-8 w-12" />
+									</TableCell>
+								</TableRow>
+							))}
+						</TableBody>
+					</Table>
+				</div>
+			</div>
+		);
 	}
 
 	if (error) {
@@ -318,9 +391,9 @@ function ColorsSection() {
 		<div className="space-y-4">
 			<div className="flex justify-between items-center">
 				<p className="text-sm text-muted-foreground">
-					Paint finishes. Prices are set per technique/color combination.
+					Paint and fill colors used in lettering pricing
 				</p>
-				<Button onClick={handleCreate}>
+				<Button variant="outline" onClick={handleCreate}>
 					<Plus className="h-4 w-4 mr-2" />
 					Add Color
 				</Button>
@@ -336,41 +409,35 @@ function ColorsSection() {
 						<TableHeader>
 							<TableRow>
 								<TableHead>Name</TableHead>
-								<TableHead>Status</TableHead>
-								<TableHead className="w-[70px]"></TableHead>
+								<TableHead className="w-[80px]"></TableHead>
 							</TableRow>
 						</TableHeader>
 						<TableBody>
 							{colors?.map((item) => (
-								<TableRow key={item.id}>
-									<TableCell className="font-medium">{item.name}</TableCell>
-									<TableCell>
-										<Badge variant={item.isActive ? 'default' : 'secondary'}>
-											{item.isActive ? 'Active' : 'Inactive'}
-										</Badge>
+								<TableRow
+									key={item.id}
+									className="cursor-pointer"
+									onClick={() => handleEdit(item)}
+								>
+									<TableCell className="font-medium">
+										{item.name}
+										{!item.isActive && (
+											<Badge variant="secondary" className="ml-2">
+												Inactive
+											</Badge>
+										)}
 									</TableCell>
 									<TableCell>
-										<DropdownMenu>
-											<DropdownMenuTrigger asChild>
-												<Button variant="ghost" size="icon-sm">
-													<MoreHorizontal className="h-4 w-4" />
-												</Button>
-											</DropdownMenuTrigger>
-											<DropdownMenuContent align="end">
-												<DropdownMenuItem onClick={() => handleEdit(item)}>
-													Edit
-												</DropdownMenuItem>
-												<DropdownMenuItem onClick={() => handleToggleActive(item)}>
-													{item.isActive ? 'Deactivate' : 'Activate'}
-												</DropdownMenuItem>
-												<DropdownMenuItem
-													className="text-destructive"
-													onClick={() => handleDelete(item)}
-												>
-													Delete
-												</DropdownMenuItem>
-											</DropdownMenuContent>
-										</DropdownMenu>
+										<Button
+											variant="ghost"
+											size="sm"
+											onClick={(e) => {
+												e.stopPropagation();
+												handleEdit(item);
+											}}
+										>
+											Edit
+										</Button>
 									</TableCell>
 								</TableRow>
 							))}
@@ -379,7 +446,7 @@ function ColorsSection() {
 				</div>
 			)}
 
-			<Dialog open={formDialogOpen} onOpenChange={setFormDialogOpen}>
+			<Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
 				<DialogContent>
 					<DialogHeader>
 						<DialogTitle>
@@ -410,8 +477,27 @@ function ColorsSection() {
 						</Field>
 					</FieldGroup>
 
-					<DialogFooter>
-						<Button variant="outline" onClick={() => setFormDialogOpen(false)}>
+					<DialogFooter className="flex-col sm:flex-row gap-2">
+						{isEditing && selectedItem && (
+							<div className="flex gap-2 mr-auto">
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={handleToggleActive}
+									disabled={updateMutation.isPending}
+								>
+									{selectedItem.isActive ? 'Deactivate' : 'Activate'}
+								</Button>
+								<Button
+									variant="destructive"
+									size="sm"
+									onClick={() => setDeleteDialogOpen(true)}
+								>
+									Delete
+								</Button>
+							</div>
+						)}
+						<Button variant="outline" onClick={() => setDialogOpen(false)}>
 							Cancel
 						</Button>
 						<Button
@@ -519,17 +605,15 @@ function FontsSection() {
 		}
 	};
 
-	const handleToggleActive = async (font: Font) => {
+	const handleToggleActive = async () => {
+		if (!selectedFont) return;
 		try {
-			await updateMutation.mutateAsync({ id: font.id, isActive: !font.isActive });
+			await updateMutation.mutateAsync({ id: selectedFont.id, isActive: !selectedFont.isActive });
+			setEditDialogOpen(false);
+			setSelectedFont(null);
 		} catch {
 			// Error handled by mutation
 		}
-	};
-
-	const handleDelete = (font: Font) => {
-		setSelectedFont(font);
-		setDeleteDialogOpen(true);
 	};
 
 	const handleDeleteConfirm = async () => {
@@ -537,6 +621,7 @@ function FontsSection() {
 		try {
 			await deleteMutation.mutateAsync(selectedFont.id);
 			setDeleteDialogOpen(false);
+			setEditDialogOpen(false);
 			setSelectedFont(null);
 		} catch {
 			// Error handled by mutation
@@ -544,7 +629,44 @@ function FontsSection() {
 	};
 
 	if (isLoading) {
-		return <div className="text-muted-foreground">Loading fonts...</div>;
+		return (
+			<div className="space-y-4">
+				<div className="flex justify-between items-center">
+					<Skeleton className="h-4 w-80" />
+					<Skeleton className="h-9 w-28" />
+				</div>
+				<div className="border rounded-lg">
+					<Table>
+						<TableHeader>
+							<TableRow>
+								<TableHead>Name</TableHead>
+								<TableHead>Preview</TableHead>
+								<TableHead>Filename</TableHead>
+								<TableHead className="w-[80px]"></TableHead>
+							</TableRow>
+						</TableHeader>
+						<TableBody>
+							{Array.from({ length: 3 }).map((_, i) => (
+								<TableRow key={i}>
+									<TableCell>
+										<Skeleton className="h-4 w-32" />
+									</TableCell>
+									<TableCell>
+										<Skeleton className="h-4 w-40" />
+									</TableCell>
+									<TableCell>
+										<Skeleton className="h-4 w-28" />
+									</TableCell>
+									<TableCell>
+										<Skeleton className="h-8 w-12" />
+									</TableCell>
+								</TableRow>
+							))}
+						</TableBody>
+					</Table>
+				</div>
+			</div>
+		);
 	}
 
 	if (error) {
@@ -559,9 +681,9 @@ function FontsSection() {
 		<div className="space-y-4">
 			<div className="flex justify-between items-center">
 				<p className="text-sm text-muted-foreground">
-					Upload custom fonts for inscription rendering on quotes.
+					Custom fonts for inscription rendering on quotes
 				</p>
-				<Button onClick={() => {
+				<Button variant="outline" onClick={() => {
 					setUploadFile(null);
 					setUploadName('');
 					setMutationError(null);
@@ -574,7 +696,7 @@ function FontsSection() {
 
 			{fontsList && fontsList.length === 0 ? (
 				<div className="text-center py-8 text-muted-foreground border rounded-lg">
-					No fonts uploaded yet. Add your first font to get started.
+					No fonts uploaded yet. Add a font (.ttf, .otf, .woff, .woff2) to use in inscription rendering.
 				</div>
 			) : (
 				<div className="border rounded-lg">
@@ -584,14 +706,24 @@ function FontsSection() {
 								<TableHead>Name</TableHead>
 								<TableHead>Preview</TableHead>
 								<TableHead>Filename</TableHead>
-								<TableHead>Status</TableHead>
-								<TableHead className="w-[70px]"></TableHead>
+								<TableHead className="w-[80px]"></TableHead>
 							</TableRow>
 						</TableHeader>
 						<TableBody>
 							{fontsList?.map((font) => (
-								<TableRow key={font.id}>
-									<TableCell className="font-medium">{font.name}</TableCell>
+								<TableRow
+									key={font.id}
+									className="cursor-pointer"
+									onClick={() => handleEdit(font)}
+								>
+									<TableCell className="font-medium">
+										{font.name}
+										{!font.isActive && (
+											<Badge variant="secondary" className="ml-2">
+												Inactive
+											</Badge>
+										)}
+									</TableCell>
 									<TableCell>
 										<InscriptionText
 											text="In Loving Memory"
@@ -604,32 +736,16 @@ function FontsSection() {
 										{font.filename}
 									</TableCell>
 									<TableCell>
-										<Badge variant={font.isActive ? 'default' : 'secondary'}>
-											{font.isActive ? 'Active' : 'Inactive'}
-										</Badge>
-									</TableCell>
-									<TableCell>
-										<DropdownMenu>
-											<DropdownMenuTrigger asChild>
-												<Button variant="ghost" size="icon-sm">
-													<MoreHorizontal className="h-4 w-4" />
-												</Button>
-											</DropdownMenuTrigger>
-											<DropdownMenuContent align="end">
-												<DropdownMenuItem onClick={() => handleEdit(font)}>
-													Edit
-												</DropdownMenuItem>
-												<DropdownMenuItem onClick={() => handleToggleActive(font)}>
-													{font.isActive ? 'Deactivate' : 'Activate'}
-												</DropdownMenuItem>
-												<DropdownMenuItem
-													className="text-destructive"
-													onClick={() => handleDelete(font)}
-												>
-													Delete
-												</DropdownMenuItem>
-											</DropdownMenuContent>
-										</DropdownMenu>
+										<Button
+											variant="ghost"
+											size="sm"
+											onClick={(e) => {
+												e.stopPropagation();
+												handleEdit(font);
+											}}
+										>
+											Edit
+										</Button>
 									</TableCell>
 								</TableRow>
 							))}
@@ -736,7 +852,26 @@ function FontsSection() {
 						</Field>
 					</FieldGroup>
 
-					<DialogFooter>
+					<DialogFooter className="flex-col sm:flex-row gap-2">
+						{selectedFont && (
+							<div className="flex gap-2 mr-auto">
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={handleToggleActive}
+									disabled={updateMutation.isPending}
+								>
+									{selectedFont.isActive ? 'Deactivate' : 'Activate'}
+								</Button>
+								<Button
+									variant="destructive"
+									size="sm"
+									onClick={() => setDeleteDialogOpen(true)}
+								>
+									Delete
+								</Button>
+							</div>
+						)}
 						<Button variant="outline" onClick={() => setEditDialogOpen(false)}>
 							Cancel
 						</Button>

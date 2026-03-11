@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
-import { eq, and, asc, count } from 'drizzle-orm';
+import { eq, and, asc, count, min, max, countDistinct, inArray } from 'drizzle-orm';
 import { requireAuth, requireTenant } from '../middleware/auth';
 import { db } from '../lib/auth';
 import { letteringTechniques, letteringCosts } from '@griffiths-crm/shared/db/schema';
@@ -33,20 +33,35 @@ const letteringTechniquesRoutes = new Hono()
 			.where(eq(letteringTechniques.tenantId, tenantId))
 			.orderBy(asc(letteringTechniques.sortOrder), asc(letteringTechniques.name));
 
-		// Get cost counts per technique
-		const costCounts = await db
-			.select({
-				techniqueId: letteringCosts.techniqueId,
-				count: count(),
-			})
-			.from(letteringCosts)
-			.groupBy(letteringCosts.techniqueId);
+		// Get cost summary per technique (count, price range, color count)
+		const techniqueIds = techniques.map((t) => t.id);
+		const costSummaries = techniqueIds.length > 0
+			? await db
+				.select({
+					techniqueId: letteringCosts.techniqueId,
+					count: count(),
+					priceMin: min(letteringCosts.pricePerLetter),
+					priceMax: max(letteringCosts.pricePerLetter),
+					colorCount: countDistinct(letteringCosts.colorId),
+				})
+				.from(letteringCosts)
+				.where(inArray(letteringCosts.techniqueId, techniqueIds))
+				.groupBy(letteringCosts.techniqueId)
+			: [];
 
-		const countMap = new Map(costCounts.map((cc) => [cc.techniqueId, Number(cc.count)]));
+		const summaryMap = new Map(costSummaries.map((cs) => [cs.techniqueId, {
+			costCount: Number(cs.count),
+			priceMin: cs.priceMin,
+			priceMax: cs.priceMax,
+			colorCount: Number(cs.colorCount),
+		}]));
 
 		const techniquesWithCounts = techniques.map((t) => ({
 			...t,
-			costCount: countMap.get(t.id) || 0,
+			costCount: summaryMap.get(t.id)?.costCount || 0,
+			priceMin: summaryMap.get(t.id)?.priceMin ?? null,
+			priceMax: summaryMap.get(t.id)?.priceMax ?? null,
+			colorCount: summaryMap.get(t.id)?.colorCount || 0,
 		}));
 
 		return c.json({ letteringTechniques: techniquesWithCounts });
