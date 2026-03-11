@@ -23,7 +23,6 @@ type ImportToCatalogDialogProps = {
 		name?: string;
 		description?: string | null;
 		categoryId?: string | null;
-		basePrice?: string | null;
 		imageUrl?: string | null;
 	}) => void;
 	product: SupplierProduct | null;
@@ -43,7 +42,6 @@ export function ImportToCatalogDialog({
 	const [name, setName] = useState('');
 	const [description, setDescription] = useState('');
 	const [categoryId, setCategoryId] = useState<string | null>(null);
-	const [basePrice, setBasePrice] = useState('');
 	const [imageUrl, setImageUrl] = useState<string | null>(null);
 	const [uploadEntityId, setUploadEntityId] = useState('');
 
@@ -53,7 +51,6 @@ export function ImportToCatalogDialog({
 			setName(product.name);
 			setDescription(product.description || '');
 			setCategoryId(null);
-			setBasePrice('');
 			setImageUrl(null);
 			setUploadEntityId(crypto.randomUUID());
 		}
@@ -65,7 +62,6 @@ export function ImportToCatalogDialog({
 			name: name || undefined,
 			description: description || null,
 			categoryId: categoryId || null,
-			basePrice: basePrice || null,
 			imageUrl,
 		});
 	};
@@ -98,12 +94,6 @@ export function ImportToCatalogDialog({
 					<div className="bg-muted px-4 py-3 rounded text-sm">
 						<span className="font-medium">Supplier cost:</span>{' '}
 						{formatCurrency(product.supplierCost)}
-						{basePrice && parseFloat(basePrice) > 0 && (
-							<span className="ml-3 text-muted-foreground">
-								Margin: {formatCurrency(String(parseFloat(basePrice) - parseFloat(product.supplierCost)))}
-								{' '}({((parseFloat(basePrice) - parseFloat(product.supplierCost)) / parseFloat(product.supplierCost) * 100).toFixed(0)}%)
-							</span>
-						)}
 					</div>
 				)}
 
@@ -128,28 +118,14 @@ export function ImportToCatalogDialog({
 						/>
 					</Field>
 
-					<div className="grid grid-cols-2 gap-4">
-						<Field>
-							<FieldLabel htmlFor="import-category">Catalog Category</FieldLabel>
-							<CategorySelect
-								value={categoryId}
-								onChange={setCategoryId}
-								placeholder="Select category"
-							/>
-						</Field>
-
-						<Field>
-							<FieldLabel htmlFor="import-price">Selling Price</FieldLabel>
-							<Input
-								id="import-price"
-								type="number"
-								step="0.01"
-								value={basePrice}
-								onChange={(e) => setBasePrice(e.target.value)}
-								placeholder="0.00"
-							/>
-						</Field>
-					</div>
+					<Field>
+						<FieldLabel htmlFor="import-category">Catalog Category</FieldLabel>
+						<CategorySelect
+							value={categoryId}
+							onChange={setCategoryId}
+							placeholder="Select category"
+						/>
+					</Field>
 
 					<Field>
 						<FieldLabel htmlFor="import-description">Description</FieldLabel>

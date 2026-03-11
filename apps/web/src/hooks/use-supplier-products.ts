@@ -79,7 +79,6 @@ export type ImportToCatalogInput = {
 	name?: string;
 	description?: string | null;
 	categoryId?: string | null;
-	basePrice?: string | null;
 	imageUrl?: string | null;
 };
 

@@ -188,11 +188,6 @@ export function ProductsPage() {
 		}
 	};
 
-	const formatPrice = (price: string | null) => {
-		if (!price) return '-';
-		return `£${parseFloat(price).toFixed(2)}`;
-	};
-
 	const handleTabChange = (val: string) => {
 		if (val === 'sundries') {
 			setSearchParams({ tab: 'sundries' });
@@ -435,7 +430,6 @@ export function ProductsPage() {
 								<TableHead>SKU</TableHead>
 								<TableHead>Name</TableHead>
 								<TableHead>Category</TableHead>
-								<TableHead>Base Price</TableHead>
 								<TableHead>Options</TableHead>
 								<TableHead>Status</TableHead>
 								<TableHead className="w-[70px]"></TableHead>
@@ -463,7 +457,6 @@ export function ProductsPage() {
 											<span className="text-muted-foreground">-</span>
 										)}
 									</TableCell>
-									<TableCell>{formatPrice(product.basePrice)}</TableCell>
 									<TableCell>
 										{product.optionCount || 0}
 									</TableCell>
@@ -688,11 +681,6 @@ function ProductCard({
 								</Badge>
 							)}
 						</div>
-						{product.basePrice && (
-							<span className="text-sm font-semibold">
-								£{parseFloat(product.basePrice).toFixed(2)}
-							</span>
-						)}
 					</div>
 				</CardContent>
 			</Card>

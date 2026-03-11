@@ -502,7 +502,6 @@ export const products = pgTable('products', {
 	name: text('name').notNull(),
 	description: text('description'),
 	imageUrl: text('image_url'),
-	basePrice: numeric('base_price', { precision: 10, scale: 2 }),
 	isActive: boolean('is_active').notNull().default(true),
 	archivedAt: timestamp('archived_at'),
 	createdAt: timestamp('created_at').notNull().defaultNow(),

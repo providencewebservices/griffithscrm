@@ -58,7 +58,6 @@ const importToCatalogSchema = z.object({
 	name: z.string().optional(),
 	description: z.string().optional().nullable(),
 	categoryId: z.string().optional().nullable(),
-	basePrice: z.string().optional().nullable(),
 	imageUrl: z.string().optional().nullable(),
 });
 
@@ -436,7 +435,6 @@ const supplierProductsRoutes = new Hono()
 				name: data.name || supplierProduct.name,
 				description: data.description !== undefined ? data.description : supplierProduct.description,
 				categoryId: data.categoryId || null,
-				basePrice: data.basePrice || null,
 				imageUrl: data.imageUrl !== undefined ? data.imageUrl : supplierProduct.imageUrl,
 				isActive: true,
 			})

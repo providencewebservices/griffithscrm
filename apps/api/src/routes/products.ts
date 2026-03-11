@@ -58,7 +58,6 @@ async function getProductWithRelations(productId: string, tenantId: string) {
 			name: products.name,
 			description: products.description,
 			imageUrl: products.imageUrl,
-			basePrice: products.basePrice,
 			isActive: products.isActive,
 			archivedAt: products.archivedAt,
 			createdAt: products.createdAt,
@@ -178,7 +177,6 @@ const productsRoutes = new Hono()
 				name: products.name,
 				description: products.description,
 				imageUrl: products.imageUrl,
-				basePrice: products.basePrice,
 				isActive: products.isActive,
 				archivedAt: products.archivedAt,
 				categoryId: products.categoryId,
@@ -498,7 +496,6 @@ const productsRoutes = new Hono()
 			description: existing.description,
 			categoryId: existing.categoryId,
 			supplierId: existing.supplierId,
-			basePrice: existing.basePrice,
 			isActive: false, // New copies start inactive
 		});
 

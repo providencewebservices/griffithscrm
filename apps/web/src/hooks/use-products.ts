@@ -37,7 +37,6 @@ export type Product = {
 	name: string;
 	description: string | null;
 	imageUrl: string | null;
-	basePrice: string | null;
 	isActive: boolean;
 	archivedAt: string | null;
 	createdAt: string;

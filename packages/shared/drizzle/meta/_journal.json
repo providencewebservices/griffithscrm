@@ -225,6 +225,13 @@
       "when": 1773237125523,
       "tag": "0031_cooing_doctor_octopus",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1773239942639,
+      "tag": "0032_chief_maggott",
+      "breakpoints": true
     }
   ]
 }

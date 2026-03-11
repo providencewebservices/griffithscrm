@@ -33,6 +33,12 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from '@/components/ui/dialog';
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
@@ -44,8 +50,8 @@ import {
 	useDeleteProductCategoryMutation,
 	type UpdateProductCategoryInput,
 } from '@/hooks/use-product-categories';
-import { useSignedUrl, useSignedUrls } from '@/hooks/use-uploads';
-import { ArrowLeft, Package, ImageIcon } from 'lucide-react';
+import { useSignedUrl } from '@/hooks/use-uploads';
+import { ArrowLeft, Package, ImageIcon, MoreHorizontal, FileText } from 'lucide-react';
 
 export function CategoryDetailPage() {
 	const { id } = useParams<{ id: string }>();
@@ -62,8 +68,6 @@ export function CategoryDetailPage() {
 
 	const { data: category, isLoading, error } = useProductCategoryQuery(id);
 	const { data: signedCategoryImageUrl } = useSignedUrl(category?.imageUrl);
-	const productImageUrls = category?.products?.map((p) => p.imageUrl) || [];
-	const { data: signedProductImages } = useSignedUrls(productImageUrls);
 	const updateMutation = useUpdateProductCategoryMutation();
 	const deleteMutation = useDeleteProductCategoryMutation();
 
@@ -102,11 +106,6 @@ export function CategoryDetailPage() {
 		} catch (err) {
 			// Error handled by mutation
 		}
-	};
-
-	const formatPrice = (price: string | null) => {
-		if (!price) return '-';
-		return `£${parseFloat(price).toFixed(2)}`;
 	};
 
 	if (isLoading) {
@@ -179,17 +178,29 @@ export function CategoryDetailPage() {
 								{productCount} {productCount === 1 ? 'product' : 'products'}
 							</Badge>
 						</div>
+						<p className="text-sm text-muted-foreground mt-1">
+							Created {new Date(category.createdAt).toLocaleDateString()} · Updated {new Date(category.updatedAt).toLocaleDateString()}
+						</p>
 					</div>
 				</div>
 				<div className="flex items-center gap-2">
 					<Button onClick={handleEdit}>Edit</Button>
-					<Button
-						variant="destructive"
-						onClick={() => setDeleteDialogOpen(true)}
-						disabled={productCount > 0}
-					>
-						Delete
-					</Button>
+					<DropdownMenu>
+						<DropdownMenuTrigger asChild>
+							<Button variant="outline" size="icon">
+								<MoreHorizontal className="h-4 w-4" />
+							</Button>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent align="end">
+							<DropdownMenuItem
+								className="text-destructive"
+								disabled={productCount > 0}
+								onClick={() => setDeleteDialogOpen(true)}
+							>
+								Delete
+							</DropdownMenuItem>
+						</DropdownMenuContent>
+					</DropdownMenu>
 				</div>
 			</div>
 
@@ -199,140 +210,99 @@ export function CategoryDetailPage() {
 				</div>
 			)}
 
-			<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-				{/* Main Content */}
-				<div className="lg:col-span-2 space-y-6">
-					{/* Category Image */}
-					{category.imageUrl && (
-						<Card>
-							<CardHeader>
-								<CardTitle>Category Image</CardTitle>
-							</CardHeader>
-							<CardContent>
-								<img
-									src={signedCategoryImageUrl || category.imageUrl}
-									alt={category.name}
-									className="w-full max-w-md h-48 object-cover rounded-lg border"
-								/>
-							</CardContent>
-						</Card>
-					)}
+			<div className="space-y-6">
+				{/* Category Image */}
+				<Card>
+					<CardHeader>
+						<CardTitle>Category Image</CardTitle>
+					</CardHeader>
+					<CardContent>
+						{category.imageUrl ? (
+							<img
+								src={signedCategoryImageUrl || category.imageUrl}
+								alt={category.name}
+								className="w-full max-w-md h-48 object-cover rounded-lg border"
+							/>
+						) : (
+							<div className="text-center py-8 text-muted-foreground border rounded-lg">
+								<ImageIcon className="h-8 w-8 mx-auto mb-2 opacity-50" />
+								No image. Click Edit to add one.
+							</div>
+						)}
+					</CardContent>
+				</Card>
 
-					{/* Description */}
-					{category.description && (
-						<Card>
-							<CardHeader>
-								<CardTitle>Description</CardTitle>
-							</CardHeader>
-							<CardContent>
-								<p className="text-muted-foreground whitespace-pre-wrap">
-									{category.description}
-								</p>
-							</CardContent>
-						</Card>
-					)}
+				{/* Description */}
+				<Card>
+					<CardHeader>
+						<CardTitle>Description</CardTitle>
+					</CardHeader>
+					<CardContent>
+						{category.description ? (
+							<p className="text-muted-foreground whitespace-pre-wrap">
+								{category.description}
+							</p>
+						) : (
+							<div className="text-center py-8 text-muted-foreground border rounded-lg">
+								<FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
+								No description. Click Edit to add one.
+							</div>
+						)}
+					</CardContent>
+				</Card>
 
-					{/* Products */}
-					<Card>
-						<CardHeader>
-							<CardTitle>Products</CardTitle>
-							<CardDescription>
-								Products in this category
-							</CardDescription>
-						</CardHeader>
-						<CardContent>
-							{productCount === 0 ? (
-								<div className="text-center py-8 text-muted-foreground border rounded-lg">
-									<Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
-									No products in this category yet.
-								</div>
-							) : (
-								<div className="border rounded-lg">
-									<Table>
-										<TableHeader>
-											<TableRow>
-												<TableHead className="w-[60px]">Image</TableHead>
-												<TableHead>SKU</TableHead>
-												<TableHead>Name</TableHead>
-												<TableHead>Base Price</TableHead>
-												<TableHead>Status</TableHead>
-												<TableHead className="w-[80px]"></TableHead>
-											</TableRow>
-										</TableHeader>
-										<TableBody>
-											{category.products?.map((product) => (
-												<TableRow key={product.id}>
-													<TableCell>
-														{product.imageUrl ? (
-															<img
-																src={
-																	(signedProductImages?.get(product.imageUrl)) ||
-																	product.imageUrl
-																}
-																alt={product.name}
-																className="w-10 h-10 object-cover rounded"
-															/>
-														) : (
-															<div className="w-10 h-10 bg-muted rounded flex items-center justify-center">
-																<ImageIcon className="h-4 w-4 text-muted-foreground" />
-															</div>
-														)}
-													</TableCell>
-													<TableCell className="font-mono text-sm">
-														{product.sku}
-													</TableCell>
-													<TableCell className="font-medium">
+				{/* Products */}
+				<Card>
+					<CardHeader>
+						<CardTitle>Products</CardTitle>
+						<CardDescription>
+							Products in this category
+						</CardDescription>
+					</CardHeader>
+					<CardContent>
+						{productCount === 0 ? (
+							<div className="text-center py-8 text-muted-foreground border rounded-lg">
+								<Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
+								No products in this category yet.
+							</div>
+						) : (
+							<div className="border rounded-lg">
+								<Table>
+									<TableHeader>
+										<TableRow>
+											<TableHead>SKU</TableHead>
+											<TableHead>Name</TableHead>
+											<TableHead>Status</TableHead>
+										</TableRow>
+									</TableHeader>
+									<TableBody>
+										{category.products?.map((product) => (
+											<TableRow key={product.id}>
+												<TableCell className="font-mono text-sm">
+													{product.sku}
+												</TableCell>
+												<TableCell className="font-medium">
+													<Link to={`/app/products/${product.id}`} className="hover:underline">
 														{product.name}
-													</TableCell>
-													<TableCell>{formatPrice(product.basePrice)}</TableCell>
-													<TableCell>
-														{product.archivedAt ? (
-															<Badge variant="outline">Archived</Badge>
-														) : product.isActive ? (
-															<Badge variant="default">Active</Badge>
-														) : (
-															<Badge variant="secondary">Inactive</Badge>
-														)}
-													</TableCell>
-													<TableCell>
-														<Link to={`/app/products/${product.id}`}>
-															<Button variant="ghost" size="sm">
-																View
-															</Button>
-														</Link>
-													</TableCell>
-												</TableRow>
-											))}
-										</TableBody>
-									</Table>
-								</div>
-							)}
-						</CardContent>
-					</Card>
-				</div>
-
-				{/* Sidebar */}
-				<div className="space-y-6">
-					<Card>
-						<CardHeader>
-							<CardTitle>Details</CardTitle>
-						</CardHeader>
-						<CardContent className="space-y-4">
-							<div>
-								<p className="text-sm font-medium text-muted-foreground">Products</p>
-								<p>{productCount}</p>
+													</Link>
+												</TableCell>
+												<TableCell>
+													{product.archivedAt ? (
+														<Badge variant="outline">Archived</Badge>
+													) : product.isActive ? (
+														<Badge variant="default">Active</Badge>
+													) : (
+														<Badge variant="secondary">Inactive</Badge>
+													)}
+												</TableCell>
+											</TableRow>
+										))}
+									</TableBody>
+								</Table>
 							</div>
-							<div>
-								<p className="text-sm font-medium text-muted-foreground">Created</p>
-								<p>{new Date(category.createdAt).toLocaleDateString()}</p>
-							</div>
-							<div>
-								<p className="text-sm font-medium text-muted-foreground">Updated</p>
-								<p>{new Date(category.updatedAt).toLocaleDateString()}</p>
-							</div>
-						</CardContent>
-					</Card>
-				</div>
+						)}
+					</CardContent>
+				</Card>
 			</div>
 
 			{/* Edit Dialog */}

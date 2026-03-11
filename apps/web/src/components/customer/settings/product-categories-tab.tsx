@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -20,6 +20,7 @@ import {
 	DialogTitle,
 } from '@/components/ui/dialog';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Badge } from '@/components/ui/badge';
 import { Plus } from 'lucide-react';
 import {
 	useProductCategoriesQuery,
@@ -28,6 +29,7 @@ import {
 } from '@/hooks/use-product-categories';
 
 export function ProductCategoriesTab() {
+	const navigate = useNavigate();
 	const { data: categories, isLoading, error } = useProductCategoriesQuery();
 	const createMutation = useCreateProductCategoryMutation();
 
@@ -102,19 +104,15 @@ export function ProductCategoriesTab() {
 						<TableHeader>
 							<TableRow>
 								<TableHead>Name</TableHead>
-								<TableHead>Description</TableHead>
 								<TableHead>Products</TableHead>
 								<TableHead className="w-[80px]"></TableHead>
 							</TableRow>
 						</TableHeader>
 						<TableBody>
 							{categories?.map((item) => (
-								<TableRow key={item.id}>
+								<TableRow key={item.id} className="cursor-pointer" onClick={() => navigate(`/app/categories/${item.id}`)}>
 									<TableCell className="font-medium">{item.name}</TableCell>
-									<TableCell className="max-w-[250px] truncate">
-										{item.description || <span className="text-muted-foreground">-</span>}
-									</TableCell>
-									<TableCell>{item.productCount}</TableCell>
+									<TableCell><Badge variant="secondary">{item.productCount}</Badge></TableCell>
 									<TableCell>
 										<Link to={`/app/categories/${item.id}`}>
 											<Button variant="ghost" size="sm">

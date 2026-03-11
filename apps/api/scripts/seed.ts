@@ -924,7 +924,6 @@ async function seedProductCatalog() {
 				sku: p.sku,
 				name: p.name,
 				description: p.desc,
-				basePrice: p.price,
 			});
 			createdRecords.products.push(productId);
 
