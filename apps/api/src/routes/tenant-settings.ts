@@ -11,6 +11,9 @@ import { getSignedImageUrl } from '../lib/s3';
 const updateSettingsSchema = z.object({
 	name: z.string().min(1, 'Name is required').optional(),
 	logoUrl: z.string().nullable().optional(),
+	phone: z.string().nullable().optional(),
+	email: z.string().nullable().optional(),
+	website: z.string().nullable().optional(),
 	address: z
 		.object({
 			streetNumber: z.string().optional(),
@@ -72,6 +75,9 @@ const tenantSettingsRoutes = new Hono()
 				slug: tenant.slug,
 				logoUrl: tenant.logoUrl,
 				logoSignedUrl,
+				phone: tenant.phone,
+				email: tenant.email,
+				website: tenant.website,
 				address,
 				createdAt: tenant.createdAt,
 				updatedAt: tenant.updatedAt,
@@ -83,7 +89,7 @@ const tenantSettingsRoutes = new Hono()
 	.put('/', zValidator('json', updateSettingsSchema), async (c) => {
 		const currentUser = c.get('user');
 		const tenantId = currentUser.tenantId!;
-		const { name, logoUrl, address } = c.req.valid('json');
+		const { name, logoUrl, phone, email, website, address } = c.req.valid('json');
 
 		// Get current tenant
 		const [tenant] = await db
@@ -131,7 +137,7 @@ const tenantSettingsRoutes = new Hono()
 		}
 
 		// Update tenant
-		const updateData: { name?: string; logoUrl?: string | null; addressId?: string | null; updatedAt: Date } = {
+		const updateData: { name?: string; logoUrl?: string | null; phone?: string | null; email?: string | null; website?: string | null; addressId?: string | null; updatedAt: Date } = {
 			updatedAt: new Date(),
 		};
 
@@ -141,6 +147,18 @@ const tenantSettingsRoutes = new Hono()
 
 		if (logoUrl !== undefined) {
 			updateData.logoUrl = logoUrl;
+		}
+
+		if (phone !== undefined) {
+			updateData.phone = phone;
+		}
+
+		if (email !== undefined) {
+			updateData.email = email;
+		}
+
+		if (website !== undefined) {
+			updateData.website = website;
 		}
 
 		if (addressId !== tenant.addressId) {
@@ -173,6 +191,9 @@ const tenantSettingsRoutes = new Hono()
 				slug: updated.slug,
 				logoUrl: updated.logoUrl,
 				logoSignedUrl: updatedLogoSignedUrl,
+				phone: updated.phone,
+				email: updated.email,
+				website: updated.website,
 				address: updatedAddress,
 				createdAt: updated.createdAt,
 				updatedAt: updated.updatedAt,

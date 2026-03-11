@@ -12,6 +12,7 @@ interface ImageUploadProps {
 	entityId: string;
 	className?: string;
 	disabled?: boolean;
+	compact?: boolean;
 }
 
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
@@ -24,6 +25,7 @@ export function ImageUpload({
 	entityId,
 	className,
 	disabled = false,
+	compact = false,
 }: ImageUploadProps) {
 	const [preview, setPreview] = useState<string | null>(value || null);
 	const [error, setError] = useState<string | null>(null);
@@ -173,7 +175,7 @@ export function ImageUpload({
 					<img
 						src={preview}
 						alt="Preview"
-						className="w-full max-h-48 object-contain rounded-lg border"
+						className={cn("w-full object-contain rounded-lg border", compact ? "max-h-32" : "max-h-48")}
 					/>
 					{!disabled && (
 						<div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
@@ -216,7 +218,8 @@ export function ImageUpload({
 					onDragOver={handleDragOver}
 					onDragLeave={handleDragLeave}
 					className={cn(
-						'w-full h-48 border-2 border-dashed rounded-lg flex flex-col items-center justify-center gap-2 cursor-pointer transition-colors',
+						'w-full border-2 border-dashed rounded-lg flex flex-col items-center justify-center gap-2 cursor-pointer transition-colors',
+						compact ? 'h-32' : 'h-48',
 						isDragging
 							? 'border-primary bg-primary/5'
 							: 'border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/50',
@@ -226,12 +229,12 @@ export function ImageUpload({
 				>
 					{uploadMutation.isPending ? (
 						<>
-							<Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+							<Loader2 className={cn("animate-spin text-muted-foreground", compact ? "h-6 w-6" : "h-8 w-8")} />
 							<span className="text-sm text-muted-foreground">Uploading...</span>
 						</>
 					) : (
 						<>
-							<ImageIcon className="h-8 w-8 text-muted-foreground" />
+							<ImageIcon className={cn("text-muted-foreground", compact ? "h-6 w-6" : "h-8 w-8")} />
 							<div className="text-center">
 								<span className="text-sm font-medium text-muted-foreground">
 									Click to upload

@@ -7,6 +7,9 @@ export const tenants = pgTable('tenants', {
 	slug: text('slug').notNull().unique(),
 	addressId: text('address_id'), // References addresses table (FK added via migration)
 	logoUrl: text('logo_url'),
+	phone: text('phone'),
+	email: text('email'),
+	website: text('website'),
 	createdAt: timestamp('created_at').notNull().defaultNow(),
 	updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });

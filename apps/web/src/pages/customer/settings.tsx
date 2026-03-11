@@ -14,7 +14,9 @@ import {
 import {
 	Select,
 	SelectContent,
+	SelectGroup,
 	SelectItem,
+	SelectLabel,
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select';
@@ -42,18 +44,37 @@ type SettingsTab =
 	| 'integrations'
 	| 'payments';
 
-const TAB_CONFIG: { value: SettingsTab; label: string; icon: typeof Building2 }[] = [
-	{ value: 'business', label: 'Business', icon: Building2 },
-	{ value: 'pricing', label: 'Pricing', icon: Percent },
-	{ value: 'categories', label: 'Categories', icon: FolderTree },
-	{ value: 'materials', label: 'Materials', icon: Layers },
-	{ value: 'finishes', label: 'Finishes', icon: Paintbrush },
-	{ value: 'lettering', label: 'Lettering', icon: Type },
-	{ value: 'sundries', label: 'Sundries', icon: Package },
-	{ value: 'line-items', label: 'Line Items', icon: List },
-	{ value: 'integrations', label: 'Integrations', icon: Mail },
-	{ value: 'payments', label: 'Payments', icon: CreditCard },
+type TabItem = { value: SettingsTab; label: string; icon: typeof Building2 };
+
+const TAB_GROUPS: { label: string | null; items: TabItem[] }[] = [
+	{
+		label: null,
+		items: [
+			{ value: 'business', label: 'Business', icon: Building2 },
+		],
+	},
+	{
+		label: 'Product Catalog',
+		items: [
+			{ value: 'pricing', label: 'Pricing', icon: Percent },
+			{ value: 'categories', label: 'Categories', icon: FolderTree },
+			{ value: 'materials', label: 'Materials', icon: Layers },
+			{ value: 'finishes', label: 'Finishes', icon: Paintbrush },
+			{ value: 'lettering', label: 'Lettering', icon: Type },
+			{ value: 'sundries', label: 'Sundries', icon: Package },
+			{ value: 'line-items', label: 'Line Items', icon: List },
+		],
+	},
+	{
+		label: 'System',
+		items: [
+			{ value: 'integrations', label: 'Integrations', icon: Mail },
+			{ value: 'payments', label: 'Payments', icon: CreditCard },
+		],
+	},
 ];
+
+const TAB_CONFIG = TAB_GROUPS.flatMap((g) => g.items);
 
 function SettingsContent({ tab }: { tab: SettingsTab }) {
 	switch (tab) {
@@ -117,13 +138,18 @@ export function SettingsPage() {
 						</SelectValue>
 					</SelectTrigger>
 					<SelectContent>
-						{TAB_CONFIG.map(({ value, label, icon: Icon }) => (
-							<SelectItem key={value} value={value}>
-								<span className="flex items-center gap-2">
-									<Icon className="h-4 w-4" />
-									{label}
-								</span>
-							</SelectItem>
+						{TAB_GROUPS.map((group, groupIndex) => (
+							<SelectGroup key={groupIndex}>
+								{group.label && <SelectLabel>{group.label}</SelectLabel>}
+								{group.items.map(({ value, label, icon: Icon }) => (
+									<SelectItem key={value} value={value}>
+										<span className="flex items-center gap-2">
+											<Icon className="h-4 w-4" />
+											{label}
+										</span>
+									</SelectItem>
+								))}
+							</SelectGroup>
 						))}
 					</SelectContent>
 				</Select>
@@ -133,24 +159,33 @@ export function SettingsPage() {
 			<div className="flex gap-8">
 				{/* Sidebar navigation - hidden on mobile */}
 				<nav className="hidden lg:block w-48 flex-shrink-0">
-					<ul className="space-y-1">
-						{TAB_CONFIG.map(({ value, label, icon: Icon }) => (
-							<li key={value}>
-								<button
-									onClick={() => handleTabChange(value)}
-									className={cn(
-										'w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors',
-										activeTab === value
-											? 'bg-primary text-primary-foreground font-medium'
-											: 'text-muted-foreground hover:bg-muted hover:text-foreground'
-									)}
-								>
-									<Icon className="h-4 w-4" />
-									{label}
-								</button>
-							</li>
-						))}
-					</ul>
+					{TAB_GROUPS.map((group, groupIndex) => (
+						<div key={groupIndex} className={groupIndex > 0 ? 'pt-4' : ''}>
+							{group.label && (
+								<div className="px-3 pb-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+									{group.label}
+								</div>
+							)}
+							<ul className="space-y-1">
+								{group.items.map(({ value, label, icon: Icon }) => (
+									<li key={value}>
+										<button
+											onClick={() => handleTabChange(value)}
+											className={cn(
+												'w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors',
+												activeTab === value
+													? 'bg-primary text-primary-foreground font-medium'
+													: 'text-muted-foreground hover:bg-muted hover:text-foreground'
+											)}
+										>
+											<Icon className="h-4 w-4" />
+											{label}
+										</button>
+									</li>
+								))}
+							</ul>
+						</div>
+					))}
 				</nav>
 
 				{/* Content area */}

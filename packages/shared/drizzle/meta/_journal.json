@@ -218,6 +218,13 @@
       "when": 1772637317771,
       "tag": "0030_rare_madame_hydra",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1773237125523,
+      "tag": "0031_cooing_doctor_octopus",
+      "breakpoints": true
     }
   ]
 }
