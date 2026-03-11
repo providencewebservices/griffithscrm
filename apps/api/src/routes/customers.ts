@@ -49,6 +49,10 @@ const updateCustomerSchema = z.object({
 	lastName: z.string().min(1, 'Last name is required').optional(),
 	contactInfo: z.array(contactInfoSchema).optional(),
 	addresses: z.array(addressSchema).optional(),
+	doNotCall: z.boolean().optional(),
+	doNotEmail: z.boolean().optional(),
+	doNotMail: z.boolean().optional(),
+	communicationNotes: z.string().nullable().optional(),
 });
 
 const searchQuerySchema = z.object({
@@ -340,17 +344,19 @@ const customerRoutes = new Hono()
 		const now = new Date();
 
 		try {
-			// Update customer basic info
-			if (updates.firstName || updates.lastName) {
-				await db
-					.update(customers)
-					.set({
-						...(updates.firstName && { firstName: updates.firstName }),
-						...(updates.lastName && { lastName: updates.lastName }),
-						updatedAt: now,
-					})
-					.where(eq(customers.id, customerId));
-			}
+			// Update customer basic info and preferences
+			await db
+				.update(customers)
+				.set({
+					...(updates.firstName && { firstName: updates.firstName }),
+					...(updates.lastName && { lastName: updates.lastName }),
+					...(updates.doNotCall !== undefined && { doNotCall: updates.doNotCall }),
+					...(updates.doNotEmail !== undefined && { doNotEmail: updates.doNotEmail }),
+					...(updates.doNotMail !== undefined && { doNotMail: updates.doNotMail }),
+					...(updates.communicationNotes !== undefined && { communicationNotes: updates.communicationNotes }),
+					updatedAt: now,
+				})
+				.where(eq(customers.id, customerId));
 
 			// Update contact info if provided
 			if (updates.contactInfo !== undefined) {

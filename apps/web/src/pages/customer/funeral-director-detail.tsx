@@ -17,6 +17,14 @@ import {
 	BreadcrumbPage,
 	BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from '@/components/ui/table';
 import { Separator } from '@/components/ui/separator';
 import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
 import {
@@ -24,12 +32,16 @@ import {
 	useArchiveFuneralDirectorMutation,
 	useUnarchiveFuneralDirectorMutation,
 } from '@/hooks/use-funeral-directors';
+import { useQuotesQuery, formatPriceRange, formatQuoteNumberWithOptions } from '@/hooks/use-quotes';
 import {
 	Mail,
 	Phone,
 	MapPin,
 	Globe,
 	ArrowLeft,
+	ExternalLink,
+	Clock,
+	FileText,
 } from 'lucide-react';
 import { DocumentsCard } from '@/components/documents';
 import { EmailThreadsCard } from '@/components/inbox/email-threads-card';
@@ -44,6 +56,9 @@ export function FuneralDirectorDetailPage() {
 	const { data: funeralDirector, isLoading, error } = useFuneralDirectorQuery(id);
 	const archiveMutation = useArchiveFuneralDirectorMutation();
 	const unarchiveMutation = useUnarchiveFuneralDirectorMutation();
+	const { data: fdQuotes, isLoading: quotesLoading } = useQuotesQuery(
+		id ? { funeralDirectorId: id } : undefined
+	);
 
 	const handleArchive = () => {
 		setMutationError(null);
@@ -117,6 +132,32 @@ export function FuneralDirectorDetailPage() {
 
 	const displayName = funeralDirector.tradingName || funeralDirector.businessName;
 
+	const formatDate = (dateString: string) => {
+		return new Date(dateString).toLocaleDateString('en-GB', {
+			day: 'numeric',
+			month: 'short',
+			year: 'numeric',
+		});
+	};
+
+	const getStatusVariant = (status: string) => {
+		switch (status) {
+			case 'accepted':
+				return 'default';
+			case 'presented':
+				return 'secondary';
+			case 'draft':
+			case 'review':
+			case 'ready':
+				return 'outline';
+			case 'rejected':
+			case 'expired':
+				return 'destructive';
+			default:
+				return 'secondary';
+		}
+	};
+
 	return (
 		<div>
 			<Breadcrumb className="mb-4">
@@ -137,10 +178,8 @@ export function FuneralDirectorDetailPage() {
 				<div>
 					<div className="flex items-center gap-3">
 						<h2 className="text-2xl font-bold">{displayName}</h2>
-						{funeralDirector.archivedAt ? (
+						{funeralDirector.archivedAt && (
 							<Badge variant="secondary">Archived</Badge>
-						) : (
-							<Badge variant="default">Active</Badge>
 						)}
 					</div>
 					{funeralDirector.tradingName && (
@@ -148,6 +187,9 @@ export function FuneralDirectorDetailPage() {
 							Legal name: {funeralDirector.businessName}
 						</p>
 					)}
+					<p className="text-muted-foreground mt-1">
+						Added {formatDate(funeralDirector.createdAt)}
+					</p>
 				</div>
 				<div className="flex gap-2">
 					<Link to={`/app/funeral-directors/${id}/edit`}>
@@ -175,6 +217,71 @@ export function FuneralDirectorDetailPage() {
 				</div>
 			)}
 
+			{/* Interaction History - elevated to top */}
+			<Card className="mb-6">
+				<CardHeader>
+					<CardTitle className="flex items-center gap-2">
+						<Clock className="h-5 w-5" />
+						Interaction History
+					</CardTitle>
+					<CardDescription>Quotes linked to this funeral director</CardDescription>
+				</CardHeader>
+				<CardContent>
+					{quotesLoading ? (
+						<p className="text-muted-foreground">Loading history...</p>
+					) : !fdQuotes?.packages || fdQuotes.packages.length === 0 ? (
+						<div className="text-center py-8">
+							<FileText className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
+							<p className="text-muted-foreground">No quotes yet</p>
+						</div>
+					) : (
+						<Table>
+							<TableHeader>
+								<TableRow>
+									<TableHead>Quote #</TableHead>
+									<TableHead>Customer</TableHead>
+									<TableHead>Date</TableHead>
+									<TableHead>Status</TableHead>
+									<TableHead className="text-right">Total</TableHead>
+									<TableHead></TableHead>
+								</TableRow>
+							</TableHeader>
+							<TableBody>
+								{fdQuotes.packages.map((quote) => (
+									<TableRow key={quote.id}>
+										<TableCell className="font-medium">
+											{formatQuoteNumberWithOptions(quote.firstQuoteNumber, quote.optionCount)}
+										</TableCell>
+										<TableCell>
+											{quote.customerFirstName || quote.customerLastName
+												? `${quote.customerFirstName ?? ''} ${quote.customerLastName ?? ''}`.trim()
+												: '-'}
+										</TableCell>
+										<TableCell>{formatDate(quote.createdAt)}</TableCell>
+										<TableCell>
+											<Badge variant={getStatusVariant(quote.status)}>
+												{quote.status.charAt(0).toUpperCase() +
+													quote.status.slice(1)}
+											</Badge>
+										</TableCell>
+										<TableCell className="text-right">
+											{formatPriceRange(quote.priceRange)}
+										</TableCell>
+										<TableCell>
+											<Link to={`/app/quotes/${quote.id}`}>
+												<Button variant="ghost" size="sm">
+													View
+												</Button>
+											</Link>
+										</TableCell>
+									</TableRow>
+								))}
+							</TableBody>
+						</Table>
+					)}
+				</CardContent>
+			</Card>
+
 			<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 				<Card>
 					<CardHeader>
@@ -195,7 +302,9 @@ export function FuneralDirectorDetailPage() {
 								<div className="space-y-2">
 									{getEmailContacts().map((contact) => (
 										<div key={contact.id} className="flex items-center gap-2">
-											<span>{contact.value}</span>
+											<a href={`mailto:${contact.value}`} className="text-primary hover:underline">
+												{contact.value}
+											</a>
 											{contact.label && (
 												<span className="text-xs text-muted-foreground">
 													({contact.label})
@@ -225,7 +334,9 @@ export function FuneralDirectorDetailPage() {
 								<div className="space-y-2">
 									{getPhoneContacts().map((contact) => (
 										<div key={contact.id} className="flex items-center gap-2">
-											<span>{contact.value}</span>
+											<a href={`tel:${contact.value}`} className="text-primary hover:underline">
+												{contact.value}
+											</a>
 											{contact.label && (
 												<span className="text-xs text-muted-foreground">
 													({contact.label})
@@ -254,9 +365,10 @@ export function FuneralDirectorDetailPage() {
 										href={funeralDirector.website}
 										target="_blank"
 										rel="noopener noreferrer"
-										className="text-primary hover:underline"
+										className="inline-flex items-center gap-1 text-primary hover:underline"
 									>
 										{funeralDirector.website}
+										<ExternalLink className="h-3 w-3" />
 									</a>
 								</div>
 							</>
@@ -300,16 +412,18 @@ export function FuneralDirectorDetailPage() {
 				</Card>
 			</div>
 
-			{funeralDirector.notes && (
-				<Card className="mt-6">
-					<CardHeader>
-						<CardTitle>Notes</CardTitle>
-					</CardHeader>
-					<CardContent>
+			<Card className="mt-6">
+				<CardHeader>
+					<CardTitle>Notes</CardTitle>
+				</CardHeader>
+				<CardContent>
+					{funeralDirector.notes ? (
 						<p className="whitespace-pre-wrap">{funeralDirector.notes}</p>
-					</CardContent>
-				</Card>
-			)}
+					) : (
+						<p className="text-sm text-muted-foreground">No notes</p>
+					)}
+				</CardContent>
+			</Card>
 
 			{/* Email Threads */}
 			<div className="mt-6">

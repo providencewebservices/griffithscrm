@@ -10,7 +10,13 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from '@/components/ui/select';
 import {
 	Card,
 	CardContent,
@@ -26,7 +32,8 @@ import {
 	type CustomerListItem,
 } from '@/hooks/use-customers';
 import { useTenantSettingsQuery } from '@/hooks/use-tenant-settings';
-import { Search, List, LayoutGrid, Mail, Phone, MapPin, X, Plus } from 'lucide-react';
+import { getInitials, getAvatarColor } from '@/lib/avatar-utils';
+import { Search, List, LayoutGrid, Mail, Phone, MapPin, X, Plus, Users } from 'lucide-react';
 
 type ViewMode = 'active' | 'archived';
 type DisplayMode = 'table' | 'cards';
@@ -122,14 +129,17 @@ export function CustomersList() {
 
 				{/* Controls row */}
 				<div className="flex items-center justify-between gap-2 sm:gap-4">
-					{/* Left: Tabs + Desktop search */}
+					{/* Left: Status filter + Desktop search */}
 					<div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
-						<Tabs value={viewMode} onValueChange={handleViewModeChange}>
-							<TabsList>
-								<TabsTrigger value="active">Active</TabsTrigger>
-								<TabsTrigger value="archived">Archived</TabsTrigger>
-							</TabsList>
-						</Tabs>
+						<Select value={viewMode} onValueChange={handleViewModeChange}>
+							<SelectTrigger className="w-[110px]">
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="active">Active</SelectItem>
+								<SelectItem value="archived">Archived</SelectItem>
+							</SelectContent>
+						</Select>
 						{/* Desktop-only inline search */}
 						<div className="relative flex-1 hidden sm:block">
 							<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -191,12 +201,18 @@ export function CustomersList() {
 			)}
 
 			{customers && customers.length === 0 ? (
-				<div className="text-center py-8 text-muted-foreground">
-					{searchQuery
-						? 'No customers found matching your search.'
-						: viewMode === 'archived'
-							? 'No archived customers.'
-							: 'No customers yet. Add your first customer to get started.'}
+				<div className="flex flex-col items-center justify-center py-12 border rounded-lg">
+					<Users className="h-10 w-10 text-muted-foreground mb-3" />
+					<p className="text-muted-foreground mb-4">
+						{searchQuery
+							? 'No customers found matching your search.'
+							: viewMode === 'archived'
+								? 'No archived customers.'
+								: 'No customers yet. Add your first customer to get started.'}
+					</p>
+					{!searchQuery && viewMode === 'active' && (
+						<Button onClick={handleAddCustomer}>Add Customer</Button>
+					)}
 				</div>
 			) : displayMode === 'table' ? (
 				<>
@@ -291,46 +307,50 @@ export function CustomersList() {
 function CustomerCard({ customer }: { customer: CustomerListItem }) {
 	const fullName = `${customer.firstName} ${customer.lastName}`;
 	const hasLocation = customer.primaryAddress?.formattedAddress;
+	const initials = getInitials(fullName);
+	const avatarColor = getAvatarColor(fullName);
 
 	return (
-		<Card className="h-full hover:shadow-md transition-shadow">
-			<CardHeader className="pb-3">
-				<CardTitle className="text-base">{fullName}</CardTitle>
-			</CardHeader>
-			<CardContent className="flex flex-col flex-1">
-				<div className="flex flex-col gap-1.5 text-sm text-muted-foreground">
-					{customer.primaryEmail?.value && (
-						<div className="flex items-center gap-2">
-							<Mail className="h-3.5 w-3.5" />
-							<span className="truncate">{customer.primaryEmail.value}</span>
+		<Link to={`/app/customers/${customer.id}`} className="block">
+			<Card className="h-full hover:shadow-md transition-shadow cursor-pointer">
+				<CardHeader className="pb-3">
+					<div className="flex items-center gap-3">
+						<div
+							className="h-9 w-9 rounded-full flex items-center justify-center text-sm font-medium shrink-0"
+							style={{ backgroundColor: avatarColor }}
+						>
+							{initials}
 						</div>
-					)}
-					{customer.primaryPhone?.value && (
-						<div className="flex items-center gap-2">
-							<Phone className="h-3.5 w-3.5" />
-							<span>{customer.primaryPhone.value}</span>
-						</div>
-					)}
-					{hasLocation && (
-						<div className="flex gap-2">
-							<MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-							<div className="flex flex-col">
-								{customer.primaryAddress?.formattedAddress?.split(', ').map((part, i) => (
-									<span key={i}>{part}</span>
-								))}
+						<CardTitle className="text-base font-medium">{fullName}</CardTitle>
+					</div>
+				</CardHeader>
+				<CardContent>
+					<div className="flex flex-col gap-1.5 text-sm text-muted-foreground">
+						{customer.primaryEmail?.value && (
+							<div className="flex items-center gap-2">
+								<Mail className="h-4 w-4" />
+								<span className="truncate">{customer.primaryEmail.value}</span>
 							</div>
-						</div>
-					)}
-				</div>
-
-				<div className="mt-auto pt-3">
-					<Link to={`/app/customers/${customer.id}`}>
-						<Button variant="outline" size="sm" className="w-full">
-							View Details
-						</Button>
-					</Link>
-				</div>
-			</CardContent>
-		</Card>
+						)}
+						{customer.primaryPhone?.value && (
+							<div className="flex items-center gap-2">
+								<Phone className="h-4 w-4" />
+								<span>{customer.primaryPhone.value}</span>
+							</div>
+						)}
+						{hasLocation && (
+							<div className="flex gap-2">
+								<MapPin className="h-4 w-4 mt-0.5 shrink-0" />
+								<div className="flex flex-col">
+									{customer.primaryAddress?.formattedAddress?.split(', ').map((part, i) => (
+										<span key={i}>{part}</span>
+									))}
+								</div>
+							</div>
+						)}
+					</div>
+				</CardContent>
+			</Card>
+		</Link>
 	);
 }

@@ -37,6 +37,7 @@ import {
 } from '@/hooks/use-option-choices';
 import { useSignedUrls } from '@/hooks/use-uploads';
 import { ChevronDown, ChevronRight, MoreHorizontal, Plus, ImageIcon } from 'lucide-react';
+import { formatPriceAdjustment } from '@/lib/product-utils';
 
 const OPTION_TYPE_LABELS: Record<ProductOptionType, string> = {
 	dimension: 'Dimension',
@@ -138,12 +139,6 @@ export function ProductOptionCard({ option, defaultOpen = false }: ProductOption
 		}
 	};
 
-	const formatPrice = (price: string) => {
-		const num = parseFloat(price);
-		if (num === 0) return '-';
-		return num > 0 ? `+£${num.toFixed(2)}` : `-£${Math.abs(num).toFixed(2)}`;
-	};
-
 	return (
 		<>
 			<div className="border rounded-lg">
@@ -231,7 +226,7 @@ export function ProductOptionCard({ option, defaultOpen = false }: ProductOption
 													<TableCell className="font-medium">
 														{choice.name}
 													</TableCell>
-													<TableCell>{formatPrice(choice.priceAdjustment)}</TableCell>
+													<TableCell>{formatPriceAdjustment(choice.priceAdjustment)}</TableCell>
 													{option.type !== 'flower_holes' && (
 													<TableCell>
 														<DropdownMenu>

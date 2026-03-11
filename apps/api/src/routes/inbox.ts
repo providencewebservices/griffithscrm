@@ -23,12 +23,12 @@ const threadsQuerySchema = z.object({
 	page: z.coerce.number().int().min(1).optional().default(1),
 	limit: z.coerce.number().int().min(1).max(100).optional().default(50),
 	filter: z.enum(['all', 'unread', 'customers', 'quotes', 'jobs', 'unlinked']).optional().default('all'),
-	contactEntityType: z.enum(['customer', 'funeral_director', 'supplier', 'quote', 'job']).optional(),
+	contactEntityType: z.enum(['customer', 'funeral_director', 'memorial_site', 'supplier', 'quote', 'job']).optional(),
 	contactEntityId: z.string().optional(),
 });
 
 const linkSchema = z.object({
-	entityType: z.enum(['customer', 'quote', 'job', 'funeral_director', 'supplier']),
+	entityType: z.enum(['customer', 'quote', 'job', 'funeral_director', 'memorial_site', 'supplier']),
 	entityId: z.string().min(1),
 });
 

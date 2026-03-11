@@ -101,6 +101,10 @@ export type CreateCustomerInput = {
 	lastName: string;
 	contactInfo?: ContactInfoInput[];
 	addresses?: AddressInput[];
+	doNotCall?: boolean;
+	doNotEmail?: boolean;
+	doNotMail?: boolean;
+	communicationNotes?: string | null;
 };
 
 export type UpdateCustomerInput = {
@@ -108,6 +112,10 @@ export type UpdateCustomerInput = {
 	lastName?: string;
 	contactInfo?: ContactInfoInput[];
 	addresses?: AddressInput[];
+	doNotCall?: boolean;
+	doNotEmail?: boolean;
+	doNotMail?: boolean;
+	communicationNotes?: string | null;
 };
 
 export type CustomerSearchParams = {

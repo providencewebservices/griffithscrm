@@ -511,6 +511,8 @@ const listQuerySchema = z.object({
 	status: z.enum(QUOTE_STATUSES).optional(),
 	quoteType: z.enum(QUOTE_TYPES).optional(),
 	customerId: z.string().optional(),
+	funeralDirectorId: z.string().optional(),
+	memorialSiteId: z.string().optional(),
 	search: z.string().optional(),
 	latestOnly: z.enum(['true', 'false']).optional().default('true'),
 	page: z.coerce.number().min(1).optional().default(1),
@@ -529,7 +531,7 @@ const quotesRoutes = new Hono()
 	.get('/', zValidator('query', listQuerySchema), async (c) => {
 		const currentUser = c.get('user');
 		const tenantId = currentUser.tenantId!;
-		const { status, quoteType, customerId, search, page, limit } = c.req.valid('query');
+		const { status, quoteType, customerId, funeralDirectorId, memorialSiteId, search, page, limit } = c.req.valid('query');
 
 		// Build filter conditions for packages
 		const conditions: ReturnType<typeof eq>[] = [eq(quotePackages.tenantId, tenantId)];
@@ -544,6 +546,14 @@ const quotesRoutes = new Hono()
 
 		if (customerId) {
 			conditions.push(eq(quotePackages.customerId, customerId));
+		}
+
+		if (funeralDirectorId) {
+			conditions.push(eq(quotePackages.funeralDirectorId, funeralDirectorId));
+		}
+
+		if (memorialSiteId) {
+			conditions.push(eq(quotePackages.memorialSiteId, memorialSiteId));
 		}
 
 		// Search filter at SQL level - search by quote number or customer name

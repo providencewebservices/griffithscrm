@@ -418,6 +418,14 @@ export function ProductDetailPage() {
 							)}
 						</CardContent>
 					</Card>
+
+					{/* Documents */}
+					<DocumentsCard
+						entityType="product"
+						entityId={product.id}
+						title="Documents"
+						description="Files and documents for this product"
+					/>
 				</div>
 
 				{/* Sidebar */}
@@ -428,15 +436,9 @@ export function ProductDetailPage() {
 						</CardHeader>
 						<CardContent className="space-y-4">
 							<div>
-								<p className="text-sm font-medium text-muted-foreground">SKU</p>
-								<p className="font-mono">{product.sku}</p>
-							</div>
-							<Separator />
-							<div>
 								<p className="text-sm font-medium text-muted-foreground">Category</p>
 								<p>{product.category?.name || '-'}</p>
 							</div>
-							<Separator />
 							<div>
 								<p className="text-sm font-medium text-muted-foreground">Supplier</p>
 								{product.supplierName ? (
@@ -451,23 +453,20 @@ export function ProductDetailPage() {
 								)}
 							</div>
 							{product.supplierProductSource && (
-								<>
-									<Separator />
-									<div>
-										<p className="text-sm font-medium text-muted-foreground">Imported From</p>
-										<Link
-											to={`/app/suppliers/${product.supplierId}/collections/${product.supplierProductSource.collectionId}/products/${product.supplierProductSource.supplierProductId}`}
-											className="text-primary hover:underline text-sm"
-										>
-											{product.supplierProductSource.supplierProductName || 'Supplier Product'}
-										</Link>
-										{product.supplierProductSource.collectionName && (
-											<p className="text-xs text-muted-foreground">
-												{product.supplierName} &gt; {product.supplierProductSource.collectionName}
-											</p>
-										)}
-									</div>
-								</>
+								<div>
+									<p className="text-sm font-medium text-muted-foreground">Imported From</p>
+									<Link
+										to={`/app/suppliers/${product.supplierId}/collections/${product.supplierProductSource.collectionId}/products/${product.supplierProductSource.supplierProductId}`}
+										className="text-primary hover:underline text-sm"
+									>
+										{product.supplierProductSource.supplierProductName || 'Supplier Product'}
+									</Link>
+									{product.supplierProductSource.collectionName && (
+										<p className="text-xs text-muted-foreground">
+											{product.supplierName} &gt; {product.supplierProductSource.collectionName}
+										</p>
+									)}
+								</div>
 							)}
 							<Separator />
 							<div>
@@ -492,16 +491,6 @@ export function ProductDetailPage() {
 						</CardContent>
 					</Card>
 				</div>
-			</div>
-
-			{/* Documents */}
-			<div className="mt-6">
-				<DocumentsCard
-					entityType="product"
-					entityId={product.id}
-					title="Documents"
-					description="Files and documents for this product"
-				/>
 			</div>
 
 			{/* Edit Product Dialog */}

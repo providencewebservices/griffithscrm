@@ -25,6 +25,8 @@ interface DocumentsCardProps {
 	tagFilter?: string;
 	defaultTags?: string;
 	excludeTags?: string[];
+	/** When true, renders content without Card wrapper (for embedding inside tabs, etc.) */
+	embedded?: boolean;
 }
 
 export function DocumentsCard({
@@ -35,6 +37,7 @@ export function DocumentsCard({
 	tagFilter,
 	defaultTags,
 	excludeTags,
+	embedded,
 }: DocumentsCardProps) {
 	const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
 	const [uploadError, setUploadError] = useState<string | null>(null);
@@ -92,6 +95,49 @@ export function DocumentsCard({
 		}
 	};
 
+	const content = (
+		<>
+			{isLoading ? (
+				<div className="text-center py-8 text-muted-foreground">
+					Loading documents...
+				</div>
+			) : filteredDocuments.length === 0 ? (
+				<div className="text-center py-8 text-muted-foreground border rounded-lg">
+					<Files className="h-8 w-8 mx-auto mb-2 opacity-50" />
+					No documents uploaded yet
+				</div>
+			) : (
+				<div className="space-y-2">
+					{filteredDocuments.map((doc) => (
+						<DocumentRow key={doc.id} document={doc} />
+					))}
+				</div>
+			)}
+		</>
+	);
+
+	if (embedded) {
+		return (
+			<>
+				<div className="flex items-center justify-between mb-4">
+					<p className="text-sm text-muted-foreground">{description}</p>
+					<Button size="sm" onClick={() => setUploadDialogOpen(true)}>
+						<Plus className="h-4 w-4 mr-2" />
+						Upload
+					</Button>
+				</div>
+				{content}
+				<DocumentUploadDialog
+					open={uploadDialogOpen}
+					onOpenChange={setUploadDialogOpen}
+					onSubmit={handleUpload}
+					isLoading={uploadMutation.isPending}
+					error={uploadError}
+				/>
+			</>
+		);
+	}
+
 	return (
 		<>
 			<Card>
@@ -108,22 +154,7 @@ export function DocumentsCard({
 					</div>
 				</CardHeader>
 				<CardContent>
-					{isLoading ? (
-						<div className="text-center py-8 text-muted-foreground">
-							Loading documents...
-						</div>
-					) : filteredDocuments.length === 0 ? (
-						<div className="text-center py-8 text-muted-foreground border rounded-lg">
-							<Files className="h-8 w-8 mx-auto mb-2 opacity-50" />
-							No documents uploaded yet
-						</div>
-					) : (
-						<div className="space-y-2">
-							{filteredDocuments.map((doc) => (
-								<DocumentRow key={doc.id} document={doc} />
-							))}
-						</div>
-					)}
+					{content}
 				</CardContent>
 			</Card>
 

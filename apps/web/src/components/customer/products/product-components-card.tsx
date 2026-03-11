@@ -48,66 +48,7 @@ import {
 	type ProductComponent,
 } from '@/hooks/use-product-components';
 import { Plus, MoreHorizontal, Layers } from 'lucide-react';
-
-// Component types from schema
-const COMPONENT_TYPES = [
-	'headstone',
-	'base',
-	'vase',
-	'kerb',
-	'book',
-	'post',
-	'column',
-	'capping_piece',
-	'rest',
-	'cross',
-	'die',
-	'tablet',
-	'slab',
-	'desk',
-	'heart',
-	'gate',
-	'flat_tablet',
-	'candle_box',
-	'riser',
-	'filler',
-	'wing',
-	'piece',
-	'wedge',
-	'desk_headstone',
-	'column_cap',
-	'plaque',
-] as const;
-
-// Human-readable labels for component types
-const COMPONENT_TYPE_LABELS: Record<string, string> = {
-	headstone: 'Headstone',
-	base: 'Base',
-	vase: 'Vase',
-	kerb: 'Kerb',
-	book: 'Book',
-	post: 'Post',
-	column: 'Column',
-	capping_piece: 'Capping Piece',
-	rest: 'Rest',
-	cross: 'Cross',
-	die: 'Die',
-	tablet: 'Tablet',
-	slab: 'Slab',
-	desk: 'Desk',
-	heart: 'Heart',
-	gate: 'Gate',
-	flat_tablet: 'Flat Tablet',
-	candle_box: 'Candle Box',
-	riser: 'Riser',
-	filler: 'Filler',
-	wing: 'Wing',
-	piece: 'Piece',
-	wedge: 'Wedge',
-	desk_headstone: 'Desk Headstone',
-	column_cap: 'Column Cap',
-	plaque: 'Plaque',
-};
+import { COMPONENT_TYPES, COMPONENT_TYPE_LABELS } from '@/lib/product-utils';
 
 type ProductComponentsCardProps = {
 	productId: string;

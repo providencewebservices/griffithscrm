@@ -26,13 +26,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from '@/components/ui/dialog';
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-	DropdownMenuSeparator,
-} from '@/components/ui/dropdown-menu';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
 	Select,
 	SelectContent,
@@ -47,9 +41,6 @@ import { useProductCategoriesQuery } from '@/hooks/use-product-categories';
 import {
 	useProductsQuery,
 	useCreateProductMutation,
-	useArchiveProductMutation,
-	useUnarchiveProductMutation,
-	useDuplicateProductMutation,
 	type CreateProductInput,
 	type ProductListParams,
 	type Product,
@@ -61,7 +52,7 @@ import {
 	type CreateSundryInput,
 } from '@/hooks/use-sundries';
 import { useSuppliersQuery } from '@/hooks/use-suppliers';
-import { Search, MoreHorizontal, Plus, Package, ChevronLeft, ChevronRight, List, LayoutGrid, ImageIcon } from 'lucide-react';
+import { Search, Plus, Package, ChevronLeft, ChevronRight, List, LayoutGrid, ImageIcon } from 'lucide-react';
 
 type StatusFilter = 'true' | 'false' | 'all';
 type DisplayMode = 'table' | 'cards';
@@ -154,9 +145,6 @@ export function ProductsPage() {
 	const { data: signedSundryUrls } = useSignedUrls(sundryImageUrls);
 
 	const createMutation = useCreateProductMutation();
-	const archiveMutation = useArchiveProductMutation();
-	const unarchiveMutation = useUnarchiveProductMutation();
-	const duplicateMutation = useDuplicateProductMutation();
 	const createSundryMutation = useCreateSundryMutation();
 
 	const handleAddProduct = () => {
@@ -172,31 +160,6 @@ export function ProductsPage() {
 			navigate(`/app/products/${product.id}`);
 		} catch (err) {
 			setMutationError(err instanceof Error ? err.message : 'An error occurred');
-		}
-	};
-
-	const handleArchive = async (id: string) => {
-		try {
-			await archiveMutation.mutateAsync(id);
-		} catch (err) {
-			// Error handled by mutation
-		}
-	};
-
-	const handleUnarchive = async (id: string) => {
-		try {
-			await unarchiveMutation.mutateAsync(id);
-		} catch (err) {
-			// Error handled by mutation
-		}
-	};
-
-	const handleDuplicate = async (id: string) => {
-		try {
-			const product = await duplicateMutation.mutateAsync(id);
-			navigate(`/app/products/${product.id}`);
-		} catch (err) {
-			// Error handled by mutation
 		}
 	};
 
@@ -329,18 +292,19 @@ export function ProductsPage() {
 						</SelectContent>
 					</Select>
 					{!isSundriesView && (
-						<label className="flex items-center gap-2 text-sm whitespace-nowrap">
-							<input
-								type="checkbox"
+						<div className="flex items-center gap-2">
+							<Checkbox
+								id="include-archived"
 								checked={includeArchived}
-								onChange={(e) => {
-									setIncludeArchived(e.target.checked);
+								onCheckedChange={(checked) => {
+									setIncludeArchived(checked === true);
 									setPage(1);
 								}}
-								className="rounded border-gray-300"
 							/>
-							Archived
-						</label>
+							<label htmlFor="include-archived" className="text-sm whitespace-nowrap cursor-pointer">
+								Archived
+							</label>
+						</div>
 					)}
 				</div>
 				<div className="flex items-center gap-2">
@@ -513,40 +477,9 @@ export function ProductsPage() {
 										)}
 									</TableCell>
 									<TableCell>
-										<DropdownMenu>
-											<DropdownMenuTrigger asChild>
-												<Button variant="ghost" size="icon-sm">
-													<MoreHorizontal className="h-4 w-4" />
-												</Button>
-											</DropdownMenuTrigger>
-											<DropdownMenuContent align="end">
-												<DropdownMenuItem asChild>
-													<Link to={`/app/products/${product.id}`}>
-														View Details
-													</Link>
-												</DropdownMenuItem>
-												<DropdownMenuItem
-													onClick={() => handleDuplicate(product.id)}
-												>
-													Duplicate
-												</DropdownMenuItem>
-												<DropdownMenuSeparator />
-												{product.archivedAt ? (
-													<DropdownMenuItem
-														onClick={() => handleUnarchive(product.id)}
-													>
-														Restore
-													</DropdownMenuItem>
-												) : (
-													<DropdownMenuItem
-														className="text-destructive"
-														onClick={() => handleArchive(product.id)}
-													>
-														Archive
-													</DropdownMenuItem>
-												)}
-											</DropdownMenuContent>
-										</DropdownMenu>
+										<Link to={`/app/products/${product.id}`}>
+											<Button variant="ghost" size="sm">View</Button>
+										</Link>
 									</TableCell>
 								</TableRow>
 							))}
@@ -711,61 +644,59 @@ function ProductCard({
 	signedImageUrl?: string;
 }) {
 	return (
-		<Card
-			className={`hover:shadow-md transition-shadow py-0 gap-3 ${product.archivedAt ? 'opacity-60' : ''}`}
-		>
-			<div className="aspect-[4/3] bg-white flex items-center justify-center overflow-hidden rounded-t-xl">
-				{product.imageUrl ? (
-					<img
-						src={signedImageUrl || product.imageUrl}
-						alt={product.name}
-						className="w-full h-full object-contain"
-					/>
-				) : (
-					<Package className="h-12 w-12 text-muted-foreground" />
-				)}
-			</div>
-			<CardHeader className="pb-2 pt-3">
-				<div className="flex items-start justify-between">
-					<div className="space-y-1 flex-1 min-w-0">
-						<CardTitle className="text-base line-clamp-2">{product.name}</CardTitle>
-						{product.category?.name && (
-							<p className="text-sm text-muted-foreground">{product.category.name}</p>
-						)}
-					</div>
-					<Badge variant="outline" className="text-xs font-mono ml-2">
-						{product.sku}
-					</Badge>
-				</div>
-			</CardHeader>
-			<CardContent className="space-y-2 pb-4">
-				<div className="flex items-center">
-					{product.archivedAt ? (
-						<Badge variant="outline">Archived</Badge>
-					) : product.isActive ? (
-						<Badge variant="default">Active</Badge>
+		<Link to={`/app/products/${product.id}`} className="block">
+			<Card
+				className={`hover:shadow-md transition-shadow py-0 gap-3 cursor-pointer ${product.archivedAt ? 'opacity-60' : ''}`}
+			>
+				<div className="aspect-[4/3] bg-white flex items-center justify-center overflow-hidden rounded-t-xl">
+					{product.imageUrl ? (
+						<img
+							src={signedImageUrl || product.imageUrl}
+							alt={product.name}
+							className="w-full h-full object-contain"
+						/>
 					) : (
-						<Badge variant="secondary">Inactive</Badge>
+						<Package className="h-12 w-12 text-muted-foreground" />
 					)}
 				</div>
-
-				{(product.optionCount ?? 0) > 0 && (
-					<div className="flex items-center gap-2">
-						<Badge variant="secondary" className="text-xs">
-							{product.optionCount} option{product.optionCount !== 1 ? 's' : ''}
+				<CardHeader className="pb-2 pt-3">
+					<div className="flex items-start justify-between">
+						<div className="space-y-1 flex-1 min-w-0">
+							<CardTitle className="text-base line-clamp-2">{product.name}</CardTitle>
+							{product.category?.name && (
+								<p className="text-sm text-muted-foreground">{product.category.name}</p>
+							)}
+						</div>
+						<Badge variant="outline" className="text-xs font-mono ml-2">
+							{product.sku}
 						</Badge>
 					</div>
-				)}
-
-				<div className="pt-2">
-					<Link to={`/app/products/${product.id}`}>
-						<Button variant="outline" size="sm" className="w-full">
-							View Details
-						</Button>
-					</Link>
-				</div>
-			</CardContent>
-		</Card>
+				</CardHeader>
+				<CardContent className="pb-4">
+					<div className="flex items-center justify-between">
+						<div className="flex items-center gap-2">
+							{product.archivedAt ? (
+								<Badge variant="outline">Archived</Badge>
+							) : product.isActive ? (
+								<Badge variant="default">Active</Badge>
+							) : (
+								<Badge variant="secondary">Inactive</Badge>
+							)}
+							{(product.optionCount ?? 0) > 0 && (
+								<Badge variant="secondary" className="text-xs">
+									{product.optionCount} option{product.optionCount !== 1 ? 's' : ''}
+								</Badge>
+							)}
+						</div>
+						{product.basePrice && (
+							<span className="text-sm font-semibold">
+								£{parseFloat(product.basePrice).toFixed(2)}
+							</span>
+						)}
+					</div>
+				</CardContent>
+			</Card>
+		</Link>
 	);
 }
 
@@ -777,42 +708,36 @@ function SundryCard({
 	signedImageUrl?: string;
 }) {
 	return (
-		<Card className="hover:shadow-md transition-shadow py-0 gap-3">
-			<div className="aspect-[4/3] bg-white flex items-center justify-center overflow-hidden rounded-t-xl">
-				{sundry.imageUrl ? (
-					<img
-						src={signedImageUrl || sundry.imageUrl}
-						alt={sundry.name}
-						className="w-full h-full object-contain"
-					/>
-				) : (
-					<Package className="h-12 w-12 text-muted-foreground" />
-				)}
-			</div>
-			<CardHeader className="pb-2 pt-3">
-				<div className="space-y-1">
-					<CardTitle className="text-base line-clamp-2">{sundry.name}</CardTitle>
-					{sundry.supplierName && (
-						<p className="text-sm text-muted-foreground">{sundry.supplierName}</p>
+		<Link to={`/app/sundries/${sundry.id}`} className="block">
+			<Card className="hover:shadow-md transition-shadow py-0 gap-3 cursor-pointer">
+				<div className="aspect-[4/3] bg-white flex items-center justify-center overflow-hidden rounded-t-xl">
+					{sundry.imageUrl ? (
+						<img
+							src={signedImageUrl || sundry.imageUrl}
+							alt={sundry.name}
+							className="w-full h-full object-contain"
+						/>
+					) : (
+						<Package className="h-12 w-12 text-muted-foreground" />
 					)}
 				</div>
-			</CardHeader>
-			<CardContent className="space-y-2 pb-4">
-				<div className="flex items-center justify-between">
-					<Badge variant={sundry.isActive ? 'default' : 'secondary'}>
-						{sundry.isActive ? 'Active' : 'Inactive'}
-					</Badge>
-					<span className="text-sm font-medium">£{parseFloat(sundry.price).toFixed(2)}</span>
-				</div>
-
-				<div className="pt-2">
-					<Link to={`/app/sundries/${sundry.id}`}>
-						<Button variant="outline" size="sm" className="w-full">
-							View Details
-						</Button>
-					</Link>
-				</div>
-			</CardContent>
-		</Card>
+				<CardHeader className="pb-2 pt-3">
+					<div className="space-y-1">
+						<CardTitle className="text-base line-clamp-2">{sundry.name}</CardTitle>
+						{sundry.supplierName && (
+							<p className="text-sm text-muted-foreground">{sundry.supplierName}</p>
+						)}
+					</div>
+				</CardHeader>
+				<CardContent className="pb-4">
+					<div className="flex items-center justify-between">
+						<Badge variant={sundry.isActive ? 'default' : 'secondary'}>
+							{sundry.isActive ? 'Active' : 'Inactive'}
+						</Badge>
+						<span className="text-sm font-medium">£{parseFloat(sundry.price).toFixed(2)}</span>
+					</div>
+				</CardContent>
+			</Card>
+		</Link>
 	);
 }

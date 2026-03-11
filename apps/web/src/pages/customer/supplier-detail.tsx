@@ -5,7 +5,6 @@ import { Badge } from '@/components/ui/badge';
 import {
 	Card,
 	CardContent,
-	CardDescription,
 	CardHeader,
 	CardTitle,
 } from '@/components/ui/card';
@@ -25,6 +24,7 @@ import {
 	TableHeader,
 	TableRow,
 } from '@/components/ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
 import {
@@ -46,7 +46,9 @@ import {
 	Package,
 	ShoppingBag,
 	BookOpen,
+	Copy,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { DocumentsCard } from '@/components/documents';
 import { EmailThreadsCard } from '@/components/inbox/email-threads-card';
 import {
@@ -54,7 +56,6 @@ import {
 	useCreateSupplierCollectionMutation,
 } from '@/hooks/use-supplier-collections';
 import { CollectionFormDialog } from '@/components/customer/supplier-catalog/collection-form-dialog';
-import { CsvImportDialog } from '@/components/customer/supplier-catalog/csv-import-dialog';
 
 export function SupplierDetailPage() {
 	const { id } = useParams<{ id: string }>();
@@ -78,6 +79,11 @@ export function SupplierDetailPage() {
 			style: 'currency',
 			currency: 'GBP',
 		}).format(parseFloat(amount));
+	};
+
+	const handleCopyToClipboard = (value: string, label: string) => {
+		navigator.clipboard.writeText(value);
+		toast.success(`${label} copied to clipboard`);
 	};
 
 	const handleArchive = () => {
@@ -172,10 +178,8 @@ export function SupplierDetailPage() {
 				<div>
 					<div className="flex items-center gap-3">
 						<h2 className="text-2xl font-bold">{displayName}</h2>
-						{supplier.archivedAt ? (
+						{supplier.archivedAt && (
 							<Badge variant="secondary">Archived</Badge>
-						) : (
-							<Badge variant="default">Active</Badge>
 						)}
 					</div>
 					{supplier.tradingName && supplier.tradingName !== supplier.businessName && (
@@ -197,7 +201,7 @@ export function SupplierDetailPage() {
 							{unarchiveMutation.isPending ? 'Restoring...' : 'Restore'}
 						</Button>
 					) : (
-						<Button variant="destructive" onClick={handleArchive}>
+						<Button variant="outline" onClick={handleArchive}>
 							Archive
 						</Button>
 					)}
@@ -210,326 +214,373 @@ export function SupplierDetailPage() {
 				</div>
 			)}
 
-			<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-				<Card>
-					<CardHeader>
-						<CardTitle>Contact Information</CardTitle>
-						<CardDescription>Email addresses and phone numbers</CardDescription>
-					</CardHeader>
-					<CardContent className="space-y-4">
-						<div>
-							<h4 className="text-sm font-medium mb-2 flex items-center gap-2">
-								<Mail className="h-4 w-4" />
-								Email Addresses
-							</h4>
-							{getEmailContacts().length === 0 ? (
-								<p className="text-sm text-muted-foreground">
-									No email addresses
-								</p>
-							) : (
-								<div className="space-y-2">
-									{getEmailContacts().map((contact) => (
-										<div key={contact.id} className="flex items-center gap-2">
-											<span>{contact.value}</span>
-											{contact.label && (
-												<span className="text-xs text-muted-foreground">
-													({contact.label})
-												</span>
-											)}
-											{contact.isPrimary && (
-												<Badge variant="secondary" className="text-xs">
-													Primary
-												</Badge>
-											)}
-										</div>
-									))}
-								</div>
-							)}
-						</div>
+			<Tabs defaultValue="overview">
+				<TabsList>
+					<TabsTrigger value="overview">Overview</TabsTrigger>
+					<TabsTrigger value="products">Products</TabsTrigger>
+					<TabsTrigger value="activity">Activity</TabsTrigger>
+				</TabsList>
 
-						<Separator />
-
-						<div>
-							<h4 className="text-sm font-medium mb-2 flex items-center gap-2">
-								<Phone className="h-4 w-4" />
-								Phone Numbers
-							</h4>
-							{getPhoneContacts().length === 0 ? (
-								<p className="text-sm text-muted-foreground">No phone numbers</p>
-							) : (
-								<div className="space-y-2">
-									{getPhoneContacts().map((contact) => (
-										<div key={contact.id} className="flex items-center gap-2">
-											<span>{contact.value}</span>
-											{contact.label && (
-												<span className="text-xs text-muted-foreground">
-													({contact.label})
-												</span>
-											)}
-											{contact.isPrimary && (
-												<Badge variant="secondary" className="text-xs">
-													Primary
-												</Badge>
-											)}
-										</div>
-									))}
-								</div>
-							)}
-						</div>
-
-						{supplier.website && (
-							<>
-								<Separator />
+				<TabsContent value="overview" className="space-y-6 mt-6">
+					<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+						<Card>
+							<CardHeader>
+								<CardTitle>Contact Information</CardTitle>
+							</CardHeader>
+							<CardContent className="space-y-4">
 								<div>
 									<h4 className="text-sm font-medium mb-2 flex items-center gap-2">
-										<Globe className="h-4 w-4" />
-										Website
+										<Mail className="h-4 w-4" />
+										Email Addresses
 									</h4>
-									<a
-										href={supplier.website}
-										target="_blank"
-										rel="noopener noreferrer"
-										className="text-primary hover:underline"
-									>
-										{supplier.website}
-									</a>
-								</div>
-							</>
-						)}
-					</CardContent>
-				</Card>
-
-				<Card>
-					<CardHeader>
-						<CardTitle>Addresses</CardTitle>
-						<CardDescription>Physical locations</CardDescription>
-					</CardHeader>
-					<CardContent>
-						{supplier.addresses.length === 0 ? (
-							<p className="text-sm text-muted-foreground">No addresses</p>
-						) : (
-							<div className="space-y-4">
-								{supplier.addresses.map((address) => (
-									<div key={address.id} className="flex items-start gap-2">
-										<MapPin className="h-4 w-4 mt-0.5 shrink-0" />
-										<div>
-											<p>{address.formattedAddress}</p>
-											<div className="flex items-center gap-2 mt-1">
-												{address.label && (
-													<span className="text-xs text-muted-foreground">
-														({address.label})
-													</span>
-												)}
-												{address.isPrimary && (
-													<Badge variant="secondary" className="text-xs">
-														Primary
-													</Badge>
-												)}
-											</div>
+									{getEmailContacts().length === 0 ? (
+										<p className="text-sm text-muted-foreground">
+											No email addresses
+										</p>
+									) : (
+										<div className="space-y-2">
+											{getEmailContacts().map((contact) => (
+												<div key={contact.id} className="flex items-center gap-2 group">
+													<button
+														type="button"
+														onClick={() => handleCopyToClipboard(contact.value, 'Email')}
+														className="flex items-center gap-1.5 hover:text-primary transition-colors"
+													>
+														<span>{contact.value}</span>
+														<Copy className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+													</button>
+													{contact.label && (
+														<span className="text-xs text-muted-foreground">
+															({contact.label})
+														</span>
+													)}
+													{contact.isPrimary && (
+														<Badge variant="secondary" className="text-xs">
+															Primary
+														</Badge>
+													)}
+												</div>
+											))}
 										</div>
+									)}
+								</div>
+
+								<Separator />
+
+								<div>
+									<h4 className="text-sm font-medium mb-2 flex items-center gap-2">
+										<Phone className="h-4 w-4" />
+										Phone Numbers
+									</h4>
+									{getPhoneContacts().length === 0 ? (
+										<p className="text-sm text-muted-foreground">No phone numbers</p>
+									) : (
+										<div className="space-y-2">
+											{getPhoneContacts().map((contact) => (
+												<div key={contact.id} className="flex items-center gap-2 group">
+													<button
+														type="button"
+														onClick={() => handleCopyToClipboard(contact.value, 'Phone number')}
+														className="flex items-center gap-1.5 hover:text-primary transition-colors"
+													>
+														<span>{contact.value}</span>
+														<Copy className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+													</button>
+													{contact.label && (
+														<span className="text-xs text-muted-foreground">
+															({contact.label})
+														</span>
+													)}
+													{contact.isPrimary && (
+														<Badge variant="secondary" className="text-xs">
+															Primary
+														</Badge>
+													)}
+												</div>
+											))}
+										</div>
+									)}
+								</div>
+
+								{supplier.website && (
+									<>
+										<Separator />
+										<div>
+											<h4 className="text-sm font-medium mb-2 flex items-center gap-2">
+												<Globe className="h-4 w-4" />
+												Website
+											</h4>
+											<a
+												href={supplier.website}
+												target="_blank"
+												rel="noopener noreferrer"
+												className="text-primary hover:underline"
+											>
+												{supplier.website}
+											</a>
+										</div>
+									</>
+								)}
+							</CardContent>
+						</Card>
+
+						<Card>
+							<CardHeader>
+								<CardTitle>Addresses</CardTitle>
+							</CardHeader>
+							<CardContent>
+								{supplier.addresses.length === 0 ? (
+									<p className="text-sm text-muted-foreground">No addresses</p>
+								) : (
+									<div className="space-y-4">
+										{supplier.addresses.map((address) => (
+											<div key={address.id} className="flex items-start gap-2">
+												<MapPin className="h-4 w-4 mt-0.5 shrink-0" />
+												<div>
+													<p>{address.formattedAddress}</p>
+													<div className="flex items-center gap-2 mt-1">
+														{address.label && (
+															<span className="text-xs text-muted-foreground">
+																({address.label})
+															</span>
+														)}
+														{address.isPrimary && (
+															<Badge variant="secondary" className="text-xs">
+																Primary
+															</Badge>
+														)}
+													</div>
+												</div>
+											</div>
+										))}
 									</div>
-								))}
-							</div>
-						)}
-					</CardContent>
-				</Card>
-			</div>
-
-			<Card className="mt-6">
-				<CardHeader>
-					<CardTitle className="flex items-center gap-2">
-						<CreditCard className="h-5 w-5" />
-						Account Details
-					</CardTitle>
-					<CardDescription>
-						Your account terms with this supplier
-					</CardDescription>
-				</CardHeader>
-				<CardContent>
-					<div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-						<div>
-							<p className="text-sm font-medium mb-1">Account Number</p>
-							<p>{supplier.accountNumber || '-'}</p>
-						</div>
-						<div>
-							<p className="text-sm font-medium mb-1">Payment Terms</p>
-							<p>
-								{supplier.paymentTerms
-									? PAYMENT_TERM_LABELS[supplier.paymentTerms as PaymentTerms]
-									: '-'}
-							</p>
-						</div>
-						<div>
-							<p className="text-sm font-medium mb-1">Default Lead Time</p>
-							<p>
-								{supplier.defaultLeadTimeDays
-									? `${supplier.defaultLeadTimeDays} days`
-									: '-'}
-							</p>
-						</div>
-						<div>
-							<p className="text-sm font-medium mb-1">Minimum Order Value</p>
-							<p>
-								{supplier.minimumOrderValue
-									? formatCurrency(supplier.minimumOrderValue)
-									: '-'}
-							</p>
-						</div>
+								)}
+							</CardContent>
+						</Card>
 					</div>
-				</CardContent>
-			</Card>
 
-			<div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-				<Card>
-					<CardHeader>
-						<CardTitle className="flex items-center gap-2">
-							<Package className="h-5 w-5" />
-							Materials from Supplier
-						</CardTitle>
-						<CardDescription>
-							Stone materials sourced from this supplier
-						</CardDescription>
-					</CardHeader>
-					<CardContent>
-						{!materials || materials.length === 0 ? (
-							<p className="text-sm text-muted-foreground">
-								No materials linked to this supplier
-							</p>
-						) : (
-							<Table>
-								<TableHeader>
-									<TableRow>
-										<TableHead>Name</TableHead>
-										<TableHead>Status</TableHead>
-									</TableRow>
-								</TableHeader>
-								<TableBody>
-									{materials.map((material) => (
-										<TableRow key={material.id}>
-											<TableCell className="font-medium">
-												{material.name}
-											</TableCell>
-											<TableCell>
-												<Badge variant={material.isActive ? 'default' : 'secondary'}>
-													{material.isActive ? 'Active' : 'Inactive'}
-												</Badge>
-											</TableCell>
-										</TableRow>
-									))}
-								</TableBody>
-							</Table>
-						)}
-					</CardContent>
-				</Card>
-
-				<Card>
-					<CardHeader>
-						<CardTitle className="flex items-center gap-2">
-							<ShoppingBag className="h-5 w-5" />
-							Sundries from Supplier
-						</CardTitle>
-						<CardDescription>
-							Add-on items sourced from this supplier
-						</CardDescription>
-					</CardHeader>
-					<CardContent>
-						{!sundries || sundries.length === 0 ? (
-							<p className="text-sm text-muted-foreground">
-								No sundries linked to this supplier
-							</p>
-						) : (
-							<Table>
-								<TableHeader>
-									<TableRow>
-										<TableHead>Name</TableHead>
-										<TableHead className="text-right">Price</TableHead>
-										<TableHead>Status</TableHead>
-									</TableRow>
-								</TableHeader>
-								<TableBody>
-									{sundries.map((sundry) => (
-										<TableRow key={sundry.id}>
-											<TableCell className="font-medium">
-												{sundry.name}
-											</TableCell>
-											<TableCell className="text-right">
-												{formatCurrency(sundry.price)}
-											</TableCell>
-											<TableCell>
-												<Badge variant={sundry.isActive ? 'default' : 'secondary'}>
-													{sundry.isActive ? 'Active' : 'Inactive'}
-												</Badge>
-											</TableCell>
-										</TableRow>
-									))}
-								</TableBody>
-							</Table>
-						)}
-					</CardContent>
-				</Card>
-			</div>
-
-			<Card className="mt-6">
-				<CardHeader>
-					<div className="flex items-center justify-between">
-						<div>
+					<Card>
+						<CardHeader>
 							<CardTitle className="flex items-center gap-2">
-								<BookOpen className="h-5 w-5" />
-								Supplier Catalog
+								<CreditCard className="h-5 w-5" />
+								Account Details
 							</CardTitle>
-							<CardDescription>
-								Browse and manage this supplier's product collections
-							</CardDescription>
-						</div>
-						<Button onClick={() => {
-							setCollectionError(null);
-							setCollectionDialogOpen(true);
-						}}>
-							Add Collection
-						</Button>
-					</div>
-				</CardHeader>
-				<CardContent>
-					{!collections || collections.length === 0 ? (
-						<p className="text-sm text-muted-foreground">
-							No collections yet. Add a collection to start organizing this supplier's products.
-						</p>
-					) : (
-						<Table>
-							<TableHeader>
-								<TableRow>
-									<TableHead>Name</TableHead>
-									<TableHead className="text-right">Categories</TableHead>
-									<TableHead>Status</TableHead>
-									<TableHead className="w-[80px]"></TableHead>
-								</TableRow>
-							</TableHeader>
-							<TableBody>
-								{collections.map((collection) => (
-									<TableRow key={collection.id}>
-										<TableCell className="font-medium">
-											{collection.name}
-										</TableCell>
-										<TableCell className="text-right">
-											{collection.categoryCount}
-										</TableCell>
-										<TableCell>
-											<Badge variant={collection.isActive ? 'default' : 'secondary'}>
-												{collection.isActive ? 'Active' : 'Inactive'}
-											</Badge>
-										</TableCell>
-										<TableCell>
-											<Link to={`/app/suppliers/${id}/collections/${collection.id}`}>
-												<Button variant="ghost" size="sm">View</Button>
-											</Link>
-										</TableCell>
-									</TableRow>
-								))}
-							</TableBody>
-						</Table>
+						</CardHeader>
+						<CardContent>
+							<div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+								<div>
+									<p className="text-sm font-medium mb-1">Account Number</p>
+									<p>{supplier.accountNumber || <span className="text-muted-foreground">Not set</span>}</p>
+								</div>
+								<div>
+									<p className="text-sm font-medium mb-1">Payment Terms</p>
+									<p>
+										{supplier.paymentTerms
+											? PAYMENT_TERM_LABELS[supplier.paymentTerms as PaymentTerms]
+											: <span className="text-muted-foreground">Not set</span>}
+									</p>
+								</div>
+								<div>
+									<p className="text-sm font-medium mb-1">Default Lead Time</p>
+									<p>
+										{supplier.defaultLeadTimeDays
+											? `${supplier.defaultLeadTimeDays} days`
+											: <span className="text-muted-foreground">Not set</span>}
+									</p>
+								</div>
+								<div>
+									<p className="text-sm font-medium mb-1">Minimum Order Value</p>
+									<p>
+										{supplier.minimumOrderValue
+											? formatCurrency(supplier.minimumOrderValue)
+											: <span className="text-muted-foreground">Not set</span>}
+									</p>
+								</div>
+							</div>
+						</CardContent>
+					</Card>
+
+					{supplier.notes && (
+						<Card>
+							<CardHeader>
+								<CardTitle>Notes</CardTitle>
+							</CardHeader>
+							<CardContent>
+								<p className="whitespace-pre-wrap">{supplier.notes}</p>
+							</CardContent>
+						</Card>
 					)}
-				</CardContent>
-			</Card>
+				</TabsContent>
+
+				<TabsContent value="products" className="space-y-6 mt-6">
+					<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+						<Card>
+							<CardHeader>
+								<CardTitle className="flex items-center gap-2">
+									<Package className="h-5 w-5" />
+									Materials
+								</CardTitle>
+							</CardHeader>
+							<CardContent>
+								{!materials || materials.length === 0 ? (
+									<p className="text-sm text-muted-foreground">
+										No materials linked to this supplier
+									</p>
+								) : (
+									<Table>
+										<TableHeader>
+											<TableRow>
+												<TableHead>Name</TableHead>
+												<TableHead>Status</TableHead>
+												<TableHead className="w-[80px]"></TableHead>
+											</TableRow>
+										</TableHeader>
+										<TableBody>
+											{materials.map((material) => (
+												<TableRow key={material.id}>
+													<TableCell className="font-medium">
+														{material.name}
+													</TableCell>
+													<TableCell>
+														{!material.isActive && (
+															<Badge variant="secondary">Inactive</Badge>
+														)}
+													</TableCell>
+													<TableCell>
+														<Link to={`/app/materials/${material.id}`}>
+															<Button variant="ghost" size="sm">View</Button>
+														</Link>
+													</TableCell>
+												</TableRow>
+											))}
+										</TableBody>
+									</Table>
+								)}
+							</CardContent>
+						</Card>
+
+						<Card>
+							<CardHeader>
+								<CardTitle className="flex items-center gap-2">
+									<ShoppingBag className="h-5 w-5" />
+									Sundries
+								</CardTitle>
+							</CardHeader>
+							<CardContent>
+								{!sundries || sundries.length === 0 ? (
+									<p className="text-sm text-muted-foreground">
+										No sundries linked to this supplier
+									</p>
+								) : (
+									<Table>
+										<TableHeader>
+											<TableRow>
+												<TableHead>Name</TableHead>
+												<TableHead className="text-right">Price</TableHead>
+												<TableHead>Status</TableHead>
+												<TableHead className="w-[80px]"></TableHead>
+											</TableRow>
+										</TableHeader>
+										<TableBody>
+											{sundries.map((sundry) => (
+												<TableRow key={sundry.id}>
+													<TableCell className="font-medium">
+														{sundry.name}
+													</TableCell>
+													<TableCell className="text-right">
+														{formatCurrency(sundry.price)}
+													</TableCell>
+													<TableCell>
+														{!sundry.isActive && (
+															<Badge variant="secondary">Inactive</Badge>
+														)}
+													</TableCell>
+													<TableCell>
+														<Link to={`/app/sundries/${sundry.id}`}>
+															<Button variant="ghost" size="sm">View</Button>
+														</Link>
+													</TableCell>
+												</TableRow>
+											))}
+										</TableBody>
+									</Table>
+								)}
+							</CardContent>
+						</Card>
+					</div>
+
+					<Card>
+						<CardHeader>
+							<div className="flex items-center justify-between">
+								<CardTitle className="flex items-center gap-2">
+									<BookOpen className="h-5 w-5" />
+									Supplier Catalog
+								</CardTitle>
+								<Button onClick={() => {
+									setCollectionError(null);
+									setCollectionDialogOpen(true);
+								}}>
+									Add Collection
+								</Button>
+							</div>
+						</CardHeader>
+						<CardContent>
+							{!collections || collections.length === 0 ? (
+								<p className="text-sm text-muted-foreground">
+									No collections yet. Add a collection to start organizing this supplier's products.
+								</p>
+							) : (
+								<Table>
+									<TableHeader>
+										<TableRow>
+											<TableHead>Name</TableHead>
+											<TableHead className="text-right">Categories</TableHead>
+											<TableHead>Status</TableHead>
+											<TableHead className="w-[80px]"></TableHead>
+										</TableRow>
+									</TableHeader>
+									<TableBody>
+										{collections.map((collection) => (
+											<TableRow key={collection.id}>
+												<TableCell className="font-medium">
+													{collection.name}
+												</TableCell>
+												<TableCell className="text-right">
+													{collection.categoryCount}
+												</TableCell>
+												<TableCell>
+													{!collection.isActive && (
+														<Badge variant="secondary">Inactive</Badge>
+													)}
+												</TableCell>
+												<TableCell>
+													<Link to={`/app/suppliers/${id}/collections/${collection.id}`}>
+														<Button variant="ghost" size="sm">View</Button>
+													</Link>
+												</TableCell>
+											</TableRow>
+										))}
+									</TableBody>
+								</Table>
+							)}
+						</CardContent>
+					</Card>
+				</TabsContent>
+
+				<TabsContent value="activity" className="space-y-6 mt-6">
+					<EmailThreadsCard
+						entityType="supplier"
+						entityId={supplier.id}
+						entityName={displayName}
+					/>
+					<DocumentsCard
+						entityType="supplier"
+						entityId={supplier.id}
+						title="Documents"
+						description="Files and documents for this supplier"
+					/>
+				</TabsContent>
+			</Tabs>
 
 			{id && (
 				<CollectionFormDialog
@@ -549,36 +600,6 @@ export function SupplierDetailPage() {
 					error={collectionError}
 				/>
 			)}
-
-			{supplier.notes && (
-				<Card className="mt-6">
-					<CardHeader>
-						<CardTitle>Notes</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<p className="whitespace-pre-wrap">{supplier.notes}</p>
-					</CardContent>
-				</Card>
-			)}
-
-			{/* Email Threads */}
-			<div className="mt-6">
-				<EmailThreadsCard
-					entityType="supplier"
-					entityId={supplier.id}
-					entityName={displayName}
-				/>
-			</div>
-
-			{/* Documents */}
-			<div className="mt-6">
-				<DocumentsCard
-					entityType="supplier"
-					entityId={supplier.id}
-					title="Documents"
-					description="Files and documents for this supplier"
-				/>
-			</div>
 
 			<DeleteConfirmDialog
 				open={archiveDialogOpen}

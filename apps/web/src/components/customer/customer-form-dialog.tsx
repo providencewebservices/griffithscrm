@@ -23,6 +23,7 @@ import {
 	FieldLabel,
 	FieldError,
 } from '@/components/ui/field';
+import { Textarea } from '@/components/ui/textarea';
 import { Plus, Trash2 } from 'lucide-react';
 import type {
 	CustomerWithRelations,
@@ -94,6 +95,10 @@ export function CustomerFormDialog({
 	const [lastName, setLastName] = useState('');
 	const [contacts, setContacts] = useState<ContactInfoInput[]>([]);
 	const [addresses, setAddresses] = useState<AddressInput[]>([]);
+	const [doNotCall, setDoNotCall] = useState(false);
+	const [doNotEmail, setDoNotEmail] = useState(false);
+	const [doNotMail, setDoNotMail] = useState(false);
+	const [communicationNotes, setCommunicationNotes] = useState('');
 
 	const isEditing = !!customer;
 
@@ -127,11 +132,19 @@ export function CustomerFormDialog({
 					isPrimary: a.isPrimary,
 				}))
 			);
+			setDoNotCall(customer.doNotCall);
+			setDoNotEmail(customer.doNotEmail);
+			setDoNotMail(customer.doNotMail);
+			setCommunicationNotes(customer.communicationNotes || '');
 		} else {
 			setFirstName('');
 			setLastName('');
 			setContacts([]);
 			setAddresses([]);
+			setDoNotCall(false);
+			setDoNotEmail(false);
+			setDoNotMail(false);
+			setCommunicationNotes('');
 		}
 	}, [customer, open]);
 
@@ -142,6 +155,10 @@ export function CustomerFormDialog({
 			lastName,
 			contactInfo: contacts.filter((c) => c.value.trim()),
 			addresses: addresses.filter((a) => a.formattedAddress.trim()),
+			doNotCall,
+			doNotEmail,
+			doNotMail,
+			communicationNotes: communicationNotes || null,
 		});
 	};
 
@@ -332,6 +349,42 @@ export function CustomerFormDialog({
 									))}
 								</div>
 							)}
+						</div>
+
+						{/* Communication Preferences */}
+						<div>
+							<h3 className="text-sm font-medium mb-3">Communication Preferences</h3>
+							<div className="space-y-3">
+								<div className="flex flex-wrap gap-6">
+									<label className="flex items-center gap-1.5 text-sm">
+										<Checkbox
+											checked={doNotCall}
+											onCheckedChange={(checked) => setDoNotCall(checked === true)}
+										/>
+										Do not call
+									</label>
+									<label className="flex items-center gap-1.5 text-sm">
+										<Checkbox
+											checked={doNotEmail}
+											onCheckedChange={(checked) => setDoNotEmail(checked === true)}
+										/>
+										Do not email
+									</label>
+									<label className="flex items-center gap-1.5 text-sm">
+										<Checkbox
+											checked={doNotMail}
+											onCheckedChange={(checked) => setDoNotMail(checked === true)}
+										/>
+										Do not mail
+									</label>
+								</div>
+								<Textarea
+									placeholder="Communication notes..."
+									value={communicationNotes}
+									onChange={(e) => setCommunicationNotes(e.target.value)}
+									rows={2}
+								/>
+							</div>
 						</div>
 
 						{/* Addresses */}

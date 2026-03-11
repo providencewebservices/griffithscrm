@@ -10,7 +10,6 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import {
 	Card,
@@ -32,12 +31,26 @@ import {
 	type MemorialSiteType,
 	type MemorialSiteListItem,
 } from '@/hooks/use-memorial-sites';
+import { getAvatarColor } from '@/lib/avatar-utils';
 import { Search, Church, Flame, Building2, Building, List, LayoutGrid, Phone, MapPin, X, Plus } from 'lucide-react';
 
 type ViewMode = 'active' | 'archived';
 type DisplayMode = 'table' | 'cards';
 
 const ITEMS_PER_PAGE = 12;
+
+function getSiteTypeIcon(siteType: MemorialSiteType) {
+	switch (siteType) {
+		case 'churchyard':
+			return Church;
+		case 'council_cemetery':
+			return Building2;
+		case 'chapel':
+			return Building;
+		default:
+			return Flame;
+	}
+}
 
 export function MemorialSitesList() {
 	const [searchQuery, setSearchQuery] = useState('');
@@ -113,14 +126,17 @@ export function MemorialSitesList() {
 
 				{/* Controls row */}
 				<div className="flex items-center justify-between gap-2 sm:gap-4">
-					{/* Left: Tabs + Site type filter + Desktop search */}
+					{/* Left: Status filter + Site type filter + Desktop search */}
 					<div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
-						<Tabs value={viewMode} onValueChange={handleViewModeChange}>
-							<TabsList>
-								<TabsTrigger value="active">Active</TabsTrigger>
-								<TabsTrigger value="archived">Archived</TabsTrigger>
-							</TabsList>
-						</Tabs>
+						<Select value={viewMode} onValueChange={handleViewModeChange}>
+							<SelectTrigger className="w-[110px]">
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="active">Active</SelectItem>
+								<SelectItem value="archived">Archived</SelectItem>
+							</SelectContent>
+						</Select>
 						<Select
 							value={siteTypeFilter}
 							onValueChange={handleSiteTypeChange}
@@ -193,12 +209,20 @@ export function MemorialSitesList() {
 			</div>
 
 			{memorialSites && memorialSites.length === 0 ? (
-				<div className="text-center py-8 text-muted-foreground">
-					{searchQuery || siteTypeFilter !== 'all'
-						? 'No memorial sites found matching your search.'
-						: viewMode === 'archived'
-							? 'No archived memorial sites.'
-							: 'No memorial sites yet. Add your first memorial site to get started.'}
+				<div className="flex flex-col items-center justify-center py-12 border rounded-lg">
+					<Church className="h-10 w-10 text-muted-foreground mb-3" />
+					<p className="text-muted-foreground mb-4">
+						{searchQuery || siteTypeFilter !== 'all'
+							? 'No memorial sites found matching your search.'
+							: viewMode === 'archived'
+								? 'No archived memorial sites.'
+								: 'No memorial sites yet. Add your first memorial site to get started.'}
+					</p>
+					{!searchQuery && siteTypeFilter === 'all' && viewMode === 'active' && (
+						<Link to="/app/memorial-sites/new">
+							<Button>Add Memorial Site</Button>
+						</Link>
+					)}
 				</div>
 			) : displayMode === 'table' ? (
 				<>
@@ -283,70 +307,64 @@ function SiteTypeBadge({ siteType }: { siteType: MemorialSiteType }) {
 		return 'secondary'; // crematorium and chapel both use secondary
 	};
 
-	const getIcon = () => {
-		switch (siteType) {
-			case 'churchyard':
-				return <Church className="h-3 w-3" />;
-			case 'council_cemetery':
-				return <Building2 className="h-3 w-3" />;
-			case 'chapel':
-				return <Building className="h-3 w-3" />;
-			default:
-				return <Flame className="h-3 w-3" />;
-		}
-	};
+	const Icon = getSiteTypeIcon(siteType);
 
 	return (
 		<Badge variant={getVariant()} className="gap-1">
-			{getIcon()}
+			<Icon className="h-3 w-3" />
 			{SITE_TYPE_LABELS[siteType]}
 		</Badge>
 	);
 }
 
 function MemorialSiteCard({ site }: { site: MemorialSiteListItem }) {
-	return (
-		<Card className="h-full hover:shadow-md transition-shadow">
-			<CardHeader className="pb-3">
-				<div className="flex items-start justify-between gap-2">
-					<CardTitle className="text-base">{site.name}</CardTitle>
-					<SiteTypeBadge siteType={site.siteType} />
-				</div>
-			</CardHeader>
-			<CardContent className="flex flex-col flex-1">
-				<div className="flex flex-col gap-1.5 text-sm text-muted-foreground">
-					{site.primaryPhone?.value && (
-						<div className="flex items-center gap-2">
-							<Phone className="h-3.5 w-3.5" />
-							<span>{site.primaryPhone.value}</span>
-						</div>
-					)}
-					{site.primaryAddress && (
-						<div className="flex gap-2">
-							<MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-							<div className="flex flex-col">
-								{site.primaryAddress.formattedAddress?.split(', ').map((part, i) => (
-									<span key={i}>{part}</span>
-								))}
-							</div>
-						</div>
-					)}
-					{!site.primaryPhone?.value && !site.primaryAddress && (
-						<div className="flex items-center gap-2">
-							<MapPin className="h-3.5 w-3.5" />
-							<span>No location info</span>
-						</div>
-					)}
-				</div>
+	const Icon = getSiteTypeIcon(site.siteType);
+	const avatarColor = getAvatarColor(site.name);
 
-				<div className="mt-auto pt-3">
-					<Link to={`/app/memorial-sites/${site.id}`}>
-						<Button variant="outline" size="sm" className="w-full">
-							View Details
-						</Button>
-					</Link>
-				</div>
-			</CardContent>
-		</Card>
+	return (
+		<Link to={`/app/memorial-sites/${site.id}`} className="block">
+			<Card className="h-full hover:shadow-md transition-shadow cursor-pointer">
+				<CardHeader className="pb-3">
+					<div className="flex items-start justify-between gap-2">
+						<div className="flex items-center gap-3">
+							<div
+								className="h-9 w-9 rounded-full flex items-center justify-center shrink-0"
+								style={{ backgroundColor: avatarColor }}
+							>
+								<Icon className="h-4 w-4" />
+							</div>
+							<CardTitle className="text-base font-medium">{site.name}</CardTitle>
+						</div>
+						<SiteTypeBadge siteType={site.siteType} />
+					</div>
+				</CardHeader>
+				<CardContent>
+					<div className="flex flex-col gap-1.5 text-sm text-muted-foreground">
+						{site.primaryPhone?.value && (
+							<div className="flex items-center gap-2">
+								<Phone className="h-4 w-4" />
+								<span>{site.primaryPhone.value}</span>
+							</div>
+						)}
+						{site.primaryAddress && (
+							<div className="flex gap-2">
+								<MapPin className="h-4 w-4 mt-0.5 shrink-0" />
+								<div className="flex flex-col">
+									{site.primaryAddress.formattedAddress?.split(', ').map((part, i) => (
+										<span key={i}>{part}</span>
+									))}
+								</div>
+							</div>
+						)}
+						{!site.primaryPhone?.value && !site.primaryAddress && (
+							<div className="flex items-center gap-2">
+								<MapPin className="h-4 w-4" />
+								<span>No location info</span>
+							</div>
+						)}
+					</div>
+				</CardContent>
+			</Card>
+		</Link>
 	);
 }

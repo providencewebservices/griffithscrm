@@ -317,6 +317,8 @@ export type QuoteSearchParams = {
 	status?: QuoteStatus;
 	quoteType?: QuoteType;
 	customerId?: string;
+	funeralDirectorId?: string;
+	memorialSiteId?: string;
 	search?: string;
 	page?: number;
 	limit?: number;
@@ -351,6 +353,8 @@ async function fetchQuotes(params?: QuoteSearchParams): Promise<QuotesListRespon
 	if (params?.status) searchParams.set('status', params.status);
 	if (params?.quoteType) searchParams.set('quoteType', params.quoteType);
 	if (params?.customerId) searchParams.set('customerId', params.customerId);
+	if (params?.funeralDirectorId) searchParams.set('funeralDirectorId', params.funeralDirectorId);
+	if (params?.memorialSiteId) searchParams.set('memorialSiteId', params.memorialSiteId);
 	if (params?.search) searchParams.set('search', params.search);
 	if (params?.page) searchParams.set('page', String(params.page));
 	if (params?.limit) searchParams.set('limit', String(params.limit));

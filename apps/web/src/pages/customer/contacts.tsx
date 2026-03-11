@@ -3,6 +3,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CustomersList } from '@/components/contacts/customers-list';
 import { FuneralDirectorsList } from '@/components/contacts/funeral-directors-list';
 import { MemorialSitesList } from '@/components/contacts/memorial-sites-list';
+import { useCustomersQuery } from '@/hooks/use-customers';
+import { useFuneralDirectorsQuery } from '@/hooks/use-funeral-directors';
+import { useMemorialSitesQuery } from '@/hooks/use-memorial-sites';
 import { Users, Building2, Church } from 'lucide-react';
 
 type ContactTab = 'customers' | 'funeral-directors' | 'memorial-sites';
@@ -16,6 +19,16 @@ const TAB_CONFIG: { value: ContactTab; label: string; icon: typeof Users }[] = [
 export function ContactsPage() {
 	const [searchParams, setSearchParams] = useSearchParams();
 	const activeTab = (searchParams.get('tab') as ContactTab) || 'customers';
+
+	const { data: customers } = useCustomersQuery();
+	const { data: funeralDirectors } = useFuneralDirectorsQuery();
+	const { data: memorialSites } = useMemorialSitesQuery();
+
+	const counts: Record<ContactTab, number | undefined> = {
+		'customers': customers?.length,
+		'funeral-directors': funeralDirectors?.length,
+		'memorial-sites': memorialSites?.length,
+	};
 
 	const handleTabChange = (tab: string) => {
 		if (tab === 'customers') {
@@ -41,6 +54,11 @@ export function ContactsPage() {
 						<TabsTrigger key={value} value={value} className="gap-2">
 							<Icon className="h-4 w-4" />
 							{label}
+							{counts[value] != null && (
+								<span className="text-muted-foreground text-xs ml-0.5">
+									({counts[value]})
+								</span>
+							)}
 						</TabsTrigger>
 					))}
 				</TabsList>
