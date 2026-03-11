@@ -5,7 +5,6 @@ import { Badge } from '@/components/ui/badge';
 import {
 	Card,
 	CardContent,
-	CardDescription,
 	CardHeader,
 	CardTitle,
 } from '@/components/ui/card';
@@ -25,6 +24,16 @@ import {
 	TableHeader,
 	TableRow,
 } from '@/components/ui/table';
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { TimeOffRequestDialog } from '@/components/time-off';
 import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
 import { useSession } from '@/lib/auth';
@@ -61,6 +70,9 @@ export function TeamMemberDetailPage() {
 		null
 	);
 	const [mutationError, setMutationError] = useState<string | null>(null);
+	const [approveDialogOpen, setApproveDialogOpen] = useState(false);
+	const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+	const [actionRequest, setActionRequest] = useState<TimeOffRequest | null>(null);
 
 	const handleCreateRequest = async (data: {
 		startDate: string;
@@ -97,10 +109,18 @@ export function TeamMemberDetailPage() {
 		}
 	};
 
-	const handleApprove = async (request: TimeOffRequest) => {
+	const handleApproveClick = (request: TimeOffRequest) => {
+		setActionRequest(request);
+		setApproveDialogOpen(true);
+	};
+
+	const handleApproveConfirm = async () => {
+		if (!actionRequest) return;
 		setMutationError(null);
 		try {
-			await approveTimeOffMutation.mutateAsync({ id: request.id });
+			await approveTimeOffMutation.mutateAsync({ id: actionRequest.id });
+			setApproveDialogOpen(false);
+			setActionRequest(null);
 		} catch (err) {
 			setMutationError(
 				err instanceof Error ? err.message : 'Failed to approve request'
@@ -108,10 +128,18 @@ export function TeamMemberDetailPage() {
 		}
 	};
 
-	const handleReject = async (request: TimeOffRequest) => {
+	const handleRejectClick = (request: TimeOffRequest) => {
+		setActionRequest(request);
+		setRejectDialogOpen(true);
+	};
+
+	const handleRejectConfirm = async () => {
+		if (!actionRequest) return;
 		setMutationError(null);
 		try {
-			await rejectTimeOffMutation.mutateAsync({ id: request.id });
+			await rejectTimeOffMutation.mutateAsync({ id: actionRequest.id });
+			setRejectDialogOpen(false);
+			setActionRequest(null);
 		} catch (err) {
 			setMutationError(
 				err instanceof Error ? err.message : 'Failed to reject request'
@@ -204,7 +232,11 @@ export function TeamMemberDetailPage() {
 					</div>
 					<p className="text-muted-foreground mt-1">
 						Team member since{' '}
-						{new Date(member.createdAt).toLocaleDateString()}
+						{new Date(member.createdAt).toLocaleDateString('en-GB', {
+							day: 'numeric',
+							month: 'long',
+							year: 'numeric',
+						})}
 					</p>
 				</div>
 			</div>
@@ -215,67 +247,50 @@ export function TeamMemberDetailPage() {
 				</div>
 			)}
 
-			<div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-				<Card>
-					<CardHeader className="pb-3">
-						<CardTitle className="text-base flex items-center gap-2">
-							<Mail className="h-4 w-4" />
-							Email
-						</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<p className="text-sm">{member.email}</p>
-					</CardContent>
-				</Card>
-
-				<Card>
-					<CardHeader className="pb-3">
-						<CardTitle className="text-base flex items-center gap-2">
-							<Calendar className="h-4 w-4" />
-							Joined
-						</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<p className="text-sm">
-							{new Date(member.createdAt).toLocaleDateString('en-GB', {
-								day: 'numeric',
-								month: 'long',
-								year: 'numeric',
-							})}
-						</p>
-					</CardContent>
-				</Card>
-
-				<Card>
-					<CardHeader className="pb-3">
-						<CardTitle className="text-base flex items-center gap-2">
-							<Clock className="h-4 w-4" />
-							Status
-						</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<p className="text-sm">
-							{member.emailVerified ? 'Active member' : 'Invitation pending'}
-						</p>
-					</CardContent>
-				</Card>
-			</div>
+			<Card className="mb-6">
+				<CardContent className="pt-6">
+					<div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+						<div className="flex items-start gap-3">
+							<Mail className="h-4 w-4 mt-0.5 text-muted-foreground" />
+							<div>
+								<p className="text-xs text-muted-foreground">Email</p>
+								<p className="text-sm">{member.email}</p>
+							</div>
+						</div>
+						<div className="flex items-start gap-3">
+							<Calendar className="h-4 w-4 mt-0.5 text-muted-foreground" />
+							<div>
+								<p className="text-xs text-muted-foreground">Joined</p>
+								<p className="text-sm">
+									{new Date(member.createdAt).toLocaleDateString('en-GB', {
+										day: 'numeric',
+										month: 'long',
+										year: 'numeric',
+									})}
+								</p>
+							</div>
+						</div>
+						<div className="flex items-start gap-3">
+							<Clock className="h-4 w-4 mt-0.5 text-muted-foreground" />
+							<div>
+								<p className="text-xs text-muted-foreground">Status</p>
+								<p className="text-sm">
+									{member.emailVerified ? 'Active member' : 'Invitation pending'}
+								</p>
+							</div>
+						</div>
+					</div>
+				</CardContent>
+			</Card>
 
 			{/* Time-off Requests */}
 			<Card>
 				<CardHeader>
 					<div className="flex items-center justify-between">
-						<div>
-							<CardTitle className="flex items-center gap-2">
-								<CalendarDays className="h-5 w-5" />
-								Time Off Requests
-							</CardTitle>
-							<CardDescription>
-								{isOwnProfile
-									? 'View and manage your time off requests'
-									: `Time off requests for ${member.name}`}
-							</CardDescription>
-						</div>
+						<CardTitle className="flex items-center gap-2">
+							<CalendarDays className="h-5 w-5" />
+							Time Off Requests
+						</CardTitle>
 						{isOwnProfile && (
 							<Button onClick={() => setRequestDialogOpen(true)}>
 								<Plus className="h-4 w-4 mr-2" />
@@ -325,7 +340,11 @@ export function TeamMemberDetailPage() {
 										</TableCell>
 										<TableCell>{getStatusBadge(request.status)}</TableCell>
 										<TableCell>
-											{new Date(request.createdAt).toLocaleDateString()}
+											{new Date(request.createdAt).toLocaleDateString('en-GB', {
+												day: 'numeric',
+												month: 'short',
+												year: 'numeric',
+											})}
 										</TableCell>
 										<TableCell>
 											<div className="flex items-center gap-1">
@@ -336,7 +355,7 @@ export function TeamMemberDetailPage() {
 															variant="ghost"
 															size="icon"
 															className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50"
-															onClick={() => handleApprove(request)}
+															onClick={() => handleApproveClick(request)}
 															disabled={approveTimeOffMutation.isPending}
 															title="Approve"
 														>
@@ -346,7 +365,7 @@ export function TeamMemberDetailPage() {
 															variant="ghost"
 															size="icon"
 															className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-															onClick={() => handleReject(request)}
+															onClick={() => handleRejectClick(request)}
 															disabled={rejectTimeOffMutation.isPending}
 															title="Reject"
 														>
@@ -390,6 +409,66 @@ export function TeamMemberDetailPage() {
 				description="Are you sure you want to cancel this time off request? This action cannot be undone."
 				isLoading={deleteTimeOffMutation.isPending}
 			/>
+
+			{/* Approve confirmation dialog */}
+			<AlertDialog open={approveDialogOpen} onOpenChange={setApproveDialogOpen}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Approve Time Off Request</AlertDialogTitle>
+						<AlertDialogDescription>
+							{actionRequest && (
+								<>
+									Are you sure you want to approve the time off request for{' '}
+									<span className="font-medium text-foreground">
+										{formatDateRange(actionRequest.startDate, actionRequest.endDate)}
+									</span>
+									?
+								</>
+							)}
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Cancel</AlertDialogCancel>
+						<AlertDialogAction
+							className="bg-green-600 hover:bg-green-700"
+							onClick={handleApproveConfirm}
+							disabled={approveTimeOffMutation.isPending}
+						>
+							Approve
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
+
+			{/* Reject confirmation dialog */}
+			<AlertDialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Reject Time Off Request</AlertDialogTitle>
+						<AlertDialogDescription>
+							{actionRequest && (
+								<>
+									Are you sure you want to reject the time off request for{' '}
+									<span className="font-medium text-foreground">
+										{formatDateRange(actionRequest.startDate, actionRequest.endDate)}
+									</span>
+									?
+								</>
+							)}
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Cancel</AlertDialogCancel>
+						<AlertDialogAction
+							className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+							onClick={handleRejectConfirm}
+							disabled={rejectTimeOffMutation.isPending}
+						>
+							Reject
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</div>
 	);
 }
