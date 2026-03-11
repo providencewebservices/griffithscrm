@@ -19,15 +19,9 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from '@/components/ui/dialog';
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
-import { MoreHorizontal, Plus, Eye, EyeOff } from 'lucide-react';
+import { Plus, Check } from 'lucide-react';
 import {
 	useLineItemPresetsQuery,
 	useCreateLineItemPresetMutation,
@@ -83,18 +77,16 @@ export function LineItemsTab() {
 		setFormDialogOpen(true);
 	};
 
-	const handleDelete = (item: LineItemPreset) => {
-		setSelectedItem(item);
-		setDeleteDialogOpen(true);
-	};
-
-	const handleToggleActive = async (item: LineItemPreset) => {
+	const handleToggleActive = async () => {
+		if (!selectedItem) return;
 		try {
 			await updateMutation.mutateAsync({
-				id: item.id,
-				isActive: !item.isActive,
+				id: selectedItem.id,
+				isActive: !selectedItem.isActive,
 			});
-		} catch (err) {
+			setFormDialogOpen(false);
+			resetForm();
+		} catch {
 			// Error handled by mutation
 		}
 	};
@@ -127,8 +119,9 @@ export function LineItemsTab() {
 		try {
 			await deleteMutation.mutateAsync(selectedItem.id);
 			setDeleteDialogOpen(false);
+			setFormDialogOpen(false);
 			setSelectedItem(null);
-		} catch (err) {
+		} catch {
 			// Error handled by mutation
 		}
 	};
@@ -170,71 +163,65 @@ export function LineItemsTab() {
 						<TableHeader>
 							<TableRow>
 								<TableHead>Name</TableHead>
-								<TableHead>Default Price</TableHead>
+								<TableHead className="text-right">Default Price</TableHead>
 								<TableHead>VAT Exempt</TableHead>
-								<TableHead>Line Visible</TableHead>
-								<TableHead>Price Visible</TableHead>
-								<TableHead>Status</TableHead>
-								<TableHead className="w-[70px]"></TableHead>
+								<TableHead>Show on Quote</TableHead>
+								<TableHead>Show Price</TableHead>
+								<TableHead className="w-[80px]"></TableHead>
 							</TableRow>
 						</TableHeader>
 						<TableBody>
 							{presets?.map((item) => (
-								<TableRow key={item.id}>
-									<TableCell className="font-medium">{item.name}</TableCell>
-									<TableCell>£{item.defaultPrice}</TableCell>
+								<TableRow
+									key={item.id}
+									className="cursor-pointer"
+									onClick={() => handleEdit(item)}
+								>
+									<TableCell className="font-medium">
+										{item.name}
+										{!item.isActive && (
+											<Badge variant="secondary" className="ml-2">
+												Inactive
+											</Badge>
+										)}
+									</TableCell>
+									<TableCell className="text-right">£{item.defaultPrice}</TableCell>
 									<TableCell>
 										{item.vatExempt ? (
-											<Badge variant="outline">Yes</Badge>
+											<Check className="h-4 w-4" />
 										) : (
-											<span className="text-muted-foreground">No</span>
+											<span className="text-muted-foreground">—</span>
 										)}
 									</TableCell>
 									<TableCell>
 										{item.visibleToCustomer ? (
-											<Eye className="h-4 w-4 text-muted-foreground" />
+											<span>Shown</span>
 										) : (
-											<EyeOff className="h-4 w-4 text-muted-foreground" />
+											<span className="text-muted-foreground">Hidden</span>
 										)}
 									</TableCell>
 									<TableCell>
 										{item.visibleToCustomer ? (
 											item.priceVisibleToCustomer ? (
-												<Eye className="h-4 w-4 text-muted-foreground" />
+												<span>Shown</span>
 											) : (
-												<EyeOff className="h-4 w-4 text-muted-foreground" />
+												<span className="text-muted-foreground">Hidden</span>
 											)
 										) : (
 											<span className="text-muted-foreground">—</span>
 										)}
 									</TableCell>
 									<TableCell>
-										<Badge variant={item.isActive ? 'default' : 'secondary'}>
-											{item.isActive ? 'Active' : 'Inactive'}
-										</Badge>
-									</TableCell>
-									<TableCell>
-										<DropdownMenu>
-											<DropdownMenuTrigger asChild>
-												<Button variant="ghost" size="icon-sm">
-													<MoreHorizontal className="h-4 w-4" />
-												</Button>
-											</DropdownMenuTrigger>
-											<DropdownMenuContent align="end">
-												<DropdownMenuItem onClick={() => handleEdit(item)}>
-													Edit
-												</DropdownMenuItem>
-												<DropdownMenuItem onClick={() => handleToggleActive(item)}>
-													{item.isActive ? 'Deactivate' : 'Activate'}
-												</DropdownMenuItem>
-												<DropdownMenuItem
-													className="text-destructive"
-													onClick={() => handleDelete(item)}
-												>
-													Delete
-												</DropdownMenuItem>
-											</DropdownMenuContent>
-										</DropdownMenu>
+										<Button
+											variant="ghost"
+											size="sm"
+											onClick={(e) => {
+												e.stopPropagation();
+												handleEdit(item);
+											}}
+										>
+											Edit
+										</Button>
 									</TableCell>
 								</TableRow>
 							))}
@@ -334,7 +321,26 @@ export function LineItemsTab() {
 						</Field>
 					</FieldGroup>
 
-					<DialogFooter>
+					<DialogFooter className="flex-col sm:flex-row gap-2">
+						{isEditing && selectedItem && (
+							<div className="flex gap-2 mr-auto">
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={handleToggleActive}
+									disabled={updateMutation.isPending}
+								>
+									{selectedItem.isActive ? 'Deactivate' : 'Activate'}
+								</Button>
+								<Button
+									variant="destructive"
+									size="sm"
+									onClick={() => setDeleteDialogOpen(true)}
+								>
+									Delete
+								</Button>
+							</div>
+						)}
 						<Button variant="outline" onClick={() => setFormDialogOpen(false)}>
 							Cancel
 						</Button>
