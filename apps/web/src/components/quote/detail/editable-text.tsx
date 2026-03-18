@@ -85,7 +85,7 @@ export function EditableText({
 				setEditValue(value);
 				setIsEditing(true);
 			}}
-			className={`hover:bg-muted px-1 py-0.5 rounded cursor-pointer text-left ${className || ''}`}
+			className={`hover:bg-muted/80 bg-muted/40 border-b border-dashed border-muted-foreground/30 px-1.5 py-1 rounded-sm transition-colors cursor-pointer text-left ${className || ''}`}
 			title="Click to edit"
 		>
 			{value}

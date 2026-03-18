@@ -308,7 +308,7 @@ export function CustomLineItemsSection({
 							</TableHeader>
 							<TableBody>
 								{lineItems.map((item) => (
-									<TableRow key={item.id}>
+									<TableRow key={item.id} className="[&_td]:py-3">
 										<TableCell>
 											<EditableText
 												value={item.description}
@@ -401,7 +401,7 @@ export function CustomLineItemsSection({
 												<Button
 													variant="ghost"
 													size="icon"
-													className="h-8 w-8 text-destructive"
+													className="h-8 w-8 text-muted-foreground/60 hover:text-destructive transition-colors"
 													onClick={() => setDeleteConfirmId(item.id)}
 												>
 													<Trash2 className="h-4 w-4" />
