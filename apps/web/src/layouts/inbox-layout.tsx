@@ -252,7 +252,7 @@ function IconRail() {
 	return (
 		<Sidebar
 			collapsible="none"
-			className="w-[calc(var(--sidebar-width-icon))] border-r"
+			className="w-[calc(var(--sidebar-width-icon)+1px)]! border-r"
 		>
 			<SidebarHeader>
 				<SidebarMenu>
@@ -344,7 +344,7 @@ function ThreadListPanel({
 	const unreadCount = threads.filter((t) => t.isUnread).length;
 
 	return (
-		<Sidebar collapsible="none" className="flex-1 flex flex-col">
+		<Sidebar collapsible="none" className="hidden flex-1 md:flex bg-background text-foreground">
 			<SidebarHeader className="border-b p-3 gap-3">
 				<div className="flex items-center justify-between">
 					<h2 className="font-semibold text-base">Inbox</h2>
@@ -519,8 +519,8 @@ function ThreadListPanel({
 								onClick={() => onSelectThread(thread)}
 								className={`w-full text-left px-3 py-3 border-b cursor-pointer transition-colors ${
 									isSelected
-										? 'bg-sidebar-accent text-sidebar-accent-foreground'
-										: 'hover:bg-sidebar-accent/50'
+										? 'bg-accent text-accent-foreground'
+										: 'hover:bg-muted'
 								} ${thread.isUnread && !isSelected ? 'bg-blue-50/50 dark:bg-blue-950/20' : ''}`}
 							>
 								<div className="flex items-start gap-2.5">
@@ -770,7 +770,7 @@ function InboxLayoutInner() {
 	if (integrationsLoading) {
 		return (
 			<>
-				<Sidebar collapsible="icon" className="overflow-hidden [&>[data-sidebar=sidebar]]:flex-row">
+				<Sidebar collapsible="icon" className="overflow-hidden *:data-[sidebar=sidebar]:flex-row">
 					<IconRail />
 				</Sidebar>
 				<SidebarInset>
@@ -786,7 +786,7 @@ function InboxLayoutInner() {
 	if (!activeIntegration) {
 		return (
 			<>
-				<Sidebar collapsible="icon" className="overflow-hidden [&>[data-sidebar=sidebar]]:flex-row">
+				<Sidebar collapsible="icon" className="overflow-hidden *:data-[sidebar=sidebar]:flex-row">
 					<IconRail />
 				</Sidebar>
 				<SidebarInset>
@@ -815,7 +815,7 @@ function InboxLayoutInner() {
 	return (
 		<>
 			{/* Outer sidebar: icon rail + thread list */}
-			<Sidebar collapsible="icon" className="overflow-hidden [&>[data-sidebar=sidebar]]:flex-row">
+			<Sidebar collapsible="icon" className="overflow-hidden *:data-[sidebar=sidebar]:flex-row">
 				<IconRail />
 				<ThreadListPanel
 					threads={threads}
