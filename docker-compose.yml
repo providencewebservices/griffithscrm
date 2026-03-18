@@ -7,7 +7,7 @@ services:
       POSTGRES_PASSWORD: supersecretpassword
       POSTGRES_DB: griffiths_crm
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
@@ -15,8 +15,8 @@ services:
     image: axllent/mailpit
     container_name: griffiths-crm-mail
     ports:
-      - "1025:1025"  # SMTP
-      - "8025:8025"  # Web UI
+      - "1026:1025"  # SMTP
+      - "8026:8025"  # Web UI
     environment:
       MP_SMTP_AUTH_ACCEPT_ANY: 1
       MP_SMTP_AUTH_ALLOW_INSECURE: 1
@@ -25,7 +25,7 @@ services:
     image: localstack/localstack:latest
     container_name: griffiths-crm-localstack
     ports:
-      - "4566:4566"  # LocalStack gateway
+      - "4577:4566"  # LocalStack gateway
     environment:
       - SERVICES=s3
       - DEBUG=0
