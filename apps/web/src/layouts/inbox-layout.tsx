@@ -344,7 +344,7 @@ function ThreadListPanel({
 	const unreadCount = threads.filter((t) => t.isUnread).length;
 
 	return (
-		<Sidebar collapsible="none" className="hidden flex-1 md:flex bg-background text-foreground">
+		<Sidebar collapsible="none" className="hidden w-0 min-w-0 flex-1 md:flex bg-background text-foreground">
 			<SidebarHeader className="border-b p-3 gap-3">
 				<div className="flex items-center justify-between">
 					<h2 className="font-semibold text-base">Inbox</h2>
