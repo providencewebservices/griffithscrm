@@ -54,6 +54,12 @@ export type FolderContentsResponse = {
 	subfolders: DocumentFolder[];
 	documents: Document[];
 	breadcrumb: BreadcrumbItem[];
+	pagination: {
+		total: number;
+		limit: number;
+		offset: number;
+		hasMore: boolean;
+	};
 };
 
 // API functions
@@ -92,8 +98,14 @@ async function fetchFolder(id: string): Promise<FolderResponse> {
 	return response.json();
 }
 
-async function fetchFolderContents(folderId: string): Promise<FolderContentsResponse> {
-	const response = await fetch(`${API_URL}/api/document-folders/${folderId}/contents`, {
+async function fetchFolderContents(
+	folderId: string,
+	params?: { limit?: number; offset?: number }
+): Promise<FolderContentsResponse> {
+	const url = new URL(`${API_URL}/api/document-folders/${folderId}/contents`);
+	if (params?.limit) url.searchParams.set('limit', params.limit.toString());
+	if (params?.offset) url.searchParams.set('offset', params.offset.toString());
+	const response = await fetch(url.toString(), {
 		credentials: 'include',
 	});
 	if (!response.ok) {
@@ -221,12 +233,15 @@ export function useFolderQuery(id: string | undefined) {
 	});
 }
 
-export function useFolderContentsQuery(folderId: string | null) {
+export function useFolderContentsQuery(
+	folderId: string | null,
+	params?: { limit?: number; offset?: number }
+) {
 	// Use 'root' for unfiled documents when folderId is null
 	const queryFolderId = folderId ?? 'root';
 	return useQuery({
-		queryKey: ['document-folder-contents', queryFolderId],
-		queryFn: () => fetchFolderContents(queryFolderId),
+		queryKey: ['document-folder-contents', queryFolderId, params],
+		queryFn: () => fetchFolderContents(queryFolderId, params),
 		placeholderData: keepPreviousData,
 	});
 }

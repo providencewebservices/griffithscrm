@@ -185,69 +185,96 @@ const documentFoldersRoutes = new Hono()
 	})
 
 	// Get folder contents (subfolders + documents)
-	.get('/:id/contents', async (c) => {
-		const currentUser = c.get('user');
-		const tenantId = currentUser.tenantId!;
-		const folderId = c.req.param('id');
+	.get(
+		'/:id/contents',
+		zValidator(
+			'query',
+			z.object({
+				limit: z.coerce.number().min(1).max(100).optional().default(25),
+				offset: z.coerce.number().min(0).optional().default(0),
+			})
+		),
+		async (c) => {
+			const currentUser = c.get('user');
+			const tenantId = currentUser.tenantId!;
+			const folderId = c.req.param('id');
+			const { limit, offset } = c.req.valid('query');
 
-		// Verify folder exists (unless 'root')
-		if (folderId !== 'root') {
-			const [folder] = await db
-				.select({ id: documentFolders.id })
-				.from(documentFolders)
-				.where(and(eq(documentFolders.id, folderId), eq(documentFolders.tenantId, tenantId)))
-				.limit(1);
+			// Verify folder exists (unless 'root')
+			if (folderId !== 'root') {
+				const [folder] = await db
+					.select({ id: documentFolders.id })
+					.from(documentFolders)
+					.where(and(eq(documentFolders.id, folderId), eq(documentFolders.tenantId, tenantId)))
+					.limit(1);
 
-			if (!folder) {
-				return c.json({ error: 'Folder not found' }, 404);
+				if (!folder) {
+					return c.json({ error: 'Folder not found' }, 404);
+				}
 			}
+
+			// Get subfolders
+			const folderConditions = [eq(documentFolders.tenantId, tenantId)];
+			if (folderId === 'root') {
+				folderConditions.push(isNull(documentFolders.parentId));
+			} else {
+				folderConditions.push(eq(documentFolders.parentId, folderId));
+			}
+
+			const subfolders = await db
+				.select()
+				.from(documentFolders)
+				.where(and(...folderConditions))
+				.orderBy(asc(documentFolders.sortOrder), asc(documentFolders.name));
+
+			// Get documents in this folder
+			const docConditions = [eq(documents.tenantId, tenantId)];
+			if (folderId === 'root') {
+				docConditions.push(isNull(documents.folderId));
+			} else {
+				docConditions.push(eq(documents.folderId, folderId));
+			}
+
+			// Get total document count
+			const [totalResult] = await db
+				.select({ count: count() })
+				.from(documents)
+				.where(and(...docConditions));
+			const total = Number(totalResult.count);
+
+			// Get paginated documents
+			const folderDocuments = await db
+				.select()
+				.from(documents)
+				.where(and(...docConditions))
+				.orderBy(desc(documents.createdAt))
+				.limit(limit)
+				.offset(offset);
+
+			// Add signed URLs to documents
+			const documentsWithUrls = await Promise.all(
+				folderDocuments.map(async (doc) => ({
+					...doc,
+					publicUrl: await getSignedImageUrl(doc.s3Key),
+				}))
+			);
+
+			// Build breadcrumb (empty for root)
+			const breadcrumb = folderId === 'root' ? [] : await buildBreadcrumb(tenantId, folderId);
+
+			return c.json({
+				subfolders,
+				documents: documentsWithUrls,
+				breadcrumb,
+				pagination: {
+					total,
+					limit,
+					offset,
+					hasMore: offset + limit < total,
+				},
+			});
 		}
-
-		// Get subfolders
-		const folderConditions = [eq(documentFolders.tenantId, tenantId)];
-		if (folderId === 'root') {
-			folderConditions.push(isNull(documentFolders.parentId));
-		} else {
-			folderConditions.push(eq(documentFolders.parentId, folderId));
-		}
-
-		const subfolders = await db
-			.select()
-			.from(documentFolders)
-			.where(and(...folderConditions))
-			.orderBy(asc(documentFolders.sortOrder), asc(documentFolders.name));
-
-		// Get documents in this folder
-		const docConditions = [eq(documents.tenantId, tenantId)];
-		if (folderId === 'root') {
-			docConditions.push(isNull(documents.folderId));
-		} else {
-			docConditions.push(eq(documents.folderId, folderId));
-		}
-
-		const folderDocuments = await db
-			.select()
-			.from(documents)
-			.where(and(...docConditions))
-			.orderBy(desc(documents.createdAt));
-
-		// Add signed URLs to documents
-		const documentsWithUrls = await Promise.all(
-			folderDocuments.map(async (doc) => ({
-				...doc,
-				publicUrl: await getSignedImageUrl(doc.s3Key),
-			}))
-		);
-
-		// Build breadcrumb (empty for root)
-		const breadcrumb = folderId === 'root' ? [] : await buildBreadcrumb(tenantId, folderId);
-
-		return c.json({
-			subfolders,
-			documents: documentsWithUrls,
-			breadcrumb,
-		});
-	})
+	)
 
 	// Create folder
 	.post('/', zValidator('json', createFolderSchema), async (c) => {

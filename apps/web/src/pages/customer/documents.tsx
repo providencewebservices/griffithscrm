@@ -147,7 +147,8 @@ export function DocumentsPage() {
 
 	// Use folder contents query when viewing a specific folder
 	const folderContentsQuery = useFolderContentsQuery(
-		selectedFolderId === 'all' ? null : selectedFolderId
+		selectedFolderId === 'all' ? null : selectedFolderId,
+		{ limit, offset: page * limit }
 	);
 
 	// Use documents query when viewing 'all' documents or when searching
@@ -184,7 +185,9 @@ export function DocumentsPage() {
 	const breadcrumb: BreadcrumbItem[] = shouldUseFolderContents
 		? folderContentsQuery.data?.breadcrumb || []
 		: [];
-	const pagination = isSearching || isViewingAllDocuments ? documentsQuery.data?.pagination : null;
+	const pagination = shouldUseFolderContents
+		? folderContentsQuery.data?.pagination ?? null
+		: documentsQuery.data?.pagination ?? null;
 
 	// Sort toggle handler
 	const handleSort = useCallback((column: SortColumn) => {
@@ -792,7 +795,7 @@ export function DocumentsPage() {
 								</>
 							) : null}
 
-							{/* Pagination (only when searching or viewing all) */}
+							{/* Pagination */}
 							{pagination && (
 								<div className="flex items-center justify-between mt-4">
 									<p className="text-sm text-muted-foreground">

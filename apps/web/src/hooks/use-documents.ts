@@ -171,7 +171,8 @@ async function presignDocument(input: {
 	});
 	if (!response.ok) {
 		const error = await response.json();
-		throw new Error(error.error || 'Failed to get upload URL');
+		const message = typeof error.error === 'string' ? error.error : 'Failed to get upload URL';
+		throw new Error(message);
 	}
 	return response.json();
 }
@@ -224,11 +225,12 @@ async function uploadDocument(input: DocumentUploadInput): Promise<Document> {
 	const { entityType, entityId, folderId, file, name, tags, notes } = input;
 
 	// Step 1: Get presigned URL
+	const contentType = file.type || 'application/octet-stream';
 	const presignResult = await presignDocument({
 		entityType,
 		entityId,
 		filename: file.name,
-		contentType: file.type,
+		contentType,
 	});
 
 	// Step 2: Upload file directly to S3
@@ -236,7 +238,7 @@ async function uploadDocument(input: DocumentUploadInput): Promise<Document> {
 		method: 'PUT',
 		body: file,
 		headers: {
-			'Content-Type': file.type,
+			'Content-Type': contentType,
 		},
 	});
 	if (!uploadResponse.ok) {
@@ -253,7 +255,7 @@ async function uploadDocument(input: DocumentUploadInput): Promise<Document> {
 		notes,
 		filename: file.name,
 		s3Key: presignResult.key,
-		contentType: file.type,
+		contentType,
 		size: file.size,
 	});
 }
