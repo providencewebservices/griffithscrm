@@ -103,7 +103,7 @@ export function OptionContent({
 												<TableHead>Material</TableHead>
 												<TableHead>Dimensions</TableHead>
 												<TableHead className="text-center">Qty</TableHead>
-												<TableHead className="text-right text-orange-600">Supplier</TableHead>
+												<TableHead className="text-right">Supplier</TableHead>
 												<TableHead className="text-center">Markup</TableHead>
 												<TableHead className="text-right">Retail</TableHead>
 												<TableHead className="text-right">Total</TableHead>
@@ -111,7 +111,7 @@ export function OptionContent({
 										</TableHeader>
 										<TableBody>
 											{option.components.map((comp) => (
-												<TableRow key={comp.id}>
+												<TableRow key={comp.id} className="[&_td]:py-3">
 													<TableCell className="font-medium">{formatComponentType(comp.componentType)}</TableCell>
 													<TableCell>
 														{comp.materialName || '-'}
@@ -125,7 +125,7 @@ export function OptionContent({
 															: '-'}
 													</TableCell>
 													<TableCell className="text-center">{comp.quantity}</TableCell>
-													<TableCell className="text-right text-orange-600">
+													<TableCell className="text-right">
 														<EditableNumber
 															value={parseFloat(comp.supplierCost)}
 															onSave={async (value) => {
@@ -200,7 +200,7 @@ export function OptionContent({
 											<TableRow>
 												<TableHead>Item</TableHead>
 												<TableHead className="text-center">Qty</TableHead>
-												<TableHead className="text-right text-orange-600">Supplier</TableHead>
+												<TableHead className="text-right">Supplier</TableHead>
 												<TableHead className="text-center">Markup</TableHead>
 												<TableHead className="text-right">Retail</TableHead>
 												<TableHead className="text-right">Total</TableHead>
@@ -208,10 +208,10 @@ export function OptionContent({
 										</TableHeader>
 										<TableBody>
 											{option.sundries.map((sundry) => (
-												<TableRow key={sundry.id}>
+												<TableRow key={sundry.id} className="[&_td]:py-3">
 													<TableCell className="font-medium">{sundry.sundryName || '-'}</TableCell>
 													<TableCell className="text-center">{sundry.quantity}</TableCell>
-													<TableCell className="text-right text-orange-600">
+													<TableCell className="text-right">
 														<EditableNumber
 															value={parseFloat(sundry.supplierCost)}
 															onSave={async (value) => {

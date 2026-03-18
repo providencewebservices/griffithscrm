@@ -41,7 +41,7 @@ import { TasksPage } from './pages/customer/tasks';
 import { TaskDetailPage } from './pages/customer/task-detail';
 import { WorksheetDetailPage } from './pages/customer/worksheet-detail';
 import { MemorialWorksheetPrintPage } from './pages/customer/memorial-worksheet-print';
-import { InboxPage } from './pages/customer/inbox';
+import { InboxLayout } from './layouts/inbox-layout';
 import { PublicPackageViewPage } from './pages/public/package-view';
 import { PaymentPage } from './pages/public/payment';
 import { PaymentSuccessPage } from './pages/public/payment-success';
@@ -126,8 +126,17 @@ function App() {
 					<Route path="documents" element={<DocumentsPage />} />
 					<Route path="documents/:id" element={<DocumentViewerPage />} />
 					<Route path="calendar" element={<CalendarPage />} />
-					<Route path="inbox" element={<InboxPage />} />
 				</Route>
+
+				{/* Inbox — dedicated sidebar-09 layout */}
+				<Route
+					path="/app/inbox"
+					element={
+						<ProtectedRoute requiredRole="tenant_user">
+							<InboxLayout />
+						</ProtectedRoute>
+					}
+				/>
 			</Routes>
 		</BrowserRouter>
 	);

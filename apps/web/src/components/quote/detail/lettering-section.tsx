@@ -297,7 +297,7 @@ export function LetteringSection({
 								<TableHead>Color</TableHead>
 								<TableHead>Text</TableHead>
 								<TableHead className="text-center">Letters</TableHead>
-								<TableHead className="text-right text-orange-600">Cost/Letter</TableHead>
+								<TableHead className="text-right">Cost/Letter</TableHead>
 								<TableHead className="text-center">Markup</TableHead>
 								<TableHead className="text-right">Retail</TableHead>
 								<TableHead className="text-right">Total</TableHead>
@@ -306,7 +306,7 @@ export function LetteringSection({
 						</TableHeader>
 						<TableBody>
 							{option.lettering.map((lett) => (
-								<TableRow key={lett.id}>
+								<TableRow key={lett.id} className="[&_td]:py-3">
 									{editingId === lett.id ? (
 										// Edit mode
 										<>
@@ -399,7 +399,7 @@ export function LetteringSection({
 											<TableCell>{lett.colorName || '-'}</TableCell>
 											<TableCell className="max-w-[200px] truncate">{lett.text || '-'}</TableCell>
 											<TableCell className="text-center">{lett.letterCount}</TableCell>
-											<TableCell className="text-right text-orange-600">
+											<TableCell className="text-right">
 												<EditableNumber
 													value={parseFloat(lett.supplierCost)}
 													onSave={async (value) => {
@@ -439,7 +439,7 @@ export function LetteringSection({
 															variant="ghost"
 															size="sm"
 															onClick={() => handleStartEdit(lett)}
-															className="h-7 w-7 p-0"
+															className="h-8 w-8 p-0"
 															title="Edit"
 														>
 															<Pencil className="h-4 w-4" />
@@ -448,7 +448,7 @@ export function LetteringSection({
 															variant="ghost"
 															size="sm"
 															onClick={() => setDeleteConfirmId(lett.id)}
-															className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+															className="h-8 w-8 p-0 text-muted-foreground/60 hover:text-destructive transition-colors"
 															title="Delete"
 														>
 															<Trash2 className="h-4 w-4" />

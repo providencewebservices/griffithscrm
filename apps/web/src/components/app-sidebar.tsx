@@ -1,5 +1,4 @@
 import * as React from "react"
-import { LayoutDashboard, UsersRound, Users, Settings, Package, FileText, Briefcase, Truck, Files, CalendarDays, Mail, ListChecks } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
 import { NavUser } from "@/components/nav-user"
@@ -14,23 +13,7 @@ import {
 	SidebarRail,
 } from "@/components/ui/sidebar"
 import { useCustomerView } from "@/contexts/customer-view-context"
-
-const navItems = [
-	{ title: "Dashboard", url: "/app", icon: LayoutDashboard },
-	{ title: "Inbox", url: "/app/inbox", icon: Mail },
-	{ title: "Quotes", url: "/app/quotes", icon: FileText },
-	{ title: "Jobs", url: "/app/jobs", icon: Briefcase },
-	{ title: "Tasks", url: "/app/tasks", icon: ListChecks },
-	{ title: "Calendar", url: "/app/calendar", icon: CalendarDays },
-	{ title: "Products", url: "/app/products", icon: Package },
-	{ title: "Contacts", url: "/app/contacts", icon: Users },
-	{ title: "Suppliers", url: "/app/suppliers", icon: Truck },
-	{ title: "Documents", url: "/app/documents", icon: Files },
-	{ title: "Team", url: "/app/team", icon: UsersRound },
-	{ title: "Settings", url: "/app/settings", icon: Settings },
-]
-
-const customerViewItems = ["Quotes", "Products"]
+import { navItems, customerViewItems } from "@/lib/nav-items"
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 	const { isCustomerView } = useCustomerView()

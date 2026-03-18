@@ -86,7 +86,7 @@ export function EditableNumber({
 					onKeyDown={handleKeyDown}
 					min={min}
 					step={step}
-					className="h-7 w-20 text-right"
+					className="h-8 w-24 text-right"
 					disabled={isSaving}
 				/>
 				{isSaving && <Loader2 className="h-3 w-3 animate-spin" />}
@@ -107,7 +107,7 @@ export function EditableNumber({
 				setEditValue(String(value));
 				setIsEditing(true);
 			}}
-			className="hover:bg-muted px-1 py-0.5 rounded cursor-pointer text-left"
+			className="hover:bg-muted/80 bg-muted/40 border-b border-dashed border-muted-foreground/30 px-1.5 py-1 rounded-sm transition-colors cursor-pointer text-left"
 			title="Click to edit"
 		>
 			{displayValue}
