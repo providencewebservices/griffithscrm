@@ -289,7 +289,7 @@ Implement a structured workflow system modeling how jobs progress through their 
   - Register in `apps/api/src/index.ts` as `app.route('/api/tenant/workflow-templates', workflowTemplatesRoutes)` (matching existing tenant-scoped config route pattern)
   - Validation: `bun run build:api` succeeds. Call `POST /api/tenant/workflow-templates/seed`, verify 5 templates created with correct steps. Call again, verify idempotent (no duplicates).
 
-- [ ] **Task 19: Create workflow templates hook**
+- [x] **Task 19: Create workflow templates hook**
   - Create `apps/web/src/hooks/use-workflow-templates.ts`:
     - `useWorkflowTemplatesQuery()` — fetch all templates
     - `useWorkflowTemplateQuery(id)` — fetch single template with steps
