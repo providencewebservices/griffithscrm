@@ -359,7 +359,7 @@ Implement a structured workflow system modeling how jobs progress through their 
     - When job has no workflow tasks, show an empty state with "Generate Workflow" button (calls `POST /seed` then creates tasks, or prompts user to accept from a template)
   - Validation: `bun run dev`, open a job with workflow tasks, verify stepper renders with correct data. Open a pre-existing job (no tasks), verify empty state.
 
-- [ ] **Task 26: Add workflow task actions (complete, skip, edit, add)**
+- [x] **Task 26: Add workflow task actions (complete, skip, edit, add)**
   - In `apps/web/src/pages/customer/job-detail.tsx` (extending the Workflow tab from Task 25):
     - Clicking a task expands it to show: description, notes (editable textarea), taskDate field (date picker, if step has requiresDate), assignee selector
     - "Complete" button for pending/in_progress tasks → calls complete endpoint
