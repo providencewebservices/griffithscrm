@@ -371,7 +371,7 @@ Implement a structured workflow system modeling how jobs progress through their 
 
 ## Phase 8: Forms & Fees — API & UI
 
-- [ ] **Task 27: Create job forms API routes**
+- [x] **Task 27: Create job forms API routes**
   - Create `apps/api/src/routes/job-forms.ts`:
     - Mount at `/api/jobs` prefix (same pattern as Task 22)
     - `GET /:jobId/forms` — list forms for a job, ordered by sortOrder
