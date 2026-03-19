@@ -433,7 +433,7 @@ Implement a structured workflow system modeling how jobs progress through their 
     - Include all review fields in job detail response (already done in Task 12, verify)
   - Validation: `bun run build:api` succeeds. Submit a review, verify fields persist.
 
-- [ ] **Task 32: Build post-sales review section on job detail page**
+- [x] **Task 32: Build post-sales review section on job detail page**
   - In `apps/web/src/pages/customer/job-detail.tsx`:
     - When job status is `installed` or `completed`, show a "Post-Sales Review" card/section
     - If not yet reviewed: form with outcome `<Select>` (Satisfied, Issue Reported, Follow-Up Needed, No Response), notes `<Textarea>`, "Submit Review" button

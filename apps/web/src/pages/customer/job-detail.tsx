@@ -62,6 +62,7 @@ import {
 	useMarkInvoicedMutation,
 	useUpdateAccountStatusMutation,
 	useRecalculateAccountStatusMutation,
+	useSubmitReviewMutation,
 	formatJobStatus,
 	getNextJobStatus,
 	getNextStatusButtonLabel,
@@ -70,8 +71,10 @@ import {
 	formatAccountStatus,
 	getAccountStatusColor,
 	ACCOUNT_STATUSES,
+	REVIEW_OUTCOMES,
 	type JobStatus,
 	type AccountStatus,
+	type ReviewOutcome,
 	type PaymentScheduleItem,
 	type JobAttachment,
 	type JobAttachmentCategory,
@@ -123,6 +126,7 @@ import {
 	Eye,
 	MessageSquare,
 	History,
+	Star,
 } from 'lucide-react';
 import {
 	DropdownMenu,
@@ -171,6 +175,17 @@ import {
 	type JobProof,
 	type ProofStatus,
 } from '@/hooks/use-job-proofs';
+
+// Review outcome labels
+function formatReviewOutcome(outcome: string): string {
+	const labels: Record<string, string> = {
+		satisfied: 'Satisfied',
+		issue_reported: 'Issue Reported',
+		follow_up_needed: 'Follow-Up Needed',
+		no_response: 'No Response',
+	};
+	return labels[outcome] || outcome;
+}
 
 // Status icons mapping
 const STATUS_ICONS: Record<JobStatus, React.ElementType> = {
@@ -255,6 +270,10 @@ export function JobDetailPage() {
 	const [revisionFeedback, setRevisionFeedback] = useState('');
 	const [proofHistoryOpen, setProofHistoryOpen] = useState(false);
 
+	// Review state
+	const [reviewOutcome, setReviewOutcome] = useState<ReviewOutcome | ''>('');
+	const [reviewNotes, setReviewNotes] = useState('');
+
 	const { data: job, isLoading, error } = useJobQuery(id);
 	const { data: paymentData, isLoading: paymentLoading } = usePaymentScheduleQuery(id);
 	const { data: attachments, isLoading: attachmentsLoading } = useAttachmentsQuery(id);
@@ -295,6 +314,7 @@ export function JobDetailPage() {
 	const sendProofMutation = useSendProofMutation(id!);
 	const approveProofMutation = useApproveProofMutation(id!);
 	const requestRevisionMutation = useRequestRevisionMutation(id!);
+	const submitReviewMutation = useSubmitReviewMutation();
 
 	// Initialize notes when job loads
 	if (job && !notesInitialized) {
@@ -1289,6 +1309,114 @@ export function JobDetailPage() {
 						</div>
 					</CardContent>
 				</Card>
+
+				{/* Post-Sales Review Section */}
+				{(job.status === 'installed' || job.status === 'completed') && (
+					<Card className="mt-6">
+						<CardHeader>
+							<div className="flex items-center gap-3">
+								<CardTitle className="flex items-center gap-2">
+									<Star className="h-5 w-5" />
+									Post-Sales Review
+								</CardTitle>
+								{job.reviewOutcome && (
+									<Badge
+										variant={
+											job.reviewOutcome === 'satisfied' ? 'success' :
+											job.reviewOutcome === 'issue_reported' ? 'destructive' :
+											job.reviewOutcome === 'follow_up_needed' ? 'warning' :
+											'secondary'
+										}
+									>
+										{formatReviewOutcome(job.reviewOutcome)}
+									</Badge>
+								)}
+							</div>
+						</CardHeader>
+						<CardContent>
+							{job.reviewCompletedAt ? (
+								<div className="space-y-3">
+									<div className="flex items-center gap-6 text-sm">
+										<div>
+											<span className="text-muted-foreground">Reviewed: </span>
+											<span className="font-medium">{formatDate(job.reviewCompletedAt)}</span>
+										</div>
+										{job.reviewCompletedBy && (
+											<div>
+												<span className="text-muted-foreground">By: </span>
+												<span className="font-medium">
+													{teamMembers?.find((m) => m.id === job.reviewCompletedBy)?.name || 'Unknown'}
+												</span>
+											</div>
+										)}
+									</div>
+									{job.reviewNotes && (
+										<div>
+											<p className="text-sm text-muted-foreground mb-1">Notes</p>
+											<p className="text-sm whitespace-pre-wrap">{job.reviewNotes}</p>
+										</div>
+									)}
+								</div>
+							) : (
+								<div className="space-y-4">
+									<div>
+										<Label htmlFor="review-outcome">Outcome</Label>
+										<Select
+											value={reviewOutcome}
+											onValueChange={(v) => setReviewOutcome(v as ReviewOutcome)}
+										>
+											<SelectTrigger id="review-outcome" className="w-64">
+												<SelectValue placeholder="Select outcome..." />
+											</SelectTrigger>
+											<SelectContent>
+												{REVIEW_OUTCOMES.map((outcome) => (
+													<SelectItem key={outcome} value={outcome}>
+														{formatReviewOutcome(outcome)}
+													</SelectItem>
+												))}
+											</SelectContent>
+										</Select>
+									</div>
+									<div>
+										<Label htmlFor="review-notes">Notes (optional)</Label>
+										<Textarea
+											id="review-notes"
+											placeholder="Add any notes about the customer's feedback..."
+											value={reviewNotes}
+											onChange={(e) => setReviewNotes(e.target.value)}
+											rows={3}
+										/>
+									</div>
+									<Button
+										onClick={async () => {
+											if (!id || !reviewOutcome) return;
+											try {
+												await submitReviewMutation.mutateAsync({
+													id,
+													reviewOutcome,
+													reviewNotes: reviewNotes || undefined,
+												});
+												toast.success('Review submitted');
+												setReviewOutcome('');
+												setReviewNotes('');
+											} catch (err) {
+												toast.error(err instanceof Error ? err.message : 'Failed to submit review');
+											}
+										}}
+										disabled={!reviewOutcome || submitReviewMutation.isPending}
+									>
+										{submitReviewMutation.isPending ? (
+											<Loader2 className="h-4 w-4 mr-2 animate-spin" />
+										) : (
+											<Star className="h-4 w-4 mr-2" />
+										)}
+										Submit Review
+									</Button>
+								</div>
+							)}
+						</CardContent>
+					</Card>
+				)}
 
 				{/* Tasks Section */}
 				<div className="mt-6">

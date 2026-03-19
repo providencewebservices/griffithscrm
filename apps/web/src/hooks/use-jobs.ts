@@ -1,11 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { JOB_STATUSES, ACCOUNT_STATUSES } from '@griffiths-crm/shared/db/schema';
+import { JOB_STATUSES, ACCOUNT_STATUSES, REVIEW_OUTCOMES } from '@griffiths-crm/shared/db/schema';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 // Types
 export type JobStatus = (typeof JOB_STATUSES)[number];
 export type AccountStatus = (typeof ACCOUNT_STATUSES)[number];
+export type ReviewOutcome = (typeof REVIEW_OUTCOMES)[number];
 
 // Quote detail types for job execution
 export type JobQuoteComponent = {
@@ -85,6 +86,10 @@ export type Job = {
 	invoicedAt: string | null;
 	invoiceNumber: string | null;
 	accountStatus: string | null;
+	reviewCompletedAt: string | null;
+	reviewCompletedBy: string | null;
+	reviewNotes: string | null;
+	reviewOutcome: string | null;
 	createdAt: string;
 	updatedAt: string;
 };
@@ -542,6 +547,47 @@ export function useRecalculateAccountStatusMutation() {
 	});
 }
 
+// ============================================
+// POST-SALES REVIEW HOOKS
+// ============================================
+
+async function submitReview({
+	id,
+	reviewOutcome,
+	reviewNotes,
+}: {
+	id: string;
+	reviewOutcome: ReviewOutcome;
+	reviewNotes?: string;
+}): Promise<JobWithQuoteSummary> {
+	const response = await fetch(`${API_URL}/api/jobs/${id}/review`, {
+		method: 'PUT',
+		headers: { 'Content-Type': 'application/json' },
+		credentials: 'include',
+		body: JSON.stringify({ reviewOutcome, reviewNotes }),
+	});
+
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.error || 'Failed to submit review');
+	}
+
+	const data: JobResponse = await response.json();
+	return data.job;
+}
+
+export function useSubmitReviewMutation() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: submitReview,
+		onSuccess: (data) => {
+			queryClient.invalidateQueries({ queryKey: ['jobs'] });
+			queryClient.invalidateQueries({ queryKey: ['job', data.id] });
+		},
+	});
+}
+
 // Payment schedule hooks
 export function usePaymentScheduleQuery(jobId: string | undefined) {
 	return useQuery({
@@ -973,4 +1019,4 @@ export function getAccountStatusColor(status: string | null): string {
 }
 
 // Re-export for convenience
-export { JOB_STATUSES, ACCOUNT_STATUSES };
+export { JOB_STATUSES, ACCOUNT_STATUSES, REVIEW_OUTCOMES };
