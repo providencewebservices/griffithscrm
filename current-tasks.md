@@ -65,7 +65,7 @@ Add Gmail folder navigation (Inbox, Trash) and the ability to trash/untrash emai
     6. Return `{ success: true }`
   - Validation: `bun run build:api` passes
 
-- [ ] **Task 4: Add `folder` query param to `GET /threads` and fix archived/trashed filtering**
+- [X] **Task 4: Add `folder` query param to `GET /threads` and fix archived/trashed filtering**
   - In `apps/api/src/routes/inbox.ts`:
   - Update `threadsQuerySchema` to include: `folder: z.enum(['inbox', 'trash']).optional().default('inbox')`
   - **When folder is `inbox`** (default):
@@ -83,7 +83,7 @@ Add Gmail folder navigation (Inbox, Trash) and the ability to trash/untrash emai
 
 ## Phase 4: Sync Integration
 
-- [ ] **Task 5: Handle `isTrashed` in full sync and incremental sync**
+- [X] **Task 5: Handle `isTrashed` in full sync and incremental sync**
   - In `apps/api/src/lib/email-sync.ts`:
   - **Full sync** (line ~63-88):
     - When inserting threads, detect TRASH label in `thread.labelIds` and set `isTrashed` accordingly: `isTrashed: thread.labelIds.includes('TRASH')`

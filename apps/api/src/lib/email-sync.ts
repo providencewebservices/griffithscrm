@@ -73,6 +73,7 @@ export async function doSync(integrationId: string, tenantId: string) {
 					messageCount: thread.messageCount,
 					isUnread: thread.isUnread,
 					isArchived: false,
+					isTrashed: thread.labelIds.includes('TRASH'),
 					labelIds: JSON.stringify(thread.labelIds),
 				}).onConflictDoUpdate({
 					target: [emailThreads.integrationId, emailThreads.providerThreadId],
@@ -82,6 +83,7 @@ export async function doSync(integrationId: string, tenantId: string) {
 						lastMessageAt: thread.lastMessageAt,
 						messageCount: thread.messageCount,
 						isUnread: thread.isUnread,
+						isTrashed: thread.labelIds.includes('TRASH'),
 						labelIds: JSON.stringify(thread.labelIds),
 						updatedAt: new Date(),
 					},
@@ -177,6 +179,7 @@ export async function doSync(integrationId: string, tenantId: string) {
 					messageCount: 1,
 					isUnread: msg.isUnread,
 					isArchived: false,
+					isTrashed: msg.labelIds.includes('TRASH'),
 					labelIds: JSON.stringify(msg.labelIds),
 				});
 				thread = { id: threadId } as any;
@@ -255,11 +258,20 @@ export async function doSync(integrationId: string, tenantId: string) {
 			}
 		}
 
-		// Process label modifications (unread status)
+		// Process label modifications (unread status + trash status)
 		const affectedThreadIds = new Set<string>();
+		const trashedThreadIds = new Set<string>();
+		const untrashedThreadIds = new Set<string>();
+		const threadsToCheckTrash = new Set<string>();
+
 		for (const mod of syncResult.labelsModified) {
 			const isNowUnread = mod.addedLabels.includes('UNREAD');
 			const isNowRead = mod.removedLabels.includes('UNREAD');
+			const trashAdded = mod.addedLabels.includes('TRASH');
+			const trashRemoved = mod.removedLabels.includes('TRASH');
+			const inboxRemoved = mod.removedLabels.includes('INBOX');
+
+			// Update message unread status
 			if (isNowUnread || isNowRead) {
 				await db
 					.update(emailMessages)
@@ -270,8 +282,10 @@ export async function doSync(integrationId: string, tenantId: string) {
 							eq(emailMessages.providerMessageId, mod.providerMessageId)
 						)
 					);
+			}
 
-				// Look up the thread for this message so we can recalculate thread read status
+			// Look up the thread if there's any relevant label change
+			if (isNowUnread || isNowRead || trashAdded || trashRemoved || inboxRemoved) {
 				const [msg] = await db
 					.select({ threadId: emailMessages.threadId })
 					.from(emailMessages)
@@ -282,8 +296,18 @@ export async function doSync(integrationId: string, tenantId: string) {
 						)
 					)
 					.limit(1);
+
 				if (msg) {
-					affectedThreadIds.add(msg.threadId);
+					if (isNowUnread || isNowRead) {
+						affectedThreadIds.add(msg.threadId);
+					}
+					if (trashAdded) {
+						trashedThreadIds.add(msg.threadId);
+					} else if (trashRemoved) {
+						untrashedThreadIds.add(msg.threadId);
+					} else if (inboxRemoved) {
+						threadsToCheckTrash.add(msg.threadId);
+					}
 				}
 			}
 		}
@@ -305,6 +329,50 @@ export async function doSync(integrationId: string, tenantId: string) {
 				.update(emailThreads)
 				.set({ isUnread: !!unreadMsg, updatedAt: new Date() })
 				.where(eq(emailThreads.id, affectedThreadId));
+		}
+
+		// Update definitively trashed threads
+		for (const threadId of trashedThreadIds) {
+			await db
+				.update(emailThreads)
+				.set({ isTrashed: true, updatedAt: new Date() })
+				.where(eq(emailThreads.id, threadId));
+		}
+
+		// Update definitively untrashed threads
+		for (const threadId of untrashedThreadIds) {
+			await db
+				.update(emailThreads)
+				.set({ isTrashed: false, updatedAt: new Date() })
+				.where(eq(emailThreads.id, threadId));
+		}
+
+		// Re-fetch threads where INBOX was removed to determine trash vs archive
+		for (const threadId of threadsToCheckTrash) {
+			if (trashedThreadIds.has(threadId) || untrashedThreadIds.has(threadId)) continue;
+
+			const [thread] = await db
+				.select()
+				.from(emailThreads)
+				.where(eq(emailThreads.id, threadId))
+				.limit(1);
+
+			if (thread) {
+				try {
+					const fullThread = await provider.getThread({
+						accessToken,
+						threadId: thread.providerThreadId,
+					});
+					const allLabels = fullThread.messages.flatMap((m: any) => m.labelIds);
+					const isTrashed = allLabels.includes('TRASH');
+					await db
+						.update(emailThreads)
+						.set({ isTrashed, updatedAt: new Date() })
+						.where(eq(emailThreads.id, threadId));
+				} catch (err) {
+					console.error('Failed to re-fetch thread for trash check:', threadId, err);
+				}
+			}
 		}
 
 		// Update sync state
