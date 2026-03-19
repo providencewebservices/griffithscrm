@@ -50,6 +50,7 @@ export type EmailThread = {
 	messageCount: number;
 	isUnread: boolean;
 	isArchived: boolean;
+	isTrashed: boolean;
 	labelIds: string[];
 	links: EmailEntityLink[];
 	latestMessage: EmailMessageMeta | null;
@@ -99,6 +100,7 @@ export type ThreadsQueryParams = {
 	filter?: 'all' | 'unread' | 'customers' | 'quotes' | 'jobs' | 'unlinked';
 	contactEntityType?: string;
 	contactEntityId?: string;
+	folder?: 'inbox' | 'trash';
 };
 
 // Fetch functions
@@ -129,6 +131,7 @@ async function fetchInboxThreads(params?: ThreadsQueryParams): Promise<{
 	if (params?.filter) searchParams.set('filter', params.filter);
 	if (params?.contactEntityType) searchParams.set('contactEntityType', params.contactEntityType);
 	if (params?.contactEntityId) searchParams.set('contactEntityId', params.contactEntityId);
+	if (params?.folder) searchParams.set('folder', params.folder);
 
 	const url = `${API_URL}/api/inbox/threads${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
 	const response = await fetch(url, { credentials: 'include' });
@@ -259,6 +262,30 @@ async function archiveThread(threadId: string): Promise<void> {
 	}
 }
 
+async function trashThread(threadId: string): Promise<void> {
+	const response = await fetch(`${API_URL}/api/inbox/threads/${threadId}/trash`, {
+		method: 'POST',
+		credentials: 'include',
+	});
+
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.error || 'Failed to trash thread');
+	}
+}
+
+async function untrashThread(threadId: string): Promise<void> {
+	const response = await fetch(`${API_URL}/api/inbox/threads/${threadId}/untrash`, {
+		method: 'POST',
+		credentials: 'include',
+	});
+
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.error || 'Failed to untrash thread');
+	}
+}
+
 async function syncIntegration(integrationId: string): Promise<void> {
 	const response = await fetch(`${API_URL}/api/email-integrations/${integrationId}/sync`, {
 		method: 'POST',
@@ -374,6 +401,30 @@ export function useArchiveThreadMutation() {
 
 	return useMutation({
 		mutationFn: archiveThread,
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ['inbox-threads'] });
+			queryClient.invalidateQueries({ queryKey: ['inbox-unread-count'] });
+		},
+	});
+}
+
+export function useTrashThreadMutation() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: trashThread,
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ['inbox-threads'] });
+			queryClient.invalidateQueries({ queryKey: ['inbox-unread-count'] });
+		},
+	});
+}
+
+export function useUntrashThreadMutation() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: untrashThread,
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ['inbox-threads'] });
 			queryClient.invalidateQueries({ queryKey: ['inbox-unread-count'] });

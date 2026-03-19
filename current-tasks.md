@@ -104,7 +104,7 @@ Add Gmail folder navigation (Inbox, Trash) and the ability to trash/untrash emai
 
 ## Phase 5: Frontend Hooks
 
-- [ ] **Task 6: Add trash/untrash mutations and folder param to hooks**
+- [X] **Task 6: Add trash/untrash mutations and folder param to hooks**
   - In `apps/web/src/hooks/use-inbox.ts`:
   - Add `isTrashed: boolean` to the `EmailThread` type (after `isArchived`)
   - Add `folder` to `ThreadsQueryParams` type: `folder?: 'inbox' | 'trash'`
