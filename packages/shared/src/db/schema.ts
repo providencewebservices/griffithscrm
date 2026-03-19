@@ -1314,6 +1314,37 @@ export const jobForms = pgTable('job_forms', {
 	tenantJobIdx: index('jf_tenant_job_idx').on(table.tenantId, table.jobId),
 }));
 
+// Proof statuses (for job proof approval workflow)
+export const PROOF_STATUSES = ['draft', 'sent_to_customer', 'approved', 'revision_requested', 'superseded'] as const;
+
+// Job proofs (memorial proof versions for customer approval)
+export const jobProofs = pgTable('job_proofs', {
+	id: text('id').primaryKey(),
+	tenantId: text('tenant_id')
+		.notNull()
+		.references(() => tenants.id, { onDelete: 'cascade' }),
+	jobId: text('job_id')
+		.notNull()
+		.references(() => jobs.id, { onDelete: 'cascade' }),
+	version: integer('version').notNull(),
+	status: text('status').notNull().default('draft'),
+	s3Key: text('s3_key').notNull(),
+	filename: text('filename').notNull(),
+	contentType: text('content_type').notNull(),
+	size: integer('size'),
+	sentAt: timestamp('sent_at'),
+	approvedAt: timestamp('approved_at'),
+	customerFeedback: text('customer_feedback'),
+	notes: text('notes'),
+	createdBy: text('created_by')
+		.notNull()
+		.references(() => users.id),
+	createdAt: timestamp('created_at').defaultNow().notNull(),
+	updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+	tenantJobIdx: index('jp_tenant_job_idx').on(table.tenantId, table.jobId),
+}));
+
 // ============================================
 // UNIFIED DOCUMENT MANAGEMENT
 // ============================================

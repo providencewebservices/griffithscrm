@@ -124,7 +124,7 @@ Implement a structured workflow system modeling how jobs progress through their 
   - Run `bun run db:generate` then `bun run db:migrate`
   - Validation: Verify migration and table.
 
-- [ ] **Task 8: Create job_proofs table**
+- [x] **Task 8: Create job_proofs table**
   - In `packages/shared/src/db/schema.ts`:
     - Add constant: `export const PROOF_STATUSES = ['draft', 'sent_to_customer', 'approved', 'revision_requested', 'superseded'] as const`
     - Create `jobProofs` table:

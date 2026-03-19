@@ -288,6 +288,13 @@
       "when": 1773940366959,
       "tag": "0040_freezing_grandmaster",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1773940589191,
+      "tag": "0041_slim_red_ghost",
+      "breakpoints": true
     }
   ]
 }
