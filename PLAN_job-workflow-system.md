@@ -78,7 +78,7 @@ Implement a structured workflow system modeling how jobs progress through their 
   - Run `bun run db:generate` then `bun run db:migrate`
   - Validation: Verify migration and both tables exist.
 
-- [ ] **Task 6: Create job_workflow_tasks table**
+- [x] **Task 6: Create job_workflow_tasks table**
   - In `packages/shared/src/db/schema.ts`:
     - Add constant: `export const WORKFLOW_TASK_STATUSES = ['pending', 'in_progress', 'completed', 'skipped'] as const`
     - Create `jobWorkflowTasks` table:

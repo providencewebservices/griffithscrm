@@ -1258,6 +1258,36 @@ export const workflowSteps = pgTable('workflow_steps', {
 	updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
+// Workflow task statuses
+export const WORKFLOW_TASK_STATUSES = ['pending', 'in_progress', 'completed', 'skipped'] as const;
+
+// Job workflow tasks (instantiated steps for a specific job)
+export const jobWorkflowTasks = pgTable('job_workflow_tasks', {
+	id: text('id').primaryKey(),
+	tenantId: text('tenant_id')
+		.notNull()
+		.references(() => tenants.id, { onDelete: 'cascade' }),
+	jobId: text('job_id')
+		.notNull()
+		.references(() => jobs.id, { onDelete: 'cascade' }),
+	workflowStepId: text('workflow_step_id').references(() => workflowSteps.id),
+	name: text('name').notNull(),
+	description: text('description'),
+	sortOrder: integer('sort_order').notNull(),
+	status: text('status').notNull().default('pending'),
+	assigneeId: text('assignee_id').references(() => users.id),
+	category: text('category').notNull(),
+	dueDate: timestamp('due_date'),
+	completedAt: timestamp('completed_at'),
+	completedBy: text('completed_by').references(() => users.id),
+	taskDate: timestamp('task_date'),
+	notes: text('notes'),
+	createdAt: timestamp('created_at').defaultNow().notNull(),
+	updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+	tenantJobIdx: index('jwt_tenant_job_idx').on(table.tenantId, table.jobId),
+}));
+
 // ============================================
 // UNIFIED DOCUMENT MANAGEMENT
 // ============================================
