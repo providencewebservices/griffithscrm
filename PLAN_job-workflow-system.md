@@ -382,7 +382,7 @@ Implement a structured workflow system modeling how jobs progress through their 
   - Register in `apps/api/src/index.ts`
   - Validation: `bun run build:api` succeeds. Test CRUD and suggestions endpoint.
 
-- [ ] **Task 28: Build forms & fees section on job detail page**
+- [x] **Task 28: Build forms & fees section on job detail page**
   - Create `apps/web/src/hooks/use-job-forms.ts` with query and mutation hooks
   - In `apps/web/src/pages/customer/job-detail.tsx`:
     - Add a "Forms & Fees" tab (or section within the Workflow tab)
