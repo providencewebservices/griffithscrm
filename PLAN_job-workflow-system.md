@@ -309,7 +309,7 @@ Implement a structured workflow system modeling how jobs progress through their 
     - "Reset to Defaults" button that calls seed endpoint (with confirmation dialog)
   - Validation: `bun run dev`, navigate to Settings → Workflows, verify templates load. Add/remove/reorder steps. Reset to defaults.
 
-- [ ] **Task 21: Register workflow templates tab in settings page**
+- [x] **Task 21: Register workflow templates tab in settings page**
   - In `apps/web/src/pages/customer/settings.tsx`:
     - Import `WorkflowTemplatesTab` from `@/components/customer/settings/workflow-templates-tab`
     - Add a "Workflows" tab group with item: `{ value: 'workflows', label: 'Workflows', icon: ListChecks }` (import `ListChecks` from lucide-react)
