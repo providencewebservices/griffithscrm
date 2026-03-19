@@ -409,7 +409,7 @@ Implement a structured workflow system modeling how jobs progress through their 
   - Register in `apps/api/src/index.ts`
   - Validation: `bun run build:api` succeeds. Test upload flow: presign → confirm → send → approve. Test versioning: upload v2, verify v1 becomes superseded.
 
-- [ ] **Task 30: Build proof workflow section on job detail page**
+- [x] **Task 30: Build proof workflow section on job detail page**
   - Create `apps/web/src/hooks/use-job-proofs.ts` with query and mutation hooks
   - In `apps/web/src/pages/customer/job-detail.tsx`:
     - Add a "Proof" tab (only visible for `new_memorial` quote type jobs)
