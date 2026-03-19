@@ -57,6 +57,7 @@ import {
 	ArrowLeft,
 	Inbox,
 	Trash2,
+	Undo2,
 } from 'lucide-react';
 import { ComposeEmailDialog } from '@/components/inbox/compose-email-dialog';
 import {
@@ -65,6 +66,8 @@ import {
 	useInboxThreadQuery,
 	useMarkReadMutation,
 	useArchiveThreadMutation,
+	useTrashThreadMutation,
+	useUntrashThreadMutation,
 	useSendEmailMutation,
 	useSyncInboxMutation,
 	useUnreadCountQuery,
@@ -308,6 +311,8 @@ export function InboxPage() {
 	// Mutations
 	const markReadMutation = useMarkReadMutation();
 	const archiveMutation = useArchiveThreadMutation();
+	const trashMutation = useTrashThreadMutation();
+	const untrashMutation = useUntrashThreadMutation();
 	const sendEmailMutation = useSendEmailMutation();
 	const syncMutation = useSyncInboxMutation();
 
@@ -349,6 +354,28 @@ export function InboxPage() {
 			toast.success('Thread archived');
 		} catch {
 			toast.error('Failed to archive');
+		}
+	};
+
+	const handleTrash = async () => {
+		if (!selectedThreadId) return;
+		try {
+			await trashMutation.mutateAsync(selectedThreadId);
+			setSelectedThreadId(null);
+			toast.success('Thread moved to trash');
+		} catch {
+			toast.error('Failed to trash thread');
+		}
+	};
+
+	const handleUntrash = async () => {
+		if (!selectedThreadId) return;
+		try {
+			await untrashMutation.mutateAsync(selectedThreadId);
+			setSelectedThreadId(null);
+			toast.success('Thread moved to inbox');
+		} catch {
+			toast.error('Failed to restore thread');
 		}
 	};
 
@@ -737,31 +764,47 @@ export function InboxPage() {
 									Reply
 								</Button>
 
-								<DropdownMenu>
-									<DropdownMenuTrigger asChild>
-										<Button variant="outline" size="sm">
-											<Link2 className="h-4 w-4 mr-2" />
-											Link to...
-											<ChevronDown className="h-4 w-4 ml-1" />
-										</Button>
-									</DropdownMenuTrigger>
-									<DropdownMenuContent>
-										<DropdownMenuItem onClick={() => toast.info('Entity linking coming soon')}>
-											Link to Customer
-										</DropdownMenuItem>
-										<DropdownMenuItem onClick={() => toast.info('Entity linking coming soon')}>
-											Link to Quote
-										</DropdownMenuItem>
-										<DropdownMenuItem onClick={() => toast.info('Entity linking coming soon')}>
-											Link to Job
-										</DropdownMenuItem>
-									</DropdownMenuContent>
-								</DropdownMenu>
+								{folder === 'inbox' && (
+									<>
+										<DropdownMenu>
+											<DropdownMenuTrigger asChild>
+												<Button variant="outline" size="sm">
+													<Link2 className="h-4 w-4 mr-2" />
+													Link to...
+													<ChevronDown className="h-4 w-4 ml-1" />
+												</Button>
+											</DropdownMenuTrigger>
+											<DropdownMenuContent>
+												<DropdownMenuItem onClick={() => toast.info('Entity linking coming soon')}>
+													Link to Customer
+												</DropdownMenuItem>
+												<DropdownMenuItem onClick={() => toast.info('Entity linking coming soon')}>
+													Link to Quote
+												</DropdownMenuItem>
+												<DropdownMenuItem onClick={() => toast.info('Entity linking coming soon')}>
+													Link to Job
+												</DropdownMenuItem>
+											</DropdownMenuContent>
+										</DropdownMenu>
 
-								<Button variant="outline" size="sm" onClick={handleArchive} disabled={archiveMutation.isPending}>
-									<Archive className="h-4 w-4 mr-2" />
-									Archive
-								</Button>
+										<Button variant="outline" size="sm" onClick={handleArchive} disabled={archiveMutation.isPending}>
+											<Archive className="h-4 w-4 mr-2" />
+											Archive
+										</Button>
+
+										<Button variant="outline" size="sm" onClick={handleTrash} disabled={trashMutation.isPending}>
+											<Trash2 className="h-4 w-4 mr-2" />
+											Trash
+										</Button>
+									</>
+								)}
+
+								{folder === 'trash' && (
+									<Button variant="outline" size="sm" onClick={handleUntrash} disabled={untrashMutation.isPending}>
+										<Undo2 className="h-4 w-4 mr-2" />
+										Move to Inbox
+									</Button>
+								)}
 							</div>
 
 							{/* Messages */}

@@ -147,7 +147,7 @@ Add Gmail folder navigation (Inbox, Trash) and the ability to trash/untrash emai
   - Import `Trash2` icon from lucide-react for trash folder tab
   - Validation: `bun run dev`, navigate between Inbox and Trash tabs, verify thread lists change and filter controls show/hide correctly
 
-- [ ] **Task 8: Add trash/untrash buttons to thread detail action bar**
+- [X] **Task 8: Add trash/untrash buttons to thread detail action bar**
   - In `apps/web/src/pages/customer/inbox.tsx`:
   - Import `useTrashThreadMutation` and `useUntrashThreadMutation` from hooks
   - Import `Trash2` and `Undo2` (or `ArchiveRestore`) icons from lucide-react
