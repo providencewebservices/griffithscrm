@@ -1,16 +1,19 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
-import { eq, and, asc, sql } from 'drizzle-orm';
+import { eq, and, asc, sql, isNull } from 'drizzle-orm';
 import { requireAuth, requireTenant } from '../middleware/auth';
 import { db } from '../lib/auth';
 import {
 	jobs,
 	jobWorkflowTasks,
+	workflowTemplates,
+	workflowSteps,
 	users,
 	WORKFLOW_TASK_STATUSES,
 	WORKFLOW_STEP_CATEGORIES,
 } from '@griffiths-crm/shared/db/schema';
+import { seedDefaultWorkflowTemplates } from '../lib/workflow-seed';
 
 // Validation schemas
 const createTaskSchema = z.object({
@@ -76,6 +79,114 @@ const jobWorkflowTasksRoutes = new Hono()
 			.orderBy(asc(jobWorkflowTasks.sortOrder));
 
 		return c.json({ workflowTasks: tasks });
+	})
+
+	// Generate workflow tasks from template
+	.post('/:jobId/workflow-tasks/generate', async (c) => {
+		const tenantId = c.get('user').tenantId!;
+		const jobId = c.req.param('jobId');
+
+		// Verify job exists and belongs to tenant
+		const [job] = await db
+			.select()
+			.from(jobs)
+			.where(and(eq(jobs.id, jobId), eq(jobs.tenantId, tenantId)))
+			.limit(1);
+
+		if (!job) {
+			return c.json({ error: 'Job not found' }, 404);
+		}
+
+		// Check job has zero workflow tasks
+		const [taskCount] = await db
+			.select({ count: sql<number>`COUNT(*)` })
+			.from(jobWorkflowTasks)
+			.where(eq(jobWorkflowTasks.jobId, jobId));
+
+		if (Number(taskCount.count) > 0) {
+			return c.json({ error: 'Job already has workflow tasks' }, 400);
+		}
+
+		// Ensure default templates exist
+		await seedDefaultWorkflowTemplates(tenantId);
+
+		// Find matching template
+		const templateCondition = job.productionMethod
+			? eq(workflowTemplates.productionMethod, job.productionMethod)
+			: isNull(workflowTemplates.productionMethod);
+
+		const [template] = await db
+			.select()
+			.from(workflowTemplates)
+			.where(
+				and(
+					eq(workflowTemplates.tenantId, tenantId),
+					eq(workflowTemplates.quoteType, job.quoteType),
+					templateCondition,
+					eq(workflowTemplates.isActive, true),
+				),
+			)
+			.limit(1);
+
+		if (!template) {
+			return c.json({ error: 'No matching workflow template found' }, 404);
+		}
+
+		// Get template steps
+		const steps = await db
+			.select()
+			.from(workflowSteps)
+			.where(eq(workflowSteps.templateId, template.id))
+			.orderBy(asc(workflowSteps.sortOrder));
+
+		if (steps.length === 0) {
+			return c.json({ error: 'Template has no steps' }, 400);
+		}
+
+		// Create workflow tasks from steps
+		const newTasks = steps.map((step) => ({
+			id: crypto.randomUUID(),
+			tenantId,
+			jobId,
+			workflowStepId: step.id,
+			name: step.name,
+			description: step.description,
+			sortOrder: step.sortOrder,
+			status: 'pending' as const,
+			assigneeId: step.defaultAssigneeId,
+			category: step.category,
+		}));
+
+		await db.insert(jobWorkflowTasks).values(newTasks);
+
+		// Return created tasks with assignee info
+		const tasks = await db
+			.select({
+				id: jobWorkflowTasks.id,
+				tenantId: jobWorkflowTasks.tenantId,
+				jobId: jobWorkflowTasks.jobId,
+				workflowStepId: jobWorkflowTasks.workflowStepId,
+				name: jobWorkflowTasks.name,
+				description: jobWorkflowTasks.description,
+				sortOrder: jobWorkflowTasks.sortOrder,
+				status: jobWorkflowTasks.status,
+				assigneeId: jobWorkflowTasks.assigneeId,
+				assigneeName: users.name,
+				category: jobWorkflowTasks.category,
+				dueDate: jobWorkflowTasks.dueDate,
+				completedAt: jobWorkflowTasks.completedAt,
+				completedBy: jobWorkflowTasks.completedBy,
+				taskDate: jobWorkflowTasks.taskDate,
+				notes: jobWorkflowTasks.notes,
+				createdAt: jobWorkflowTasks.createdAt,
+				updatedAt: jobWorkflowTasks.updatedAt,
+			})
+			.from(jobWorkflowTasks)
+			.leftJoin(users, eq(jobWorkflowTasks.assigneeId, users.id))
+			.where(eq(jobWorkflowTasks.jobId, jobId))
+			.orderBy(asc(jobWorkflowTasks.sortOrder));
+
+		return c.json({ workflowTasks: tasks }, 201);
 	})
 
 	// Add an ad-hoc task

@@ -469,7 +469,7 @@ Implement a structured workflow system modeling how jobs progress through their 
     - On every form status update (PUT), check if ALL forms for the job have status in `['approved', 'received', 'not_required']`. If so, find the job's workflow task named **"Forms & Fees"** and auto-complete it.
   - Validation: Upload a proof → verify "Create Memorial Proof" task auto-completes. Approve a proof → verify "Proof Approval" task auto-completes. Mark all forms as approved → verify "Forms & Fees" task auto-completes.
 
-- [ ] **Task 36: Add "Generate Workflow" action for existing jobs**
+- [x] **Task 36: Add "Generate Workflow" action for existing jobs**
   - In `apps/api/src/routes/job-workflow-tasks.ts`:
     - Add `POST /:jobId/workflow-tasks/generate` — looks up the matching template for the job's (quoteType, productionMethod), generates tasks from it. Only works if the job currently has zero workflow tasks (return 400 otherwise with "Job already has workflow tasks").
     - Calls `seedDefaultWorkflowTemplates(tenantId)` first to ensure templates exist
