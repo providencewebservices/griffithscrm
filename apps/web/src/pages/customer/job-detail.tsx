@@ -70,6 +70,8 @@ import {
 	formatAttachmentCategory,
 	formatAccountStatus,
 	getAccountStatusColor,
+	formatDepositStatus,
+	getDepositStatusColor,
 	ACCOUNT_STATUSES,
 	REVIEW_OUTCOMES,
 	type JobStatus,
@@ -927,6 +929,13 @@ export function JobDetailPage() {
 					) : (
 						<span className="text-muted-foreground">No payments</span>
 					)}
+				</div>
+				<div className="w-px h-4 bg-border" />
+				{/* Deposit Status */}
+				<div className="flex items-center gap-1.5 text-sm">
+					<Badge variant="outline" className={getDepositStatusColor(job.depositStatus)}>
+						{formatDepositStatus(job.depositStatus)}
+					</Badge>
 				</div>
 				<div className="w-px h-4 bg-border" />
 				{/* Tasks */}

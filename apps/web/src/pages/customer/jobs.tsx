@@ -31,6 +31,8 @@ import {
 	getJobStatusClassName,
 	formatAccountStatus,
 	getAccountStatusColor,
+	formatDepositStatus,
+	getDepositStatusColor,
 	JOB_STATUSES,
 	type JobStatus,
 	type JobListItem,
@@ -229,6 +231,7 @@ export function JobsPage() {
 									<TableHead>Customer</TableHead>
 									<TableHead className="text-right">Total</TableHead>
 									<TableHead>Payment</TableHead>
+									<TableHead>Deposit</TableHead>
 									<TableHead>Account</TableHead>
 									<TableHead>Status</TableHead>
 									<TableHead>Created</TableHead>
@@ -251,6 +254,11 @@ export function JobsPage() {
 										</TableCell>
 										<TableCell>
 											<PaymentStatusDisplay job={job} formatCurrency={formatCurrency} />
+										</TableCell>
+										<TableCell>
+											<Badge variant="outline" className={getDepositStatusColor(job.depositStatus)}>
+												{formatDepositStatus(job.depositStatus)}
+											</Badge>
 										</TableCell>
 										<TableCell>
 											<Badge variant="outline" className={getAccountStatusColor(job.accountStatus)}>
@@ -392,9 +400,14 @@ function JobCard({ job, formatCurrency, formatDate }: JobCardProps) {
 
 					<div className="flex items-center justify-between">
 						<PaymentStatusDisplay job={job} formatCurrency={formatCurrency} />
-						<Badge variant="outline" className={`text-xs ${getAccountStatusColor(job.accountStatus)}`}>
-							{formatAccountStatus(job.accountStatus)}
-						</Badge>
+						<div className="flex items-center gap-1.5">
+							<Badge variant="outline" className={`text-xs ${getDepositStatusColor(job.depositStatus)}`}>
+								{formatDepositStatus(job.depositStatus)}
+							</Badge>
+							<Badge variant="outline" className={`text-xs ${getAccountStatusColor(job.accountStatus)}`}>
+								{formatAccountStatus(job.accountStatus)}
+							</Badge>
+						</div>
 					</div>
 				</CardContent>
 			</Card>

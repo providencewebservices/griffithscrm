@@ -90,6 +90,7 @@ export type Job = {
 	reviewCompletedBy: string | null;
 	reviewNotes: string | null;
 	reviewOutcome: string | null;
+	depositStatus: string | null;
 	createdAt: string;
 	updatedAt: string;
 };
@@ -1013,6 +1014,32 @@ export function getAccountStatusColor(status: string | null): string {
 		case 'overdue':
 			return 'bg-red-100 text-red-800';
 		case 'not_invoiced':
+		default:
+			return 'bg-gray-100 text-gray-800';
+	}
+}
+
+// Helper: Format deposit status for display
+export function formatDepositStatus(status: string | null): string {
+	const labels: Record<string, string> = {
+		no_deposit_required: 'No Deposit Required',
+		awaiting_deposit: 'Awaiting Deposit',
+		partially_paid: 'Partially Paid',
+		deposit_paid: 'Deposit Paid',
+	};
+	return status ? labels[status] || status : 'No Deposit Required';
+}
+
+// Helper: Get deposit status badge color
+export function getDepositStatusColor(status: string | null): string {
+	switch (status) {
+		case 'deposit_paid':
+			return 'bg-green-100 text-green-800';
+		case 'partially_paid':
+			return 'bg-yellow-100 text-yellow-800';
+		case 'awaiting_deposit':
+			return 'bg-orange-100 text-orange-800';
+		case 'no_deposit_required':
 		default:
 			return 'bg-gray-100 text-gray-800';
 	}

@@ -455,7 +455,7 @@ Implement a structured workflow system modeling how jobs progress through their 
   - In `apps/api/src/routes/pipeline.ts`: include `depositStatus` in pipeline job card responses
   - Validation: `bun run build:api` succeeds. Create jobs with different payment states, verify correct deposit status values.
 
-- [ ] **Task 34: Display deposit status in UI**
+- [x] **Task 34: Display deposit status in UI**
   - In `apps/web/src/pages/customer/job-detail.tsx`: show deposit status badge prominently in the job header area
   - In `apps/web/src/pages/customer/jobs.tsx`: add deposit status badge column to job list
   - Badge colors: no_deposit_required=gray, awaiting_deposit=orange, partially_paid=yellow, deposit_paid=green
