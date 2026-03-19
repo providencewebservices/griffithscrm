@@ -319,7 +319,7 @@ Implement a structured workflow system modeling how jobs progress through their 
 
 ## Phase 7: Job Workflow Tasks — API & UI
 
-- [ ] **Task 22: Create job workflow tasks API routes**
+- [x] **Task 22: Create job workflow tasks API routes**
   - Create `apps/api/src/routes/job-workflow-tasks.ts`:
     - Define routes relative to `/:jobId/workflow-tasks` (the file will be mounted at `/api/jobs` in index.ts, resulting in `/api/jobs/:jobId/workflow-tasks/*`)
     - `GET /:jobId/workflow-tasks` — list all workflow tasks for a job, ordered by sortOrder. Include assignee name via join.
