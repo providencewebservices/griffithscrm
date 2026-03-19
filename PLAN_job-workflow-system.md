@@ -341,7 +341,7 @@ Implement a structured workflow system modeling how jobs progress through their 
       - Set: `workflowStepId` = step.id, `status` = 'pending', `tenantId`, `jobId`
   - Validation: Accept a quote via API, verify workflow tasks auto-created on the new job matching the template steps.
 
-- [ ] **Task 24: Build workflow tasks hook**
+- [x] **Task 24: Build workflow tasks hook**
   - Create `apps/web/src/hooks/use-job-workflow-tasks.ts`:
     - `useJobWorkflowTasksQuery(jobId)` — fetch workflow tasks for a job
     - `useCompleteWorkflowTaskMutation(jobId)`, `useSkipWorkflowTaskMutation(jobId)`
