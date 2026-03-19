@@ -461,7 +461,7 @@ Implement a structured workflow system modeling how jobs progress through their 
   - Badge colors: no_deposit_required=gray, awaiting_deposit=orange, partially_paid=yellow, deposit_paid=green
   - Validation: `bun run dev`, verify deposit status shows on job list and job detail.
 
-- [ ] **Task 35: Connect workflow tasks to proof and forms completion**
+- [x] **Task 35: Connect workflow tasks to proof and forms completion**
   - In `apps/api/src/routes/job-proofs.ts`:
     - When a proof is uploaded (POST confirm), find the job's workflow task named **"Create Memorial Proof"** (exact match) and if its status is `pending` or `in_progress`, set it to `completed`
     - When a proof is approved (PUT approve), find the job's workflow task named **"Proof Approval"** and auto-complete it

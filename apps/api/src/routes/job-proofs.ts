@@ -5,6 +5,7 @@ import { eq, and, desc, sql, ne } from 'drizzle-orm';
 import { requireAuth, requireTenant } from '../middleware/auth';
 import { db } from '../lib/auth';
 import { generatePresignedUploadUrl, isS3Configured } from '../lib/s3';
+import { autoCompleteWorkflowTask } from '../lib/workflow-utils';
 import { jobs, jobProofs, users, PROOF_STATUSES } from '@griffiths-crm/shared/db/schema';
 
 // Allowed content types for proof uploads
@@ -188,6 +189,9 @@ const jobProofsRoutes = new Hono()
 
 		const [created] = await db.insert(jobProofs).values(newProof).returning();
 
+		// Auto-complete "Create Memorial Proof" workflow task
+		await autoCompleteWorkflowTask(jobId, 'Create Memorial Proof', currentUser.id);
+
 		return c.json({ proof: created }, 201);
 	})
 
@@ -233,7 +237,8 @@ const jobProofsRoutes = new Hono()
 
 	// Approve proof
 	.put('/:jobId/proofs/:proofId/approve', async (c) => {
-		const tenantId = c.get('user').tenantId!;
+		const currentUser = c.get('user');
+		const tenantId = currentUser.tenantId!;
 		const jobId = c.req.param('jobId');
 		const proofId = c.req.param('proofId');
 
@@ -267,6 +272,9 @@ const jobProofsRoutes = new Hono()
 			})
 			.where(eq(jobProofs.id, proofId))
 			.returning();
+
+		// Auto-complete "Proof Approval" workflow task
+		await autoCompleteWorkflowTask(jobId, 'Proof Approval', currentUser.id);
 
 		return c.json({ proof: updated });
 	})

@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { eq, and, asc, sql } from 'drizzle-orm';
 import { requireAuth, requireTenant } from '../middleware/auth';
 import { db } from '../lib/auth';
+import { autoCompleteWorkflowTask } from '../lib/workflow-utils';
 import { jobs, jobForms, FORM_STATUSES } from '@griffiths-crm/shared/db/schema';
 
 // Validation schemas
@@ -106,7 +107,8 @@ const jobFormsRoutes = new Hono()
 
 	// Update a form
 	.put('/:jobId/forms/:formId', zValidator('json', updateFormSchema), async (c) => {
-		const tenantId = c.get('user').tenantId!;
+		const currentUser = c.get('user');
+		const tenantId = currentUser.tenantId!;
 		const jobId = c.req.param('jobId');
 		const formId = c.req.param('formId');
 		const data = c.req.valid('json');
@@ -145,6 +147,21 @@ const jobFormsRoutes = new Hono()
 			.set(updateData)
 			.where(eq(jobForms.id, formId))
 			.returning();
+
+		// Check if all forms for this job are now in terminal statuses
+		if (data.status !== undefined) {
+			const allForms = await db
+				.select({ status: jobForms.status })
+				.from(jobForms)
+				.where(eq(jobForms.jobId, jobId));
+
+			const terminalStatuses = ['approved', 'received', 'not_required'];
+			const allComplete = allForms.length > 0 && allForms.every((f) => terminalStatuses.includes(f.status));
+
+			if (allComplete) {
+				await autoCompleteWorkflowTask(jobId, 'Forms & Fees', currentUser.id);
+			}
+		}
 
 		return c.json({ form: updated });
 	})
