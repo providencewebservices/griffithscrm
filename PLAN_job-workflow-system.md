@@ -350,7 +350,7 @@ Implement a structured workflow system modeling how jobs progress through their 
     - `useDeleteWorkflowTaskMutation(jobId)` — for removing ad-hoc tasks
   - Validation: `bun run build:web` succeeds.
 
-- [ ] **Task 25: Build read-only workflow task list on job detail page**
+- [x] **Task 25: Build read-only workflow task list on job detail page**
   - In `apps/web/src/pages/customer/job-detail.tsx`:
     - Add a "Workflow" tab to the existing `<Tabs>` component
     - Render a vertical stepper/checklist of workflow tasks ordered by sortOrder

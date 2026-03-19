@@ -110,6 +110,12 @@ import {
 	Blocks,
 	Receipt,
 	RefreshCw,
+	ListChecks,
+	User,
+	Circle,
+	CircleCheck,
+	CircleDashed,
+	CircleMinus,
 } from 'lucide-react';
 import { JobTasksSection } from '@/components/tasks/job-tasks-section';
 import {
@@ -118,6 +124,13 @@ import {
 	useUpdateMemorialWorksheetMutation,
 	type MemorialWorksheet,
 } from '@/hooks/use-memorial-worksheet';
+import {
+	useJobWorkflowTasksQuery,
+	useGenerateWorkflowMutation,
+	type WorkflowTask,
+	type WorkflowTaskStatus,
+} from '@/hooks/use-job-workflow-tasks';
+import { Progress } from '@/components/ui/progress';
 
 // Status icons mapping
 const STATUS_ICONS: Record<JobStatus, React.ElementType> = {
@@ -187,6 +200,7 @@ export function JobDetailPage() {
 	const { data: attachments, isLoading: attachmentsLoading } = useAttachmentsQuery(id);
 	const { data: worksheet, isLoading: worksheetLoading } = useMemorialWorksheetQuery(id);
 	const { data: jobTasks } = useTasksQuery({ entityType: 'job', entityId: id });
+	const { data: workflowTasks, isLoading: workflowTasksLoading } = useJobWorkflowTasksQuery(id);
 	const createWorksheetMutation = useCreateMemorialWorksheetMutation();
 	const updateWorksheetMutation = useUpdateMemorialWorksheetMutation();
 	const updateStatusMutation = useUpdateJobStatusMutation();
@@ -203,6 +217,7 @@ export function JobDetailPage() {
 	const updateAccountStatusMutation = useUpdateAccountStatusMutation();
 	const recalculateAccountStatusMutation = useRecalculateAccountStatusMutation();
 	const updateDatesMutation = useUpdateJobDatesMutation();
+	const generateWorkflowMutation = useGenerateWorkflowMutation(id!);
 
 	// Initialize notes when job loads
 	if (job && !notesInitialized) {
@@ -589,6 +604,11 @@ export function JobDetailPage() {
 	const tasksDone = jobTasks?.filter((t) => t.status === 'done').length ?? 0;
 	const tasksTotal = jobTasks?.length ?? 0;
 
+	// Workflow task counts
+	const workflowCompleted = workflowTasks?.filter((t) => t.status === 'completed').length ?? 0;
+	const workflowTotal = workflowTasks?.length ?? 0;
+	const workflowProgressPercent = workflowTotal > 0 ? Math.round((workflowCompleted / workflowTotal) * 100) : 0;
+
 	// Memorial details heading per type
 	const memorialHeadings: Record<string, string> = {
 		new_memorial: 'Memorial Specifications',
@@ -745,6 +765,15 @@ export function JobDetailPage() {
 			<Tabs defaultValue="overview" className="mt-4">
 				<TabsList>
 					<TabsTrigger value="overview">Overview</TabsTrigger>
+					<TabsTrigger value="workflow" className="flex items-center gap-2">
+						<ListChecks className="h-4 w-4" />
+						Workflow
+						{workflowTotal > 0 && (
+							<Badge variant="secondary" className="h-5 text-xs px-1.5">
+								{workflowCompleted}/{workflowTotal}
+							</Badge>
+						)}
+					</TabsTrigger>
 					{hasSpecifications && (
 						<TabsTrigger value="specifications" className="flex items-center gap-2">
 							<Blocks className="h-4 w-4" />
@@ -1098,6 +1127,147 @@ export function JobDetailPage() {
 						</div>
 					</CollapsibleContent>
 				</Collapsible>
+			</TabsContent>
+
+			{/* Workflow Tab */}
+			<TabsContent value="workflow" className="mt-6">
+				<div className="max-w-2xl space-y-6">
+					{workflowTasksLoading ? (
+						<div className="text-muted-foreground flex items-center gap-2">
+							<Loader2 className="h-4 w-4 animate-spin" />
+							Loading workflow...
+						</div>
+					) : !workflowTasks || workflowTasks.length === 0 ? (
+						<Card>
+							<CardContent className="pt-6">
+								<div className="text-center py-8">
+									<ListChecks className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+									<p className="text-muted-foreground mb-4">
+										No workflow tasks have been created for this job yet.
+									</p>
+									<Button
+										onClick={() => {
+											generateWorkflowMutation.mutate(undefined, {
+												onSuccess: () => toast.success('Workflow generated'),
+												onError: (err) => toast.error(err.message),
+											});
+										}}
+										disabled={generateWorkflowMutation.isPending}
+									>
+										{generateWorkflowMutation.isPending ? (
+											<Loader2 className="h-4 w-4 mr-2 animate-spin" />
+										) : (
+											<ListChecks className="h-4 w-4 mr-2" />
+										)}
+										Generate Workflow
+									</Button>
+								</div>
+							</CardContent>
+						</Card>
+					) : (
+						<>
+							{/* Progress indicator */}
+							<Card>
+								<CardContent className="pt-6">
+									<div className="flex items-center justify-between mb-2">
+										<span className="text-sm font-medium">
+											{workflowCompleted} of {workflowTotal} steps complete
+										</span>
+										<span className="text-sm text-muted-foreground">
+											{workflowProgressPercent}%
+										</span>
+									</div>
+									<Progress value={workflowProgressPercent} />
+								</CardContent>
+							</Card>
+
+							{/* Task list */}
+							<Card>
+								<CardHeader>
+									<CardTitle>Workflow Steps</CardTitle>
+								</CardHeader>
+								<CardContent>
+									<div className="space-y-1">
+										{workflowTasks.map((task, index) => {
+											const isCompleted = task.status === 'completed';
+											const isSkipped = task.status === 'skipped';
+											const isInProgress = task.status === 'in_progress';
+
+											return (
+												<div
+													key={task.id}
+													className={`flex items-center gap-3 py-3 ${index < workflowTasks.length - 1 ? 'border-b' : ''}`}
+												>
+													{/* Status icon */}
+													<div className="flex-shrink-0">
+														{isCompleted ? (
+															<CircleCheck className="h-5 w-5 text-green-500" />
+														) : isSkipped ? (
+															<CircleMinus className="h-5 w-5 text-gray-400" />
+														) : isInProgress ? (
+															<CircleDashed className="h-5 w-5 text-blue-500" />
+														) : (
+															<Circle className="h-5 w-5 text-gray-300" />
+														)}
+													</div>
+
+													{/* Task info */}
+													<div className="flex-1 min-w-0">
+														<div className="flex items-center gap-2">
+															<span className={`font-medium text-sm ${isSkipped ? 'line-through text-muted-foreground' : ''}`}>
+																{task.name}
+															</span>
+															<Badge
+																variant="outline"
+																className="text-xs capitalize"
+															>
+																{task.category}
+															</Badge>
+														</div>
+														<div className="flex items-center gap-3 mt-0.5">
+															<span className="text-xs text-muted-foreground flex items-center gap-1">
+																<User className="h-3 w-3" />
+																{task.assigneeName || 'Unassigned'}
+															</span>
+															{task.dueDate && (
+																<span className="text-xs text-muted-foreground flex items-center gap-1">
+																	<Calendar className="h-3 w-3" />
+																	{formatDate(task.dueDate)}
+																</span>
+															)}
+														</div>
+													</div>
+
+													{/* Status badge */}
+													<div className="flex-shrink-0">
+														<Badge
+															variant={
+																isCompleted ? 'default' :
+																isInProgress ? 'default' :
+																'secondary'
+															}
+															className={
+																isCompleted ? 'bg-green-100 text-green-800 hover:bg-green-100' :
+																isInProgress ? 'bg-blue-100 text-blue-800 hover:bg-blue-100' :
+																isSkipped ? 'bg-gray-100 text-gray-500 hover:bg-gray-100' :
+																''
+															}
+														>
+															{isCompleted ? 'Completed' :
+															 isInProgress ? 'In Progress' :
+															 isSkipped ? 'Skipped' :
+															 'Pending'}
+														</Badge>
+													</div>
+												</div>
+											);
+										})}
+									</div>
+								</CardContent>
+							</Card>
+						</>
+					)}
+				</div>
 			</TabsContent>
 
 			{/* Specifications Tab */}

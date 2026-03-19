@@ -127,6 +127,21 @@ async function addWorkflowTask(jobId: string, input: AddWorkflowTaskInput): Prom
 	return data.workflowTask;
 }
 
+async function generateWorkflowTasks(jobId: string): Promise<WorkflowTask[]> {
+	const response = await fetch(`${API_URL}/api/jobs/${jobId}/workflow-tasks/generate`, {
+		method: 'POST',
+		credentials: 'include',
+	});
+
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.error || 'Failed to generate workflow tasks');
+	}
+
+	const data: { workflowTasks: WorkflowTask[] } = await response.json();
+	return data.workflowTasks;
+}
+
 async function deleteWorkflowTask(jobId: string, taskId: string): Promise<void> {
 	const response = await fetch(`${API_URL}/api/jobs/${jobId}/workflow-tasks/${taskId}`, {
 		method: 'DELETE',
@@ -198,6 +213,17 @@ export function useDeleteWorkflowTaskMutation(jobId: string) {
 
 	return useMutation({
 		mutationFn: (taskId: string) => deleteWorkflowTask(jobId, taskId),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ['workflow-tasks', jobId] });
+		},
+	});
+}
+
+export function useGenerateWorkflowMutation(jobId: string) {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: () => generateWorkflowTasks(jobId),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ['workflow-tasks', jobId] });
 		},
