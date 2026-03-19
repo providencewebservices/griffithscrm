@@ -75,6 +75,13 @@ export type Job = {
 	jobNumber: string;
 	status: JobStatus;
 	notes: string | null;
+	productionMethod: string | null;
+	proposedDeliveryDate: string | null;
+	refixingDate: string | null;
+	jobStartDate: string | null;
+	ashesDate: string | null;
+	installationDate: string | null;
+	deadline: string | null;
 	invoicedAt: string | null;
 	invoiceNumber: string | null;
 	accountStatus: string | null;
@@ -383,6 +390,53 @@ export function useDeleteJobMutation() {
 		mutationFn: deleteJob,
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ['jobs'] });
+		},
+	});
+}
+
+// ============================================
+// DATE UPDATE HOOKS
+// ============================================
+
+export type UpdateJobDatesInput = {
+	proposedDeliveryDate?: string | null;
+	refixingDate?: string | null;
+	jobStartDate?: string | null;
+	ashesDate?: string | null;
+	installationDate?: string | null;
+};
+
+async function updateJobDates({
+	id,
+	dates,
+}: {
+	id: string;
+	dates: UpdateJobDatesInput;
+}): Promise<JobWithQuoteSummary> {
+	const response = await fetch(`${API_URL}/api/jobs/${id}/dates`, {
+		method: 'PUT',
+		headers: { 'Content-Type': 'application/json' },
+		credentials: 'include',
+		body: JSON.stringify(dates),
+	});
+
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.error || 'Failed to update dates');
+	}
+
+	const data: JobResponse = await response.json();
+	return data.job;
+}
+
+export function useUpdateJobDatesMutation() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: updateJobDates,
+		onSuccess: (data) => {
+			queryClient.invalidateQueries({ queryKey: ['jobs'] });
+			queryClient.invalidateQueries({ queryKey: ['job', data.id] });
 		},
 	});
 }

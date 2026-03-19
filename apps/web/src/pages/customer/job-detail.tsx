@@ -58,6 +58,7 @@ import {
 	useConfirmAttachmentMutation,
 	useDeleteAttachmentMutation,
 	useGeneratePaymentLinkMutation,
+	useUpdateJobDatesMutation,
 	useMarkInvoicedMutation,
 	useUpdateAccountStatusMutation,
 	useRecalculateAccountStatusMutation,
@@ -201,6 +202,7 @@ export function JobDetailPage() {
 	const markInvoicedMutation = useMarkInvoicedMutation();
 	const updateAccountStatusMutation = useUpdateAccountStatusMutation();
 	const recalculateAccountStatusMutation = useRecalculateAccountStatusMutation();
+	const updateDatesMutation = useUpdateJobDatesMutation();
 
 	// Initialize notes when job loads
 	if (job && !notesInitialized) {
@@ -511,6 +513,27 @@ export function JobDetailPage() {
 		} catch (err) {
 			setMutationError(err instanceof Error ? err.message : 'Failed to recalculate status');
 		}
+	};
+
+	// Date update handler
+	const handleDateChange = async (field: string, value: string) => {
+		if (!id) return;
+		try {
+			await updateDatesMutation.mutateAsync({
+				id,
+				dates: {
+					[field]: value ? new Date(value).toISOString() : null,
+				},
+			});
+			toast.success('Date updated');
+		} catch (err) {
+			toast.error(err instanceof Error ? err.message : 'Failed to update date');
+		}
+	};
+
+	const toDateInputValue = (dateStr: string | null | undefined): string => {
+		if (!dateStr) return '';
+		return new Date(dateStr).toISOString().split('T')[0];
 	};
 
 	const getFileIcon = (contentType: string) => {
@@ -841,6 +864,103 @@ export function JobDetailPage() {
 					</CardContent>
 				</Card>
 			</div>
+
+				{/* Dates Section */}
+				<Card className="mt-6">
+					<CardHeader>
+						<CardTitle className="flex items-center gap-2">
+							<Calendar className="h-5 w-5" />
+							Dates
+						</CardTitle>
+					</CardHeader>
+					<CardContent>
+						<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+							{quoteType === 'new_memorial' && (
+								<>
+									<div>
+										<Label htmlFor="date-proposed-delivery">Proposed Delivery Date</Label>
+										<Input
+											id="date-proposed-delivery"
+											type="date"
+											value={toDateInputValue(job.proposedDeliveryDate)}
+											onChange={(e) => handleDateChange('proposedDeliveryDate', e.target.value)}
+											disabled={updateDatesMutation.isPending}
+										/>
+									</div>
+									<div>
+										<Label htmlFor="date-installation">Fixing Date</Label>
+										<Input
+											id="date-installation"
+											type="date"
+											value={toDateInputValue(job.installationDate)}
+											onChange={(e) => handleDateChange('installationDate', e.target.value)}
+											disabled={updateDatesMutation.isPending}
+										/>
+									</div>
+								</>
+							)}
+							{quoteType === 'additional_inscription' && (
+								<div>
+									<Label htmlFor="date-refixing">Re-Fixing Date</Label>
+									<Input
+										id="date-refixing"
+										type="date"
+										value={toDateInputValue(job.refixingDate)}
+										onChange={(e) => handleDateChange('refixingDate', e.target.value)}
+										disabled={updateDatesMutation.isPending}
+									/>
+								</div>
+							)}
+							{quoteType === 'refurbishment' && (
+								<div>
+									<Label htmlFor="date-job-start">Job Start Date</Label>
+									<Input
+										id="date-job-start"
+										type="date"
+										value={toDateInputValue(job.jobStartDate)}
+										onChange={(e) => handleDateChange('jobStartDate', e.target.value)}
+										disabled={updateDatesMutation.isPending}
+									/>
+								</div>
+							)}
+							{quoteType === 'ashes' && (
+								<div>
+									<Label htmlFor="date-ashes">Date of Ashes</Label>
+									<Input
+										id="date-ashes"
+										type="date"
+										value={toDateInputValue(job.ashesDate)}
+										onChange={(e) => handleDateChange('ashesDate', e.target.value)}
+										disabled={updateDatesMutation.isPending}
+									/>
+								</div>
+							)}
+							{quoteType !== 'new_memorial' && (
+								<div>
+									<Label htmlFor="date-installation-general">Installation Date</Label>
+									<Input
+										id="date-installation-general"
+										type="date"
+										value={toDateInputValue(job.installationDate)}
+										onChange={(e) => handleDateChange('installationDate', e.target.value)}
+										disabled={updateDatesMutation.isPending}
+									/>
+								</div>
+							)}
+							<div>
+								<Label htmlFor="date-deadline">Deadline</Label>
+								<Input
+									id="date-deadline"
+									type="date"
+									value={toDateInputValue(job.deadline)}
+									disabled
+									className="bg-muted"
+								/>
+								<p className="text-xs text-muted-foreground mt-1">Set from quote</p>
+							</div>
+						</div>
+					</CardContent>
+				</Card>
 
 				{/* Invoicing Section */}
 				<Card className="mt-6">

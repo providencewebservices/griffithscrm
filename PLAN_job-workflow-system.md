@@ -220,7 +220,7 @@ Implement a structured workflow system modeling how jobs progress through their 
 
 ## Phase 5: Workflow-Specific Date Fields UI
 
-- [ ] **Task 17: Add workflow-specific date fields to job detail page**
+- [x] **Task 17: Add workflow-specific date fields to job detail page**
   - In `apps/web/src/pages/customer/job-detail.tsx`:
     - Add a "Dates" card/section that shows relevant date fields based on `quoteType`:
       - `new_memorial`: Proposed Delivery Date, Fixing Date (existing `installationDate`)
