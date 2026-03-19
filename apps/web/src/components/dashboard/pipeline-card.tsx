@@ -7,6 +7,8 @@ import {
 import {
 	formatJobStatus,
 	getJobStatusVariant,
+	formatAccountStatus,
+	getAccountStatusColor,
 } from '@/hooks/use-jobs';
 import { formatCurrency, type PipelineQuoteItem, type PipelineJobItem } from '@/hooks/use-pipeline';
 
@@ -69,11 +71,18 @@ export function PipelineJobCard({ item }: PipelineJobCardProps) {
 				<span className="text-sm font-bold text-foreground">
 					{formatCurrency(item.total)}
 				</span>
-				{item.paymentStatus && (
-					<span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-						{item.paymentStatus}
-					</span>
-				)}
+				<div className="flex items-center gap-1">
+					{item.accountStatus && item.accountStatus !== 'not_invoiced' && (
+						<span className={`text-[10px] px-1.5 py-0.5 rounded ${getAccountStatusColor(item.accountStatus)}`}>
+							{formatAccountStatus(item.accountStatus)}
+						</span>
+					)}
+					{item.paymentStatus && (
+						<span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+							{item.paymentStatus}
+						</span>
+					)}
+				</div>
 			</div>
 		</Link>
 	);

@@ -187,6 +187,7 @@ export const pipelineRoutes = new Hono()
 						jobNumber: jobs.jobNumber,
 						status: jobs.status,
 						quoteId: jobs.quoteId,
+						accountStatus: jobs.accountStatus,
 						updatedAt: jobs.updatedAt,
 					})
 					.from(jobs)
@@ -263,6 +264,7 @@ export const pipelineRoutes = new Hono()
 							total: quote?.total || '0',
 							status: job.status,
 							paymentStatus,
+							accountStatus: job.accountStatus,
 							updatedAt: job.updatedAt,
 						};
 					})

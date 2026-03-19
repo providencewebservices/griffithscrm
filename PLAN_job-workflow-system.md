@@ -212,7 +212,7 @@ Implement a structured workflow system modeling how jobs progress through their 
   - Add mutation hooks to `apps/web/src/hooks/use-jobs.ts`: `useMarkInvoicedMutation`, `useUpdateAccountStatusMutation`, `useRecalculateAccountStatusMutation`
   - Validation: `bun run dev`, open a job detail, verify invoicing section renders. Mark as invoiced, verify date displays and badge updates.
 
-- [ ] **Task 16: Add account status to job list and pipeline**
+- [x] **Task 16: Add account status to job list and pipeline**
   - In `apps/web/src/pages/customer/jobs.tsx`: add `accountStatus` badge column to the job list table
   - In `apps/api/src/routes/pipeline.ts`: add `accountStatus` to the `select()` call in the pipeline job query, include in response
   - Update pipeline UI if needed to show account status badge on job cards

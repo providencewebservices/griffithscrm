@@ -29,6 +29,8 @@ import {
 	formatJobStatus,
 	getJobStatusVariant,
 	getJobStatusClassName,
+	formatAccountStatus,
+	getAccountStatusColor,
 	JOB_STATUSES,
 	type JobStatus,
 	type JobListItem,
@@ -227,6 +229,7 @@ export function JobsPage() {
 									<TableHead>Customer</TableHead>
 									<TableHead className="text-right">Total</TableHead>
 									<TableHead>Payment</TableHead>
+									<TableHead>Account</TableHead>
 									<TableHead>Status</TableHead>
 									<TableHead>Created</TableHead>
 									<TableHead className="w-[100px]"></TableHead>
@@ -248,6 +251,11 @@ export function JobsPage() {
 										</TableCell>
 										<TableCell>
 											<PaymentStatusDisplay job={job} formatCurrency={formatCurrency} />
+										</TableCell>
+										<TableCell>
+											<Badge variant="outline" className={getAccountStatusColor(job.accountStatus)}>
+												{formatAccountStatus(job.accountStatus)}
+											</Badge>
 										</TableCell>
 										<TableCell>
 											<Badge
@@ -382,7 +390,12 @@ function JobCard({ job, formatCurrency, formatDate }: JobCardProps) {
 						</div>
 					</div>
 
-					<PaymentStatusDisplay job={job} formatCurrency={formatCurrency} />
+					<div className="flex items-center justify-between">
+						<PaymentStatusDisplay job={job} formatCurrency={formatCurrency} />
+						<Badge variant="outline" className={`text-xs ${getAccountStatusColor(job.accountStatus)}`}>
+							{formatAccountStatus(job.accountStatus)}
+						</Badge>
+					</div>
 				</CardContent>
 			</Card>
 		</Link>

@@ -19,6 +19,7 @@ export type PipelineJobItem = {
 	total: string;
 	status: string;
 	paymentStatus: string;
+	accountStatus: string | null;
 	updatedAt: string;
 };
 
