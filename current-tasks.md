@@ -131,7 +131,7 @@ Add Gmail folder navigation (Inbox, Trash) and the ability to trash/untrash emai
 
 ## Phase 6: Frontend UI
 
-- [ ] **Task 7: Add folder navigation to inbox page**
+- [X] **Task 7: Add folder navigation to inbox page**
   - In `apps/web/src/pages/customer/inbox.tsx`:
   - Add `folder` state via URL search params (use existing `searchParams`/`setSearchParams` pattern, not local state) defaulting to `'inbox'`
   - Add folder navigation tabs above the thread list panel — two options: **Inbox** and **Trash**

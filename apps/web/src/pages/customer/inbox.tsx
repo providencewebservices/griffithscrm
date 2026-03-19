@@ -55,6 +55,8 @@ import {
 	X,
 	Users,
 	ArrowLeft,
+	Inbox,
+	Trash2,
 } from 'lucide-react';
 import { ComposeEmailDialog } from '@/components/inbox/compose-email-dialog';
 import {
@@ -65,6 +67,7 @@ import {
 	useArchiveThreadMutation,
 	useSendEmailMutation,
 	useSyncInboxMutation,
+	useUnreadCountQuery,
 	getConnectGmailUrl,
 	type EmailThread,
 	type EmailMessageFull,
@@ -224,6 +227,14 @@ export function InboxPage() {
 	const [searchQuery, setSearchQuery] = useState('');
 	const [debouncedSearch, setDebouncedSearch] = useState('');
 	const [filter, setFilter] = useState<ThreadsQueryParams['filter']>('all');
+	const folder = (searchParams.get('folder') as 'inbox' | 'trash') || 'inbox';
+	const setFolder = (f: 'inbox' | 'trash') => {
+		setSearchParams((prev) => {
+			if (f === 'inbox') { prev.delete('folder'); } else { prev.set('folder', f); }
+			return prev;
+		}, { replace: true });
+		setSelectedThreadId(null);
+	};
 	const [composeOpen, setComposeOpen] = useState(false);
 	const [replyToThread, setReplyToThread] = useState<{ threadId: string; subject: string; fromAddress: string; fromName: string; body: string } | null>(null);
 
@@ -285,12 +296,14 @@ export function InboxPage() {
 
 	const queryParams: ThreadsQueryParams = {
 		q: debouncedSearch || undefined,
-		filter,
-		contactEntityType: selectedContact?.entityType || undefined,
-		contactEntityId: selectedContact?.entityId || undefined,
+		filter: folder === 'trash' ? undefined : filter,
+		contactEntityType: folder === 'trash' ? undefined : selectedContact?.entityType || undefined,
+		contactEntityId: folder === 'trash' ? undefined : selectedContact?.entityId || undefined,
+		folder,
 	};
 	const { data: threadsData, isLoading: threadsLoading } = useInboxThreadsQuery(queryParams);
 	const { data: selectedThread, isLoading: threadLoading } = useInboxThreadQuery(selectedThreadId);
+	const { data: globalUnreadCount } = useUnreadCountQuery();
 
 	// Mutations
 	const markReadMutation = useMarkReadMutation();
@@ -420,29 +433,60 @@ export function InboxPage() {
 			<div className="flex gap-4 flex-1 min-h-0 overflow-hidden">
 				{/* Left Panel - Thread List */}
 				<Card className={`${selectedThreadId ? 'hidden lg:flex lg:w-80' : 'w-full lg:w-2/5'} min-w-0 flex flex-col overflow-hidden transition-[width] duration-200`}>
+					<div className="flex border-b">
+						<button
+							onClick={() => setFolder('inbox')}
+							className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+								folder === 'inbox'
+									? 'border-primary text-primary'
+									: 'border-transparent text-muted-foreground hover:text-foreground'
+							}`}
+						>
+							<Inbox className="h-4 w-4" />
+							Inbox
+							{(globalUnreadCount ?? 0) > 0 && (
+								<Badge variant="secondary" className="h-5 px-1.5 text-xs">
+									{globalUnreadCount}
+								</Badge>
+							)}
+						</button>
+						<button
+							onClick={() => setFolder('trash')}
+							className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+								folder === 'trash'
+									? 'border-primary text-primary'
+									: 'border-transparent text-muted-foreground hover:text-foreground'
+							}`}
+						>
+							<Trash2 className="h-4 w-4" />
+							Trash
+						</button>
+					</div>
 					<div className="p-4 border-b space-y-3">
 						<div className="flex items-center justify-between gap-2">
-							<h3 className="font-semibold">Messages</h3>
-							<div className="flex items-center gap-2">
-								<Select value={filter} onValueChange={(v) => setFilter(v as ThreadsQueryParams['filter'])}>
-									<SelectTrigger size="sm" className="h-7 text-xs">
-										<SelectValue />
-									</SelectTrigger>
-									<SelectContent>
-										<SelectItem value="all">All</SelectItem>
-										<SelectItem value="unread">Unread</SelectItem>
-										<SelectItem value="customers">Customers</SelectItem>
-										<SelectItem value="quotes">Quotes</SelectItem>
-										<SelectItem value="jobs">Jobs</SelectItem>
-										<SelectItem value="unlinked">Unlinked</SelectItem>
-									</SelectContent>
-								</Select>
-								{unreadCount > 0 && (
-									<Badge variant="secondary">{unreadCount} unread</Badge>
-								)}
-							</div>
+							<h3 className="font-semibold">{folder === 'trash' ? 'Trash' : 'Messages'}</h3>
+							{folder !== 'trash' && (
+								<div className="flex items-center gap-2">
+									<Select value={filter} onValueChange={(v) => setFilter(v as ThreadsQueryParams['filter'])}>
+										<SelectTrigger size="sm" className="h-7 text-xs">
+											<SelectValue />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value="all">All</SelectItem>
+											<SelectItem value="unread">Unread</SelectItem>
+											<SelectItem value="customers">Customers</SelectItem>
+											<SelectItem value="quotes">Quotes</SelectItem>
+											<SelectItem value="jobs">Jobs</SelectItem>
+											<SelectItem value="unlinked">Unlinked</SelectItem>
+										</SelectContent>
+									</Select>
+									{unreadCount > 0 && (
+										<Badge variant="secondary">{unreadCount} unread</Badge>
+									)}
+								</div>
+							)}
 						</div>
-						{selectedContact && (
+						{folder !== 'trash' && selectedContact && (
 							<div className="flex items-center gap-2">
 								<Badge variant="secondary" className="flex items-center gap-1 py-1">
 									<Users className="h-3 w-3" />
@@ -469,7 +513,7 @@ export function InboxPage() {
 									className="pl-9"
 								/>
 							</div>
-							<Popover open={contactFilterOpen} onOpenChange={setContactFilterOpen}>
+							{folder !== 'trash' && <Popover open={contactFilterOpen} onOpenChange={setContactFilterOpen}>
 								<PopoverTrigger asChild>
 									<Button variant="outline" size="sm" className="h-9 shrink-0">
 										<Users className="h-4 w-4 mr-1" />
@@ -570,7 +614,7 @@ export function InboxPage() {
 										</CommandList>
 									</Command>
 								</PopoverContent>
-							</Popover>
+							</Popover>}
 						</div>
 					</div>
 
