@@ -427,7 +427,7 @@ Implement a structured workflow system modeling how jobs progress through their 
 
 ## Phase 10: Post-Sales Review — API & UI
 
-- [ ] **Task 31: Add post-sales review API endpoint**
+- [x] **Task 31: Add post-sales review API endpoint**
   - In `apps/api/src/routes/jobs.ts`:
     - Add `PUT /:id/review` — validates `reviewOutcome` against `REVIEW_OUTCOMES`, accepts `reviewNotes` (optional text). Sets `reviewCompletedAt` = now, `reviewCompletedBy` = session user id.
     - Include all review fields in job detail response (already done in Task 12, verify)

@@ -22,6 +22,7 @@ import {
 	JOB_STATUSES,
 	JOB_ATTACHMENT_CATEGORIES,
 	ACCOUNT_STATUSES,
+	REVIEW_OUTCOMES,
 } from '@griffiths-crm/shared/db/schema';
 
 // Validation schemas
@@ -654,6 +655,52 @@ export const jobsRouter = new Hono()
 		const jobWithSummary = await getJobWithQuoteSummary(id, tenantId);
 		return c.json({ job: jobWithSummary });
 	})
+
+	// ============================================
+	// POST-SALES REVIEW ROUTES
+	// ============================================
+
+	// Submit post-sales review
+	.put(
+		'/:id/review',
+		zValidator(
+			'json',
+			z.object({
+				reviewOutcome: z.enum(REVIEW_OUTCOMES),
+				reviewNotes: z.string().optional(),
+			})
+		),
+		async (c) => {
+			const currentUser = c.get('user');
+			const tenantId = currentUser.tenantId!;
+			const id = c.req.param('id');
+			const { reviewOutcome, reviewNotes } = c.req.valid('json');
+
+			const [job] = await db
+				.select()
+				.from(jobs)
+				.where(and(eq(jobs.id, id), eq(jobs.tenantId, tenantId)))
+				.limit(1);
+
+			if (!job) {
+				return c.json({ error: 'Job not found' }, 404);
+			}
+
+			await db
+				.update(jobs)
+				.set({
+					reviewOutcome,
+					reviewNotes: reviewNotes || null,
+					reviewCompletedAt: new Date(),
+					reviewCompletedBy: currentUser.id,
+					updatedAt: new Date(),
+				})
+				.where(eq(jobs.id, id));
+
+			const jobWithSummary = await getJobWithQuoteSummary(id, tenantId);
+			return c.json({ job: jobWithSummary });
+		}
+	)
 
 	// Delete job (only if pending)
 	.delete('/:id', async (c) => {
