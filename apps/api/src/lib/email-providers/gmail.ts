@@ -540,6 +540,16 @@ export class GmailProvider implements IEmailProvider {
 		const gmail = createAuthenticatedClient(params.accessToken);
 		await gmail.users.stop({ userId: 'me' });
 	}
+
+	async trashThread(params: { accessToken: string; threadId: string }): Promise<void> {
+		const gmail = createAuthenticatedClient(params.accessToken);
+		await gmail.users.threads.trash({ userId: 'me', id: params.threadId });
+	}
+
+	async untrashThread(params: { accessToken: string; threadId: string }): Promise<void> {
+		const gmail = createAuthenticatedClient(params.accessToken);
+		await gmail.users.threads.untrash({ userId: 'me', id: params.threadId });
+	}
 }
 
 export { GMAIL_SCOPES, getOAuth2Client };

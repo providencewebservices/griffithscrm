@@ -152,4 +152,8 @@ export interface IEmailProvider {
 	stopWatch(params: {
 		accessToken: string;
 	}): Promise<void>;
+
+	trashThread(params: { accessToken: string; threadId: string }): Promise<void>;
+
+	untrashThread(params: { accessToken: string; threadId: string }): Promise<void>;
 }
