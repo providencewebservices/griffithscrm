@@ -1579,6 +1579,46 @@ const quotesRoutes = new Hono()
 		return c.json({ package: fullPackage });
 	})
 
+	// Update production method on package
+	.put('/:id/production-method', zValidator('json', z.object({
+		productionMethod: z.enum(PRODUCTION_METHODS).nullable(),
+	})), async (c) => {
+		const currentUser = c.get('user');
+		const tenantId = currentUser.tenantId!;
+		const id = c.req.param('id');
+		const { productionMethod } = c.req.valid('json');
+
+		// Get package
+		const [pkg] = await db
+			.select()
+			.from(quotePackages)
+			.where(and(eq(quotePackages.id, id), eq(quotePackages.tenantId, tenantId)))
+			.limit(1);
+
+		if (!pkg) {
+			return c.json({ error: 'Package not found' }, 404);
+		}
+
+		if (pkg.status !== 'draft') {
+			return c.json({ error: 'Can only update production method on draft packages' }, 400);
+		}
+
+		// Update package
+		await db
+			.update(quotePackages)
+			.set({ productionMethod, updatedAt: new Date() })
+			.where(eq(quotePackages.id, id));
+
+		// Propagate to all options
+		await db
+			.update(quotes)
+			.set({ productionMethod, updatedAt: new Date() })
+			.where(eq(quotes.packageId, id));
+
+		const fullPackage = await getPackageWithOptions(id, tenantId);
+		return c.json({ package: fullPackage });
+	})
+
 	// Delete package (draft only)
 	.delete('/:id', async (c) => {
 		const currentUser = c.get('user');

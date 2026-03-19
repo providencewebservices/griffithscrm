@@ -5,6 +5,7 @@ import {
 	COMPONENT_TYPES,
 	FLOWER_HOLE_CHOICES,
 	FLOWER_TOP_COLOR_CHOICES,
+	PRODUCTION_METHODS,
 } from '@griffiths-crm/shared/db/schema';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -15,6 +16,7 @@ export type QuoteType = (typeof QUOTE_TYPES)[number];
 export type ComponentType = (typeof COMPONENT_TYPES)[number];
 export type FlowerHoleChoice = (typeof FLOWER_HOLE_CHOICES)[number];
 export type FlowerTopColorChoice = (typeof FLOWER_TOP_COLOR_CHOICES)[number];
+export type ProductionMethod = (typeof PRODUCTION_METHODS)[number];
 
 export type QuoteComponent = {
 	id: string;
@@ -168,6 +170,7 @@ export type QuotePackage = {
 	internalNotes: string | null;
 	proposedInscription: string | null;
 	existingMemorialDescription: string | null;
+	productionMethod: ProductionMethod | null;
 	relatedJobId: string | null;
 	validUntil: string | null;
 	accessToken: string | null;
@@ -276,6 +279,7 @@ export type CreateQuoteInput = {
 	source?: string;
 	proposedInscription?: string;
 	existingMemorialDescription?: string;
+	productionMethod?: ProductionMethod;
 	relatedJobId?: string;
 	notes?: string;
 	internalNotes?: string;
@@ -663,6 +667,42 @@ export function useSendQuoteEmailMutation() {
 		mutationFn: sendQuoteEmail,
 		onSuccess: (_data, variables) => {
 			queryClient.invalidateQueries({ queryKey: ['quote', variables.id] });
+			queryClient.invalidateQueries({ queryKey: ['quotes'] });
+		},
+	});
+}
+
+// Production method update
+async function updateProductionMethod({
+	id,
+	productionMethod,
+}: {
+	id: string;
+	productionMethod: ProductionMethod | null;
+}): Promise<QuotePackageWithOptions> {
+	const response = await fetch(`${API_URL}/api/quotes/${id}/production-method`, {
+		method: 'PUT',
+		headers: { 'Content-Type': 'application/json' },
+		credentials: 'include',
+		body: JSON.stringify({ productionMethod }),
+	});
+
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.error || 'Failed to update production method');
+	}
+
+	const data: PackageResponse = await response.json();
+	return data.package;
+}
+
+export function useUpdateProductionMethodMutation() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: updateProductionMethod,
+		onSuccess: (data) => {
+			queryClient.setQueryData(['quote', data.id], data);
 			queryClient.invalidateQueries({ queryKey: ['quotes'] });
 		},
 	});
@@ -1315,5 +1355,11 @@ export function getNextQuoteStatusLabel(current: QuoteStatus): string | null {
 	return labels[current];
 }
 
+// Production method labels
+export const PRODUCTION_METHOD_LABELS: Record<ProductionMethod, string> = {
+	in_house: 'In-House (Sandblasted)',
+	external: 'External (Hand Cut)',
+};
+
 // Re-export for convenience
-export { FLOWER_HOLE_CHOICES, FLOWER_TOP_COLOR_CHOICES, QUOTE_TYPES };
+export { FLOWER_HOLE_CHOICES, FLOWER_TOP_COLOR_CHOICES, QUOTE_TYPES, PRODUCTION_METHODS };

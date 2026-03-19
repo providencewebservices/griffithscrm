@@ -7,10 +7,21 @@ import {
 	CardTitle,
 } from '@/components/ui/card';
 import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from '@/components/ui/select';
+import {
 	QUOTE_TYPE_LABELS,
 	QUOTE_TYPE_SECTION_CONFIG,
+	PRODUCTION_METHODS,
+	PRODUCTION_METHOD_LABELS,
+	useUpdateProductionMethodMutation,
 	type QuoteType,
 	type QuotePackageWithOptions,
+	type ProductionMethod,
 } from '@/hooks/use-quotes';
 
 export function SharedContextCard({
@@ -22,6 +33,8 @@ export function SharedContextCard({
 }) {
 	const quoteType = (pkg.quoteType as QuoteType) || 'new_memorial';
 	const sectionConfig = QUOTE_TYPE_SECTION_CONFIG[quoteType];
+	const updateProductionMethod = useUpdateProductionMethodMutation();
+	const canEdit = pkg.status === 'draft';
 
 	return (
 		<Card>
@@ -59,6 +72,35 @@ export function SharedContextCard({
 						<div>
 							<p className="text-sm font-medium text-muted-foreground">Quote Type</p>
 							<p>{QUOTE_TYPE_LABELS[pkg.quoteType as QuoteType]}</p>
+						</div>
+					)}
+					{quoteType === 'new_memorial' && (
+						<div>
+							<p className="text-sm font-medium text-muted-foreground">Production Method</p>
+							{canEdit ? (
+								<Select
+									value={pkg.productionMethod || ''}
+									onValueChange={(value) => {
+										updateProductionMethod.mutate({
+											id: pkg.id,
+											productionMethod: (value || null) as ProductionMethod | null,
+										});
+									}}
+								>
+									<SelectTrigger className="mt-1">
+										<SelectValue placeholder="Select method..." />
+									</SelectTrigger>
+									<SelectContent>
+										{PRODUCTION_METHODS.map((method) => (
+											<SelectItem key={method} value={method}>
+												{PRODUCTION_METHOD_LABELS[method]}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							) : (
+								<p>{pkg.productionMethod ? PRODUCTION_METHOD_LABELS[pkg.productionMethod] : 'Not set'}</p>
+							)}
 						</div>
 					)}
 					{pkg.validUntil && (

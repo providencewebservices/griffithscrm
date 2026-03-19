@@ -177,7 +177,7 @@ Implement a structured workflow system modeling how jobs progress through their 
     - Add job date update endpoint: accept `proposedDeliveryDate`, `refixingDate`, `jobStartDate`, `ashesDate`, `installationDate` in the existing update handler or a new `PUT /:id/dates`
   - Validation: `bun run build:api` succeeds. Fetch a job detail, verify new fields appear (as null for existing jobs).
 
-- [ ] **Task 13: Add production method selector to quote builder UI**
+- [x] **Task 13: Add production method selector to quote builder UI**
   - In `apps/web/src/pages/customer/quote-detail.tsx`:
     - In the shared context section of the quote package editor, when `quoteType === 'new_memorial'`, show a production method selector
     - Use a `<Select>` component with options: "In-House (Sandblasted)" → `in_house`, "External (Hand Cut)" → `external`
