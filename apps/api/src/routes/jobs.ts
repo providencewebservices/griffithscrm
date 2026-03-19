@@ -21,6 +21,7 @@ import {
 	quotePackages,
 	JOB_STATUSES,
 	JOB_ATTACHMENT_CATEGORIES,
+	ACCOUNT_STATUSES,
 } from '@griffiths-crm/shared/db/schema';
 
 // Validation schemas
@@ -511,6 +512,148 @@ export const jobsRouter = new Hono()
 			return c.json({ job: jobWithSummary });
 		}
 	)
+
+	// ============================================
+	// INVOICING ROUTES
+	// ============================================
+
+	// Mark job as invoiced
+	.put(
+		'/:id/invoice',
+		zValidator(
+			'json',
+			z.object({
+				invoiceNumber: z.string().optional(),
+			})
+		),
+		async (c) => {
+			const currentUser = c.get('user');
+			const tenantId = currentUser.tenantId!;
+			const id = c.req.param('id');
+			const { invoiceNumber } = c.req.valid('json');
+
+			const [job] = await db
+				.select()
+				.from(jobs)
+				.where(and(eq(jobs.id, id), eq(jobs.tenantId, tenantId)))
+				.limit(1);
+
+			if (!job) {
+				return c.json({ error: 'Job not found' }, 404);
+			}
+
+			await db
+				.update(jobs)
+				.set({
+					invoicedAt: new Date(),
+					invoiceNumber: invoiceNumber || null,
+					accountStatus: 'invoiced',
+					updatedAt: new Date(),
+				})
+				.where(eq(jobs.id, id));
+
+			const jobWithSummary = await getJobWithQuoteSummary(id, tenantId);
+			return c.json({ job: jobWithSummary });
+		}
+	)
+
+	// Manual override of account status
+	.put(
+		'/:id/account-status',
+		zValidator(
+			'json',
+			z.object({
+				accountStatus: z.enum(ACCOUNT_STATUSES),
+			})
+		),
+		async (c) => {
+			const currentUser = c.get('user');
+			const tenantId = currentUser.tenantId!;
+			const id = c.req.param('id');
+			const { accountStatus } = c.req.valid('json');
+
+			const [job] = await db
+				.select()
+				.from(jobs)
+				.where(and(eq(jobs.id, id), eq(jobs.tenantId, tenantId)))
+				.limit(1);
+
+			if (!job) {
+				return c.json({ error: 'Job not found' }, 404);
+			}
+
+			await db
+				.update(jobs)
+				.set({
+					accountStatus,
+					updatedAt: new Date(),
+				})
+				.where(eq(jobs.id, id));
+
+			const jobWithSummary = await getJobWithQuoteSummary(id, tenantId);
+			return c.json({ job: jobWithSummary });
+		}
+	)
+
+	// Recalculate account status from payment schedule
+	.post('/:id/recalculate-account-status', async (c) => {
+		const currentUser = c.get('user');
+		const tenantId = currentUser.tenantId!;
+		const id = c.req.param('id');
+
+		const [job] = await db
+			.select()
+			.from(jobs)
+			.where(and(eq(jobs.id, id), eq(jobs.tenantId, tenantId)))
+			.limit(1);
+
+		if (!job) {
+			return c.json({ error: 'Job not found' }, 404);
+		}
+
+		// Derive status from payment schedule
+		const paymentItems = await db
+			.select()
+			.from(jobPaymentScheduleItems)
+			.where(eq(jobPaymentScheduleItems.jobId, id));
+
+		let accountStatus: string;
+
+		if (!job.invoicedAt) {
+			accountStatus = 'not_invoiced';
+		} else {
+			const totalDue = paymentItems.reduce((sum, item) => sum + parseFloat(item.amount), 0);
+			const totalPaid = paymentItems.reduce((sum, item) => sum + parseFloat(item.paidAmount), 0);
+
+			if (totalPaid >= totalDue && totalDue > 0) {
+				accountStatus = 'paid';
+			} else if (
+				paymentItems.some(
+					(item) =>
+						item.dueDate &&
+						new Date(item.dueDate) < new Date() &&
+						parseFloat(item.paidAmount) < parseFloat(item.amount)
+				)
+			) {
+				accountStatus = 'overdue';
+			} else if (totalPaid > 0) {
+				accountStatus = 'partially_paid';
+			} else {
+				accountStatus = 'invoiced';
+			}
+		}
+
+		await db
+			.update(jobs)
+			.set({
+				accountStatus,
+				updatedAt: new Date(),
+			})
+			.where(eq(jobs.id, id));
+
+		const jobWithSummary = await getJobWithQuoteSummary(id, tenantId);
+		return c.json({ job: jobWithSummary });
+	})
 
 	// Delete job (only if pending)
 	.delete('/:id', async (c) => {

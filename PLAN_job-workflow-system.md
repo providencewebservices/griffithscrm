@@ -187,7 +187,7 @@ Implement a structured workflow system modeling how jobs progress through their 
 
 ## Phase 4: Invoicing & Account Status — API & UI
 
-- [ ] **Task 14: Add invoicing API endpoints**
+- [x] **Task 14: Add invoicing API endpoints**
   - In `apps/api/src/routes/jobs.ts`:
     - Add `PUT /:id/invoice` — accepts `invoiceNumber` (optional), sets `invoicedAt` to now, transitions `accountStatus` to `'invoiced'`
     - Add `PUT /:id/account-status` — accepts `accountStatus` (validated against `ACCOUNT_STATUSES`), sets it directly (manual override)
