@@ -298,7 +298,7 @@ Implement a structured workflow system modeling how jobs progress through their 
     - `useSeedTemplatesMutation()` — calls the seed endpoint
   - Validation: `bun run build:web` succeeds.
 
-- [ ] **Task 20: Build workflow templates settings tab**
+- [x] **Task 20: Build workflow templates settings tab**
   - Create `apps/web/src/components/customer/settings/workflow-templates-tab.tsx`:
     - List all workflow templates showing: name, quoteType label, productionMethod label (if set), step count, isActive badge
     - Click a template to expand and show its ordered steps
