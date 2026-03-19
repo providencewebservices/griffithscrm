@@ -49,7 +49,7 @@ Implement a structured workflow system modeling how jobs progress through their 
 
 ## Phase 2: Schema Foundation — New Tables
 
-- [ ] **Task 5: Create workflow_templates and workflow_steps tables**
+- [x] **Task 5: Create workflow_templates and workflow_steps tables**
   - In `packages/shared/src/db/schema.ts`:
     - Add constant: `export const WORKFLOW_STEP_CATEGORIES = ['admin', 'production', 'installation', 'invoicing', 'review'] as const`
     - Create `workflowTemplates` table:

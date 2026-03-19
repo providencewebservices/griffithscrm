@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import { pgTable, text, timestamp, boolean, primaryKey, integer, numeric, uniqueIndex, index, jsonb } from 'drizzle-orm/pg-core';
 
 // Tenants table (must be defined before users due to foreign key)
@@ -1210,6 +1211,51 @@ export const jobAttachments = pgTable('job_attachments', {
 	notes: text('notes'), // Optional description
 	uploadedBy: text('uploaded_by').references(() => users.id, { onDelete: 'set null' }),
 	createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+// ============================================
+// WORKFLOW TEMPLATES & STEPS
+// ============================================
+
+// Workflow step categories
+export const WORKFLOW_STEP_CATEGORIES = ['admin', 'production', 'installation', 'invoicing', 'review'] as const;
+
+// Workflow templates (define step sequences for each job type)
+export const workflowTemplates = pgTable('workflow_templates', {
+	id: text('id').primaryKey(),
+	tenantId: text('tenant_id')
+		.notNull()
+		.references(() => tenants.id, { onDelete: 'cascade' }),
+	name: text('name').notNull(),
+	quoteType: text('quote_type').notNull(),
+	productionMethod: text('production_method'),
+	isActive: boolean('is_active').notNull().default(true),
+	createdAt: timestamp('created_at').defaultNow().notNull(),
+	updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+	tenantTypeMethodActiveIdx: uniqueIndex('wt_tenant_type_method_active_idx')
+		.on(table.tenantId, table.quoteType, table.productionMethod)
+		.where(sql`${table.isActive} = true`),
+}));
+
+// Workflow steps (ordered steps within a template)
+export const workflowSteps = pgTable('workflow_steps', {
+	id: text('id').primaryKey(),
+	tenantId: text('tenant_id')
+		.notNull()
+		.references(() => tenants.id, { onDelete: 'cascade' }),
+	templateId: text('template_id')
+		.notNull()
+		.references(() => workflowTemplates.id, { onDelete: 'cascade' }),
+	name: text('name').notNull(),
+	description: text('description'),
+	sortOrder: integer('sort_order').notNull(),
+	defaultAssigneeId: text('default_assignee_id').references(() => users.id),
+	category: text('category').notNull(),
+	requiresDate: boolean('requires_date').notNull().default(false),
+	dateFieldLabel: text('date_field_label'),
+	createdAt: timestamp('created_at').defaultNow().notNull(),
+	updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
 // ============================================
