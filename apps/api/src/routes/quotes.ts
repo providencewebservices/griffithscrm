@@ -44,6 +44,7 @@ import {
 	FLOWER_HOLE_CHOICES,
 	ENQUIRY_SOURCES,
 	PAYER_TYPES,
+	PRODUCTION_METHODS,
 } from '@griffiths-crm/shared/db/schema';
 import { generateJobNumber } from './jobs';
 
@@ -432,6 +433,7 @@ const createQuoteSchema = z.object({
 	validUntil: z.string().datetime().optional(),
 	existingMemorialDescription: z.string().optional(), // For refurbishment quotes
 	relatedJobId: z.string().optional(),
+	productionMethod: z.enum(PRODUCTION_METHODS).optional(),
 	// For inline customer creation
 	customerDetails: customerDetailsSchema.optional(),
 	// First option fields (per-option)
@@ -585,6 +587,7 @@ const quotesRoutes = new Hono()
 				payerType: quotePackages.payerType,
 				funeralDirectorId: quotePackages.funeralDirectorId,
 				quoteType: quotePackages.quoteType,
+				productionMethod: quotePackages.productionMethod,
 				status: quotePackages.status,
 				notes: quotePackages.notes,
 				validUntil: quotePackages.validUntil,
@@ -1106,6 +1109,7 @@ const quotesRoutes = new Hono()
 			councilId: data.councilId || null,
 			memorialSiteId: data.memorialSiteId || null,
 			memorialLocation: data.memorialLocation || null,
+			productionMethod: data.productionMethod || null,
 		});
 
 		// Step 2: Create the first quote option linked to the package
@@ -1133,6 +1137,7 @@ const quotesRoutes = new Hono()
 			notes: null, // Notes are at package level now
 			internalNotes: null,
 			flowerHoles: data.flowerHoles || null,
+			productionMethod: data.productionMethod || null,
 			proposedInscription: null, // Shared at package level
 			existingMemorialDescription: null,
 			relatedJobId: null,
@@ -1489,6 +1494,7 @@ const quotesRoutes = new Hono()
 			notes: mergedData.notes || null,
 			internalNotes: data.internalNotes ?? original.internalNotes ?? null,
 			flowerHoles: data.flowerHoles ?? original.flowerHoles ?? null,
+			productionMethod: original.productionMethod ?? null,
 			proposedInscription: data.proposedInscription ?? original.proposedInscription ?? null,
 			existingMemorialDescription: data.existingMemorialDescription ?? original.existingMemorialDescription ?? null,
 			relatedJobId: data.relatedJobId ?? original.relatedJobId ?? null,
@@ -2519,6 +2525,7 @@ ${tenantName}
 			notes: null,
 			internalNotes: null,
 			flowerHoles: sourceOption?.flowerHoles || data.flowerHoles || null,
+			productionMethod: pkg.productionMethod,
 			proposedInscription: null,
 			existingMemorialDescription: null,
 			relatedJobId: null,
@@ -2681,6 +2688,7 @@ ${tenantName}
 			notes: null,
 			internalNotes: null,
 			flowerHoles: sourceOption.flowerHoles,
+			productionMethod: pkg.productionMethod,
 			proposedInscription: null,
 			existingMemorialDescription: null,
 			relatedJobId: null,

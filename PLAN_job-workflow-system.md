@@ -157,7 +157,7 @@ Implement a structured workflow system modeling how jobs progress through their 
 
 ## Phase 3: Production Method — API & UI
 
-- [ ] **Task 10: Accept and store production method in quote API**
+- [x] **Task 10: Accept and store production method in quote API**
   - In `apps/api/src/routes/quotes.ts`:
     - Add `productionMethod` to the quote package creation/update validation schemas (optional, string from PRODUCTION_METHODS)
     - Store `productionMethod` on `quotePackages` when creating/updating
