@@ -443,7 +443,7 @@ Implement a structured workflow system modeling how jobs progress through their 
 
 ## Phase 11: Deposit Status & Integration
 
-- [ ] **Task 33: Compute and surface deposit status in API**
+- [x] **Task 33: Compute and surface deposit status in API**
   - In `apps/api/src/routes/jobs.ts` (list endpoint):
     - For each job, find the first `jobPaymentScheduleItems` record (by lowest sortOrder or id) or one with description containing "deposit" (case-insensitive)
     - Compute `depositStatus`:

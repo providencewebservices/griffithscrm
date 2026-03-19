@@ -87,6 +87,27 @@ const confirmAttachmentSchema = z.object({
 	notes: z.string().optional(),
 });
 
+// Compute deposit status from payment schedule items
+export function computeDepositStatus(
+	paymentItems: { description: string; amount: string; paidAmount: string; sortOrder: number }[]
+): string {
+	if (paymentItems.length === 0) return 'no_deposit_required';
+
+	// Prefer item with "deposit" in description, else first by sortOrder
+	const depositItem =
+		paymentItems.find((item) => item.description.toLowerCase().includes('deposit')) ||
+		[...paymentItems].sort((a, b) => a.sortOrder - b.sortOrder)[0];
+
+	if (!depositItem) return 'no_deposit_required';
+
+	const amount = parseFloat(depositItem.amount);
+	const paidAmount = parseFloat(depositItem.paidAmount);
+
+	if (paidAmount >= amount) return 'deposit_paid';
+	if (paidAmount > 0) return 'partially_paid';
+	return 'awaiting_deposit';
+}
+
 // Type-aware status sequences
 const STATUS_SEQUENCES: Record<string, string[]> = {
 	new_memorial: ['pending', 'materials_ordered', 'in_production', 'ready_for_install', 'installed', 'completed'],
@@ -305,6 +326,7 @@ export const jobsRouter = new Hono()
 						customerLastName: null,
 						total: '0',
 						paymentSummary: null,
+						depositStatus: 'no_deposit_required' as string,
 					};
 				}
 
@@ -346,12 +368,15 @@ export const jobsRouter = new Hono()
 					};
 				}
 
+				const depositStatus = computeDepositStatus(paymentItems);
+
 				return {
 					...job,
 					customerFirstName,
 					customerLastName,
 					total: quote.total,
 					paymentSummary,
+					depositStatus,
 				};
 			})
 		);
@@ -374,7 +399,20 @@ export const jobsRouter = new Hono()
 			return c.json({ error: 'Job not found' }, 404);
 		}
 
-		return c.json({ job });
+		// Compute deposit status
+		const paymentItems = await db
+			.select({
+				description: jobPaymentScheduleItems.description,
+				amount: jobPaymentScheduleItems.amount,
+				paidAmount: jobPaymentScheduleItems.paidAmount,
+				sortOrder: jobPaymentScheduleItems.sortOrder,
+			})
+			.from(jobPaymentScheduleItems)
+			.where(eq(jobPaymentScheduleItems.jobId, id));
+
+		const depositStatus = computeDepositStatus(paymentItems);
+
+		return c.json({ job: { ...job, depositStatus } });
 	})
 
 	// Update job status

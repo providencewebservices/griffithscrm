@@ -8,6 +8,7 @@ import {
 	customers,
 	jobPaymentScheduleItems,
 } from '@griffiths-crm/shared/db/schema';
+import { computeDepositStatus } from './jobs';
 
 // Column configuration for quote pipeline
 const QUOTE_COLUMNS = [
@@ -231,8 +232,10 @@ export const pipelineRoutes = new Hono()
 						// Get payment status
 						const paymentItems = await db
 							.select({
+								description: jobPaymentScheduleItems.description,
 								amount: jobPaymentScheduleItems.amount,
 								paidAmount: jobPaymentScheduleItems.paidAmount,
+								sortOrder: jobPaymentScheduleItems.sortOrder,
 							})
 							.from(jobPaymentScheduleItems)
 							.where(eq(jobPaymentScheduleItems.jobId, job.id));
@@ -257,6 +260,8 @@ export const pipelineRoutes = new Hono()
 							}
 						}
 
+						const depositStatus = computeDepositStatus(paymentItems);
+
 						return {
 							id: job.id,
 							jobNumber: job.jobNumber,
@@ -264,6 +269,7 @@ export const pipelineRoutes = new Hono()
 							total: quote?.total || '0',
 							status: job.status,
 							paymentStatus,
+							depositStatus,
 							accountStatus: job.accountStatus,
 							updatedAt: job.updatedAt,
 						};
