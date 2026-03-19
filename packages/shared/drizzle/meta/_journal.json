@@ -239,6 +239,13 @@
       "when": 1773926900267,
       "tag": "0033_acoustic_natasha_romanoff",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1773938538245,
+      "tag": "0034_yielding_hellfire_club",
+      "breakpoints": true
     }
   ]
 }

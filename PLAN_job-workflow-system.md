@@ -8,7 +8,7 @@ Implement a structured workflow system modeling how jobs progress through their 
 
 ## Phase 1: Schema Foundation — New Job Columns
 
-- [ ] **Task 1: Add production method field to schema**
+- [x] **Task 1: Add production method field to schema**
   - In `packages/shared/src/db/schema.ts`:
     - Add constant: `export const PRODUCTION_METHODS = ['in_house', 'external'] as const`
     - Add `productionMethod: text('production_method')` to `quotePackages` table (nullable — applies to all options within a package since a package represents one customer inquiry)

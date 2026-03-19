@@ -874,6 +874,9 @@ export const QUOTE_TYPES = [
 	'sundry_only', // Accessories only, no stonework
 ] as const;
 
+// Production methods (how the memorial is manufactured)
+export const PRODUCTION_METHODS = ['in_house', 'external'] as const;
+
 // Package statuses (same as quote statuses)
 export const PACKAGE_STATUSES = QUOTE_STATUSES;
 
@@ -905,6 +908,7 @@ export const quotePackages = pgTable('quote_packages', {
 
 	// Quote type context - shared
 	quoteType: text('quote_type').notNull().default('new_memorial'), // From QUOTE_TYPES
+	productionMethod: text('production_method'), // From PRODUCTION_METHODS (nullable)
 	source: text('source'), // From ENQUIRY_SOURCES
 	existingMemorialDescription: text('existing_memorial_description'),
 	relatedJobId: text('related_job_id'), // No FK to avoid circular dependency
@@ -960,6 +964,7 @@ export const quotes = pgTable('quotes', {
 	memorialSiteId: text('memorial_site_id').references(() => memorialSites.id, { onDelete: 'set null' }),
 	quoteNumber: text('quote_number').notNull(), // Tenant-unique: "Q-00001"
 	quoteType: text('quote_type').notNull().default('new_memorial'), // From QUOTE_TYPES
+	productionMethod: text('production_method'), // From PRODUCTION_METHODS (nullable — copied from package)
 	status: text('status').notNull().default('draft'), // From QUOTE_STATUSES
 	source: text('source'), // From ENQUIRY_SOURCES - how the customer contacted us
 	// For additional inscription / refurbishment quotes
@@ -1114,6 +1119,7 @@ export const jobs = pgTable('jobs', {
 		.references(() => quotes.id, { onDelete: 'restrict' }),
 	jobNumber: text('job_number').notNull(), // Tenant-unique: "J-00001"
 	status: text('status').notNull().default('pending'), // From JOB_STATUSES
+	productionMethod: text('production_method'), // From PRODUCTION_METHODS (nullable — copied from quote at acceptance)
 	installationDate: timestamp('installation_date'), // Scheduled installation date
 	deadline: timestamp('deadline'), // Job deadline
 	notes: text('notes'), // Job-specific notes
