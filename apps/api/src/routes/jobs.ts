@@ -458,6 +458,60 @@ export const jobsRouter = new Hono()
 		return c.json({ job: jobWithSummary });
 	})
 
+	// Update job dates
+	.put(
+		'/:id/dates',
+		zValidator(
+			'json',
+			z.object({
+				proposedDeliveryDate: z.string().datetime().nullable().optional(),
+				refixingDate: z.string().datetime().nullable().optional(),
+				jobStartDate: z.string().datetime().nullable().optional(),
+				ashesDate: z.string().datetime().nullable().optional(),
+				installationDate: z.string().datetime().nullable().optional(),
+			})
+		),
+		async (c) => {
+			const currentUser = c.get('user');
+			const tenantId = currentUser.tenantId!;
+			const id = c.req.param('id');
+			const data = c.req.valid('json');
+
+			// Verify job exists and belongs to tenant
+			const [job] = await db
+				.select()
+				.from(jobs)
+				.where(and(eq(jobs.id, id), eq(jobs.tenantId, tenantId)))
+				.limit(1);
+
+			if (!job) {
+				return c.json({ error: 'Job not found' }, 404);
+			}
+
+			const updateData: Record<string, unknown> = { updatedAt: new Date() };
+
+			if (data.proposedDeliveryDate !== undefined)
+				updateData.proposedDeliveryDate = data.proposedDeliveryDate
+					? new Date(data.proposedDeliveryDate)
+					: null;
+			if (data.refixingDate !== undefined)
+				updateData.refixingDate = data.refixingDate ? new Date(data.refixingDate) : null;
+			if (data.jobStartDate !== undefined)
+				updateData.jobStartDate = data.jobStartDate ? new Date(data.jobStartDate) : null;
+			if (data.ashesDate !== undefined)
+				updateData.ashesDate = data.ashesDate ? new Date(data.ashesDate) : null;
+			if (data.installationDate !== undefined)
+				updateData.installationDate = data.installationDate
+					? new Date(data.installationDate)
+					: null;
+
+			await db.update(jobs).set(updateData).where(eq(jobs.id, id));
+
+			const jobWithSummary = await getJobWithQuoteSummary(id, tenantId);
+			return c.json({ job: jobWithSummary });
+		}
+	)
+
 	// Delete job (only if pending)
 	.delete('/:id', async (c) => {
 		const currentUser = c.get('user');

@@ -170,7 +170,7 @@ Implement a structured workflow system modeling how jobs progress through their 
     - When creating the job from the accepted quote, copy `productionMethod` from the quote to the new job record
   - Validation: Accept a quote with `productionMethod: 'in_house'` via API, verify the created job has `productionMethod: 'in_house'`.
 
-- [ ] **Task 12: Expose new fields in job API responses**
+- [x] **Task 12: Expose new fields in job API responses**
   - In `apps/api/src/routes/jobs.ts`:
     - Update the job detail endpoint (`GET /:id`) to include: `productionMethod`, `proposedDeliveryDate`, `refixingDate`, `jobStartDate`, `ashesDate`, `invoicedAt`, `invoiceNumber`, `accountStatus`, `reviewCompletedAt`, `reviewCompletedBy`, `reviewNotes`, `reviewOutcome`
     - Update the job list endpoint to include: `productionMethod`, `accountStatus`, `invoicedAt`
