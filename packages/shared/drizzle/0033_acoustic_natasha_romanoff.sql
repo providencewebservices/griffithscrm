@@ -1,0 +1,1 @@
+ALTER TABLE "email_threads" ADD COLUMN "is_trashed" boolean DEFAULT false NOT NULL;

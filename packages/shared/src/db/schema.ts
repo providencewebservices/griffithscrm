@@ -1455,6 +1455,7 @@ export const emailThreads = pgTable('email_threads', {
 	messageCount: integer('message_count').notNull().default(0),
 	isUnread: boolean('is_unread').notNull().default(false),
 	isArchived: boolean('is_archived').notNull().default(false),
+	isTrashed: boolean('is_trashed').notNull().default(false),
 	labelIds: text('label_ids'), // JSON array of provider label IDs
 	createdAt: timestamp('created_at').notNull().defaultNow(),
 	updatedAt: timestamp('updated_at').notNull().defaultNow(),

@@ -232,6 +232,13 @@
       "when": 1773239942639,
       "tag": "0032_chief_maggott",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1773926900267,
+      "tag": "0033_acoustic_natasha_romanoff",
+      "breakpoints": true
     }
   ]
 }

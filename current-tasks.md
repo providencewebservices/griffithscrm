@@ -19,7 +19,7 @@ Add Gmail folder navigation (Inbox, Trash) and the ability to trash/untrash emai
 
 ## Phase 1: Backend — Provider Methods
 
-- [ ] **Task 1: Add `trashThread` and `untrashThread` to IEmailProvider and GmailProvider**
+- [X] **Task 1: Add `trashThread` and `untrashThread` to IEmailProvider and GmailProvider**
   - In `apps/api/src/lib/email-providers/types.ts`: Add method signatures to `IEmailProvider`:
     ```typescript
     trashThread(params: { accessToken: string; threadId: string }): Promise<void>;
@@ -34,7 +34,7 @@ Add Gmail folder navigation (Inbox, Trash) and the ability to trash/untrash emai
 
 ## Phase 2: Database Schema
 
-- [ ] **Task 2: Add `isTrashed` column to `emailThreads` table**
+- [X] **Task 2: Add `isTrashed` column to `emailThreads` table**
   - In `packages/shared/src/db/schema.ts`: Add to `emailThreads` table definition:
     ```typescript
     isTrashed: boolean('is_trashed').notNull().default(false),
