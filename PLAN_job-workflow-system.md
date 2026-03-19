@@ -17,7 +17,7 @@ Implement a structured workflow system modeling how jobs progress through their 
   - Run `bun run db:generate` then `bun run db:migrate`
   - Validation: Verify migration file in `packages/shared/drizzle/`. Run migrate and confirm columns exist.
 
-- [ ] **Task 2: Add workflow-specific date fields to jobs table**
+- [x] **Task 2: Add workflow-specific date fields to jobs table**
   - In `packages/shared/src/db/schema.ts`, add to `jobs` table:
     - `proposedDeliveryDate: timestamp('proposed_delivery_date')` — nullable, for new memorials
     - `refixingDate: timestamp('refixing_date')` — nullable, for additional inscriptions

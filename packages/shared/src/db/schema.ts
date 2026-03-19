@@ -1120,6 +1120,10 @@ export const jobs = pgTable('jobs', {
 	jobNumber: text('job_number').notNull(), // Tenant-unique: "J-00001"
 	status: text('status').notNull().default('pending'), // From JOB_STATUSES
 	productionMethod: text('production_method'), // From PRODUCTION_METHODS (nullable — copied from quote at acceptance)
+	proposedDeliveryDate: timestamp('proposed_delivery_date'), // For new memorials
+	refixingDate: timestamp('refixing_date'), // For additional inscriptions
+	jobStartDate: timestamp('job_start_date'), // For refurbishments
+	ashesDate: timestamp('ashes_date'), // For ashes jobs
 	installationDate: timestamp('installation_date'), // Scheduled installation date
 	deadline: timestamp('deadline'), // Job deadline
 	notes: text('notes'), // Job-specific notes
