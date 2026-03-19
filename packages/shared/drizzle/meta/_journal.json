@@ -253,6 +253,13 @@
       "when": 1773938867018,
       "tag": "0035_wakeful_jack_flag",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1773939210954,
+      "tag": "0036_zippy_marauders",
+      "breakpoints": true
     }
   ]
 }

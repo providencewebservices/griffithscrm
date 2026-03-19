@@ -1098,6 +1098,9 @@ export const quoteLineItems = pgTable('quote_line_items', {
 // JOB SYSTEM TABLES
 // ============================================
 
+// Account status options (invoicing lifecycle)
+export const ACCOUNT_STATUSES = ['not_invoiced', 'invoiced', 'partially_paid', 'paid', 'overdue'] as const;
+
 // Job status options (memorial workflow)
 export const JOB_STATUSES = [
 	'pending', // Job created, awaiting action
@@ -1124,6 +1127,9 @@ export const jobs = pgTable('jobs', {
 	refixingDate: timestamp('refixing_date'), // For additional inscriptions
 	jobStartDate: timestamp('job_start_date'), // For refurbishments
 	ashesDate: timestamp('ashes_date'), // For ashes jobs
+	invoicedAt: timestamp('invoiced_at'), // When job was invoiced
+	invoiceNumber: text('invoice_number'), // Invoice reference number
+	accountStatus: text('account_status').default('not_invoiced'), // From ACCOUNT_STATUSES
 	installationDate: timestamp('installation_date'), // Scheduled installation date
 	deadline: timestamp('deadline'), // Job deadline
 	notes: text('notes'), // Job-specific notes

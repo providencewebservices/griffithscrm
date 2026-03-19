@@ -26,7 +26,7 @@ Implement a structured workflow system modeling how jobs progress through their 
   - Run `bun run db:generate` then `bun run db:migrate`
   - Validation: Verify migration and columns.
 
-- [ ] **Task 3: Add invoicing and account status fields to jobs table**
+- [x] **Task 3: Add invoicing and account status fields to jobs table**
   - In `packages/shared/src/db/schema.ts`:
     - Add constant: `export const ACCOUNT_STATUSES = ['not_invoiced', 'invoiced', 'partially_paid', 'paid', 'overdue'] as const`
     - Add to `jobs` table:
