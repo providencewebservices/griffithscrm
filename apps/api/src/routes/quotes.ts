@@ -3285,6 +3285,7 @@ ${tenantName}
 			quoteId: optionId, // Link to the specific accepted option
 			jobNumber,
 			status: 'pending',
+			productionMethod: option.productionMethod,
 		});
 
 		// Get tenant's deposit percentage setting

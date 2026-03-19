@@ -165,7 +165,7 @@ Implement a structured workflow system modeling how jobs progress through their 
     - Include `productionMethod` in all quote and package API responses
   - Validation: `bun run build:api` succeeds. Create a quote package with `productionMethod: 'in_house'` via API, verify it persists on package and copies to quote.
 
-- [ ] **Task 11: Copy production method to job on quote acceptance**
+- [x] **Task 11: Copy production method to job on quote acceptance**
   - In `apps/api/src/routes/quotes.ts` (the `POST /:id/accept/:optionId` handler, around line ~3274):
     - When creating the job from the accepted quote, copy `productionMethod` from the quote to the new job record
   - Validation: Accept a quote with `productionMethod: 'in_house'` via API, verify the created job has `productionMethod: 'in_house'`.
