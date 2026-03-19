@@ -14,9 +14,27 @@ import type {
 	sundries,
 	tasks,
 	worksheets,
+	workflowTemplates,
+	workflowSteps,
+	jobWorkflowTasks,
+	jobForms,
+	jobProofs,
 } from '../db/schema';
 
-import { PRODUCT_OPTION_TYPES, TASK_STATUSES, TASK_PRIORITIES, WORKSHEET_STATUSES, TASK_ENTITY_TYPES } from '../db/schema';
+import {
+	PRODUCT_OPTION_TYPES,
+	TASK_STATUSES,
+	TASK_PRIORITIES,
+	WORKSHEET_STATUSES,
+	TASK_ENTITY_TYPES,
+	PRODUCTION_METHODS,
+	ACCOUNT_STATUSES,
+	REVIEW_OUTCOMES,
+	WORKFLOW_STEP_CATEGORIES,
+	WORKFLOW_TASK_STATUSES,
+	FORM_STATUSES,
+	PROOF_STATUSES,
+} from '../db/schema';
 
 // Role types
 export const USER_ROLES = ['app_admin', 'manager', 'tenant_user'] as const;
@@ -61,7 +79,20 @@ export type CustomerListItem = Customer & {
 // ============================================
 
 // Re-export constants for use in other packages
-export { PRODUCT_OPTION_TYPES, TASK_STATUSES, TASK_PRIORITIES, WORKSHEET_STATUSES, TASK_ENTITY_TYPES };
+export {
+	PRODUCT_OPTION_TYPES,
+	TASK_STATUSES,
+	TASK_PRIORITIES,
+	WORKSHEET_STATUSES,
+	TASK_ENTITY_TYPES,
+	PRODUCTION_METHODS,
+	ACCOUNT_STATUSES,
+	REVIEW_OUTCOMES,
+	WORKFLOW_STEP_CATEGORIES,
+	WORKFLOW_TASK_STATUSES,
+	FORM_STATUSES,
+	PROOF_STATUSES,
+};
 
 // Product option type enum
 export type ProductOptionType = (typeof PRODUCT_OPTION_TYPES)[number];
@@ -104,3 +135,23 @@ export type WorksheetStatus = (typeof WORKSHEET_STATUSES)[number];
 
 export type Task = InferSelectModel<typeof tasks>;
 export type Worksheet = InferSelectModel<typeof worksheets>;
+
+// ============================================
+// WORKFLOW & JOB MANAGEMENT TYPES
+// ============================================
+
+// Utility types from constants
+export type ProductionMethod = (typeof PRODUCTION_METHODS)[number];
+export type AccountStatus = (typeof ACCOUNT_STATUSES)[number];
+export type ReviewOutcome = (typeof REVIEW_OUTCOMES)[number];
+export type WorkflowStepCategory = (typeof WORKFLOW_STEP_CATEGORIES)[number];
+export type WorkflowTaskStatus = (typeof WORKFLOW_TASK_STATUSES)[number];
+export type FormStatus = (typeof FORM_STATUSES)[number];
+export type ProofStatus = (typeof PROOF_STATUSES)[number];
+
+// Database model types for workflow tables
+export type WorkflowTemplate = InferSelectModel<typeof workflowTemplates>;
+export type WorkflowStep = InferSelectModel<typeof workflowSteps>;
+export type JobWorkflowTask = InferSelectModel<typeof jobWorkflowTasks>;
+export type JobForm = InferSelectModel<typeof jobForms>;
+export type JobProof = InferSelectModel<typeof jobProofs>;

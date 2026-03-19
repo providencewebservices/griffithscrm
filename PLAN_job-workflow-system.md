@@ -148,7 +148,7 @@ Implement a structured workflow system modeling how jobs progress through their 
   - Run `bun run db:generate` then `bun run db:migrate`
   - Validation: Verify migration and table.
 
-- [ ] **Task 9: Export new constants and types from shared package**
+- [x] **Task 9: Export new constants and types from shared package**
   - In `packages/shared/src/types/index.ts`:
     - Import and re-export new constants: `PRODUCTION_METHODS`, `ACCOUNT_STATUSES`, `REVIEW_OUTCOMES`, `WORKFLOW_STEP_CATEGORIES`, `WORKFLOW_TASK_STATUSES`, `FORM_STATUSES`, `PROOF_STATUSES`
     - Add inferred types for new tables: `WorkflowTemplate`, `WorkflowStep`, `JobWorkflowTask`, `JobForm`, `JobProof`
