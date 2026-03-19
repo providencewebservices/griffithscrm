@@ -103,7 +103,7 @@ Implement a structured workflow system modeling how jobs progress through their 
   - Run `bun run db:generate` then `bun run db:migrate`
   - Validation: Verify migration and table.
 
-- [ ] **Task 7: Create job_forms table**
+- [x] **Task 7: Create job_forms table**
   - In `packages/shared/src/db/schema.ts`:
     - Add constant: `export const FORM_STATUSES = ['not_started', 'submitted', 'approved', 'received', 'not_required'] as const`
     - Create `jobForms` table:

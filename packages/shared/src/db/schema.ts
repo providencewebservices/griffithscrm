@@ -1288,6 +1288,32 @@ export const jobWorkflowTasks = pgTable('job_workflow_tasks', {
 	tenantJobIdx: index('jwt_tenant_job_idx').on(table.tenantId, table.jobId),
 }));
 
+// Form statuses (for job forms/fees tracking)
+export const FORM_STATUSES = ['not_started', 'submitted', 'approved', 'received', 'not_required'] as const;
+
+// Job forms (forms & fees checklist for a job)
+export const jobForms = pgTable('job_forms', {
+	id: text('id').primaryKey(),
+	tenantId: text('tenant_id')
+		.notNull()
+		.references(() => tenants.id, { onDelete: 'cascade' }),
+	jobId: text('job_id')
+		.notNull()
+		.references(() => jobs.id, { onDelete: 'cascade' }),
+	name: text('name').notNull(),
+	status: text('status').notNull().default('not_started'),
+	fee: numeric('fee', { precision: 10, scale: 2 }),
+	submittedAt: timestamp('submitted_at'),
+	approvedAt: timestamp('approved_at'),
+	referenceNumber: text('reference_number'),
+	notes: text('notes'),
+	sortOrder: integer('sort_order').notNull(),
+	createdAt: timestamp('created_at').defaultNow().notNull(),
+	updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+	tenantJobIdx: index('jf_tenant_job_idx').on(table.tenantId, table.jobId),
+}));
+
 // ============================================
 // UNIFIED DOCUMENT MANAGEMENT
 // ============================================

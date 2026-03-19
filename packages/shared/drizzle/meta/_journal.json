@@ -281,6 +281,13 @@
       "when": 1773940128200,
       "tag": "0039_handy_vulcan",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1773940366959,
+      "tag": "0040_freezing_grandmaster",
+      "breakpoints": true
     }
   ]
 }
