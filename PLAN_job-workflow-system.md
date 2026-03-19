@@ -201,7 +201,7 @@ Implement a structured workflow system modeling how jobs progress through their 
       - Else → `'invoiced'`
   - Validation: `bun run build:api` succeeds. Test invoice endpoint, verify status transitions. Test recalculate with various payment states.
 
-- [ ] **Task 15: Add invoicing section to job detail UI**
+- [x] **Task 15: Add invoicing section to job detail UI**
   - In `apps/web/src/pages/customer/job-detail.tsx`:
     - Add "Invoicing" section (in the existing tab structure or as a card in the overview):
       - "Mark as Invoiced" button with optional invoice number input (opens a small dialog or inline form)

@@ -1,10 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { JOB_STATUSES } from '@griffiths-crm/shared/db/schema';
+import { JOB_STATUSES, ACCOUNT_STATUSES } from '@griffiths-crm/shared/db/schema';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 // Types
 export type JobStatus = (typeof JOB_STATUSES)[number];
+export type AccountStatus = (typeof ACCOUNT_STATUSES)[number];
 
 // Quote detail types for job execution
 export type JobQuoteComponent = {
@@ -74,6 +75,9 @@ export type Job = {
 	jobNumber: string;
 	status: JobStatus;
 	notes: string | null;
+	invoicedAt: string | null;
+	invoiceNumber: string | null;
+	accountStatus: string | null;
 	createdAt: string;
 	updatedAt: string;
 };
@@ -379,6 +383,107 @@ export function useDeleteJobMutation() {
 		mutationFn: deleteJob,
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ['jobs'] });
+		},
+	});
+}
+
+// ============================================
+// INVOICING HOOKS
+// ============================================
+
+async function markJobInvoiced({
+	id,
+	invoiceNumber,
+}: {
+	id: string;
+	invoiceNumber?: string;
+}): Promise<JobWithQuoteSummary> {
+	const response = await fetch(`${API_URL}/api/jobs/${id}/invoice`, {
+		method: 'PUT',
+		headers: { 'Content-Type': 'application/json' },
+		credentials: 'include',
+		body: JSON.stringify({ invoiceNumber }),
+	});
+
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.error || 'Failed to mark as invoiced');
+	}
+
+	const data: JobResponse = await response.json();
+	return data.job;
+}
+
+async function updateAccountStatus({
+	id,
+	accountStatus,
+}: {
+	id: string;
+	accountStatus: AccountStatus;
+}): Promise<JobWithQuoteSummary> {
+	const response = await fetch(`${API_URL}/api/jobs/${id}/account-status`, {
+		method: 'PUT',
+		headers: { 'Content-Type': 'application/json' },
+		credentials: 'include',
+		body: JSON.stringify({ accountStatus }),
+	});
+
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.error || 'Failed to update account status');
+	}
+
+	const data: JobResponse = await response.json();
+	return data.job;
+}
+
+async function recalculateAccountStatus(id: string): Promise<JobWithQuoteSummary> {
+	const response = await fetch(`${API_URL}/api/jobs/${id}/recalculate-account-status`, {
+		method: 'POST',
+		credentials: 'include',
+	});
+
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.error || 'Failed to recalculate account status');
+	}
+
+	const data: JobResponse = await response.json();
+	return data.job;
+}
+
+export function useMarkInvoicedMutation() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: markJobInvoiced,
+		onSuccess: (data) => {
+			queryClient.invalidateQueries({ queryKey: ['jobs'] });
+			queryClient.invalidateQueries({ queryKey: ['job', data.id] });
+		},
+	});
+}
+
+export function useUpdateAccountStatusMutation() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: updateAccountStatus,
+		onSuccess: (data) => {
+			queryClient.invalidateQueries({ queryKey: ['jobs'] });
+			queryClient.invalidateQueries({ queryKey: ['job', data.id] });
+		},
+	});
+}
+
+export function useRecalculateAccountStatusMutation() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: recalculateAccountStatus,
+		onSuccess: (data) => {
+			queryClient.invalidateQueries({ queryKey: ['jobs'] });
+			queryClient.invalidateQueries({ queryKey: ['job', data.id] });
 		},
 	});
 }
@@ -784,5 +889,34 @@ export function getNextStatusButtonLabel(currentStatus: JobStatus, quoteType?: s
 	return labels[currentStatus] ?? STATUS_BUTTON_LABELS['default'][currentStatus] ?? null;
 }
 
+// Helper: Format account status for display
+export function formatAccountStatus(status: string | null): string {
+	const labels: Record<string, string> = {
+		not_invoiced: 'Not Invoiced',
+		invoiced: 'Invoiced',
+		partially_paid: 'Partially Paid',
+		paid: 'Paid',
+		overdue: 'Overdue',
+	};
+	return status ? labels[status] || status : 'Not Invoiced';
+}
+
+// Helper: Get account status badge variant
+export function getAccountStatusColor(status: string | null): string {
+	switch (status) {
+		case 'invoiced':
+			return 'bg-blue-100 text-blue-800';
+		case 'partially_paid':
+			return 'bg-yellow-100 text-yellow-800';
+		case 'paid':
+			return 'bg-green-100 text-green-800';
+		case 'overdue':
+			return 'bg-red-100 text-red-800';
+		case 'not_invoiced':
+		default:
+			return 'bg-gray-100 text-gray-800';
+	}
+}
+
 // Re-export for convenience
-export { JOB_STATUSES };
+export { JOB_STATUSES, ACCOUNT_STATUSES };

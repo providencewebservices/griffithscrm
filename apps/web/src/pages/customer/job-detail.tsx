@@ -29,6 +29,15 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
 import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+	DialogTrigger,
+} from '@/components/ui/dialog';
+import {
 	Select,
 	SelectContent,
 	SelectItem,
@@ -49,12 +58,19 @@ import {
 	useConfirmAttachmentMutation,
 	useDeleteAttachmentMutation,
 	useGeneratePaymentLinkMutation,
+	useMarkInvoicedMutation,
+	useUpdateAccountStatusMutation,
+	useRecalculateAccountStatusMutation,
 	formatJobStatus,
 	getNextJobStatus,
 	getNextStatusButtonLabel,
 	getJobStatusSequence,
 	formatAttachmentCategory,
+	formatAccountStatus,
+	getAccountStatusColor,
+	ACCOUNT_STATUSES,
 	type JobStatus,
+	type AccountStatus,
 	type PaymentScheduleItem,
 	type JobAttachment,
 	type JobAttachmentCategory,
@@ -91,6 +107,8 @@ import {
 	Printer,
 	ClipboardList,
 	Blocks,
+	Receipt,
+	RefreshCw,
 } from 'lucide-react';
 import { JobTasksSection } from '@/components/tasks/job-tasks-section';
 import {
@@ -159,6 +177,10 @@ export function JobDetailPage() {
 	const [worksheetInitialized, setWorksheetInitialized] = useState(false);
 	const [worksheetSaved, setWorksheetSaved] = useState(false);
 
+	// Invoicing state
+	const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
+	const [invoiceNumber, setInvoiceNumber] = useState('');
+
 	const { data: job, isLoading, error } = useJobQuery(id);
 	const { data: paymentData, isLoading: paymentLoading } = usePaymentScheduleQuery(id);
 	const { data: attachments, isLoading: attachmentsLoading } = useAttachmentsQuery(id);
@@ -176,6 +198,9 @@ export function JobDetailPage() {
 	const confirmMutation = useConfirmAttachmentMutation();
 	const deleteAttachmentMutation = useDeleteAttachmentMutation();
 	const generateLinkMutation = useGeneratePaymentLinkMutation();
+	const markInvoicedMutation = useMarkInvoicedMutation();
+	const updateAccountStatusMutation = useUpdateAccountStatusMutation();
+	const recalculateAccountStatusMutation = useRecalculateAccountStatusMutation();
 
 	// Initialize notes when job loads
 	if (job && !notesInitialized) {
@@ -444,6 +469,48 @@ export function JobDetailPage() {
 	const updateWorksheetField = (field: string, value: string) => {
 		setWorksheetForm((prev) => (prev ? { ...prev, [field]: value } : null));
 		setWorksheetSaved(false);
+	};
+
+	// Invoicing handlers
+	const handleMarkInvoiced = async () => {
+		if (!id) return;
+		setMutationError(null);
+		try {
+			await markInvoicedMutation.mutateAsync({
+				id,
+				invoiceNumber: invoiceNumber || undefined,
+			});
+			setInvoiceDialogOpen(false);
+			setInvoiceNumber('');
+			toast.success('Job marked as invoiced');
+		} catch (err) {
+			setMutationError(err instanceof Error ? err.message : 'Failed to mark as invoiced');
+		}
+	};
+
+	const handleAccountStatusChange = async (newStatus: string) => {
+		if (!id) return;
+		setMutationError(null);
+		try {
+			await updateAccountStatusMutation.mutateAsync({
+				id,
+				accountStatus: newStatus as AccountStatus,
+			});
+			toast.success('Account status updated');
+		} catch (err) {
+			setMutationError(err instanceof Error ? err.message : 'Failed to update account status');
+		}
+	};
+
+	const handleRecalculateStatus = async () => {
+		if (!id) return;
+		setMutationError(null);
+		try {
+			await recalculateAccountStatusMutation.mutateAsync(id);
+			toast.success('Account status recalculated');
+		} catch (err) {
+			setMutationError(err instanceof Error ? err.message : 'Failed to recalculate status');
+		}
 	};
 
 	const getFileIcon = (contentType: string) => {
@@ -774,6 +841,119 @@ export function JobDetailPage() {
 					</CardContent>
 				</Card>
 			</div>
+
+				{/* Invoicing Section */}
+				<Card className="mt-6">
+					<CardHeader>
+						<div className="flex items-center justify-between">
+							<div className="flex items-center gap-3">
+								<CardTitle>Invoicing</CardTitle>
+								<span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${getAccountStatusColor(job.accountStatus)}`}>
+									{formatAccountStatus(job.accountStatus)}
+								</span>
+							</div>
+							<div className="flex items-center gap-2">
+								{!job.invoicedAt && (
+									<Dialog open={invoiceDialogOpen} onOpenChange={setInvoiceDialogOpen}>
+										<DialogTrigger asChild>
+											<Button size="sm">
+												<Receipt className="h-4 w-4 mr-2" />
+												Mark as Invoiced
+											</Button>
+										</DialogTrigger>
+										<DialogContent>
+											<DialogHeader>
+												<DialogTitle>Mark as Invoiced</DialogTitle>
+												<DialogDescription>
+													This will set the invoice date to now and update the account status to "Invoiced".
+												</DialogDescription>
+											</DialogHeader>
+											<div className="py-4">
+												<Label htmlFor="invoice-number">Invoice Number (optional)</Label>
+												<Input
+													id="invoice-number"
+													placeholder="e.g., INV-001"
+													value={invoiceNumber}
+													onChange={(e) => setInvoiceNumber(e.target.value)}
+												/>
+											</div>
+											<DialogFooter>
+												<Button
+													variant="outline"
+													onClick={() => {
+														setInvoiceDialogOpen(false);
+														setInvoiceNumber('');
+													}}
+												>
+													Cancel
+												</Button>
+												<Button
+													onClick={handleMarkInvoiced}
+													disabled={markInvoicedMutation.isPending}
+												>
+													{markInvoicedMutation.isPending ? (
+														<Loader2 className="h-4 w-4 mr-2 animate-spin" />
+													) : (
+														<Receipt className="h-4 w-4 mr-2" />
+													)}
+													Mark as Invoiced
+												</Button>
+											</DialogFooter>
+										</DialogContent>
+									</Dialog>
+								)}
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={handleRecalculateStatus}
+									disabled={recalculateAccountStatusMutation.isPending}
+									title="Recalculate from payment schedule"
+								>
+									{recalculateAccountStatusMutation.isPending ? (
+										<Loader2 className="h-4 w-4 animate-spin" />
+									) : (
+										<RefreshCw className="h-4 w-4" />
+									)}
+								</Button>
+							</div>
+						</div>
+					</CardHeader>
+					<CardContent className="space-y-4">
+						{job.invoicedAt && (
+							<div className="flex items-center gap-6 text-sm">
+								<div>
+									<span className="text-muted-foreground">Invoiced: </span>
+									<span className="font-medium">{formatDate(job.invoicedAt)}</span>
+								</div>
+								{job.invoiceNumber && (
+									<div>
+										<span className="text-muted-foreground">Invoice #: </span>
+										<span className="font-medium">{job.invoiceNumber}</span>
+									</div>
+								)}
+							</div>
+						)}
+						<div className="flex items-center gap-3">
+							<Label className="text-sm text-muted-foreground whitespace-nowrap">Account Status:</Label>
+							<Select
+								value={job.accountStatus || 'not_invoiced'}
+								onValueChange={handleAccountStatusChange}
+								disabled={updateAccountStatusMutation.isPending}
+							>
+								<SelectTrigger className="w-48">
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									{ACCOUNT_STATUSES.map((status) => (
+										<SelectItem key={status} value={status}>
+											{formatAccountStatus(status)}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</div>
+					</CardContent>
+				</Card>
 
 				{/* Tasks Section */}
 				<div className="mt-6">
