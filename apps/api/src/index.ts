@@ -51,6 +51,7 @@ import { logoProxyRoutes } from './routes/logo-proxy';
 import { workflowTemplatesRoutes } from './routes/workflow-templates';
 import { jobWorkflowTasksRoutes } from './routes/job-workflow-tasks';
 import { jobFormsRoutes } from './routes/job-forms';
+import { jobProofsRoutes } from './routes/job-proofs';
 import { startEmailSyncScheduler } from './lib/email-sync-scheduler';
 
 const app = new Hono();
@@ -150,6 +151,7 @@ app.route('/api/quotes', quotesRoutes);
 app.route('/api/jobs', jobsRouter);
 app.route('/api/jobs', jobWorkflowTasksRoutes);
 app.route('/api/jobs', jobFormsRoutes);
+app.route('/api/jobs', jobProofsRoutes);
 
 // Dashboard routes (for tenant users)
 app.route('/api/dashboard', dashboardRoutes);

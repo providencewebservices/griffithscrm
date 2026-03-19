@@ -396,7 +396,7 @@ Implement a structured workflow system modeling how jobs progress through their 
 
 ## Phase 9: Memorial Proof Workflow — API & UI
 
-- [ ] **Task 29: Create job proofs API routes**
+- [x] **Task 29: Create job proofs API routes**
   - Create `apps/api/src/routes/job-proofs.ts`:
     - Mount at `/api/jobs` prefix
     - `GET /:jobId/proofs` — list all proof versions, ordered by version desc
