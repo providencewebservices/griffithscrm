@@ -48,6 +48,7 @@ import { publicPaymentsRoutes } from './routes/public-payments';
 import { fontsRoutes } from './routes/fonts';
 import { fontProxyRoutes } from './routes/font-proxy';
 import { logoProxyRoutes } from './routes/logo-proxy';
+import { workflowTemplatesRoutes } from './routes/workflow-templates';
 import { startEmailSyncScheduler } from './lib/email-sync-scheduler';
 
 const app = new Hono();
@@ -120,6 +121,7 @@ app.route('/api/tenant/lettering-colors', letteringColorsRoutes);
 app.route('/api/tenant/fonts', fontsRoutes);
 app.route('/api/tenant/sundries', sundriesRoutes);
 app.route('/api/tenant/line-item-presets', lineItemPresetsRoutes);
+app.route('/api/tenant/workflow-templates', workflowTemplatesRoutes);
 
 // Product catalog routes (for tenant users)
 app.route('/api/tenant/product-categories', productCategoriesRoutes);

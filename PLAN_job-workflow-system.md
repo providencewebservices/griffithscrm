@@ -233,7 +233,7 @@ Implement a structured workflow system modeling how jobs progress through their 
 
 ## Phase 6: Workflow Templates — API & Settings UI
 
-- [ ] **Task 18: Create workflow templates API routes with seed logic**
+- [x] **Task 18: Create workflow templates API routes with seed logic**
   - Create `apps/api/src/routes/workflow-templates.ts` with `requireAuth`, `requireTenant` middleware:
     - `GET /` — list all templates for the tenant (with step count)
     - `GET /:id` — get template with its steps ordered by sortOrder
