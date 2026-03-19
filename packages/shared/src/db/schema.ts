@@ -1101,6 +1101,9 @@ export const quoteLineItems = pgTable('quote_line_items', {
 // Account status options (invoicing lifecycle)
 export const ACCOUNT_STATUSES = ['not_invoiced', 'invoiced', 'partially_paid', 'paid', 'overdue'] as const;
 
+// Review outcome options (post-sales review)
+export const REVIEW_OUTCOMES = ['satisfied', 'issue_reported', 'follow_up_needed', 'no_response'] as const;
+
 // Job status options (memorial workflow)
 export const JOB_STATUSES = [
 	'pending', // Job created, awaiting action
@@ -1130,6 +1133,10 @@ export const jobs = pgTable('jobs', {
 	invoicedAt: timestamp('invoiced_at'), // When job was invoiced
 	invoiceNumber: text('invoice_number'), // Invoice reference number
 	accountStatus: text('account_status').default('not_invoiced'), // From ACCOUNT_STATUSES
+	reviewCompletedAt: timestamp('review_completed_at'), // When post-sales review was done
+	reviewCompletedBy: text('review_completed_by').references(() => users.id), // Who completed the review
+	reviewNotes: text('review_notes'), // Review notes
+	reviewOutcome: text('review_outcome'), // From REVIEW_OUTCOMES
 	installationDate: timestamp('installation_date'), // Scheduled installation date
 	deadline: timestamp('deadline'), // Job deadline
 	notes: text('notes'), // Job-specific notes

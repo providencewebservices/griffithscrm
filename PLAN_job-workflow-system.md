@@ -36,7 +36,7 @@ Implement a structured workflow system modeling how jobs progress through their 
   - Run `bun run db:generate` then `bun run db:migrate`
   - Validation: Verify migration and columns.
 
-- [ ] **Task 4: Add post-sales review fields to jobs table**
+- [x] **Task 4: Add post-sales review fields to jobs table**
   - In `packages/shared/src/db/schema.ts`:
     - Add constant: `export const REVIEW_OUTCOMES = ['satisfied', 'issue_reported', 'follow_up_needed', 'no_response'] as const`
     - Add to `jobs` table:
