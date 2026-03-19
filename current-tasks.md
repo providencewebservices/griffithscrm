@@ -48,7 +48,7 @@ Add Gmail folder navigation (Inbox, Trash) and the ability to trash/untrash emai
 
 ## Phase 3: API Routes
 
-- [ ] **Task 3: Add `POST /threads/:threadId/trash` and `POST /threads/:threadId/untrash` endpoints**
+- [X] **Task 3: Add `POST /threads/:threadId/trash` and `POST /threads/:threadId/untrash` endpoints**
   - In `apps/api/src/routes/inbox.ts`, add two endpoints following the existing archive endpoint pattern (lines 331-374):
   - **Trash endpoint:**
     1. Look up thread in DB by `id` + `tenantId`

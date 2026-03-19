@@ -373,6 +373,95 @@ const inboxRoutes = new Hono()
 		return c.json({ success: true });
 	})
 
+	// POST /threads/:threadId/trash - Move thread to trash
+	.post('/threads/:threadId/trash', async (c) => {
+		const user = c.get('user');
+		const tenantId = user.tenantId!;
+		const threadId = c.req.param('threadId');
+
+		const [thread] = await db
+			.select()
+			.from(emailThreads)
+			.where(
+				and(
+					eq(emailThreads.id, threadId),
+					eq(emailThreads.tenantId, tenantId)
+				)
+			)
+			.limit(1);
+
+		if (!thread) {
+			return c.json({ error: 'Thread not found' }, 404);
+		}
+
+		const { accessToken, integration } = await getValidAccessToken(thread.integrationId);
+		const provider = getEmailProvider(integration.provider as 'gmail' | 'microsoft');
+
+		await provider.trashThread({
+			accessToken,
+			threadId: thread.providerThreadId,
+		});
+
+		await db
+			.update(emailThreads)
+			.set({ isTrashed: true, updatedAt: new Date() })
+			.where(eq(emailThreads.id, threadId));
+
+		return c.json({ success: true });
+	})
+
+	// POST /threads/:threadId/untrash - Remove thread from trash
+	.post('/threads/:threadId/untrash', async (c) => {
+		const user = c.get('user');
+		const tenantId = user.tenantId!;
+		const threadId = c.req.param('threadId');
+
+		const [thread] = await db
+			.select()
+			.from(emailThreads)
+			.where(
+				and(
+					eq(emailThreads.id, threadId),
+					eq(emailThreads.tenantId, tenantId)
+				)
+			)
+			.limit(1);
+
+		if (!thread) {
+			return c.json({ error: 'Thread not found' }, 404);
+		}
+
+		const { accessToken, integration } = await getValidAccessToken(thread.integrationId);
+		const provider = getEmailProvider(integration.provider as 'gmail' | 'microsoft');
+
+		await provider.untrashThread({
+			accessToken,
+			threadId: thread.providerThreadId,
+		});
+
+		// Re-fetch thread to get accurate labels after untrashing
+		const fullThread = await provider.getThread({
+			accessToken,
+			threadId: thread.providerThreadId,
+		});
+
+		// Derive labels as the union of all message labelIds
+		const freshLabels = [
+			...new Set(fullThread.messages.flatMap((m) => m.labelIds)),
+		];
+
+		await db
+			.update(emailThreads)
+			.set({
+				isTrashed: false,
+				labelIds: JSON.stringify(freshLabels),
+				updatedAt: new Date(),
+			})
+			.where(eq(emailThreads.id, threadId));
+
+		return c.json({ success: true });
+	})
+
 	// GET /messages/:messageId/attachments/:attachmentId - Get attachment
 	.get('/messages/:messageId/attachments/:attachmentId', async (c) => {
 		const user = c.get('user');
