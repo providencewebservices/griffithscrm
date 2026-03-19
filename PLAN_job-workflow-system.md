@@ -331,7 +331,7 @@ Implement a structured workflow system modeling how jobs progress through their 
   - Register in `apps/api/src/index.ts`: `app.route('/api/jobs', jobWorkflowTasksRoutes)` (shares the `/api/jobs` prefix with the existing `jobsRouter` — Hono supports multiple route registrations on the same prefix)
   - Validation: `bun run build:api` succeeds. Test CRUD via API.
 
-- [ ] **Task 23: Auto-create workflow tasks on job creation**
+- [x] **Task 23: Auto-create workflow tasks on job creation**
   - In `apps/api/src/routes/quotes.ts` (the `POST /:id/accept/:optionId` handler, around line ~3274):
     - After inserting the job, import and call `seedDefaultWorkflowTemplates(tenantId)` from `apps/api/src/lib/workflow-seed.ts` to ensure templates exist
     - Look up the matching workflow template: `SELECT * FROM workflowTemplates WHERE tenantId = ? AND quoteType = ? AND productionMethod = ? AND isActive = true`

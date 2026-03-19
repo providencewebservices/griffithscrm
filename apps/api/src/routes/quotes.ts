@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
-import { eq, and, desc, asc, sql, notExists, like, or, count } from 'drizzle-orm';
+import { eq, and, desc, asc, sql, notExists, like, or, count, isNull } from 'drizzle-orm';
 import crypto from 'crypto';
 import { requireAuth, requireTenant } from '../middleware/auth';
 import { db } from '../lib/auth';
@@ -45,8 +45,12 @@ import {
 	ENQUIRY_SOURCES,
 	PAYER_TYPES,
 	PRODUCTION_METHODS,
+	workflowTemplates,
+	workflowSteps,
+	jobWorkflowTasks,
 } from '@griffiths-crm/shared/db/schema';
 import { generateJobNumber } from './jobs';
+import { seedDefaultWorkflowTemplates } from '../lib/workflow-seed';
 
 // Status transition rules
 const STATUS_TRANSITIONS: Record<string, string[]> = {
@@ -3367,6 +3371,51 @@ ${tenantName}
 			paidAmount: '0',
 			sortOrder: 1,
 		});
+
+		// Auto-create workflow tasks from matching template
+		await seedDefaultWorkflowTemplates(tenantId);
+
+		const templateCondition = option.productionMethod
+			? eq(workflowTemplates.productionMethod, option.productionMethod)
+			: isNull(workflowTemplates.productionMethod);
+
+		const [template] = await db
+			.select()
+			.from(workflowTemplates)
+			.where(
+				and(
+					eq(workflowTemplates.tenantId, tenantId),
+					eq(workflowTemplates.quoteType, pkg.quoteType),
+					templateCondition,
+					eq(workflowTemplates.isActive, true),
+				),
+			)
+			.limit(1);
+
+		if (template) {
+			const steps = await db
+				.select()
+				.from(workflowSteps)
+				.where(eq(workflowSteps.templateId, template.id))
+				.orderBy(asc(workflowSteps.sortOrder));
+
+			if (steps.length > 0) {
+				await db.insert(jobWorkflowTasks).values(
+					steps.map((step) => ({
+						id: crypto.randomUUID(),
+						tenantId,
+						jobId,
+						workflowStepId: step.id,
+						name: step.name,
+						description: step.description,
+						sortOrder: step.sortOrder,
+						status: 'pending' as const,
+						assigneeId: step.defaultAssigneeId,
+						category: step.category,
+					})),
+				);
+			}
+		}
 
 		// Return updated package
 		const fullPackage = await getPackageWithOptions(packageId, tenantId);
