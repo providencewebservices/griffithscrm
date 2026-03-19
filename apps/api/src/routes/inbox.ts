@@ -23,6 +23,7 @@ const threadsQuerySchema = z.object({
 	page: z.coerce.number().int().min(1).optional().default(1),
 	limit: z.coerce.number().int().min(1).max(100).optional().default(50),
 	filter: z.enum(['all', 'unread', 'customers', 'quotes', 'jobs', 'unlinked']).optional().default('all'),
+	folder: z.enum(['inbox', 'trash']).optional().default('inbox'),
 	contactEntityType: z.enum(['customer', 'funeral_director', 'memorial_site', 'supplier', 'quote', 'job']).optional(),
 	contactEntityId: z.string().optional(),
 });
@@ -65,7 +66,8 @@ const inboxRoutes = new Hono()
 					eq(emailThreads.integrationId, integration.id),
 					eq(emailThreads.tenantId, tenantId),
 					eq(emailThreads.isUnread, true),
-					eq(emailThreads.isArchived, false)
+					eq(emailThreads.isArchived, false),
+					eq(emailThreads.isTrashed, false)
 				)
 			);
 
@@ -76,7 +78,7 @@ const inboxRoutes = new Hono()
 	.get('/threads', zValidator('query', threadsQuerySchema), async (c) => {
 		const user = c.get('user');
 		const tenantId = user.tenantId!;
-		const { q, page, limit, filter, contactEntityType, contactEntityId } = c.req.valid('query');
+		const { q, page, limit, filter, folder, contactEntityType, contactEntityId } = c.req.valid('query');
 
 		// Get user's active integration
 		const [integration] = await db
@@ -123,6 +125,13 @@ const inboxRoutes = new Hono()
 			eq(emailThreads.tenantId, tenantId),
 		];
 
+		if (folder === 'inbox') {
+			conditions.push(eq(emailThreads.isArchived, false));
+			conditions.push(eq(emailThreads.isTrashed, false));
+		} else if (folder === 'trash') {
+			conditions.push(eq(emailThreads.isTrashed, true));
+		}
+
 		if (contactLinkedThreadIds) {
 			conditions.push(inArray(emailThreads.id, contactLinkedThreadIds));
 		}
@@ -136,7 +145,7 @@ const inboxRoutes = new Hono()
 			);
 		}
 
-		if (filter === 'unread') {
+		if (folder !== 'trash' && filter === 'unread') {
 			conditions.push(eq(emailThreads.isUnread, true));
 		}
 
@@ -177,17 +186,19 @@ const inboxRoutes = new Hono()
 			})
 		);
 
-		// Apply entity-link based filters
+		// Apply entity-link based filters (only for inbox folder)
 		let filteredThreads = threads;
-		if (filter === 'customers' || filter === 'quotes' || filter === 'jobs') {
-			const entityType = filter === 'customers' ? 'customer' : filter === 'quotes' ? 'quote' : 'job';
-			const linkedThreadIds = new Set(
-				links.filter((l) => l.entityType === entityType).map((l) => l.threadId)
-			);
-			filteredThreads = threads.filter((t) => linkedThreadIds.has(t.id));
-		} else if (filter === 'unlinked') {
-			const linkedThreadIds = new Set(links.map((l) => l.threadId));
-			filteredThreads = threads.filter((t) => !linkedThreadIds.has(t.id));
+		if (folder !== 'trash') {
+			if (filter === 'customers' || filter === 'quotes' || filter === 'jobs') {
+				const entityType = filter === 'customers' ? 'customer' : filter === 'quotes' ? 'quote' : 'job';
+				const linkedThreadIds = new Set(
+					links.filter((l) => l.entityType === entityType).map((l) => l.threadId)
+				);
+				filteredThreads = threads.filter((t) => linkedThreadIds.has(t.id));
+			} else if (filter === 'unlinked') {
+				const linkedThreadIds = new Set(links.map((l) => l.threadId));
+				filteredThreads = threads.filter((t) => !linkedThreadIds.has(t.id));
+			}
 		}
 
 		// Build response
