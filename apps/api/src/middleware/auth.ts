@@ -24,6 +24,7 @@ declare module 'hono' {
 	interface ContextVariableMap {
 		user: AuthUser;
 		session: AuthSession;
+		externalTenantId: string;
 	}
 }
 
