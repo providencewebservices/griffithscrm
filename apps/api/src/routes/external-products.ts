@@ -4,7 +4,7 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { eq, and, asc, desc, isNull, count } from 'drizzle-orm';
 import { db } from '../lib/auth';
-import { tenants, productCategories, products } from '@griffiths-crm/shared/db/schema';
+import { tenants, productCategories, products, productOptions, optionChoices } from '@griffiths-crm/shared/db/schema';
 
 const externalProductsRoutes = new Hono();
 
@@ -115,6 +115,78 @@ externalProductsRoutes.get('/:slug/products', zValidator('query', productsQueryS
 			limit,
 			total,
 			totalPages: Math.ceil(total / limit),
+		},
+	});
+});
+
+// GET /:slug/products/:productId — product detail with options and choices
+externalProductsRoutes.get('/:slug/products/:productId', async (c) => {
+	const tenantId = c.get('externalTenantId');
+	const productId = c.req.param('productId');
+
+	const [product] = await db
+		.select({
+			id: products.id,
+			sku: products.sku,
+			name: products.name,
+			description: products.description,
+			imageUrl: products.imageUrl,
+			categoryId: products.categoryId,
+			categoryName: productCategories.name,
+			isActive: products.isActive,
+			archivedAt: products.archivedAt,
+		})
+		.from(products)
+		.leftJoin(productCategories, eq(productCategories.id, products.categoryId))
+		.where(and(eq(products.id, productId), eq(products.tenantId, tenantId)))
+		.limit(1);
+
+	if (!product || !product.isActive || product.archivedAt) {
+		return c.json({ error: 'Not found' }, 404);
+	}
+
+	// Fetch options with choices (matching getProductWithRelations pattern)
+	const options = await db
+		.select({
+			id: productOptions.id,
+			name: productOptions.name,
+			type: productOptions.type,
+			isRequired: productOptions.isRequired,
+			sortOrder: productOptions.sortOrder,
+		})
+		.from(productOptions)
+		.where(eq(productOptions.productId, productId))
+		.orderBy(asc(productOptions.sortOrder), asc(productOptions.name));
+
+	const optionsWithChoices = await Promise.all(
+		options.map(async (option) => {
+			const choices = await db
+				.select({
+					id: optionChoices.id,
+					name: optionChoices.name,
+					priceAdjustment: optionChoices.priceAdjustment,
+					imageUrl: optionChoices.imageUrl,
+					sortOrder: optionChoices.sortOrder,
+				})
+				.from(optionChoices)
+				.where(eq(optionChoices.optionId, option.id))
+				.orderBy(asc(optionChoices.sortOrder), asc(optionChoices.name));
+
+			return { ...option, choices };
+		})
+	);
+
+	return c.json({
+		product: {
+			id: product.id,
+			sku: product.sku,
+			name: product.name,
+			description: product.description,
+			imageUrl: product.imageUrl,
+			category: product.categoryId
+				? { id: product.categoryId, name: product.categoryName }
+				: null,
+			options: optionsWithChoices,
 		},
 	});
 });

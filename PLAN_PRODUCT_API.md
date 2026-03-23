@@ -49,7 +49,7 @@ Public, read-only REST API at `/api/external/{tenant-slug}/` exposing product ca
   - Return: `{ "products": [...], "pagination": { page, limit, total, totalPages } }`
   - Validation: `curl` with `?page=1&limit=5` → verify correct pagination math. `curl` with `?categoryId=xxx` → verify filtering. Confirm no sensitive fields in response.
 
-- [ ] **Task 4: Implement GET /api/external/:slug/products/:productId (basic detail with options)**
+- [x] **Task 4: Implement GET /api/external/:slug/products/:productId (basic detail with options)**
   - Add `GET /:slug/products/:productId` endpoint
   - Query the product with tenant check, verifying `isActive = true` and `archivedAt IS NULL` — return 404 if not found, inactive, or archived
   - Join `productCategories` for category info (matching the select pattern in `apps/api/src/routes/products.ts` `getProductWithRelations`)
