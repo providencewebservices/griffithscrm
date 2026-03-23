@@ -10,6 +10,7 @@ import {
 	Mail,
 	CreditCard,
 	ListChecks,
+	Code2,
 } from 'lucide-react';
 import {
 	Select,
@@ -31,6 +32,7 @@ import { FinishesTab } from '@/components/customer/settings/finishes-tab';
 import { IntegrationsTab } from '@/components/customer/settings/integrations-tab';
 import { PaymentsTab } from '@/components/customer/settings/payments-tab';
 import { WorkflowTemplatesTab } from '@/components/customer/settings/workflow-templates-tab';
+import { ApiTab } from '@/components/customer/settings/api-tab';
 
 type SettingsTab =
 	| 'business'
@@ -42,7 +44,8 @@ type SettingsTab =
 	| 'line-items'
 	| 'integrations'
 	| 'payments'
-	| 'workflows';
+	| 'workflows'
+	| 'api';
 
 type TabItem = { value: SettingsTab; label: string; icon: typeof Building2 };
 
@@ -75,6 +78,7 @@ const TAB_GROUPS: { label: string | null; items: TabItem[] }[] = [
 		items: [
 			{ value: 'integrations', label: 'Integrations', icon: Mail },
 			{ value: 'payments', label: 'Payments', icon: CreditCard },
+			{ value: 'api', label: 'API', icon: Code2 },
 		],
 	},
 ];
@@ -103,6 +107,8 @@ function SettingsContent({ tab }: { tab: SettingsTab }) {
 			return <PaymentsTab />;
 		case 'workflows':
 			return <WorkflowTemplatesTab />;
+		case 'api':
+			return <ApiTab />;
 		default:
 			return <BusinessTab />;
 	}

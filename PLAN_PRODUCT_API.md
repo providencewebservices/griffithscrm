@@ -92,7 +92,7 @@ Public, read-only REST API at `/api/external/{tenant-slug}/` exposing product ca
 
 ## Phase 3: Frontend — In-App API Documentation
 
-- [ ] **Task 8: Add "API" tab to Settings page**
+- [x] **Task 8: Add "API" tab to Settings page**
   - In `apps/web/src/pages/customer/settings.tsx`:
     - Add `'api'` to the `SettingsTab` union type
     - Add API tab entry to `TAB_GROUPS` in the "System" group (alongside integrations/payments), using `Code2` icon from lucide-react
