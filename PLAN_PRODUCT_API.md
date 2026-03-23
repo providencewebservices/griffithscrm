@@ -59,7 +59,7 @@ Public, read-only REST API at `/api/external/{tenant-slug}/` exposing product ca
   - Return: `{ "product": { id, sku, name, description, imageUrl, category, options: [{ ...option, choices: [...] }] } }`
   - Validation: `curl` with valid product ID → full detail with nested options/choices. Invalid/archived product ID → 404. Verify `priceAdjustment` and `imageUrl` are present on choices.
 
-- [ ] **Task 5: Add components and dimension combos to product detail**
+- [x] **Task 5: Add components and dimension combos to product detail**
   - Extend the `GET /:slug/products/:productId` handler from Task 4
   - Fetch `productComponents` for the product, ordered by `sortOrder` — note: this query pattern is in `apps/api/src/routes/product-components.ts`, not in `getProductWithRelations`
   - Fetch `dimensionCombos` for the product where `isActive = true`, ordered by `sortOrder` — note: dimension combos have an `isActive` field that must be filtered

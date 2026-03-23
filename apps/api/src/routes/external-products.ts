@@ -4,7 +4,7 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { eq, and, asc, desc, isNull, count } from 'drizzle-orm';
 import { db } from '../lib/auth';
-import { tenants, productCategories, products, productOptions, optionChoices } from '@griffiths-crm/shared/db/schema';
+import { tenants, productCategories, products, productOptions, optionChoices, productComponents, dimensionCombos, dimensionComboValues } from '@griffiths-crm/shared/db/schema';
 
 const externalProductsRoutes = new Hono();
 
@@ -176,6 +176,51 @@ externalProductsRoutes.get('/:slug/products/:productId', async (c) => {
 		})
 	);
 
+	// Fetch product components
+	const components = await db
+		.select({
+			id: productComponents.id,
+			componentType: productComponents.componentType,
+			name: productComponents.name,
+			quantity: productComponents.quantity,
+			sortOrder: productComponents.sortOrder,
+		})
+		.from(productComponents)
+		.where(eq(productComponents.productId, productId))
+		.orderBy(asc(productComponents.sortOrder));
+
+	// Fetch active dimension combos with values
+	const activeCombos = await db
+		.select({
+			id: dimensionCombos.id,
+			name: dimensionCombos.name,
+			priceAdjustment: dimensionCombos.priceAdjustment,
+			sortOrder: dimensionCombos.sortOrder,
+		})
+		.from(dimensionCombos)
+		.where(and(eq(dimensionCombos.productId, productId), eq(dimensionCombos.isActive, true)))
+		.orderBy(asc(dimensionCombos.sortOrder));
+
+	const dimensionCombosWithValues = await Promise.all(
+		activeCombos.map(async (combo) => {
+			const values = await db
+				.select({
+					componentId: dimensionComboValues.productComponentId,
+					componentType: productComponents.componentType,
+					componentName: productComponents.name,
+					dimension1: dimensionComboValues.dimension1,
+					dimension2: dimensionComboValues.dimension2,
+					dimension3: dimensionComboValues.dimension3,
+				})
+				.from(dimensionComboValues)
+				.innerJoin(productComponents, eq(productComponents.id, dimensionComboValues.productComponentId))
+				.where(eq(dimensionComboValues.comboId, combo.id))
+				.orderBy(asc(productComponents.sortOrder));
+
+			return { ...combo, values };
+		})
+	);
+
 	return c.json({
 		product: {
 			id: product.id,
@@ -187,6 +232,8 @@ externalProductsRoutes.get('/:slug/products/:productId', async (c) => {
 				? { id: product.categoryId, name: product.categoryName }
 				: null,
 			options: optionsWithChoices,
+			components,
+			dimensionCombos: dimensionCombosWithValues,
 		},
 	});
 });
