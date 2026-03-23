@@ -6,6 +6,7 @@ import { requireAuth, requireTenant } from '../middleware/auth';
 import { db } from '../lib/auth';
 import {
 	jobs,
+	quotes,
 	jobWorkflowTasks,
 	workflowTemplates,
 	workflowSteps,
@@ -86,10 +87,15 @@ const jobWorkflowTasksRoutes = new Hono()
 		const tenantId = c.get('user').tenantId!;
 		const jobId = c.req.param('jobId');
 
-		// Verify job exists and belongs to tenant
+		// Verify job exists and belongs to tenant, fetch quoteType from related quote
 		const [job] = await db
-			.select()
+			.select({
+				id: jobs.id,
+				productionMethod: jobs.productionMethod,
+				quoteType: quotes.quoteType,
+			})
 			.from(jobs)
+			.innerJoin(quotes, eq(jobs.quoteId, quotes.id))
 			.where(and(eq(jobs.id, jobId), eq(jobs.tenantId, tenantId)))
 			.limit(1);
 
