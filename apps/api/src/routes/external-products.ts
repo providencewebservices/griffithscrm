@@ -4,7 +4,7 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { eq, and, asc, desc, isNull, count } from 'drizzle-orm';
 import { db } from '../lib/auth';
-import { tenants, productCategories, products, productOptions, optionChoices, productComponents, dimensionCombos, dimensionComboValues } from '@griffiths-crm/shared/db/schema';
+import { tenants, productCategories, products, productOptions, optionChoices, productComponents, dimensionCombos, dimensionComboValues, materialSections, materials } from '@griffiths-crm/shared/db/schema';
 
 const externalProductsRoutes = new Hono();
 
@@ -236,6 +236,43 @@ externalProductsRoutes.get('/:slug/products/:productId', async (c) => {
 			dimensionCombos: dimensionCombosWithValues,
 		},
 	});
+});
+
+// GET /:slug/materials — material sections with active materials
+externalProductsRoutes.get('/:slug/materials', async (c) => {
+	const tenantId = c.get('externalTenantId');
+
+	const allSections = await db
+		.select({
+			id: materialSections.id,
+			name: materialSections.name,
+			sortOrder: materialSections.sortOrder,
+		})
+		.from(materialSections)
+		.where(eq(materialSections.tenantId, tenantId))
+		.orderBy(asc(materialSections.sortOrder));
+
+	const sectionsWithMaterials = await Promise.all(
+		allSections.map(async (section) => {
+			const sectionMaterials = await db
+				.select({
+					id: materials.id,
+					name: materials.name,
+					imageUrl: materials.imageUrl,
+					sortOrder: materials.sortOrder,
+				})
+				.from(materials)
+				.where(and(eq(materials.sectionId, section.id), eq(materials.isActive, true)))
+				.orderBy(asc(materials.sortOrder));
+
+			return { ...section, materials: sectionMaterials };
+		})
+	);
+
+	// Exclude sections with no active materials
+	const sections = sectionsWithMaterials.filter((s) => s.materials.length > 0);
+
+	return c.json({ sections });
 });
 
 export { externalProductsRoutes };

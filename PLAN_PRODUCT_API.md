@@ -71,7 +71,7 @@ Public, read-only REST API at `/api/external/{tenant-slug}/` exposing product ca
   - Return extended shape: `{ "product": { ...existing, components: [...], dimensionCombos: [{ ...combo, values: [...] }] } }`
   - Validation: `curl` product detail → verify components and dimensionCombos arrays are present. Verify inactive dimension combos are excluded.
 
-- [ ] **Task 6: Implement GET /api/external/:slug/materials**
+- [x] **Task 6: Implement GET /api/external/:slug/materials**
   - Add `GET /:slug/materials` endpoint
   - Query `materialSections` for the tenant, ordered by `sortOrder` asc
   - For each section, query `materials` where `sectionId` matches and `isActive = true`, ordered by `sortOrder`
