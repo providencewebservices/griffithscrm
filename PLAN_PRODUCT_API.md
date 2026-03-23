@@ -82,7 +82,7 @@ Public, read-only REST API at `/api/external/{tenant-slug}/` exposing product ca
   - Return: `{ "sections": [{ ...section, materials: [...] }] }`
   - Validation: `curl` → returns grouped materials. Verify inactive materials are excluded. Verify sections with no active materials are omitted.
 
-- [ ] **Task 7: Implement GET /api/external/:slug/finishes**
+- [x] **Task 7: Implement GET /api/external/:slug/finishes**
   - Add `GET /:slug/finishes` endpoint
   - Query `finishes` for the tenant where `isActive = true`, ordered by `sortOrder` asc
   - Expose: `id`, `name`, `sortOrder`

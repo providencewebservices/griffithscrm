@@ -4,7 +4,7 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { eq, and, asc, desc, isNull, count } from 'drizzle-orm';
 import { db } from '../lib/auth';
-import { tenants, productCategories, products, productOptions, optionChoices, productComponents, dimensionCombos, dimensionComboValues, materialSections, materials } from '@griffiths-crm/shared/db/schema';
+import { tenants, productCategories, products, productOptions, optionChoices, productComponents, dimensionCombos, dimensionComboValues, materialSections, materials, finishes } from '@griffiths-crm/shared/db/schema';
 
 const externalProductsRoutes = new Hono();
 
@@ -273,6 +273,23 @@ externalProductsRoutes.get('/:slug/materials', async (c) => {
 	const sections = sectionsWithMaterials.filter((s) => s.materials.length > 0);
 
 	return c.json({ sections });
+});
+
+// GET /:slug/finishes — list active finishes for tenant
+externalProductsRoutes.get('/:slug/finishes', async (c) => {
+	const tenantId = c.get('externalTenantId');
+
+	const finishList = await db
+		.select({
+			id: finishes.id,
+			name: finishes.name,
+			sortOrder: finishes.sortOrder,
+		})
+		.from(finishes)
+		.where(and(eq(finishes.tenantId, tenantId), eq(finishes.isActive, true)))
+		.orderBy(asc(finishes.sortOrder));
+
+	return c.json({ finishes: finishList });
 });
 
 export { externalProductsRoutes };
