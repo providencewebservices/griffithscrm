@@ -37,7 +37,7 @@ Public, read-only REST API at `/api/external/{tenant-slug}/` exposing product ca
   - Return: `{ "categories": [...] }`
   - Validation: `curl http://localhost:3000/api/external/{valid-slug}/categories` → returns categories JSON. Verify no `tenantId` or timestamp fields in response.
 
-- [ ] **Task 3: Implement GET /api/external/:slug/products (list with pagination)**
+- [x] **Task 3: Implement GET /api/external/:slug/products (list with pagination)**
   - Add `GET /:slug/products` endpoint
   - Accept query params via Zod: `page` (default 1, `z.coerce.number()`), `limit` (default 20, max 100), `categoryId` (optional string)
   - Query `products` table joined with `productCategories` for category name
