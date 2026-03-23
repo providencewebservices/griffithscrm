@@ -28,7 +28,7 @@ Public, read-only REST API at `/api/external/{tenant-slug}/` exposing product ca
 
 ## Phase 2: API — Endpoints
 
-- [ ] **Task 2: Implement GET /api/external/:slug/categories**
+- [x] **Task 2: Implement GET /api/external/:slug/categories**
   - In `apps/api/src/routes/external-products.ts`, add `GET /:slug/categories`
   - Read `externalTenantId` from context (set by middleware in Task 1)
   - Query `productCategories` where `tenantId` matches, ordered by `sortOrder` asc

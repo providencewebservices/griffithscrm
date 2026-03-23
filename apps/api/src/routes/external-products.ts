@@ -1,8 +1,8 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import { eq } from 'drizzle-orm';
+import { eq, asc } from 'drizzle-orm';
 import { db } from '../lib/auth';
-import { tenants } from '@griffiths-crm/shared/db/schema';
+import { tenants, productCategories } from '@griffiths-crm/shared/db/schema';
 
 const externalProductsRoutes = new Hono();
 
@@ -33,9 +33,23 @@ externalProductsRoutes.use('/:slug/*', async (c, next) => {
 	await next();
 });
 
-// Placeholder route so the slug middleware fires on /:slug/categories etc.
+// GET /:slug/categories — list product categories for tenant
 externalProductsRoutes.get('/:slug/categories', async (c) => {
-	return c.json({ categories: [] });
+	const tenantId = c.get('externalTenantId');
+
+	const categories = await db
+		.select({
+			id: productCategories.id,
+			name: productCategories.name,
+			description: productCategories.description,
+			imageUrl: productCategories.imageUrl,
+			sortOrder: productCategories.sortOrder,
+		})
+		.from(productCategories)
+		.where(eq(productCategories.tenantId, tenantId))
+		.orderBy(asc(productCategories.sortOrder));
+
+	return c.json({ categories });
 });
 
 export { externalProductsRoutes };
