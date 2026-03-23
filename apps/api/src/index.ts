@@ -52,6 +52,7 @@ import { workflowTemplatesRoutes } from './routes/workflow-templates';
 import { jobWorkflowTasksRoutes } from './routes/job-workflow-tasks';
 import { jobFormsRoutes } from './routes/job-forms';
 import { jobProofsRoutes } from './routes/job-proofs';
+import { externalProductsRoutes } from './routes/external-products';
 import { startEmailSyncScheduler } from './lib/email-sync-scheduler';
 
 const app = new Hono();
@@ -76,6 +77,7 @@ app.get('/health', (c) => c.json({ status: 'ok' }));
 app.on(['POST', 'GET'], '/api/auth/*', (c) => auth.handler(c.req.raw));
 
 // Public routes (no auth required)
+app.route('/api/external', externalProductsRoutes);
 app.route('/api/public/quotes', publicQuotesRoutes);
 app.route('/api/public/payments', publicPaymentsRoutes);
 app.route('/api/fonts', fontProxyRoutes);
