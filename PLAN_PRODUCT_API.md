@@ -103,7 +103,7 @@ Public, read-only REST API at `/api/external/{tenant-slug}/` exposing product ca
     - Use `useTenantSettingsQuery()` to load tenant slug, show loading/error states matching existing tab patterns
   - Validation: `bun run dev`, navigate to `/app/settings?tab=api` → see the stub tab in the sidebar under the System group. Verify loading state works.
 
-- [ ] **Task 9: Build API documentation tab — base URL and endpoint reference**
+- [x] **Task 9: Build API documentation tab — base URL and endpoint reference**
   - In `apps/web/src/components/customer/settings/api-tab.tsx`, replace the stub with full content:
   - **Base URL card**: Display computed URL `${VITE_API_URL}/api/external/${slug}` in a styled code block. Add "Copy" button using `navigator.clipboard.writeText()` with `toast.success('Copied')` feedback.
   - **Endpoint reference**: One `Card` per endpoint showing:
