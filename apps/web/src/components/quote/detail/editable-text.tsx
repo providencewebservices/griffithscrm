@@ -1,6 +1,6 @@
 import { Loader2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 
 export function EditableText({
 	value,
@@ -61,8 +61,8 @@ export function EditableText({
 
 	if (isEditing) {
 		return (
-			<div className="flex items-center gap-1">
-				<Input
+			<div className="relative inline-flex items-center w-full">
+				<input
 					ref={inputRef}
 					type="text"
 					value={editValue}
@@ -70,10 +70,17 @@ export function EditableText({
 					onBlur={handleSave}
 					onKeyDown={handleKeyDown}
 					placeholder={placeholder}
-					className="h-8"
 					disabled={isSaving}
+					className={cn(
+						'h-7 w-full rounded-sm border border-input bg-background px-1.5 py-0.5 text-sm outline-none',
+						'focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]',
+						'disabled:pointer-events-none disabled:opacity-50',
+						className,
+					)}
 				/>
-				{isSaving && <Loader2 className="h-3 w-3 animate-spin" />}
+				{isSaving && (
+					<Loader2 className="absolute right-1 h-3 w-3 animate-spin text-muted-foreground" />
+				)}
 			</div>
 		);
 	}
@@ -85,7 +92,11 @@ export function EditableText({
 				setEditValue(value);
 				setIsEditing(true);
 			}}
-			className={`hover:bg-muted/80 bg-muted/40 border-b border-dashed border-muted-foreground/30 px-1.5 py-1 rounded-sm transition-colors cursor-pointer text-left ${className || ''}`}
+			className={cn(
+				'inline-block w-full rounded-sm px-1.5 py-0.5 text-sm text-left transition-colors cursor-pointer',
+				'border border-transparent hover:border-input hover:bg-muted/60',
+				className,
+			)}
 			title="Click to edit"
 		>
 			{value}

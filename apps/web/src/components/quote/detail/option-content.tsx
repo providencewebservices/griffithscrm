@@ -138,11 +138,11 @@ export function OptionContent({
 									<TableHeader>
 										<TableRow>
 											<TableHead>Item</TableHead>
-											<TableHead className="text-center">Qty</TableHead>
-											<TableHead className="text-right">Supplier</TableHead>
-											<TableHead className="text-center">Markup</TableHead>
-											<TableHead className="text-right">Retail</TableHead>
-											<TableHead className="text-right">Total</TableHead>
+											<TableHead className="text-center w-14">Qty</TableHead>
+											<TableHead className="text-right w-28">Supplier</TableHead>
+											<TableHead className="text-center w-24">Markup</TableHead>
+											<TableHead className="text-right w-24">Retail</TableHead>
+											<TableHead className="text-right w-24">Total</TableHead>
 										</TableRow>
 									</TableHeader>
 									<TableBody>
@@ -178,6 +178,7 @@ export function OptionContent({
 														}}
 														disabled={!canEditPricing}
 														min={0}
+														align="center"
 														formatValue={(val) => `${val.toFixed(0)}%`}
 													/>
 												</TableCell>

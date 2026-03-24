@@ -293,11 +293,11 @@ export function LetteringSection({
 								<TableHead>Technique</TableHead>
 								<TableHead>Color</TableHead>
 								<TableHead>Text</TableHead>
-								<TableHead className="text-center">Letters</TableHead>
-								<TableHead className="text-right">Cost/Letter</TableHead>
-								<TableHead className="text-center">Markup</TableHead>
-								<TableHead className="text-right">Retail</TableHead>
-								<TableHead className="text-right">Total</TableHead>
+								<TableHead className="text-center w-16">Letters</TableHead>
+								<TableHead className="text-right w-28">Cost/Letter</TableHead>
+								<TableHead className="text-center w-24">Markup</TableHead>
+								<TableHead className="text-right w-24">Retail</TableHead>
+								<TableHead className="text-right w-24">Total</TableHead>
 								{canEditPricing && <TableHead className="w-[80px]"></TableHead>}
 							</TableRow>
 						</TableHeader>
@@ -433,6 +433,7 @@ export function LetteringSection({
 													}}
 													disabled={!canEditPricing}
 													min={0}
+													align="center"
 													formatValue={(val) => `${val.toFixed(0)}%`}
 												/>
 											</TableCell>

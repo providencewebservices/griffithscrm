@@ -1,6 +1,8 @@
 import { Loader2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
+
+const currencyFormatter = new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' });
 
 export function EditableNumber({
 	value,
@@ -10,6 +12,7 @@ export function EditableNumber({
 	formatValue,
 	min = 0,
 	step = 0.01,
+	align = 'right',
 }: {
 	value: number;
 	onSave: (value: number) => Promise<void>;
@@ -18,6 +21,7 @@ export function EditableNumber({
 	formatValue?: (val: number) => string;
 	min?: number;
 	step?: number;
+	align?: 'left' | 'center' | 'right';
 }) {
 	const [isEditing, setIsEditing] = useState(false);
 	const [editValue, setEditValue] = useState(String(value));
@@ -31,8 +35,16 @@ export function EditableNumber({
 		}
 	}, [isEditing]);
 
+	const displayValue = formatValue
+		? formatValue(value)
+		: isCurrency
+			? currencyFormatter.format(value)
+			: value.toFixed(2);
+
+	const alignClass = align === 'center' ? 'text-center' : align === 'left' ? 'text-left' : 'text-right';
+
 	const handleSave = async () => {
-		const numValue = parseFloat(editValue);
+		const numValue = Number.parseFloat(editValue);
 		if (Number.isNaN(numValue) || numValue < min) {
 			setEditValue(String(value));
 			setIsEditing(false);
@@ -65,19 +77,13 @@ export function EditableNumber({
 	};
 
 	if (disabled) {
-		const displayValue = formatValue
-			? formatValue(value)
-			: isCurrency
-				? new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(value)
-				: value.toFixed(2);
-		return <span>{displayValue}</span>;
+		return <span className={cn('block', alignClass)}>{displayValue}</span>;
 	}
 
 	if (isEditing) {
 		return (
-			<div className="flex items-center gap-1">
-				{isCurrency && <span className="text-muted-foreground">£</span>}
-				<Input
+			<div className={cn('relative inline-flex items-center min-w-[5rem]', alignClass)}>
+				<input
 					ref={inputRef}
 					type="number"
 					value={editValue}
@@ -86,19 +92,21 @@ export function EditableNumber({
 					onKeyDown={handleKeyDown}
 					min={min}
 					step={step}
-					className="h-8 w-24 text-right"
 					disabled={isSaving}
+					className={cn(
+						'h-7 w-full rounded-sm border border-input bg-background px-1.5 py-0.5 text-sm outline-none',
+						'focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]',
+						'disabled:pointer-events-none disabled:opacity-50',
+						'[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none',
+						alignClass,
+					)}
 				/>
-				{isSaving && <Loader2 className="h-3 w-3 animate-spin" />}
+				{isSaving && (
+					<Loader2 className="absolute right-1 h-3 w-3 animate-spin text-muted-foreground" />
+				)}
 			</div>
 		);
 	}
-
-	const displayValue = formatValue
-		? formatValue(value)
-		: isCurrency
-			? new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(value)
-			: value.toFixed(2);
 
 	return (
 		<button
@@ -107,7 +115,11 @@ export function EditableNumber({
 				setEditValue(String(value));
 				setIsEditing(true);
 			}}
-			className="hover:bg-muted/80 bg-muted/40 border-b border-dashed border-muted-foreground/30 px-1.5 py-1 rounded-sm transition-colors cursor-pointer text-left"
+			className={cn(
+				'inline-block min-w-[5rem] rounded-sm px-1.5 py-0.5 text-sm transition-colors cursor-pointer',
+				'border border-transparent hover:border-input hover:bg-muted/60',
+				alignClass,
+			)}
 			title="Click to edit"
 		>
 			{displayValue}

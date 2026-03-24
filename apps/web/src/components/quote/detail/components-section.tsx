@@ -11,6 +11,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
 	Table,
 	TableBody,
@@ -116,46 +117,31 @@ export function ComponentsSection({
 			<div className="flex items-center justify-between mb-3">
 				<h4 className="font-medium">Stone Components</h4>
 				{canEditPricing && (
-					<div className="flex items-center rounded-lg border overflow-hidden">
-						<button
-							type="button"
-							className={`px-3 py-1.5 text-sm font-medium transition-colors ${
-								!isProductPricing
-									? 'bg-primary text-primary-foreground'
-									: 'bg-background text-muted-foreground hover:bg-muted'
-							}`}
-							onClick={async () => {
-								if (!isProductPricing) return;
+					<Tabs
+						value={isProductPricing ? 'product' : 'components'}
+						onValueChange={async (val) => {
+							if (val === 'components' && isProductPricing) {
 								await updateProductPricing.mutateAsync({
 									packageId: pkg.id,
 									optionId: option.id,
 									supplierCost: null,
 									retailPrice: null,
 								});
-							}}
-						>
-							Price by components
-						</button>
-						<button
-							type="button"
-							className={`px-3 py-1.5 text-sm font-medium transition-colors ${
-								isProductPricing
-									? 'bg-primary text-primary-foreground'
-									: 'bg-background text-muted-foreground hover:bg-muted'
-							}`}
-							onClick={async () => {
-								if (isProductPricing) return;
+							} else if (val === 'product' && !isProductPricing) {
 								await updateProductPricing.mutateAsync({
 									packageId: pkg.id,
 									optionId: option.id,
 									supplierCost: 0,
 									retailPrice: 0,
 								});
-							}}
-						>
-							Product price
-						</button>
-					</div>
+							}
+						}}
+					>
+						<TabsList>
+							<TabsTrigger value="components">Price by components</TabsTrigger>
+							<TabsTrigger value="product">Product price</TabsTrigger>
+						</TabsList>
+					</Tabs>
 				)}
 			</div>
 			{isProductPricing ? (
@@ -356,11 +342,11 @@ export function ComponentsSection({
 											<TableHead>Type</TableHead>
 											<TableHead>Material</TableHead>
 											<TableHead>Dimensions</TableHead>
-											<TableHead className="text-center">Qty</TableHead>
-											<TableHead className="text-right">Supplier</TableHead>
-											<TableHead className="text-center">Markup</TableHead>
-											<TableHead className="text-right">Retail</TableHead>
-											<TableHead className="text-right">Total</TableHead>
+											<TableHead className="text-center w-14">Qty</TableHead>
+											<TableHead className="text-right w-28">Supplier</TableHead>
+											<TableHead className="text-center w-24">Markup</TableHead>
+											<TableHead className="text-right w-24">Retail</TableHead>
+											<TableHead className="text-right w-24">Total</TableHead>
 											{canEditPricing && <TableHead className="w-10"></TableHead>}
 										</TableRow>
 									</TableHeader>
@@ -412,6 +398,7 @@ export function ComponentsSection({
 														}}
 														disabled={!canEditPricing}
 														min={0}
+														align="center"
 														formatValue={(val) => `${val.toFixed(0)}%`}
 													/>
 												</TableCell>
