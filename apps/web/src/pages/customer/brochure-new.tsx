@@ -1,15 +1,16 @@
-import {
-	ArrowDown,
-	ArrowLeft,
-	ArrowUp,
-	Check,
-	ChevronsUpDown,
-	Plus,
-	Search,
-	X,
-} from 'lucide-react';
+import { ArrowLeft, Check, ChevronsUpDown, Eye, ImageIcon, Plus, Search } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import {
 	Breadcrumb,
 	BreadcrumbItem,
@@ -28,13 +29,17 @@ import {
 	CommandItem,
 	CommandList,
 } from '@/components/ui/command';
-import { FieldLabel } from '@/components/ui/field';
+import { FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { useCreateBrochureMutation } from '@/hooks/use-brochures';
 import { useCustomersQuery } from '@/hooks/use-customers';
+import { useProductCategoriesQuery } from '@/hooks/use-product-categories';
 import { type Product, useProductsQuery } from '@/hooks/use-products';
+import { SortableProductList } from '@/components/sortable-product-list';
 import { useSignedUrls } from '@/hooks/use-uploads';
 import { cn } from '@/lib/utils';
 
@@ -64,6 +69,7 @@ export function BrochureNewPage() {
 	// Product search state
 	const [productSearch, setProductSearch] = useState('');
 	const [debouncedProductSearch, setDebouncedProductSearch] = useState('');
+	const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
 
 	// Selected products
 	const [selectedProducts, setSelectedProducts] = useState<SelectedProduct[]>([]);
@@ -72,13 +78,24 @@ export function BrochureNewPage() {
 	const [message, setMessage] = useState('');
 	const [expiresAt, setExpiresAt] = useState(getDefaultExpiry());
 
+	// Validation
+	const [submitted, setSubmitted] = useState(false);
+
+	// Cancel confirmation
+	const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+
+	// Mobile preview
+	const [previewOpen, setPreviewOpen] = useState(false);
+
 	// Mutations
 	const createBrochure = useCreateBrochureMutation();
 
 	// Data queries
 	const { data: customers } = useCustomersQuery();
+	const { data: categories } = useProductCategoriesQuery();
 	const { data: productsData } = useProductsQuery({
 		search: debouncedProductSearch || undefined,
+		categoryId: categoryFilter || undefined,
 		isActive: 'true',
 		limit: 20,
 	});
@@ -116,6 +133,26 @@ export function BrochureNewPage() {
 		? `${selectedCustomer.firstName} ${selectedCustomer.lastName}`
 		: '';
 
+	// Dirty state for unsaved-changes protection
+	const isDirty = useMemo(() => {
+		return (
+			customerId !== (preselectedCustomerId || '') ||
+			selectedProducts.length > 0 ||
+			message !== '' ||
+			expiresAt !== getDefaultExpiry()
+		);
+	}, [customerId, preselectedCustomerId, selectedProducts, message, expiresAt]);
+
+	// Protect against browser close/refresh with unsaved changes
+	useEffect(() => {
+		if (!isDirty) return;
+		const handler = (e: BeforeUnloadEvent) => {
+			e.preventDefault();
+		};
+		window.addEventListener('beforeunload', handler);
+		return () => window.removeEventListener('beforeunload', handler);
+	}, [isDirty]);
+
 	function addProduct(product: Product) {
 		setSelectedProducts((prev) => [
 			...prev,
@@ -133,17 +170,8 @@ export function BrochureNewPage() {
 		setSelectedProducts((prev) => prev.filter((p) => p.productId !== productId));
 	}
 
-	function moveProduct(index: number, direction: 'up' | 'down') {
-		setSelectedProducts((prev) => {
-			const next = [...prev];
-			const targetIndex = direction === 'up' ? index - 1 : index + 1;
-			if (targetIndex < 0 || targetIndex >= next.length) return prev;
-			[next[index], next[targetIndex]] = [next[targetIndex], next[index]];
-			return next;
-		});
-	}
-
 	async function handleSubmit() {
+		setSubmitted(true);
 		if (!customerId || selectedProducts.length === 0) return;
 
 		try {
@@ -162,7 +190,24 @@ export function BrochureNewPage() {
 		}
 	}
 
+	function handleCancel() {
+		if (isDirty) {
+			setCancelDialogOpen(true);
+		} else {
+			navigate('/app/brochures');
+		}
+	}
+
 	const canSave = customerId && selectedProducts.length > 0 && !createBrochure.isPending;
+
+	const previewContent = (
+		<BrochurePreview
+			products={selectedProducts}
+			signedUrls={selectedSignedUrls}
+			message={message}
+			customerName={customerDisplayName}
+		/>
+	);
 
 	return (
 		<div>
@@ -189,250 +234,341 @@ export function BrochureNewPage() {
 				<h2 className="text-2xl font-bold">New Brochure</h2>
 			</div>
 
-			<div className="grid gap-6 max-w-3xl">
-				{/* Customer Selector */}
-				<Card>
-					<CardHeader>
-						<CardTitle className="text-base">Customer</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<Popover open={customerComboOpen} onOpenChange={setCustomerComboOpen}>
-							<PopoverTrigger asChild>
-								<Button
-									variant="outline"
-									role="combobox"
-									aria-expanded={customerComboOpen}
-									className="w-full justify-between font-normal h-9 text-sm"
-								>
-									<span className="truncate">
-										{customerId ? customerDisplayName || 'Select...' : 'Select a customer...'}
-									</span>
-									<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-								</Button>
-							</PopoverTrigger>
-							<PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-								<Command>
-									<CommandInput placeholder="Search customers..." />
-									<CommandList>
-										<CommandEmpty>No customers found.</CommandEmpty>
-										{customerId && (
+			<div className="grid gap-6 lg:grid-cols-5">
+				{/* Form */}
+				<div className="lg:col-span-3 space-y-6">
+					{/* Customer Selector */}
+					<Card>
+						<CardHeader>
+							<CardTitle className="text-base">Customer</CardTitle>
+						</CardHeader>
+						<CardContent className="space-y-2">
+							<Popover open={customerComboOpen} onOpenChange={setCustomerComboOpen}>
+								<PopoverTrigger asChild>
+									<Button
+										variant="outline"
+										role="combobox"
+										aria-expanded={customerComboOpen}
+										className="w-full justify-between font-normal h-9 text-sm"
+									>
+										<span className="truncate">
+											{customerId ? customerDisplayName || 'Select...' : 'Select a customer...'}
+										</span>
+										<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+									</Button>
+								</PopoverTrigger>
+								<PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+									<Command>
+										<CommandInput placeholder="Search customers..." />
+										<CommandList>
+											<CommandEmpty>No customers found.</CommandEmpty>
+											{customerId && (
+												<CommandGroup>
+													<CommandItem
+														value="_clear"
+														onSelect={() => {
+															setCustomerId('');
+															setCustomerComboOpen(false);
+														}}
+													>
+														<span className="text-muted-foreground">Clear selection</span>
+													</CommandItem>
+												</CommandGroup>
+											)}
 											<CommandGroup>
-												<CommandItem
-													value="_clear"
-													onSelect={() => {
-														setCustomerId('');
-														setCustomerComboOpen(false);
-													}}
-												>
-													<span className="text-muted-foreground">Clear selection</span>
-												</CommandItem>
+												{customers?.map((customer) => (
+													<CommandItem
+														key={customer.id}
+														value={`${customer.firstName} ${customer.lastName}`}
+														onSelect={() => {
+															setCustomerId(customer.id);
+															setCustomerComboOpen(false);
+														}}
+													>
+														<Check
+															className={cn(
+																'mr-2 h-4 w-4',
+																customerId === customer.id ? 'opacity-100' : 'opacity-0',
+															)}
+														/>
+														{customer.firstName} {customer.lastName}
+													</CommandItem>
+												))}
 											</CommandGroup>
-										)}
-										<CommandGroup>
-											{customers?.map((customer) => (
-												<CommandItem
-													key={customer.id}
-													value={`${customer.firstName} ${customer.lastName}`}
-													onSelect={() => {
-														setCustomerId(customer.id);
-														setCustomerComboOpen(false);
-													}}
-												>
-													<Check
-														className={cn(
-															'mr-2 h-4 w-4',
-															customerId === customer.id ? 'opacity-100' : 'opacity-0',
-														)}
-													/>
-													{customer.firstName} {customer.lastName}
-												</CommandItem>
-											))}
-										</CommandGroup>
-									</CommandList>
-								</Command>
-							</PopoverContent>
-						</Popover>
-					</CardContent>
-				</Card>
+										</CommandList>
+									</Command>
+								</PopoverContent>
+							</Popover>
+							{submitted && !customerId && (
+								<FieldError>Please select a customer</FieldError>
+							)}
+						</CardContent>
+					</Card>
 
-				{/* Product Selector */}
-				<Card>
-					<CardHeader>
-						<CardTitle className="text-base">Products</CardTitle>
-					</CardHeader>
-					<CardContent className="space-y-4">
-						{/* Search */}
-						<div className="relative">
-							<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-							<Input
-								placeholder="Search products..."
-								value={productSearch}
-								onChange={(e) => setProductSearch(e.target.value)}
-								className="pl-9"
-							/>
-						</div>
+					{/* Product Selector */}
+					<Card>
+						<CardHeader>
+							<CardTitle className="text-base">Products</CardTitle>
+						</CardHeader>
+						<CardContent className="space-y-4">
+							{/* Category Tabs */}
+							{categories && categories.length > 0 && (
+								<Tabs
+									value={categoryFilter || 'all'}
+									onValueChange={(v) => setCategoryFilter(v === 'all' ? null : v)}
+								>
+									<TabsList className="h-auto flex-wrap justify-start">
+										<TabsTrigger value="all" className="text-xs">
+											All
+										</TabsTrigger>
+										{categories.map((cat) => (
+											<TabsTrigger key={cat.id} value={cat.id} className="text-xs">
+												{cat.name}
+											</TabsTrigger>
+										))}
+									</TabsList>
+								</Tabs>
+							)}
 
-						{/* Search Results */}
-						{(debouncedProductSearch || productSearch) && (
-							<div className="border rounded-lg max-h-64 overflow-y-auto">
+							{/* Search */}
+							<div className="relative">
+								<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+								<Input
+									placeholder="Search products..."
+									value={productSearch}
+									onChange={(e) => setProductSearch(e.target.value)}
+									className="pl-9"
+								/>
+							</div>
+
+							{/* Product Grid */}
+							<div className="border rounded-lg max-h-72 overflow-y-auto">
 								{availableProducts.length === 0 ? (
 									<div className="p-4 text-sm text-muted-foreground text-center">
 										No products found.
 									</div>
 								) : (
-									<div className="divide-y">
+									<div className="grid grid-cols-2 gap-2 p-2">
 										{availableProducts.map((product) => {
 											const signedUrl = product.imageUrl
 												? searchSignedUrls?.get(product.imageUrl)
 												: null;
 											return (
-												<div
+												<button
 													key={product.id}
-													className="flex items-center gap-3 p-3 hover:bg-muted/50"
+													type="button"
+													onClick={() => addProduct(product)}
+													className="text-left rounded-lg border bg-background hover:bg-muted/50 overflow-hidden transition-colors"
 												>
 													{signedUrl ? (
 														<img
 															src={signedUrl}
 															alt={product.name}
-															className="h-10 w-10 rounded object-cover shrink-0"
+															className="w-full aspect-[4/3] object-cover"
 														/>
 													) : (
-														<div className="h-10 w-10 rounded bg-muted shrink-0" />
+														<div className="w-full aspect-[4/3] bg-muted flex items-center justify-center">
+															<ImageIcon className="h-8 w-8 text-muted-foreground/40" />
+														</div>
 													)}
-													<div className="flex-1 min-w-0">
+													<div className="p-2">
 														<p className="text-sm font-medium truncate">{product.name}</p>
 														{product.category && (
-															<p className="text-xs text-muted-foreground">
+															<p className="text-xs text-muted-foreground truncate">
 																{product.category.name}
 															</p>
 														)}
 													</div>
-													<Button variant="ghost" size="sm" onClick={() => addProduct(product)}>
-														<Plus className="h-4 w-4 mr-1" />
-														Add
-													</Button>
-												</div>
+												</button>
 											);
 										})}
 									</div>
 								)}
 							</div>
-						)}
 
-						{/* Selected Products */}
-						{selectedProducts.length > 0 && (
-							<div>
-								<FieldLabel className="text-sm font-medium mb-2">
-									Selected ({selectedProducts.length})
-								</FieldLabel>
-								<div className="border rounded-lg divide-y">
-									{selectedProducts.map((product, index) => {
-										const signedUrl = product.imageUrl
-											? selectedSignedUrls?.get(product.imageUrl)
-											: null;
-										return (
-											<div key={product.productId} className="flex items-center gap-3 p-3">
-												{signedUrl ? (
-													<img
-														src={signedUrl}
-														alt={product.name}
-														className="h-10 w-10 rounded object-cover shrink-0"
-													/>
-												) : (
-													<div className="h-10 w-10 rounded bg-muted shrink-0" />
-												)}
-												<div className="flex-1 min-w-0">
-													<p className="text-sm font-medium truncate">{product.name}</p>
-													{product.categoryName && (
-														<p className="text-xs text-muted-foreground">{product.categoryName}</p>
-													)}
-												</div>
-												<div className="flex items-center gap-1">
-													<Button
-														variant="ghost"
-														size="icon"
-														className="h-7 w-7"
-														disabled={index === 0}
-														onClick={() => moveProduct(index, 'up')}
-													>
-														<ArrowUp className="h-3.5 w-3.5" />
-													</Button>
-													<Button
-														variant="ghost"
-														size="icon"
-														className="h-7 w-7"
-														disabled={index === selectedProducts.length - 1}
-														onClick={() => moveProduct(index, 'down')}
-													>
-														<ArrowDown className="h-3.5 w-3.5" />
-													</Button>
-													<Button
-														variant="ghost"
-														size="icon"
-														className="h-7 w-7 text-destructive hover:text-destructive"
-														onClick={() => removeProduct(product.productId)}
-													>
-														<X className="h-3.5 w-3.5" />
-													</Button>
-												</div>
-											</div>
-										);
-									})}
+							{/* Selected Products */}
+							{selectedProducts.length > 0 && (
+								<div>
+									<p className="text-sm font-medium mb-2">
+										Selected ({selectedProducts.length})
+									</p>
+									<SortableProductList
+										products={selectedProducts}
+										signedUrls={selectedSignedUrls}
+										onReorder={setSelectedProducts}
+										onRemove={removeProduct}
+									/>
 								</div>
+							)}
+
+							{submitted && selectedProducts.length === 0 && (
+								<FieldError>Add at least one product to the brochure</FieldError>
+							)}
+						</CardContent>
+					</Card>
+
+					{/* Message & Expiry */}
+					<Card>
+						<CardHeader>
+							<CardTitle className="text-base">Details</CardTitle>
+						</CardHeader>
+						<CardContent className="space-y-4">
+							<div className="space-y-2">
+								<FieldLabel className="text-sm font-medium">Message (optional)</FieldLabel>
+								<Textarea
+									placeholder="Write a personal message for the customer..."
+									value={message}
+									onChange={(e) => setMessage(e.target.value)}
+									rows={4}
+								/>
 							</div>
-						)}
+							<div className="space-y-2">
+								<FieldLabel className="text-sm font-medium">Expires</FieldLabel>
+								<Input
+									type="date"
+									value={expiresAt}
+									onChange={(e) => setExpiresAt(e.target.value)}
+									className="h-9 text-sm max-w-xs"
+								/>
+							</div>
+						</CardContent>
+					</Card>
 
-						{selectedProducts.length === 0 && !productSearch && (
-							<p className="text-sm text-muted-foreground">
-								Search for products above to add them to the brochure.
-							</p>
-						)}
-					</CardContent>
-				</Card>
+					{/* Actions */}
+					<div className="flex items-center gap-3">
+						<Button onClick={handleSubmit} disabled={!canSave}>
+							{createBrochure.isPending ? 'Creating...' : 'Create Brochure'}
+						</Button>
+						<Button variant="outline" onClick={handleCancel}>
+							Cancel
+						</Button>
+					</div>
 
-				{/* Message & Expiry */}
-				<Card>
-					<CardHeader>
-						<CardTitle className="text-base">Details</CardTitle>
-					</CardHeader>
-					<CardContent className="space-y-4">
-						<div className="space-y-2">
-							<FieldLabel className="text-sm font-medium">Message (optional)</FieldLabel>
-							<Textarea
-								placeholder="Write a personal message for the customer..."
-								value={message}
-								onChange={(e) => setMessage(e.target.value)}
-								rows={4}
-							/>
-						</div>
-						<div className="space-y-2">
-							<FieldLabel className="text-sm font-medium">Expires</FieldLabel>
-							<Input
-								type="date"
-								value={expiresAt}
-								onChange={(e) => setExpiresAt(e.target.value)}
-								className="h-9 text-sm max-w-xs"
-							/>
-						</div>
-					</CardContent>
-				</Card>
-
-				{/* Actions */}
-				<div className="flex items-center gap-3">
-					<Button onClick={handleSubmit} disabled={!canSave}>
-						{createBrochure.isPending ? 'Creating...' : 'Create Brochure'}
-					</Button>
-					<Link to="/app/brochures">
-						<Button variant="outline">Cancel</Button>
-					</Link>
+					{createBrochure.isError && (
+						<p className="text-sm text-destructive">
+							{createBrochure.error?.message || 'Failed to create brochure'}
+						</p>
+					)}
 				</div>
 
-				{createBrochure.isError && (
-					<p className="text-sm text-destructive">
-						{createBrochure.error?.message || 'Failed to create brochure'}
-					</p>
-				)}
+				{/* Preview Panel (desktop) */}
+				<div className="hidden lg:block lg:col-span-2">
+					<div className="sticky top-4">{previewContent}</div>
+				</div>
 			</div>
+
+			{/* Preview Button (mobile) */}
+			<div className="fixed bottom-4 right-4 lg:hidden z-10">
+				<Button onClick={() => setPreviewOpen(true)} size="sm" variant="outline" className="shadow-md">
+					<Eye className="h-4 w-4 mr-2" />
+					Preview
+				</Button>
+			</div>
+
+			{/* Preview Sheet (mobile) */}
+			<Sheet open={previewOpen} onOpenChange={setPreviewOpen}>
+				<SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
+					<SheetHeader>
+						<SheetTitle>Brochure Preview</SheetTitle>
+					</SheetHeader>
+					<div className="mt-4">{previewContent}</div>
+				</SheetContent>
+			</Sheet>
+
+			{/* Cancel Confirmation */}
+			<AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Discard changes?</AlertDialogTitle>
+						<AlertDialogDescription>
+							You have unsaved changes. Are you sure you want to leave?
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Keep Editing</AlertDialogCancel>
+						<AlertDialogAction onClick={() => navigate('/app/brochures')}>
+							Discard
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</div>
+	);
+}
+
+function BrochurePreview({
+	products,
+	signedUrls,
+	message,
+	customerName,
+}: {
+	products: SelectedProduct[];
+	signedUrls: Map<string, string> | undefined;
+	message: string;
+	customerName: string;
+}) {
+	return (
+		<Card className="bg-muted/30">
+			<CardHeader className="pb-3">
+				<CardTitle className="text-sm text-muted-foreground">Customer Preview</CardTitle>
+			</CardHeader>
+			<CardContent className="space-y-4">
+				{/* Header */}
+				<div className="rounded-lg border bg-background p-4">
+					<p className="font-semibold text-base">
+						{customerName || 'Memorial Selections'}
+					</p>
+				</div>
+
+				{/* Message */}
+				{message && (
+					<div className="rounded-lg bg-muted/50 border p-3">
+						<p className="text-sm whitespace-pre-wrap line-clamp-4">{message}</p>
+					</div>
+				)}
+
+				{/* Products */}
+				{products.length === 0 ? (
+					<div className="rounded-lg border border-dashed p-6 text-center">
+						<p className="text-sm text-muted-foreground">
+							Products you add will appear here
+						</p>
+					</div>
+				) : (
+					<div className="grid grid-cols-2 gap-3">
+						{products.map((product) => {
+							const url = product.imageUrl ? signedUrls?.get(product.imageUrl) : null;
+							return (
+								<div key={product.productId} className="rounded-lg border bg-background overflow-hidden">
+									{url ? (
+										<img
+											src={url}
+											alt={product.name}
+											className="w-full aspect-[4/3] object-cover"
+										/>
+									) : (
+										<div className="w-full aspect-[4/3] bg-muted flex items-center justify-center">
+											<ImageIcon className="h-6 w-6 text-muted-foreground/40" />
+										</div>
+									)}
+									<div className="p-2">
+										<p className="text-xs font-medium truncate">{product.name}</p>
+										{product.categoryName && (
+											<p className="text-xs text-muted-foreground truncate">
+												{product.categoryName}
+											</p>
+										)}
+									</div>
+								</div>
+							);
+						})}
+					</div>
+				)}
+
+				<p className="text-xs text-muted-foreground text-center">
+					Customer will see bookmark and &ldquo;Ready to Discuss&rdquo; options
+				</p>
+			</CardContent>
+		</Card>
 	);
 }

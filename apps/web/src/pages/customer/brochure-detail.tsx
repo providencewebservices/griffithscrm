@@ -1,7 +1,5 @@
 import {
-	ArrowDown,
 	ArrowLeft,
-	ArrowUp,
 	Heart,
 	Link as LinkIcon,
 	Mail,
@@ -10,7 +8,6 @@ import {
 	Pencil,
 	Plus,
 	Search,
-	X,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
@@ -53,6 +50,7 @@ import {
 	useSendBrochureMutation,
 	useUpdateBrochureMutation,
 } from '@/hooks/use-brochures';
+import { SortableProductList } from '@/components/sortable-product-list';
 import { type Product, useProductsQuery } from '@/hooks/use-products';
 import { useSignedUrls } from '@/hooks/use-uploads';
 
@@ -694,16 +692,6 @@ function EditProductsDialog({
 		setSelected((prev) => prev.filter((p) => p.productId !== productId));
 	}
 
-	function moveProduct(index: number, direction: 'up' | 'down') {
-		setSelected((prev) => {
-			const next = [...prev];
-			const targetIndex = direction === 'up' ? index - 1 : index + 1;
-			if (targetIndex < 0 || targetIndex >= next.length) return prev;
-			[next[index], next[targetIndex]] = [next[targetIndex], next[index]];
-			return next;
-		});
-	}
-
 	const handleSave = async () => {
 		try {
 			await updateMutation.mutateAsync({
@@ -783,58 +771,12 @@ function EditProductsDialog({
 					{selected.length > 0 ? (
 						<div>
 							<p className="text-sm font-medium mb-2">Selected ({selected.length})</p>
-							<div className="border rounded-lg divide-y">
-								{selected.map((product, index) => {
-									const url = product.imageUrl ? selectedSignedUrls?.get(product.imageUrl) : null;
-									return (
-										<div key={product.productId} className="flex items-center gap-3 p-3">
-											{url ? (
-												<img
-													src={url}
-													alt={product.name}
-													className="h-10 w-10 rounded object-cover shrink-0"
-												/>
-											) : (
-												<div className="h-10 w-10 rounded bg-muted shrink-0" />
-											)}
-											<div className="flex-1 min-w-0">
-												<p className="text-sm font-medium truncate">{product.name}</p>
-												{product.categoryName && (
-													<p className="text-xs text-muted-foreground">{product.categoryName}</p>
-												)}
-											</div>
-											<div className="flex items-center gap-1">
-												<Button
-													variant="ghost"
-													size="icon"
-													className="h-7 w-7"
-													disabled={index === 0}
-													onClick={() => moveProduct(index, 'up')}
-												>
-													<ArrowUp className="h-3.5 w-3.5" />
-												</Button>
-												<Button
-													variant="ghost"
-													size="icon"
-													className="h-7 w-7"
-													disabled={index === selected.length - 1}
-													onClick={() => moveProduct(index, 'down')}
-												>
-													<ArrowDown className="h-3.5 w-3.5" />
-												</Button>
-												<Button
-													variant="ghost"
-													size="icon"
-													className="h-7 w-7 text-destructive hover:text-destructive"
-													onClick={() => removeProduct(product.productId)}
-												>
-													<X className="h-3.5 w-3.5" />
-												</Button>
-											</div>
-										</div>
-									);
-								})}
-							</div>
+							<SortableProductList
+								products={selected}
+								signedUrls={selectedSignedUrls}
+								onReorder={setSelected}
+								onRemove={removeProduct}
+							/>
 						</div>
 					) : (
 						<p className="text-sm text-muted-foreground">No products selected.</p>
