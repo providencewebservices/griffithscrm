@@ -20,7 +20,7 @@
   {
     "id": "TASK-004",
     "title": "Add product pricing API endpoint (PUT product-pricing)",
-    "done": false,
+    "done": true,
     "task_file": ".viktor/tasks/TASK-004.md"
   },
   {

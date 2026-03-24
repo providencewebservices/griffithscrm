@@ -17,3 +17,9 @@
 - **Outcome:** done
 - **Summary:** Migrated component PUT from `/:quoteId/components/:itemId` to `/:id/options/:optionId/components/:itemId` and sundry PUT from `/:quoteId/sundries/:itemId` to `/:id/options/:optionId/sundries/:itemId`. Both handlers now validate package existence, draft status, and option membership before updating. Return response uses `getPackageWithOptions()` wrapped as `{ package: ... }` matching the lettering endpoint pattern.
 - **Validation:** `bun run build:api` compiles successfully. Old routes confirmed removed. New routes verified at correct paths.
+
+### TASK-004: Add product pricing API endpoint (PUT product-pricing)
+- **Timestamp:** 2026-03-24T17:00:00Z
+- **Outcome:** done
+- **Summary:** Added `updateProductPricingSchema` Zod schema and `PUT /:id/options/:optionId/product-pricing` endpoint. Validates package ownership, draft status, and option membership. Sets `productSupplierCost` and `productRetailPrice` on the quote option row (converting numbers to strings, or null to clear). Calls `recalculateQuoteTotals()` and returns the full package via `getPackageWithOptions()`.
+- **Validation:** `bun run build:api` compiles successfully with no errors.

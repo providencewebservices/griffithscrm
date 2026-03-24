@@ -480,6 +480,11 @@ const updateLineItemPricingSchema = z.object({
 	quantity: z.number().int().min(1).optional(),
 });
 
+const updateProductPricingSchema = z.object({
+	supplierCost: z.number().min(0).nullable(),
+	retailPrice: z.number().min(0).nullable(),
+});
+
 // Schema for adding a new lettering item
 const addLetteringItemSchema = z.object({
 	techniqueId: z.string().min(1),
@@ -1872,6 +1877,62 @@ const quotesRoutes = new Hono()
 					updatedAt: new Date(),
 				})
 				.where(eq(quoteSundries.id, itemId));
+
+			// Recalculate quote totals
+			await recalculateQuoteTotals(optionId);
+
+			// Return updated package
+			const fullPackage = await getPackageWithOptions(packageId, tenantId);
+			return c.json({ package: fullPackage });
+		}
+	)
+
+	// Update product-level pricing (XOR toggle)
+	.put(
+		'/:id/options/:optionId/product-pricing',
+		zValidator('json', updateProductPricingSchema),
+		async (c) => {
+			const currentUser = c.get('user');
+			const tenantId = currentUser.tenantId!;
+			const packageId = c.req.param('id');
+			const optionId = c.req.param('optionId');
+			const data = c.req.valid('json');
+
+			// Get package and validate
+			const [pkg] = await db
+				.select()
+				.from(quotePackages)
+				.where(and(eq(quotePackages.id, packageId), eq(quotePackages.tenantId, tenantId)))
+				.limit(1);
+
+			if (!pkg) {
+				return c.json({ error: 'Package not found' }, 404);
+			}
+
+			if (pkg.status !== 'draft') {
+				return c.json({ error: 'Can only edit pricing on draft quotes' }, 400);
+			}
+
+			// Verify option exists and belongs to this package
+			const [option] = await db
+				.select()
+				.from(quotes)
+				.where(and(eq(quotes.id, optionId), eq(quotes.packageId, packageId)))
+				.limit(1);
+
+			if (!option) {
+				return c.json({ error: 'Option not found in this package' }, 404);
+			}
+
+			// Update product-level pricing on the quote option
+			await db
+				.update(quotes)
+				.set({
+					productSupplierCost: data.supplierCost !== null ? String(data.supplierCost) : null,
+					productRetailPrice: data.retailPrice !== null ? String(data.retailPrice) : null,
+					updatedAt: new Date(),
+				})
+				.where(eq(quotes.id, optionId));
 
 			// Recalculate quote totals
 			await recalculateQuoteTotals(optionId);
