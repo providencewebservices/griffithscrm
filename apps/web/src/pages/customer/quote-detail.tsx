@@ -43,6 +43,7 @@ import {
 	useUpdateComponentPricingMutation,
 	useUpdateLetteringPricingMutation,
 	useUpdateSundryPricingMutation,
+	useUpdateProductPricingMutation,
 	useAddLineItemMutation,
 	useUpdateLineItemMutation,
 	useDeleteLineItemMutation,
@@ -120,6 +121,7 @@ export function QuoteDetailPage() {
 	const updateComponentPricing = useUpdateComponentPricingMutation();
 	const updateLetteringPricing = useUpdateLetteringPricingMutation();
 	const updateSundryPricing = useUpdateSundryPricingMutation();
+	const updateProductPricing = useUpdateProductPricingMutation();
 	const addLineItem = useAddLineItemMutation();
 	const updateLineItem = useUpdateLineItemMutation();
 	const deleteLineItem = useDeleteLineItemMutation();
@@ -546,6 +548,7 @@ export function QuoteDetailPage() {
 									updateComponentPricing={updateComponentPricing}
 									updateLetteringPricing={updateLetteringPricing}
 									updateSundryPricing={updateSundryPricing}
+									updateProductPricing={updateProductPricing}
 									addLineItem={addLineItem}
 									updateLineItem={updateLineItem}
 									deleteLineItem={deleteLineItem}

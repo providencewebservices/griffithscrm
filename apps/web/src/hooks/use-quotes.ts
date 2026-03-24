@@ -864,6 +864,50 @@ async function updateSundryPricing({
 	return data.package;
 }
 
+// Product-level pricing
+type UpdateProductPricingInput = {
+	packageId: string;
+	optionId: string;
+	supplierCost: number | null;
+	retailPrice: number | null;
+};
+
+async function updateProductPricing({
+	packageId,
+	optionId,
+	...input
+}: UpdateProductPricingInput): Promise<QuotePackageWithOptions> {
+	const response = await fetch(
+		`${API_URL}/api/quotes/${packageId}/options/${optionId}/product-pricing`,
+		{
+			method: 'PUT',
+			headers: { 'Content-Type': 'application/json' },
+			credentials: 'include',
+			body: JSON.stringify(input),
+		}
+	);
+
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.error || 'Failed to update product pricing');
+	}
+
+	const data: PackageResponse = await response.json();
+	return data.package;
+}
+
+export function useUpdateProductPricingMutation() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: updateProductPricing,
+		onSuccess: (data) => {
+			queryClient.setQueryData(['quote', data.id], data);
+			queryClient.invalidateQueries({ queryKey: ['quotes'] });
+		},
+	});
+}
+
 // Line item pricing mutation hooks
 export function useUpdateComponentPricingMutation() {
 	const queryClient = useQueryClient();

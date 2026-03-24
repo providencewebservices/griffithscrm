@@ -35,3 +35,9 @@
 - **Outcome:** done
 - **Summary:** Added `DELETE /:id/options/:optionId/components/:itemId` endpoint following the deleteLettering pattern. Validates package ownership, draft status, option membership, and component existence. Deletes the quoteComponent row, recalculates totals, and returns the updated package. Does not modify product definitions.
 - **Validation:** `bun run build:api` compiles successfully with no errors.
+
+### TASK-007: Frontend product pricing hook, XOR toggle UI, and editable fields
+- **Timestamp:** 2026-03-24T20:00:00Z
+- **Outcome:** done
+- **Summary:** Added `updateProductPricing` fetch function and `useUpdateProductPricingMutation` hook in `use-quotes.ts`. Built XOR pricing mode toggle (segmented button group) in the components section of `option-content.tsx`. In "Product price" mode, the component table is replaced by two EditableNumber fields (Supplier Cost and Retail Price). Switching modes calls the product-pricing API endpoint. Toggle is only interactive on draft quotes. Wired up the mutation in `quote-detail.tsx`.
+- **Validation:** `bun run build:api` and `bun run build:web` both compile successfully with no errors.

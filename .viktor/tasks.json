@@ -38,7 +38,7 @@
   {
     "id": "TASK-007",
     "title": "Frontend product pricing hook, XOR toggle UI, and editable fields",
-    "done": false,
+    "done": true,
     "task_file": ".viktor/tasks/TASK-007.md"
   },
   {
