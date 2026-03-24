@@ -3498,6 +3498,62 @@ ${tenantName}
 		}
 	)
 
+	// Delete a component
+	.delete('/:id/options/:optionId/components/:itemId', async (c) => {
+		const currentUser = c.get('user');
+		const tenantId = currentUser.tenantId!;
+		const packageId = c.req.param('id');
+		const optionId = c.req.param('optionId');
+		const itemId = c.req.param('itemId');
+
+		// Get package and validate
+		const [pkg] = await db
+			.select()
+			.from(quotePackages)
+			.where(and(eq(quotePackages.id, packageId), eq(quotePackages.tenantId, tenantId)))
+			.limit(1);
+
+		if (!pkg) {
+			return c.json({ error: 'Package not found' }, 404);
+		}
+
+		if (pkg.status !== 'draft') {
+			return c.json({ error: 'Can only delete components from draft quotes' }, 400);
+		}
+
+		// Verify option exists and belongs to this package
+		const [option] = await db
+			.select()
+			.from(quotes)
+			.where(and(eq(quotes.id, optionId), eq(quotes.packageId, packageId)))
+			.limit(1);
+
+		if (!option) {
+			return c.json({ error: 'Option not found in this package' }, 404);
+		}
+
+		// Verify component exists and belongs to this option
+		const [component] = await db
+			.select()
+			.from(quoteComponents)
+			.where(and(eq(quoteComponents.id, itemId), eq(quoteComponents.quoteId, optionId)))
+			.limit(1);
+
+		if (!component) {
+			return c.json({ error: 'Component not found' }, 404);
+		}
+
+		// Delete the component
+		await db.delete(quoteComponents).where(eq(quoteComponents.id, itemId));
+
+		// Recalculate quote totals
+		await recalculateQuoteTotals(optionId);
+
+		// Return updated package
+		const fullPackage = await getPackageWithOptions(packageId, tenantId);
+		return c.json({ package: fullPackage });
+	})
+
 	// Accept a specific option (creates job, sets package status to accepted)
 	.post('/:id/accept/:optionId', async (c) => {
 		const currentUser = c.get('user');

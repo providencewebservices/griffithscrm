@@ -32,7 +32,7 @@
   {
     "id": "TASK-006",
     "title": "Add component deletion API endpoint",
-    "done": false,
+    "done": true,
     "task_file": ".viktor/tasks/TASK-006.md"
   },
   {

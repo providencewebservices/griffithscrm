@@ -29,3 +29,9 @@
 - **Outcome:** done
 - **Summary:** Added `addComponentSchema` Zod schema and `POST /:id/options/:optionId/components` endpoint. Validates package ownership, draft status, and option membership. Looks up material/finish by ID for name snapshots. Uses tenant default markup with supplierCost=0. Inserts quoteComponent with calculated pricing and next sortOrder. Product sync: if the option has a productId and the product lacks a component of this type, inserts a new productComponent. Recalculates totals and returns full package.
 - **Validation:** `bun run build:api` compiles successfully with no errors.
+
+### TASK-006: Add component deletion API endpoint
+- **Timestamp:** 2026-03-24T19:00:00Z
+- **Outcome:** done
+- **Summary:** Added `DELETE /:id/options/:optionId/components/:itemId` endpoint following the deleteLettering pattern. Validates package ownership, draft status, option membership, and component existence. Deletes the quoteComponent row, recalculates totals, and returns the updated package. Does not modify product definitions.
+- **Validation:** `bun run build:api` compiles successfully with no errors.
