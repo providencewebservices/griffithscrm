@@ -116,7 +116,7 @@
 	{
 		"id": "TASK-020",
 		"title": "Add Create Brochure shortcut to customer detail page",
-		"done": false,
+		"done": true,
 		"task_file": ".viktor/tasks/TASK-020.md"
 	}
 ]

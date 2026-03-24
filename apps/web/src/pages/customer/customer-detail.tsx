@@ -1,4 +1,13 @@
-import { ArrowLeft, Clock, FileText, Mail, MapPin, MessageSquare, Phone } from 'lucide-react';
+import {
+	ArrowLeft,
+	BookOpen,
+	Clock,
+	FileText,
+	Mail,
+	MapPin,
+	MessageSquare,
+	Phone,
+} from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
@@ -197,6 +206,12 @@ export function CustomerDetailPage() {
 					</p>
 				</div>
 				<div className="flex gap-2">
+					<Link to={`/app/brochures/new?customerId=${customer.id}`}>
+						<Button variant="outline">
+							<BookOpen className="h-4 w-4 mr-2" />
+							Create Brochure
+						</Button>
+					</Link>
 					<Button variant="outline" onClick={handleEdit}>
 						Edit
 					</Button>

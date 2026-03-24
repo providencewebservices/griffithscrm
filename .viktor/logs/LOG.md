@@ -113,3 +113,9 @@
 - **Outcome:** done
 - **Summary:** Added "Send Email" and "Copy Link" buttons to the brochure detail page header. Send Email calls `useSendBrochureMutation`, shows loading state, and is disabled when customer has no email. Copy Link constructs the public URL from `accessToken` and copies to clipboard. Both use sonner toast notifications. Updated the sidebar email status to always display — showing "Last sent" date and sent count when emails have been sent, or "Not yet sent" otherwise. Actions are hidden for archived brochures.
 - **Validation:** `bun run build:web` passes with no TypeScript errors.
+
+### TASK-020: Add Create Brochure shortcut to customer detail page
+- **Timestamp:** 2026-03-24T21:30:00Z
+- **Outcome:** done
+- **Summary:** Added a "Create Brochure" button with BookOpen icon to the customer detail page header actions area. The button links to `/app/brochures/new?customerId={id}`, pre-selecting the customer on the brochure creation form.
+- **Validation:** `bun run build:web` passes with no TypeScript errors.
