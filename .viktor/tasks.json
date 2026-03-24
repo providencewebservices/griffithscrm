@@ -74,7 +74,7 @@
 	{
 		"id": "TASK-013",
 		"title": "Create frontend hooks for brochure API",
-		"done": false,
+		"done": true,
 		"task_file": ".viktor/tasks/TASK-013.md"
 	},
 	{

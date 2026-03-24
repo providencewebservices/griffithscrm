@@ -71,3 +71,9 @@
 - **Outcome:** done
 - **Summary:** Created `apps/api/src/routes/public-brochures.ts` with three endpoints: GET /:token (returns brochure data with products, tenant branding, no pricing/cost data, filters out deleted products, 410 for expired/archived), POST /:token/interest/:productId (toggles isInterested on brochure_products with timestamp management), POST /:token/ready (idempotently sets readyToDiscussAt). Mounted at `/api/public/brochures` in `index.ts` alongside other public routes. No authentication required — token-based access only.
 - **Validation:** `bun run build:api` compiles successfully with no errors.
+
+### TASK-013: Create frontend hooks for brochure API
+- **Timestamp:** 2026-03-24T24:00:00Z
+- **Outcome:** done
+- **Summary:** Created `apps/web/src/hooks/use-brochures.ts` with TanStack Query hooks for all staff-facing brochure API operations. Includes `useBrochuresQuery` (paginated list with search/status), `useBrochureQuery` (detail by ID), `useCreateBrochureMutation`, `useUpdateBrochureMutation`, `useArchiveBrochureMutation`, and `useSendBrochureMutation`. All follow existing patterns from `use-products.ts` with proper query key invalidation.
+- **Validation:** `bun run build:web` compiles successfully with no TypeScript errors.
