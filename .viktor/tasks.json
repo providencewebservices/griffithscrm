@@ -86,7 +86,7 @@
 	{
 		"id": "TASK-015",
 		"title": "Build brochure create page with product selector",
-		"done": false,
+		"done": true,
 		"task_file": ".viktor/tasks/TASK-015.md"
 	},
 	{

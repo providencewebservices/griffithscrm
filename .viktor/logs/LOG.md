@@ -83,3 +83,9 @@
 - **Outcome:** done
 - **Summary:** Created `apps/web/src/pages/customer/brochures.tsx` with search (debounced), status filter (All/Active/Expired/Archived), paginated table (customer name, product count, status badge, ready to discuss, created date, View button), and pagination controls. Added `/app/brochures` route in `App.tsx` and "Brochures" sidebar nav item with BookOpen icon in `nav-items.ts`.
 - **Validation:** `bun run build:web` compiles successfully with no TypeScript errors.
+
+### TASK-015: Build brochure create page with product selector
+- **Timestamp:** 2026-03-24T15:00:00Z
+- **Outcome:** done
+- **Summary:** Created `apps/web/src/pages/customer/brochure-new.tsx` with customer selector (Command/Combobox with search, pre-selection via `customerId` query param), product search with debounced input and image thumbnails, selected products list with up/down reorder and remove buttons, message textarea, date picker defaulting to 30 days, and save button using `useCreateBrochureMutation()` with redirect to detail page. Added `/app/brochures/new` route in `App.tsx`.
+- **Validation:** `bun run build:web` compiles successfully with no TypeScript errors.
