@@ -18,7 +18,8 @@ import {
 	TableRow,
 } from '@/components/ui/table';
 import { EditableNumber } from './editable-number';
-import { Plus, Loader2 } from 'lucide-react';
+import { Plus, Loader2, Trash2 } from 'lucide-react';
+import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
 import { useMaterialSectionsQuery } from '@/hooks/use-material-sections';
 import { useMaterialsQuery } from '@/hooks/use-materials';
 import { useFinishesQuery } from '@/hooks/use-finishes';
@@ -36,6 +37,7 @@ import type {
 	useUpdateComponentPricingMutation,
 	useUpdateProductPricingMutation,
 	useAddComponentMutation,
+	useDeleteComponentMutation,
 } from '@/hooks/use-quotes';
 
 export function ComponentsSection({
@@ -46,6 +48,7 @@ export function ComponentsSection({
 	updateComponentPricing,
 	updateProductPricing,
 	addComponentMutation,
+	deleteComponentMutation,
 }: {
 	pkg: QuotePackageWithOptions;
 	option: QuoteOption;
@@ -54,8 +57,10 @@ export function ComponentsSection({
 	updateComponentPricing: ReturnType<typeof useUpdateComponentPricingMutation>;
 	updateProductPricing: ReturnType<typeof useUpdateProductPricingMutation>;
 	addComponentMutation: ReturnType<typeof useAddComponentMutation>;
+	deleteComponentMutation: ReturnType<typeof useDeleteComponentMutation>;
 }) {
 	const [showAddForm, setShowAddForm] = useState(false);
+	const [deletingId, setDeletingId] = useState<string | null>(null);
 
 	// Form state
 	const [componentType, setComponentType] = useState('');
@@ -361,6 +366,7 @@ export function ComponentsSection({
 											<TableHead className="text-center">Markup</TableHead>
 											<TableHead className="text-right">Retail</TableHead>
 											<TableHead className="text-right">Total</TableHead>
+											{canEditPricing && <TableHead className="w-10"></TableHead>}
 										</TableRow>
 									</TableHeader>
 									<TableBody>
@@ -412,6 +418,18 @@ export function ComponentsSection({
 												</TableCell>
 												<TableCell className="text-right">{formatCurrency(comp.unitPrice)}</TableCell>
 												<TableCell className="text-right font-medium">{formatCurrency(comp.lineTotal)}</TableCell>
+												{canEditPricing && (
+													<TableCell>
+														<Button
+															variant="ghost"
+															size="icon"
+															className="h-8 w-8 text-muted-foreground hover:text-destructive"
+															onClick={() => setDeletingId(comp.id)}
+														>
+															<Trash2 className="h-4 w-4" />
+														</Button>
+													</TableCell>
+												)}
 											</TableRow>
 										))}
 									</TableBody>
@@ -438,6 +456,24 @@ export function ComponentsSection({
 					) : null}
 				</>
 			)}
+
+			{/* Delete Confirmation Dialog */}
+			<DeleteConfirmDialog
+				open={!!deletingId}
+				onOpenChange={(open) => !open && setDeletingId(null)}
+				onConfirm={async () => {
+					if (!deletingId) return;
+					await deleteComponentMutation.mutateAsync({
+						packageId: pkg.id,
+						optionId: option.id,
+						itemId: deletingId,
+					});
+					setDeletingId(null);
+				}}
+				title="Delete Component"
+				description="Are you sure you want to remove this component from the quote? This cannot be undone."
+				isLoading={deleteComponentMutation.isPending}
+			/>
 		</>
 	);
 }

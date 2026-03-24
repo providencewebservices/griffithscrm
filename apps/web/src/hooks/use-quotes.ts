@@ -801,6 +801,12 @@ export type AddComponentInput = {
 	quantity?: number;
 };
 
+export type DeleteComponentInput = {
+	packageId: string;
+	optionId: string;
+	itemId: string;
+};
+
 // Line item update functions
 async function updateComponentPricing({
 	packageId,
@@ -1212,12 +1218,46 @@ async function addComponent({
 	return data.package;
 }
 
+async function deleteComponent({
+	packageId,
+	optionId,
+	itemId,
+}: DeleteComponentInput): Promise<QuotePackageWithOptions> {
+	const response = await fetch(
+		`${API_URL}/api/quotes/${packageId}/options/${optionId}/components/${itemId}`,
+		{
+			method: 'DELETE',
+			credentials: 'include',
+		}
+	);
+
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.error || 'Failed to delete component');
+	}
+
+	const data: PackageResponse = await response.json();
+	return data.package;
+}
+
 // Component mutation hooks
 export function useAddComponentMutation() {
 	const queryClient = useQueryClient();
 
 	return useMutation({
 		mutationFn: addComponent,
+		onSuccess: (data) => {
+			queryClient.setQueryData(['quote', data.id], data);
+			queryClient.invalidateQueries({ queryKey: ['quotes'] });
+		},
+	});
+}
+
+export function useDeleteComponentMutation() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: deleteComponent,
 		onSuccess: (data) => {
 			queryClient.setQueryData(['quote', data.id], data);
 			queryClient.invalidateQueries({ queryKey: ['quotes'] });

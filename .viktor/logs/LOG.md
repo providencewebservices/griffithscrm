@@ -47,3 +47,9 @@
 - **Outcome:** done
 - **Summary:** Added `addComponent` fetch function and `useAddComponentMutation` hook in `use-quotes.ts`. Extracted the components section from `option-content.tsx` into a new `components-section.tsx` file following the `lettering-section.tsx` pattern. Added inline "Add Component" form with dropdowns for component type, material section (with cascading material filter), material, finish, dimension inputs (labels change per component type), and quantity. Form only shows in "Price by components" mode on draft quotes. Wired up mutation in `quote-detail.tsx`.
 - **Validation:** `bun run build:web` compiles successfully with no errors.
+
+### TASK-009: Frontend delete component action with confirmation dialog
+- **Timestamp:** 2026-03-24T22:00:00Z
+- **Outcome:** done
+- **Summary:** Added `deleteComponent` fetch function and `useDeleteComponentMutation` hook in `use-quotes.ts`. Added a trash icon button to each component row in `components-section.tsx` (visible only on draft quotes). Clicking opens a `DeleteConfirmDialog` confirmation before executing the DELETE endpoint. On confirm, the component disappears and totals recalculate. Threaded the mutation through `option-content.tsx` and `quote-detail.tsx`.
+- **Validation:** `bun run build:web` compiles successfully with no errors.

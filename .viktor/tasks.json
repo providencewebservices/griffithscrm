@@ -50,7 +50,7 @@
   {
     "id": "TASK-009",
     "title": "Frontend delete component action with confirmation dialog",
-    "done": false,
+    "done": true,
     "task_file": ".viktor/tasks/TASK-009.md"
   }
 ]

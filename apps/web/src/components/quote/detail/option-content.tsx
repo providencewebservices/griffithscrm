@@ -34,6 +34,7 @@ import type {
 	useUpdateLetteringMutation,
 	useDeleteLetteringMutation,
 	useAddComponentMutation,
+	useDeleteComponentMutation,
 } from '@/hooks/use-quotes';
 
 export function OptionContent({
@@ -52,6 +53,7 @@ export function OptionContent({
 	updateLetteringMutation,
 	deleteLetteringMutation,
 	addComponentMutation,
+	deleteComponentMutation,
 	activePresets,
 }: {
 	pkg: QuotePackageWithOptions;
@@ -69,6 +71,7 @@ export function OptionContent({
 	updateLetteringMutation: ReturnType<typeof useUpdateLetteringMutation>;
 	deleteLetteringMutation: ReturnType<typeof useDeleteLetteringMutation>;
 	addComponentMutation: ReturnType<typeof useAddComponentMutation>;
+	deleteComponentMutation: ReturnType<typeof useDeleteComponentMutation>;
 	activePresets: { id: string; name: string; defaultPrice: string; vatExempt: boolean; visibleToCustomer: boolean; priceVisibleToCustomer: boolean }[];
 }) {
 	const quoteType = (pkg.quoteType as QuoteType) || 'new_memorial';
@@ -103,6 +106,7 @@ export function OptionContent({
 						updateComponentPricing={updateComponentPricing}
 						updateProductPricing={updateProductPricing}
 						addComponentMutation={addComponentMutation}
+						deleteComponentMutation={deleteComponentMutation}
 					/>
 				)}
 
