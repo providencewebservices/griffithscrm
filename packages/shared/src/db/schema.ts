@@ -1727,3 +1727,39 @@ export const paymentAttempts = pgTable('payment_attempts', {
 	orderIdIdx: index('payment_attempts_order_id_idx').on(table.orderId),
 	milestoneIdIdx: index('payment_attempts_milestone_id_idx').on(table.milestoneId),
 }));
+
+// Brochures table (customer-facing product brochures)
+export const brochures = pgTable('brochures', {
+	id: text('id').primaryKey(),
+	tenantId: text('tenant_id')
+		.notNull()
+		.references(() => tenants.id, { onDelete: 'cascade' }),
+	customerId: text('customer_id').references(() => customers.id, { onDelete: 'set null' }),
+	createdById: text('created_by_id').references(() => users.id, { onDelete: 'set null' }),
+	message: text('message'),
+	accessToken: text('access_token').unique(),
+	expiresAt: timestamp('expires_at').notNull(),
+	readyToDiscussAt: timestamp('ready_to_discuss_at'),
+	archivedAt: timestamp('archived_at'),
+	emailSentAt: timestamp('email_sent_at'),
+	emailSentCount: integer('email_sent_count').notNull().default(0),
+	createdAt: timestamp('created_at').notNull().defaultNow(),
+	updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, (table) => ({
+	activePerCustomer: uniqueIndex('brochures_active_per_customer')
+		.on(table.tenantId, table.customerId)
+		.where(sql`archived_at IS NULL`),
+}));
+
+// Brochure Products join table
+export const brochureProducts = pgTable('brochure_products', {
+	id: text('id').primaryKey(),
+	brochureId: text('brochure_id')
+		.notNull()
+		.references(() => brochures.id, { onDelete: 'cascade' }),
+	productId: text('product_id').references(() => products.id, { onDelete: 'set null' }),
+	sortOrder: integer('sort_order').notNull().default(0),
+	isInterested: boolean('is_interested').notNull().default(false),
+	interestedAt: timestamp('interested_at'),
+	createdAt: timestamp('created_at').notNull().defaultNow(),
+});

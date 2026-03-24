@@ -56,7 +56,7 @@
   {
     "id": "TASK-010",
     "title": "Add brochures and brochure_products tables to database schema",
-    "done": false,
+    "done": true,
     "task_file": ".viktor/tasks/TASK-010.md"
   },
   {

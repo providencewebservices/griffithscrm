@@ -53,3 +53,9 @@
 - **Outcome:** done
 - **Summary:** Added `deleteComponent` fetch function and `useDeleteComponentMutation` hook in `use-quotes.ts`. Added a trash icon button to each component row in `components-section.tsx` (visible only on draft quotes). Clicking opens a `DeleteConfirmDialog` confirmation before executing the DELETE endpoint. On confirm, the component disappears and totals recalculate. Threaded the mutation through `option-content.tsx` and `quote-detail.tsx`.
 - **Validation:** `bun run build:web` compiles successfully with no errors.
+
+### TASK-010: Add brochures and brochure_products tables to database schema
+- **Timestamp:** 2026-03-24T23:00:00Z
+- **Outcome:** done
+- **Summary:** Added `brochures` and `brochureProducts` table definitions to `schema.ts` with all required columns, FK constraints (cascade delete on tenantId/brochureId, set null on customerId/createdById/productId), unique accessToken, and a partial unique index `brochures_active_per_customer` enforcing one active brochure per customer per tenant. Generated migration `0043_perfect_peter_parker.sql` and applied it successfully.
+- **Validation:** `bun run db:generate` produced correct migration SQL. `bun run db:migrate` applied successfully. Migration SQL verified: both tables created with correct columns, FKs, and unique partial index.
