@@ -1,4 +1,5 @@
 import {
+	BookOpen,
 	Briefcase,
 	CalendarDays,
 	Files,
@@ -17,6 +18,7 @@ export const navItems = [
 	{ title: 'Dashboard', url: '/app', icon: LayoutDashboard },
 	{ title: 'Inbox', url: '/app/inbox', icon: Mail },
 	{ title: 'Quotes', url: '/app/quotes', icon: FileText },
+	{ title: 'Brochures', url: '/app/brochures', icon: BookOpen },
 	{ title: 'Jobs', url: '/app/jobs', icon: Briefcase },
 	{ title: 'Tasks', url: '/app/tasks', icon: ListChecks },
 	{ title: 'Calendar', url: '/app/calendar', icon: CalendarDays },

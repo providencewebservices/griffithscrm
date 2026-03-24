@@ -80,7 +80,7 @@
 	{
 		"id": "TASK-014",
 		"title": "Build brochure list page with routing and navigation",
-		"done": false,
+		"done": true,
 		"task_file": ".viktor/tasks/TASK-014.md"
 	},
 	{

@@ -77,3 +77,9 @@
 - **Outcome:** done
 - **Summary:** Created `apps/web/src/hooks/use-brochures.ts` with TanStack Query hooks for all staff-facing brochure API operations. Includes `useBrochuresQuery` (paginated list with search/status), `useBrochureQuery` (detail by ID), `useCreateBrochureMutation`, `useUpdateBrochureMutation`, `useArchiveBrochureMutation`, and `useSendBrochureMutation`. All follow existing patterns from `use-products.ts` with proper query key invalidation.
 - **Validation:** `bun run build:web` compiles successfully with no TypeScript errors.
+
+### TASK-014: Build brochure list page with routing and navigation
+- **Timestamp:** 2026-03-24T14:00:00Z
+- **Outcome:** done
+- **Summary:** Created `apps/web/src/pages/customer/brochures.tsx` with search (debounced), status filter (All/Active/Expired/Archived), paginated table (customer name, product count, status badge, ready to discuss, created date, View button), and pagination controls. Added `/app/brochures` route in `App.tsx` and "Brochures" sidebar nav item with BookOpen icon in `nav-items.ts`.
+- **Validation:** `bun run build:web` compiles successfully with no TypeScript errors.
