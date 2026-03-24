@@ -68,7 +68,7 @@
   {
     "id": "TASK-012",
     "title": "Create public brochure API routes (no auth, token-based)",
-    "done": false,
+    "done": true,
     "task_file": ".viktor/tasks/TASK-012.md"
   },
   {

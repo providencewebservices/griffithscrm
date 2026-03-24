@@ -25,6 +25,7 @@ import { tenantPricingSettingsRoutes } from './routes/tenant-pricing-settings';
 import { quotesRoutes } from './routes/quotes';
 import { publicQuotesRoutes } from './routes/public-quotes';
 import { brochuresRoutes } from './routes/brochures';
+import { publicBrochuresRoutes } from './routes/public-brochures';
 import { jobsRouter } from './routes/jobs';
 import { dashboardRoutes } from './routes/dashboard';
 import { pipelineRoutes } from './routes/pipeline';
@@ -81,6 +82,7 @@ app.on(['POST', 'GET'], '/api/auth/*', (c) => auth.handler(c.req.raw));
 app.route('/api/external', externalProductsRoutes);
 app.route('/api/public/quotes', publicQuotesRoutes);
 app.route('/api/public/payments', publicPaymentsRoutes);
+app.route('/api/public/brochures', publicBrochuresRoutes);
 app.route('/api/fonts', fontProxyRoutes);
 app.route('/api/logo', logoProxyRoutes);
 

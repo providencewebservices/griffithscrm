@@ -65,3 +65,9 @@
 - **Outcome:** done
 - **Summary:** Created `apps/api/src/routes/brochures.ts` with five endpoints: POST (create with auto-archive of existing active brochure, access token generation, brochure_products insertion), GET list (paginated with customer name join, product count subquery, status filtering for active/expired/archived/all, search by customer name), GET detail (with products join, customer email lookup from contactInfo), PATCH (update message/expiresAt, replace products array), DELETE (soft archive). Mounted at `/api/brochures` in `index.ts`.
 - **Validation:** `bun run build:api` compiles successfully with no errors.
+
+### TASK-012: Create public brochure API routes (no auth, token-based)
+- **Timestamp:** 2026-03-24T23:45:00Z
+- **Outcome:** done
+- **Summary:** Created `apps/api/src/routes/public-brochures.ts` with three endpoints: GET /:token (returns brochure data with products, tenant branding, no pricing/cost data, filters out deleted products, 410 for expired/archived), POST /:token/interest/:productId (toggles isInterested on brochure_products with timestamp management), POST /:token/ready (idempotently sets readyToDiscussAt). Mounted at `/api/public/brochures` in `index.ts` alongside other public routes. No authentication required — token-based access only.
+- **Validation:** `bun run build:api` compiles successfully with no errors.
