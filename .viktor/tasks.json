@@ -52,5 +52,71 @@
     "title": "Frontend delete component action with confirmation dialog",
     "done": true,
     "task_file": ".viktor/tasks/TASK-009.md"
+  },
+  {
+    "id": "TASK-010",
+    "title": "Add brochures and brochure_products tables to database schema",
+    "done": false,
+    "task_file": ".viktor/tasks/TASK-010.md"
+  },
+  {
+    "id": "TASK-011",
+    "title": "Create authenticated brochure API routes (staff CRUD)",
+    "done": false,
+    "task_file": ".viktor/tasks/TASK-011.md"
+  },
+  {
+    "id": "TASK-012",
+    "title": "Create public brochure API routes (no auth, token-based)",
+    "done": false,
+    "task_file": ".viktor/tasks/TASK-012.md"
+  },
+  {
+    "id": "TASK-013",
+    "title": "Create frontend hooks for brochure API",
+    "done": false,
+    "task_file": ".viktor/tasks/TASK-013.md"
+  },
+  {
+    "id": "TASK-014",
+    "title": "Build brochure list page with routing and navigation",
+    "done": false,
+    "task_file": ".viktor/tasks/TASK-014.md"
+  },
+  {
+    "id": "TASK-015",
+    "title": "Build brochure create page with product selector",
+    "done": false,
+    "task_file": ".viktor/tasks/TASK-015.md"
+  },
+  {
+    "id": "TASK-016",
+    "title": "Build brochure detail page (staff view with edit actions)",
+    "done": false,
+    "task_file": ".viktor/tasks/TASK-016.md"
+  },
+  {
+    "id": "TASK-017",
+    "title": "Build public brochure page (customer-facing)",
+    "done": false,
+    "task_file": ".viktor/tasks/TASK-017.md"
+  },
+  {
+    "id": "TASK-018",
+    "title": "Build brochure email template and send API endpoint",
+    "done": false,
+    "task_file": ".viktor/tasks/TASK-018.md"
+  },
+  {
+    "id": "TASK-019",
+    "title": "Add send email and copy link actions to brochure detail page",
+    "done": false,
+    "task_file": ".viktor/tasks/TASK-019.md"
+  },
+  {
+    "id": "TASK-020",
+    "title": "Add Create Brochure shortcut to customer detail page",
+    "done": false,
+    "task_file": ".viktor/tasks/TASK-020.md"
   }
 ]
