@@ -8,7 +8,7 @@
   {
     "id": "TASK-002",
     "title": "Update recalculateQuoteTotals to support product-level pricing",
-    "done": false,
+    "done": true,
     "task_file": ".viktor/tasks/TASK-002.md"
   },
   {

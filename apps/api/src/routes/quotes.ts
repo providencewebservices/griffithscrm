@@ -189,17 +189,23 @@ async function recalculateQuoteTotals(quoteId: string): Promise<void> {
 		db.select().from(quoteLineItems).where(eq(quoteLineItems.quoteId, quoteId)),
 	]);
 
-	// Get current quote for VAT rate
+	// Get current quote for VAT rate and product-level pricing
 	const [quote] = await db
-		.select({ vatRate: quotes.vatRate })
+		.select({
+			vatRate: quotes.vatRate,
+			productRetailPrice: quotes.productRetailPrice,
+			productSupplierCost: quotes.productSupplierCost,
+		})
 		.from(quotes)
 		.where(eq(quotes.id, quoteId))
 		.limit(1);
 
 	if (!quote) return;
 
-	// Calculate subtotal (sum of all line totals)
-	const componentTotal = components.reduce((sum, c) => sum + parseFloat(c.lineTotal), 0);
+	// Calculate subtotal (product-level pricing overrides component sum when set)
+	const componentTotal = quote.productRetailPrice !== null
+		? parseFloat(quote.productRetailPrice)
+		: components.reduce((sum, c) => sum + parseFloat(c.lineTotal), 0);
 	const letteringTotal = letteringItems.reduce((sum, l) => sum + parseFloat(l.lineTotal), 0);
 	const sundryTotal = sundryItems.reduce((sum, s) => sum + parseFloat(s.lineTotal), 0);
 
@@ -213,8 +219,10 @@ async function recalculateQuoteTotals(quoteId: string): Promise<void> {
 
 	const subtotal = componentTotal + letteringTotal + sundryTotal + vatableLineItemTotal + vatExemptLineItemTotal;
 
-	// Calculate total cost (sum of all supplier costs - line items are flat amounts with no cost tracking)
-	const componentCost = components.reduce((sum, c) => sum + parseFloat(c.supplierCost) * c.quantity, 0);
+	// Calculate total cost (product-level pricing overrides component sum when set)
+	const componentCost = quote.productRetailPrice !== null
+		? parseFloat(quote.productSupplierCost ?? '0')
+		: components.reduce((sum, c) => sum + parseFloat(c.supplierCost) * c.quantity, 0);
 	const letteringCost = letteringItems.reduce((sum, l) => sum + parseFloat(l.supplierCost) * l.letterCount, 0);
 	const sundryCost = sundryItems.reduce((sum, s) => sum + parseFloat(s.supplierCost) * s.quantity, 0);
 	const totalCost = componentCost + letteringCost + sundryCost;
