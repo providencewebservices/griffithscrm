@@ -95,3 +95,9 @@
 - **Outcome:** done
 - **Summary:** Created `apps/web/src/pages/customer/brochure-detail.tsx` with header (customer name linked to customer detail, status badge, dates, created-by name), message section with inline edit dialog, products list with signed image URLs and interest indicators (filled heart with tooltip timestamp), ready-to-discuss prominent card, and sidebar with details. Actions include edit message, edit products (reusing product selector pattern with search/add/remove/reorder), change expiry, and archive with confirmation dialog. Updated API to join `users` table for `createdByName` and `productCategories` table for `productCategoryName`. Added route `/app/brochures/:id` in App.tsx. Archived brochures display read-only (no edit actions).
 - **Validation:** `bun run build:api` and `bun run build:web` both pass with no TypeScript errors.
+
+### TASK-017: Build public brochure page (customer-facing)
+- **Timestamp:** 2026-03-24T19:30:00Z
+- **Outcome:** done
+- **Summary:** Created `apps/web/src/pages/public/brochure-view.tsx` with tenant branding header (logo via proxy + business name), staff message display, responsive product grid (auto-fill minmax 280px) with image cards and no pricing data, heart toggle with optimistic UI (cancel + rollback on error), sticky "I'm Ready to Discuss" button (disabled after click, persisted state on reload), expired/error/loading skeleton states. Modified `apps/api/src/routes/public-brochures.ts` to return pre-signed S3 image URLs so the public page can display product images without authentication. Added route `/brochure/:token` in `App.tsx`.
+- **Validation:** `bun run build:api` and `bun run build:web` both pass with no TypeScript errors.

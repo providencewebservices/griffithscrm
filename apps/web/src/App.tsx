@@ -46,6 +46,7 @@ import { TeamPage } from './pages/customer/team';
 import { TeamMemberDetailPage } from './pages/customer/team-member-detail';
 import { WorksheetDetailPage } from './pages/customer/worksheet-detail';
 import { LoginPage } from './pages/login';
+import { PublicBrochureViewPage } from './pages/public/brochure-view';
 import { PublicPackageViewPage } from './pages/public/package-view';
 import { PaymentPage } from './pages/public/payment';
 import { PaymentFailurePage } from './pages/public/payment-failure';
@@ -61,6 +62,7 @@ function App() {
 				<Route path="/reset-password" element={<ResetPasswordPage />} />
 
 				{/* Public routes (no auth required) */}
+				<Route path="/brochure/:token" element={<PublicBrochureViewPage />} />
 				<Route path="/quote/:token" element={<PublicPackageViewPage />} />
 				<Route path="/pay/:token" element={<PaymentPage />} />
 				<Route path="/payment/success" element={<PaymentSuccessPage />} />

@@ -98,7 +98,7 @@
 	{
 		"id": "TASK-017",
 		"title": "Build public brochure page (customer-facing)",
-		"done": false,
+		"done": true,
 		"task_file": ".viktor/tasks/TASK-017.md"
 	},
 	{

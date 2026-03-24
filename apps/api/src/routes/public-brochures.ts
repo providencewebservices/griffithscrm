@@ -8,6 +8,7 @@ import {
 import { and, asc, eq } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { db } from '../lib/auth';
+import { getSignedImageUrl } from '../lib/s3';
 
 const publicBrochuresRoutes = new Hono()
 	// Get brochure data for public view
@@ -57,6 +58,14 @@ const publicBrochuresRoutes = new Hono()
 		// Filter out products where the product has been deleted (LEFT JOIN returned null)
 		const validItems = items.filter((item) => item.productName !== null);
 
+		// Generate signed image URLs for products (public page can't call authenticated sign-url endpoints)
+		const productsWithSignedUrls = await Promise.all(
+			validItems.map(async (item) => {
+				const signedImageUrl = await getSignedImageUrl(item.productImageUrl);
+				return { ...item, productImageUrl: signedImageUrl };
+			}),
+		);
+
 		// Get tenant branding
 		const [tenant] = await db
 			.select({ id: tenants.id, name: tenants.name, logoUrl: tenants.logoUrl })
@@ -72,7 +81,7 @@ const publicBrochuresRoutes = new Hono()
 				createdAt: brochure.createdAt,
 				expiresAt: brochure.expiresAt,
 			},
-			products: validItems,
+			products: productsWithSignedUrls,
 			tenant: tenant ? { id: tenant.id, name: tenant.name, hasLogo: !!tenant.logoUrl } : null,
 		});
 	})
