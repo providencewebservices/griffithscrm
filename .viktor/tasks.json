@@ -1,0 +1,56 @@
+[
+  {
+    "id": "TASK-001",
+    "title": "Add productSupplierCost and productRetailPrice columns to quotes table",
+    "done": false,
+    "task_file": ".viktor/tasks/TASK-001.md"
+  },
+  {
+    "id": "TASK-002",
+    "title": "Update recalculateQuoteTotals to support product-level pricing",
+    "done": false,
+    "task_file": ".viktor/tasks/TASK-002.md"
+  },
+  {
+    "id": "TASK-003",
+    "title": "Migrate component/sundry pricing PUT endpoints to package-based route pattern",
+    "done": false,
+    "task_file": ".viktor/tasks/TASK-003.md"
+  },
+  {
+    "id": "TASK-004",
+    "title": "Add product pricing API endpoint (PUT product-pricing)",
+    "done": false,
+    "task_file": ".viktor/tasks/TASK-004.md"
+  },
+  {
+    "id": "TASK-005",
+    "title": "Add component creation API endpoint with product sync",
+    "done": false,
+    "task_file": ".viktor/tasks/TASK-005.md"
+  },
+  {
+    "id": "TASK-006",
+    "title": "Add component deletion API endpoint",
+    "done": false,
+    "task_file": ".viktor/tasks/TASK-006.md"
+  },
+  {
+    "id": "TASK-007",
+    "title": "Frontend product pricing hook, XOR toggle UI, and editable fields",
+    "done": false,
+    "task_file": ".viktor/tasks/TASK-007.md"
+  },
+  {
+    "id": "TASK-008",
+    "title": "Frontend add component inline form with mutation hook",
+    "done": false,
+    "task_file": ".viktor/tasks/TASK-008.md"
+  },
+  {
+    "id": "TASK-009",
+    "title": "Frontend delete component action with confirmation dialog",
+    "done": false,
+    "task_file": ".viktor/tasks/TASK-009.md"
+  }
+]
