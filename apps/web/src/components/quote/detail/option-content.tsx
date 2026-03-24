@@ -14,10 +14,10 @@ import {
 } from '@/components/ui/table';
 import { EditableNumber } from './editable-number';
 import { LetteringSection } from './lettering-section';
+import { ComponentsSection } from './components-section';
 import { CustomLineItemsSection } from './custom-line-items-section';
 import {
 	QUOTE_TYPE_SECTION_CONFIG,
-	formatComponentType,
 	type QuoteType,
 	type QuotePackageWithOptions,
 	type QuoteOption,
@@ -33,6 +33,7 @@ import type {
 	useAddLetteringMutation,
 	useUpdateLetteringMutation,
 	useDeleteLetteringMutation,
+	useAddComponentMutation,
 } from '@/hooks/use-quotes';
 
 export function OptionContent({
@@ -50,6 +51,7 @@ export function OptionContent({
 	addLetteringMutation,
 	updateLetteringMutation,
 	deleteLetteringMutation,
+	addComponentMutation,
 	activePresets,
 }: {
 	pkg: QuotePackageWithOptions;
@@ -66,6 +68,7 @@ export function OptionContent({
 	addLetteringMutation: ReturnType<typeof useAddLetteringMutation>;
 	updateLetteringMutation: ReturnType<typeof useUpdateLetteringMutation>;
 	deleteLetteringMutation: ReturnType<typeof useDeleteLetteringMutation>;
+	addComponentMutation: ReturnType<typeof useAddComponentMutation>;
 	activePresets: { id: string; name: string; defaultPrice: string; vatExempt: boolean; visibleToCustomer: boolean; priceVisibleToCustomer: boolean }[];
 }) {
 	const quoteType = (pkg.quoteType as QuoteType) || 'new_memorial';
@@ -91,176 +94,17 @@ export function OptionContent({
 				)}
 
 				{/* Components */}
-				{sectionConfig.showComponents && (() => {
-					const isProductPricing = option.productRetailPrice !== null;
-					return (
-						<>
-							<div className="flex items-center justify-between mb-3">
-								<h4 className="font-medium">Stone Components</h4>
-								{canEditPricing && (
-									<div className="flex items-center rounded-lg border overflow-hidden">
-										<button
-											type="button"
-											className={`px-3 py-1.5 text-sm font-medium transition-colors ${
-												!isProductPricing
-													? 'bg-primary text-primary-foreground'
-													: 'bg-background text-muted-foreground hover:bg-muted'
-											}`}
-											onClick={async () => {
-												if (!isProductPricing) return;
-												await updateProductPricing.mutateAsync({
-													packageId: pkg.id,
-													optionId: option.id,
-													supplierCost: null,
-													retailPrice: null,
-												});
-											}}
-										>
-											Price by components
-										</button>
-										<button
-											type="button"
-											className={`px-3 py-1.5 text-sm font-medium transition-colors ${
-												isProductPricing
-													? 'bg-primary text-primary-foreground'
-													: 'bg-background text-muted-foreground hover:bg-muted'
-											}`}
-											onClick={async () => {
-												if (isProductPricing) return;
-												await updateProductPricing.mutateAsync({
-													packageId: pkg.id,
-													optionId: option.id,
-													supplierCost: 0,
-													retailPrice: 0,
-												});
-											}}
-										>
-											Product price
-										</button>
-									</div>
-								)}
-							</div>
-							{isProductPricing ? (
-								<div className="border rounded-lg p-6 space-y-4">
-									<div className="flex items-center justify-between">
-										<span className="text-sm font-medium text-muted-foreground">Supplier Cost</span>
-										<EditableNumber
-											value={parseFloat(option.productSupplierCost ?? '0')}
-											onSave={async (value) => {
-												await updateProductPricing.mutateAsync({
-													packageId: pkg.id,
-													optionId: option.id,
-													supplierCost: value,
-													retailPrice: parseFloat(option.productRetailPrice ?? '0'),
-												});
-											}}
-											disabled={!canEditPricing}
-											isCurrency
-										/>
-									</div>
-									<div className="flex items-center justify-between">
-										<span className="text-sm font-medium text-muted-foreground">Retail Price</span>
-										<EditableNumber
-											value={parseFloat(option.productRetailPrice ?? '0')}
-											onSave={async (value) => {
-												await updateProductPricing.mutateAsync({
-													packageId: pkg.id,
-													optionId: option.id,
-													supplierCost: parseFloat(option.productSupplierCost ?? '0'),
-													retailPrice: value,
-												});
-											}}
-											disabled={!canEditPricing}
-											isCurrency
-										/>
-									</div>
-								</div>
-							) : (
-								<>
-									{option.components.length > 0 ? (
-										<div>
-											<p className="text-sm text-muted-foreground mb-3">
-												{option.components.length} item{option.components.length !== 1 ? 's' : ''}
-											</p>
-											<div className="border rounded-lg overflow-x-auto">
-												<Table>
-													<TableHeader>
-														<TableRow>
-															<TableHead>Type</TableHead>
-															<TableHead>Material</TableHead>
-															<TableHead>Dimensions</TableHead>
-															<TableHead className="text-center">Qty</TableHead>
-															<TableHead className="text-right">Supplier</TableHead>
-															<TableHead className="text-center">Markup</TableHead>
-															<TableHead className="text-right">Retail</TableHead>
-															<TableHead className="text-right">Total</TableHead>
-														</TableRow>
-													</TableHeader>
-													<TableBody>
-														{option.components.map((comp) => (
-															<TableRow key={comp.id} className="[&_td]:py-3">
-																<TableCell className="font-medium">{formatComponentType(comp.componentType)}</TableCell>
-																<TableCell>
-																	{comp.materialName || '-'}
-																	{comp.finishName && (
-																		<span className="text-muted-foreground text-xs block">{comp.finishName}</span>
-																	)}
-																</TableCell>
-																<TableCell className="text-sm">
-																	{comp.height && comp.width && comp.depth
-																		? `${comp.height}" × ${comp.width}" × ${comp.depth}"`
-																		: '-'}
-																</TableCell>
-																<TableCell className="text-center">{comp.quantity}</TableCell>
-																<TableCell className="text-right">
-																	<EditableNumber
-																		value={parseFloat(comp.supplierCost)}
-																		onSave={async (value) => {
-																			await updateComponentPricing.mutateAsync({
-																				packageId: pkg.id,
-																				optionId: option.id,
-																				itemId: comp.id,
-																				supplierCost: value,
-																			});
-																		}}
-																		disabled={!canEditPricing}
-																		isCurrency
-																	/>
-																</TableCell>
-																<TableCell className="text-center text-muted-foreground text-sm">
-																	<EditableNumber
-																		value={parseFloat(comp.markupPercent)}
-																		onSave={async (value) => {
-																			await updateComponentPricing.mutateAsync({
-																				packageId: pkg.id,
-																				optionId: option.id,
-																				itemId: comp.id,
-																				markupPercent: value,
-																			});
-																		}}
-																		disabled={!canEditPricing}
-																		min={0}
-																		formatValue={(val) => `${val.toFixed(0)}%`}
-																	/>
-																</TableCell>
-																<TableCell className="text-right">{formatCurrency(comp.unitPrice)}</TableCell>
-																<TableCell className="text-right font-medium">{formatCurrency(comp.lineTotal)}</TableCell>
-															</TableRow>
-														))}
-													</TableBody>
-												</Table>
-											</div>
-										</div>
-									) : (
-										<div className="border rounded-lg p-8 text-center text-muted-foreground border-dashed">
-											No stone components added yet.
-										</div>
-									)}
-								</>
-							)}
-						</>
-					);
-				})()}
+				{sectionConfig.showComponents && (
+					<ComponentsSection
+						pkg={pkg}
+						option={option}
+						canEditPricing={canEditPricing}
+						formatCurrency={formatCurrency}
+						updateComponentPricing={updateComponentPricing}
+						updateProductPricing={updateProductPricing}
+						addComponentMutation={addComponentMutation}
+					/>
+				)}
 
 				{/* Lettering */}
 				{sectionConfig.showLettering && (

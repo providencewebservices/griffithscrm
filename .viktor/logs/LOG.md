@@ -41,3 +41,9 @@
 - **Outcome:** done
 - **Summary:** Added `updateProductPricing` fetch function and `useUpdateProductPricingMutation` hook in `use-quotes.ts`. Built XOR pricing mode toggle (segmented button group) in the components section of `option-content.tsx`. In "Product price" mode, the component table is replaced by two EditableNumber fields (Supplier Cost and Retail Price). Switching modes calls the product-pricing API endpoint. Toggle is only interactive on draft quotes. Wired up the mutation in `quote-detail.tsx`.
 - **Validation:** `bun run build:api` and `bun run build:web` both compile successfully with no errors.
+
+### TASK-008: Frontend add component inline form with mutation hook
+- **Timestamp:** 2026-03-24T21:00:00Z
+- **Outcome:** done
+- **Summary:** Added `addComponent` fetch function and `useAddComponentMutation` hook in `use-quotes.ts`. Extracted the components section from `option-content.tsx` into a new `components-section.tsx` file following the `lettering-section.tsx` pattern. Added inline "Add Component" form with dropdowns for component type, material section (with cascading material filter), material, finish, dimension inputs (labels change per component type), and quantity. Form only shows in "Price by components" mode on draft quotes. Wired up mutation in `quote-detail.tsx`.
+- **Validation:** `bun run build:web` compiles successfully with no errors.

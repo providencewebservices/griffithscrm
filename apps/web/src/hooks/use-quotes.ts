@@ -788,6 +788,19 @@ export type DeleteLetteringInput = {
 	itemId: string;
 };
 
+// Component CRUD types
+export type AddComponentInput = {
+	packageId: string;
+	optionId: string;
+	componentType: string;
+	materialId?: string | null;
+	finishId?: string | null;
+	height?: number | null;
+	width?: number | null;
+	depth?: number | null;
+	quantity?: number;
+};
+
 // Line item update functions
 async function updateComponentPricing({
 	packageId,
@@ -1170,6 +1183,41 @@ export function useDeleteLetteringMutation() {
 
 	return useMutation({
 		mutationFn: deleteLettering,
+		onSuccess: (data) => {
+			queryClient.setQueryData(['quote', data.id], data);
+			queryClient.invalidateQueries({ queryKey: ['quotes'] });
+		},
+	});
+}
+
+// Component CRUD functions
+async function addComponent({
+	packageId,
+	optionId,
+	...input
+}: AddComponentInput): Promise<QuotePackageWithOptions> {
+	const response = await fetch(`${API_URL}/api/quotes/${packageId}/options/${optionId}/components`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		credentials: 'include',
+		body: JSON.stringify(input),
+	});
+
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.error || 'Failed to add component');
+	}
+
+	const data: PackageResponse = await response.json();
+	return data.package;
+}
+
+// Component mutation hooks
+export function useAddComponentMutation() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: addComponent,
 		onSuccess: (data) => {
 			queryClient.setQueryData(['quote', data.id], data);
 			queryClient.invalidateQueries({ queryKey: ['quotes'] });

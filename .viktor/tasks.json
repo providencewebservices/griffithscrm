@@ -44,7 +44,7 @@
   {
     "id": "TASK-008",
     "title": "Frontend add component inline form with mutation hook",
-    "done": false,
+    "done": true,
     "task_file": ".viktor/tasks/TASK-008.md"
   },
   {

@@ -53,6 +53,7 @@ import {
 	useAddLetteringMutation,
 	useUpdateLetteringMutation,
 	useDeleteLetteringMutation,
+	useAddComponentMutation,
 	formatQuoteStatus,
 	formatPriceRange,
 	getNextQuoteStatus,
@@ -131,6 +132,7 @@ export function QuoteDetailPage() {
 	const addLetteringMutation = useAddLetteringMutation();
 	const updateLetteringMutation = useUpdateLetteringMutation();
 	const deleteLetteringMutation = useDeleteLetteringMutation();
+	const addComponentMutation = useAddComponentMutation();
 
 	// Line item presets for dropdown
 	const { data: lineItemPresets } = useLineItemPresetsQuery();
@@ -555,6 +557,7 @@ export function QuoteDetailPage() {
 									addLetteringMutation={addLetteringMutation}
 									updateLetteringMutation={updateLetteringMutation}
 									deleteLetteringMutation={deleteLetteringMutation}
+									addComponentMutation={addComponentMutation}
 									activePresets={activePresets}
 								/>
 							</div>
