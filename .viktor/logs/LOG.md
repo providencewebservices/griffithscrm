@@ -107,3 +107,9 @@
 - **Outcome:** done
 - **Summary:** Added `POST /:id/send` endpoint to `apps/api/src/routes/brochures.ts`. Looks up brochure with tenant verification, fetches customer email via `customerContactInfo`/`contactInfo` join (returns 400 if none found), retrieves tenant name and logo for branding, builds a professional HTML email with inline styles (Georgia serif font, tenant logo, staff message, "View Your Brochure" CTA button) plus plain text fallback, sends via `sendEmail()`, then updates `emailSentAt` and increments `emailSentCount`.
 - **Validation:** `bun run build:api` passes, `bunx biome check` passes with no errors.
+
+### TASK-019: Add send email and copy link actions to brochure detail page
+- **Timestamp:** 2026-03-24T21:00:00Z
+- **Outcome:** done
+- **Summary:** Added "Send Email" and "Copy Link" buttons to the brochure detail page header. Send Email calls `useSendBrochureMutation`, shows loading state, and is disabled when customer has no email. Copy Link constructs the public URL from `accessToken` and copies to clipboard. Both use sonner toast notifications. Updated the sidebar email status to always display — showing "Last sent" date and sent count when emails have been sent, or "Not yet sent" otherwise. Actions are hidden for archived brochures.
+- **Validation:** `bun run build:web` passes with no TypeScript errors.

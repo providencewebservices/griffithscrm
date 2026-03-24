@@ -3,6 +3,8 @@ import {
 	ArrowLeft,
 	ArrowUp,
 	Heart,
+	Link as LinkIcon,
+	Mail,
 	MessageSquare,
 	MoreHorizontal,
 	Pencil,
@@ -12,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
+import { toast } from 'sonner';
 import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -47,6 +50,7 @@ import {
 	type BrochureProduct,
 	useArchiveBrochureMutation,
 	useBrochureQuery,
+	useSendBrochureMutation,
 	useUpdateBrochureMutation,
 } from '@/hooks/use-brochures';
 import { type Product, useProductsQuery } from '@/hooks/use-products';
@@ -106,6 +110,7 @@ export function BrochureDetailPage() {
 	const { data: brochure, isLoading, error } = useBrochureQuery(id);
 	const updateMutation = useUpdateBrochureMutation();
 	const archiveMutation = useArchiveBrochureMutation();
+	const sendMutation = useSendBrochureMutation();
 
 	// Signed URLs for product images
 	const productImageUrls = brochure?.products.map((p) => p.productImageUrl) ?? [];
@@ -123,6 +128,21 @@ export function BrochureDetailPage() {
 		} catch {
 			// Error handled by mutation
 		}
+	};
+
+	const handleSendEmail = () => {
+		if (!id) return;
+		sendMutation.mutate(id, {
+			onSuccess: () => toast.success('Brochure email sent'),
+			onError: (err) => toast.error(err.message || 'Failed to send email'),
+		});
+	};
+
+	const handleCopyLink = async () => {
+		if (!brochure) return;
+		const url = `${window.location.origin}/brochure/${brochure.accessToken}`;
+		await navigator.clipboard.writeText(url);
+		toast.success('Link copied to clipboard');
 	};
 
 	const getCustomerName = () => {
@@ -211,6 +231,18 @@ export function BrochureDetailPage() {
 				</div>
 				{!isArchived && (
 					<div className="flex items-center gap-2">
+						<Button variant="ghost" size="sm" onClick={handleCopyLink}>
+							<LinkIcon className="h-4 w-4 mr-2" />
+							Copy Link
+						</Button>
+						<Button
+							size="sm"
+							onClick={handleSendEmail}
+							disabled={!brochure.customerEmail || sendMutation.isPending}
+						>
+							<Mail className="h-4 w-4 mr-2" />
+							{sendMutation.isPending ? 'Sending...' : 'Send Email'}
+						</Button>
 						<DropdownMenu>
 							<DropdownMenuTrigger asChild>
 								<Button variant="outline" size="icon">
@@ -392,18 +424,21 @@ export function BrochureDetailPage() {
 								<p className="text-sm font-medium text-muted-foreground">Expires</p>
 								<p className="text-sm">{formatDate(brochure.expiresAt)}</p>
 							</div>
-							{brochure.emailSentAt && (
-								<>
-									<Separator />
-									<div>
-										<p className="text-sm font-medium text-muted-foreground">Email Sent</p>
-										<p className="text-sm">
-											{formatDateTime(brochure.emailSentAt)} ({brochure.emailSentCount}{' '}
-											{brochure.emailSentCount === 1 ? 'time' : 'times'})
+							<Separator />
+							<div>
+								<p className="text-sm font-medium text-muted-foreground">Email</p>
+								{brochure.emailSentAt ? (
+									<>
+										<p className="text-sm">Last sent: {formatDateTime(brochure.emailSentAt)}</p>
+										<p className="text-sm text-muted-foreground">
+											Sent {brochure.emailSentCount}{' '}
+											{brochure.emailSentCount === 1 ? 'time' : 'times'}
 										</p>
-									</div>
-								</>
-							)}
+									</>
+								) : (
+									<p className="text-sm text-muted-foreground">Not yet sent</p>
+								)}
+							</div>
 						</CardContent>
 					</Card>
 				</div>

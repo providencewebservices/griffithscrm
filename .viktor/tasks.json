@@ -110,7 +110,7 @@
 	{
 		"id": "TASK-019",
 		"title": "Add send email and copy link actions to brochure detail page",
-		"done": false,
+		"done": true,
 		"task_file": ".viktor/tasks/TASK-019.md"
 	},
 	{
