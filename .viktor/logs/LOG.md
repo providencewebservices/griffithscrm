@@ -101,3 +101,9 @@
 - **Outcome:** done
 - **Summary:** Created `apps/web/src/pages/public/brochure-view.tsx` with tenant branding header (logo via proxy + business name), staff message display, responsive product grid (auto-fill minmax 280px) with image cards and no pricing data, heart toggle with optimistic UI (cancel + rollback on error), sticky "I'm Ready to Discuss" button (disabled after click, persisted state on reload), expired/error/loading skeleton states. Modified `apps/api/src/routes/public-brochures.ts` to return pre-signed S3 image URLs so the public page can display product images without authentication. Added route `/brochure/:token` in `App.tsx`.
 - **Validation:** `bun run build:api` and `bun run build:web` both pass with no TypeScript errors.
+
+### TASK-018: Build brochure email template and send API endpoint
+- **Timestamp:** 2026-03-24T20:00:00Z
+- **Outcome:** done
+- **Summary:** Added `POST /:id/send` endpoint to `apps/api/src/routes/brochures.ts`. Looks up brochure with tenant verification, fetches customer email via `customerContactInfo`/`contactInfo` join (returns 400 if none found), retrieves tenant name and logo for branding, builds a professional HTML email with inline styles (Georgia serif font, tenant logo, staff message, "View Your Brochure" CTA button) plus plain text fallback, sends via `sendEmail()`, then updates `emailSentAt` and increments `emailSentCount`.
+- **Validation:** `bun run build:api` passes, `bunx biome check` passes with no errors.

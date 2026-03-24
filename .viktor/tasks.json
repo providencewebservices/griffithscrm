@@ -104,7 +104,7 @@
 	{
 		"id": "TASK-018",
 		"title": "Build brochure email template and send API endpoint",
-		"done": false,
+		"done": true,
 		"task_file": ".viktor/tasks/TASK-018.md"
 	},
 	{

@@ -7,6 +7,7 @@ import {
 	customers,
 	productCategories,
 	products,
+	tenants,
 	users,
 } from '@griffiths-crm/shared/db/schema';
 import { zValidator } from '@hono/zod-validator';
@@ -14,6 +15,7 @@ import { and, count, desc, eq, isNotNull, isNull, sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { db } from '../lib/auth';
+import { sendEmail } from '../lib/email';
 import { requireAuth, requireTenant } from '../middleware/auth';
 
 // Validation schemas
@@ -355,6 +357,158 @@ const brochuresRoutes = new Hono()
 			.where(eq(brochures.id, brochureId));
 
 		return c.json({ success: true });
-	});
+	})
+
+	// Send brochure email to customer
+	.post(
+		'/:id/send',
+		zValidator(
+			'json',
+			z.object({
+				message: z.string().optional(),
+			}),
+		),
+		async (c) => {
+			const currentUser = c.get('user');
+			const tenantId = currentUser.tenantId!;
+			const brochureId = c.req.param('id');
+			const { message: staffMessage } = c.req.valid('json');
+
+			// Look up brochure, verify tenant ownership
+			const [brochure] = await db
+				.select()
+				.from(brochures)
+				.where(and(eq(brochures.id, brochureId), eq(brochures.tenantId, tenantId)))
+				.limit(1);
+
+			if (!brochure) {
+				return c.json({ error: 'Brochure not found' }, 404);
+			}
+
+			// Look up customer's primary email
+			const customerEmails = await db
+				.select({ value: contactInfo.value })
+				.from(customerContactInfo)
+				.innerJoin(contactInfo, eq(customerContactInfo.contactInfoId, contactInfo.id))
+				.where(
+					and(
+						eq(customerContactInfo.customerId, brochure.customerId),
+						eq(contactInfo.type, 'email'),
+					),
+				)
+				.limit(1);
+
+			const toEmail = customerEmails[0]?.value;
+			if (!toEmail) {
+				return c.json({ error: 'Customer has no email address on file.' }, 400);
+			}
+
+			// Get tenant info for branding
+			const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId)).limit(1);
+			const tenantName = tenant?.name || 'Our Company';
+			const apiBaseUrl = process.env.API_BASE_URL || 'http://localhost:3000';
+			const logoHtml = tenant?.logoUrl
+				? `<img src="${apiBaseUrl}/api/logo/${tenantId}" alt="${tenantName}" style="max-height: 60px; max-width: 200px; margin-bottom: 10px;" /><br>`
+				: '';
+
+			// Construct public brochure URL
+			const baseUrl = process.env.APP_URL || 'http://localhost:5173';
+			const brochureUrl = `${baseUrl}/brochure/${brochure.accessToken}`;
+
+			// Get customer name
+			let customerName = 'Valued Customer';
+			const [customer] = await db
+				.select({ firstName: customers.firstName, lastName: customers.lastName })
+				.from(customers)
+				.where(eq(customers.id, brochure.customerId))
+				.limit(1);
+			if (customer) {
+				customerName =
+					[customer.firstName, customer.lastName].filter(Boolean).join(' ') || 'Valued Customer';
+			}
+
+			// Build email HTML
+			const emailHtml = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Memorial Selection from ${tenantName}</title>
+</head>
+<body style="font-family: Georgia, serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+    ${logoHtml}<h1 style="color: #1a1a1a; margin: 0 0 10px 0; font-size: 24px;">${tenantName}</h1>
+  </div>
+
+  <p>Dear ${customerName},</p>
+
+  ${staffMessage ? `<p>${staffMessage}</p>` : '<p>We have prepared a selection of memorials for your consideration.</p>'}
+
+  <p>Please click the button below to view the options we have selected for you.</p>
+
+  <div style="text-align: center; margin: 30px 0;">
+    <a href="${brochureUrl}" style="display: inline-block; padding: 14px 28px; background: #1a1a1a; color: #fff; text-decoration: none; border-radius: 4px; font-weight: bold;">View Your Brochure</a>
+  </div>
+
+  <p style="color: #666; font-size: 14px;">If the button doesn't work, copy and paste this link into your browser:</p>
+  <p style="color: #1a1a1a; font-size: 14px; word-break: break-all;">${brochureUrl}</p>
+
+  <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+
+  <p>If you have any questions, please don't hesitate to contact us.</p>
+
+  <p>Kind regards,<br><strong>${tenantName}</strong></p>
+</body>
+</html>
+      `.trim();
+
+			// Build plain text email
+			const emailText = `
+${tenantName}
+
+Dear ${customerName},
+
+${staffMessage ? `${staffMessage}\n\n` : ''}We have prepared a selection of memorials for your consideration.
+
+To view the options we have selected for you, please visit:
+${brochureUrl}
+
+If you have any questions, please don't hesitate to contact us.
+
+Kind regards,
+${tenantName}
+      `.trim();
+
+			// Send email
+			try {
+				await sendEmail({
+					to: toEmail,
+					subject: `Your Memorial Selection from ${tenantName}`,
+					text: emailText,
+					html: emailHtml,
+				});
+
+				// Update brochure: set emailSentAt to now, increment emailSentCount
+				const now = new Date();
+				await db
+					.update(brochures)
+					.set({
+						emailSentAt: now,
+						emailSentCount: (brochure.emailSentCount || 0) + 1,
+						updatedAt: now,
+					})
+					.where(eq(brochures.id, brochureId));
+
+				return c.json({
+					emailSentAt: now.toISOString(),
+					emailSentCount: (brochure.emailSentCount || 0) + 1,
+				});
+			} catch (error) {
+				console.error('Failed to send brochure email:', error);
+				return c.json({ error: 'Failed to send email' }, 500);
+			}
+		},
+	);
 
 export { brochuresRoutes };
