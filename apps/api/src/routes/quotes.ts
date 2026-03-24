@@ -485,6 +485,17 @@ const updateProductPricingSchema = z.object({
 	retailPrice: z.number().min(0).nullable(),
 });
 
+// Schema for adding a new component to an option
+const addComponentSchema = z.object({
+	componentType: z.enum(COMPONENT_TYPES as unknown as [string, ...string[]]),
+	materialId: z.string().optional().nullable(),
+	finishId: z.string().optional().nullable(),
+	height: z.number().min(0).optional().nullable(),
+	width: z.number().min(0).optional().nullable(),
+	depth: z.number().min(0).optional().nullable(),
+	quantity: z.number().int().min(1).optional().default(1),
+});
+
 // Schema for adding a new lettering item
 const addLetteringItemSchema = z.object({
 	techniqueId: z.string().min(1),
@@ -3359,6 +3370,133 @@ ${tenantName}
 		const fullPackage = await getPackageWithOptions(packageId, tenantId);
 		return c.json({ package: fullPackage });
 	})
+
+	// ============================================
+	// COMPONENT CRUD ENDPOINTS
+	// ============================================
+
+	// Add a new component to an option
+	.post(
+		'/:id/options/:optionId/components',
+		zValidator('json', addComponentSchema),
+		async (c) => {
+			const currentUser = c.get('user');
+			const tenantId = currentUser.tenantId!;
+			const packageId = c.req.param('id');
+			const optionId = c.req.param('optionId');
+			const data = c.req.valid('json');
+
+			// Get package and validate
+			const [pkg] = await db
+				.select()
+				.from(quotePackages)
+				.where(and(eq(quotePackages.id, packageId), eq(quotePackages.tenantId, tenantId)))
+				.limit(1);
+
+			if (!pkg) {
+				return c.json({ error: 'Package not found' }, 404);
+			}
+
+			if (pkg.status !== 'draft') {
+				return c.json({ error: 'Can only add components to draft quotes' }, 400);
+			}
+
+			// Verify option exists and belongs to this package
+			const [option] = await db
+				.select()
+				.from(quotes)
+				.where(and(eq(quotes.id, optionId), eq(quotes.packageId, packageId)))
+				.limit(1);
+
+			if (!option) {
+				return c.json({ error: 'Option not found in this package' }, 404);
+			}
+
+			// Look up material and finish for name snapshots
+			const [material] = data.materialId
+				? await db.select().from(materials).where(eq(materials.id, data.materialId)).limit(1)
+				: [null];
+			const [finish] = data.finishId
+				? await db.select().from(finishes).where(eq(finishes.id, data.finishId)).limit(1)
+				: [null];
+
+			// Get tenant pricing settings for default markup
+			const pricingSettings = await getTenantPricingSettings(tenantId);
+
+			// Calculate pricing (supplierCost starts at 0)
+			const supplierCost = 0;
+			const markupPercent = pricingSettings.defaultMarkupPercent;
+			const unitPrice = calculateRetailPrice(supplierCost, markupPercent);
+			const quantity = data.quantity ?? 1;
+			const lineTotal = unitPrice * quantity;
+
+			// Get current max sort order for components in this option
+			const [maxSortOrder] = await db
+				.select({ maxOrder: sql<number>`COALESCE(MAX(${quoteComponents.sortOrder}), -1)` })
+				.from(quoteComponents)
+				.where(eq(quoteComponents.quoteId, optionId));
+
+			// Insert new component
+			const componentId = crypto.randomUUID();
+			await db.insert(quoteComponents).values({
+				id: componentId,
+				quoteId: optionId,
+				componentType: data.componentType,
+				materialId: data.materialId || null,
+				finishId: data.finishId || null,
+				height: data.height != null ? String(data.height) : null,
+				width: data.width != null ? String(data.width) : null,
+				depth: data.depth != null ? String(data.depth) : null,
+				quantity,
+				supplierCost: String(supplierCost),
+				markupPercent: String(markupPercent),
+				unitPrice: String(unitPrice),
+				lineTotal: String(lineTotal),
+				materialName: material?.name || null,
+				finishName: finish?.name || null,
+				sortOrder: (maxSortOrder.maxOrder ?? -1) + 1,
+			});
+
+			// Product sync: if option has a productId, sync component type to product definition
+			if (option.productId) {
+				const [existingProductComponent] = await db
+					.select()
+					.from(productComponents)
+					.where(
+						and(
+							eq(productComponents.productId, option.productId),
+							eq(productComponents.componentType, data.componentType)
+						)
+					)
+					.limit(1);
+
+				if (!existingProductComponent) {
+					// Get next sort order for product components
+					const [maxProductSortOrder] = await db
+						.select({
+							maxOrder: sql<number>`COALESCE(MAX(${productComponents.sortOrder}), -1)`,
+						})
+						.from(productComponents)
+						.where(eq(productComponents.productId, option.productId));
+
+					await db.insert(productComponents).values({
+						id: crypto.randomUUID(),
+						productId: option.productId,
+						componentType: data.componentType,
+						quantity,
+						sortOrder: (maxProductSortOrder.maxOrder ?? -1) + 1,
+					});
+				}
+			}
+
+			// Recalculate quote totals
+			await recalculateQuoteTotals(optionId);
+
+			// Return updated package
+			const fullPackage = await getPackageWithOptions(packageId, tenantId);
+			return c.json({ package: fullPackage }, 201);
+		}
+	)
 
 	// Accept a specific option (creates job, sets package status to accepted)
 	.post('/:id/accept/:optionId', async (c) => {

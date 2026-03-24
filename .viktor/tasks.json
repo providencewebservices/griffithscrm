@@ -26,7 +26,7 @@
   {
     "id": "TASK-005",
     "title": "Add component creation API endpoint with product sync",
-    "done": false,
+    "done": true,
     "task_file": ".viktor/tasks/TASK-005.md"
   },
   {
