@@ -68,7 +68,14 @@ const publicBrochuresRoutes = new Hono()
 
 		// Get tenant branding
 		const [tenant] = await db
-			.select({ id: tenants.id, name: tenants.name, logoUrl: tenants.logoUrl })
+			.select({
+				id: tenants.id,
+				name: tenants.name,
+				logoUrl: tenants.logoUrl,
+				phone: tenants.phone,
+				email: tenants.email,
+				website: tenants.website,
+			})
 			.from(tenants)
 			.where(eq(tenants.id, brochure.tenantId))
 			.limit(1);
@@ -82,7 +89,16 @@ const publicBrochuresRoutes = new Hono()
 				expiresAt: brochure.expiresAt,
 			},
 			products: productsWithSignedUrls,
-			tenant: tenant ? { id: tenant.id, name: tenant.name, hasLogo: !!tenant.logoUrl } : null,
+			tenant: tenant
+				? {
+						id: tenant.id,
+						name: tenant.name,
+						hasLogo: !!tenant.logoUrl,
+						phone: tenant.phone,
+						email: tenant.email,
+						website: tenant.website,
+					}
+				: null,
 		});
 	})
 

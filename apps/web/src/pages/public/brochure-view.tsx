@@ -1,6 +1,28 @@
+import { useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertCircle, CheckCircle, Heart, Loader2, MessageSquare } from 'lucide-react';
+import {
+	AlertCircle,
+	Bookmark,
+	CheckCircle,
+	ImageIcon,
+	Loader2,
+	Mail,
+	MessageSquare,
+	Phone,
+} from 'lucide-react';
 import { useParams } from 'react-router';
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+	AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -28,7 +50,14 @@ type PublicBrochureData = {
 		expiresAt: string | null;
 	};
 	products: PublicBrochureProduct[];
-	tenant: { id: string; name: string; hasLogo: boolean } | null;
+	tenant: {
+		id: string;
+		name: string;
+		hasLogo: boolean;
+		phone: string | null;
+		email: string | null;
+		website: string | null;
+	} | null;
 };
 
 export function PublicBrochureViewPage() {
@@ -100,20 +129,24 @@ export function PublicBrochureViewPage() {
 	// Loading state
 	if (isLoading) {
 		return (
-			<div className="min-h-screen bg-gray-50">
-				<div className="bg-white border-b">
-					<div className="max-w-5xl mx-auto px-4 py-6">
-						<Skeleton className="h-8 w-48" />
+			<div className="min-h-screen bg-muted">
+				<div className="bg-background border-b">
+					<div className="max-w-5xl mx-auto px-4 py-6 sm:py-8">
+						<div className="flex items-center gap-4">
+							<Skeleton className="h-12 w-12 rounded" />
+							<Skeleton className="h-8 w-48" />
+						</div>
 					</div>
 				</div>
 				<div className="max-w-5xl mx-auto px-4 py-8">
+					<Skeleton className="h-5 w-80 mb-8" />
 					<div
 						className="grid gap-6"
 						style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}
 					>
 						{[1, 2, 3, 4].map((i) => (
 							<Card key={i}>
-								<Skeleton className="h-48 w-full rounded-t-lg rounded-b-none" />
+								<Skeleton className="aspect-[4/3] w-full rounded-t-lg rounded-b-none" />
 								<CardContent className="pt-4 space-y-2">
 									<Skeleton className="h-5 w-3/4" />
 									<Skeleton className="h-4 w-1/2" />
@@ -130,7 +163,7 @@ export function PublicBrochureViewPage() {
 	// Expired state
 	if (error instanceof Error && error.message === 'expired') {
 		return (
-			<div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+			<div className="min-h-screen bg-muted flex items-center justify-center p-4">
 				<Card className="max-w-md w-full">
 					<CardHeader>
 						<CardTitle className="flex items-center gap-2 text-yellow-700">
@@ -152,7 +185,7 @@ export function PublicBrochureViewPage() {
 	// Error state
 	if (error || !data) {
 		return (
-			<div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+			<div className="min-h-screen bg-muted flex items-center justify-center p-4">
 				<Card className="max-w-md w-full">
 					<CardHeader>
 						<CardTitle className="flex items-center gap-2 text-destructive">
@@ -172,21 +205,23 @@ export function PublicBrochureViewPage() {
 
 	const { brochure, products, tenant } = data;
 	const isReady = !!brochure.readyToDiscussAt;
+	const interestedProducts = products.filter((p) => p.isInterested);
+	const interestedCount = interestedProducts.length;
 
 	return (
-		<div className="min-h-screen bg-gray-50 pb-24">
+		<div className="min-h-screen bg-muted pb-24">
 			{/* Header */}
-			<div className="bg-white border-b">
-				<div className="max-w-5xl mx-auto px-4 py-6">
+			<div className="bg-background border-b">
+				<div className="max-w-5xl mx-auto px-4 py-6 sm:py-8">
 					<div className="flex items-center gap-4">
 						{tenant?.hasLogo && (
 							<img
 								src={`${API_URL}/api/logo/${tenant.id}`}
 								alt={tenant.name}
-								className="h-12 max-w-[160px] object-contain"
+								className="h-12 sm:h-14 max-w-[160px] object-contain"
 							/>
 						)}
-						<h1 className="text-2xl font-bold">{tenant?.name || 'Product Brochure'}</h1>
+						<h1 className="text-2xl sm:text-3xl">{tenant?.name || 'Memorial Selections'}</h1>
 					</div>
 				</div>
 			</div>
@@ -194,11 +229,13 @@ export function PublicBrochureViewPage() {
 			{/* Main Content */}
 			<div className="max-w-5xl mx-auto px-4 py-8">
 				{/* Staff message */}
-				{brochure.message && (
-					<div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-8">
-						<p className="text-blue-800 whitespace-pre-wrap">{brochure.message}</p>
-					</div>
-				)}
+				{brochure.message && <CollapsibleMessage message={brochure.message} />}
+
+				{/* Orientation text */}
+				<p className="text-muted-foreground mb-8">
+					Browse the selections below. Bookmark any you'd like to discuss, then let us know when
+					you're ready to talk.
+				</p>
 
 				{/* Product grid */}
 				{products.length === 0 ? (
@@ -220,29 +257,132 @@ export function PublicBrochureViewPage() {
 			</div>
 
 			{/* Sticky "Ready to Discuss" bar */}
-			<div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg">
+			<div className="fixed bottom-0 left-0 right-0 bg-background border-t shadow-lg z-10">
 				<div className="max-w-5xl mx-auto px-4 py-4">
 					{isReady ? (
-						<div className="flex items-center justify-center gap-2 text-green-700">
-							<CheckCircle className="h-5 w-5" />
-							<span className="font-medium">
-								Thanks! Your memorial mason will be in touch soon.
-							</span>
+						<div className="text-center space-y-2">
+							<div className="flex items-center justify-center gap-2 text-green-700">
+								<CheckCircle className="h-5 w-5" />
+								<span className="font-medium">
+									Thank you. {tenant?.name || 'Your memorial mason'} will be in touch soon.
+								</span>
+							</div>
+							{(tenant?.phone || tenant?.email) && (
+								<div className="flex items-center justify-center gap-4 text-sm text-muted-foreground">
+									{tenant?.phone && (
+										<a
+											href={`tel:${tenant.phone}`}
+											className="inline-flex items-center gap-1.5 hover:text-foreground transition-colors"
+										>
+											<Phone className="h-3.5 w-3.5" />
+											{tenant.phone}
+										</a>
+									)}
+									{tenant?.email && (
+										<a
+											href={`mailto:${tenant.email}`}
+											className="inline-flex items-center gap-1.5 hover:text-foreground transition-colors"
+										>
+											<Mail className="h-3.5 w-3.5" />
+											{tenant.email}
+										</a>
+									)}
+								</div>
+							)}
 						</div>
 					) : (
-						<Button
-							className="w-full sm:w-auto sm:mx-auto sm:flex"
-							size="lg"
-							onClick={() => readyMutation.mutate()}
-							disabled={readyMutation.isPending}
-						>
-							{readyMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-							<MessageSquare className="h-4 w-4 mr-2" />
-							I'm Ready to Discuss
-						</Button>
+						<div className="flex items-center justify-center">
+							<AlertDialog>
+								<AlertDialogTrigger asChild>
+									<Button size="lg" className="w-full sm:w-auto">
+										<MessageSquare className="h-4 w-4 mr-2" />
+										I'm Ready to Discuss
+										{interestedCount > 0 && (
+											<Badge variant="secondary" className="ml-2">
+												{interestedCount}
+											</Badge>
+										)}
+									</Button>
+								</AlertDialogTrigger>
+								<AlertDialogContent>
+									<AlertDialogHeader>
+										<AlertDialogTitle>Ready to discuss?</AlertDialogTitle>
+										<AlertDialogDescription asChild>
+											<div>
+												{interestedCount > 0 ? (
+													<>
+														You've bookmarked {interestedCount}{' '}
+														{interestedCount === 1 ? 'memorial' : 'memorials'}:
+														<ul className="mt-2 space-y-1">
+															{interestedProducts.map((p) => (
+																<li
+																	key={p.id}
+																	className="flex items-center gap-2"
+																>
+																	<Bookmark className="h-3 w-3 fill-primary text-primary shrink-0" />
+																	{p.productName}
+																</li>
+															))}
+														</ul>
+													</>
+												) : (
+													"You haven't bookmarked any memorials yet, but you can still let your mason know you're ready to talk."
+												)}
+											</div>
+										</AlertDialogDescription>
+									</AlertDialogHeader>
+									<AlertDialogFooter>
+										<AlertDialogCancel>Go Back</AlertDialogCancel>
+										<AlertDialogAction
+											onClick={() => readyMutation.mutate()}
+											disabled={readyMutation.isPending}
+										>
+											{readyMutation.isPending && (
+												<Loader2 className="h-4 w-4 mr-2 animate-spin" />
+											)}
+											Yes, I'm Ready
+										</AlertDialogAction>
+									</AlertDialogFooter>
+								</AlertDialogContent>
+							</AlertDialog>
+						</div>
 					)}
 				</div>
 			</div>
+		</div>
+	);
+}
+
+function CollapsibleMessage({ message }: { message: string }) {
+	const [expanded, setExpanded] = useState(false);
+	const [clamped, setClamped] = useState(false);
+	const textRef = useRef<HTMLParagraphElement>(null);
+
+	// Check if text is actually clamped after first render
+	const checkClamped = (el: HTMLParagraphElement | null) => {
+		textRef.current = el;
+		if (el) {
+			setClamped(el.scrollHeight > el.clientHeight);
+		}
+	};
+
+	return (
+		<div className="bg-muted/50 border border-border rounded-lg p-4 sm:p-5 mb-6">
+			<p
+				ref={checkClamped}
+				className={`text-foreground whitespace-pre-wrap leading-relaxed ${!expanded ? 'line-clamp-3' : ''}`}
+			>
+				{message}
+			</p>
+			{clamped && (
+				<button
+					type="button"
+					onClick={() => setExpanded(!expanded)}
+					className="text-sm text-muted-foreground hover:text-foreground mt-2 transition-colors"
+				>
+					{expanded ? 'Show less' : 'Read more'}
+				</button>
+			)}
 		</div>
 	);
 }
@@ -261,11 +401,11 @@ function ProductCard({
 				<img
 					src={product.productImageUrl}
 					alt={product.productName}
-					className="w-full h-48 object-cover"
+					className="w-full aspect-[4/3] object-cover"
 				/>
 			) : (
-				<div className="w-full h-48 bg-muted flex items-center justify-center">
-					<span className="text-muted-foreground text-sm">No image</span>
+				<div className="w-full aspect-[4/3] bg-muted flex items-center justify-center">
+					<ImageIcon className="h-10 w-10 text-muted-foreground/40" />
 				</div>
 			)}
 
@@ -281,11 +421,11 @@ function ProductCard({
 						type="button"
 						onClick={onToggleInterest}
 						className="shrink-0 p-2 rounded-full hover:bg-muted transition-colors touch-manipulation"
-						aria-label={product.isInterested ? 'Remove from interested' : 'Mark as interested'}
+						aria-label={product.isInterested ? 'Remove bookmark' : 'Bookmark this memorial'}
 					>
-						<Heart
+						<Bookmark
 							className={`h-6 w-6 transition-colors ${
-								product.isInterested ? 'fill-red-500 text-red-500' : 'text-muted-foreground'
+								product.isInterested ? 'fill-primary text-primary' : 'text-muted-foreground'
 							}`}
 						/>
 					</button>
