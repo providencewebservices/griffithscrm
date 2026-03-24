@@ -12,6 +12,7 @@ export type BrochureProduct = {
 	productSku: string;
 	productImageUrl: string | null;
 	productDescription: string | null;
+	productCategoryName: string | null;
 };
 
 export type BrochureListItem = {
@@ -37,6 +38,7 @@ export type Brochure = {
 	tenantId: string;
 	customerId: string;
 	createdById: string;
+	createdByName: string | null;
 	message: string | null;
 	accessToken: string;
 	expiresAt: string;

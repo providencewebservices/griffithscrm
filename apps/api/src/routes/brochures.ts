@@ -5,7 +5,9 @@ import {
 	contactInfo,
 	customerContactInfo,
 	customers,
+	productCategories,
 	products,
+	users,
 } from '@griffiths-crm/shared/db/schema';
 import { zValidator } from '@hono/zod-validator';
 import { and, count, desc, eq, isNotNull, isNull, sql } from 'drizzle-orm';
@@ -156,6 +158,7 @@ const brochuresRoutes = new Hono()
 				tenantId: brochures.tenantId,
 				customerId: brochures.customerId,
 				createdById: brochures.createdById,
+				createdByName: users.name,
 				message: brochures.message,
 				accessToken: brochures.accessToken,
 				expiresAt: brochures.expiresAt,
@@ -170,6 +173,7 @@ const brochuresRoutes = new Hono()
 			})
 			.from(brochures)
 			.leftJoin(customers, eq(brochures.customerId, customers.id))
+			.leftJoin(users, eq(brochures.createdById, users.id))
 			.where(and(eq(brochures.id, brochureId), eq(brochures.tenantId, tenantId)))
 			.limit(1);
 
@@ -189,9 +193,11 @@ const brochuresRoutes = new Hono()
 				productSku: products.sku,
 				productImageUrl: products.imageUrl,
 				productDescription: products.description,
+				productCategoryName: productCategories.name,
 			})
 			.from(brochureProducts)
 			.leftJoin(products, eq(products.id, brochureProducts.productId))
+			.leftJoin(productCategories, eq(products.categoryId, productCategories.id))
 			.where(eq(brochureProducts.brochureId, brochureId))
 			.orderBy(brochureProducts.sortOrder);
 

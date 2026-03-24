@@ -9,6 +9,7 @@ import { AdminDashboard } from './pages/admin/dashboard';
 import { TenantsPage } from './pages/admin/tenants';
 import { UsersPage } from './pages/admin/users';
 import { CustomerDashboard } from './pages/customer';
+import { BrochureDetailPage } from './pages/customer/brochure-detail';
 import { BrochureNewPage } from './pages/customer/brochure-new';
 import { BrochuresPage } from './pages/customer/brochures';
 import { CalendarPage } from './pages/customer/calendar';
@@ -94,6 +95,7 @@ function App() {
 					<Route index element={<CustomerDashboard />} />
 					<Route path="brochures" element={<BrochuresPage />} />
 					<Route path="brochures/new" element={<BrochureNewPage />} />
+					<Route path="brochures/:id" element={<BrochureDetailPage />} />
 					<Route path="quotes" element={<QuotesPage />} />
 					<Route path="quotes/new" element={<QuoteNewPage />} />
 					<Route path="quotes/:id" element={<QuoteDetailPage />} />

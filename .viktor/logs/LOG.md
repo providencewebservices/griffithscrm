@@ -89,3 +89,9 @@
 - **Outcome:** done
 - **Summary:** Created `apps/web/src/pages/customer/brochure-new.tsx` with customer selector (Command/Combobox with search, pre-selection via `customerId` query param), product search with debounced input and image thumbnails, selected products list with up/down reorder and remove buttons, message textarea, date picker defaulting to 30 days, and save button using `useCreateBrochureMutation()` with redirect to detail page. Added `/app/brochures/new` route in `App.tsx`.
 - **Validation:** `bun run build:web` compiles successfully with no TypeScript errors.
+
+### TASK-016: Build brochure detail page (staff view with edit actions)
+- **Timestamp:** 2026-03-24T18:00:00Z
+- **Outcome:** done
+- **Summary:** Created `apps/web/src/pages/customer/brochure-detail.tsx` with header (customer name linked to customer detail, status badge, dates, created-by name), message section with inline edit dialog, products list with signed image URLs and interest indicators (filled heart with tooltip timestamp), ready-to-discuss prominent card, and sidebar with details. Actions include edit message, edit products (reusing product selector pattern with search/add/remove/reorder), change expiry, and archive with confirmation dialog. Updated API to join `users` table for `createdByName` and `productCategories` table for `productCategoryName`. Added route `/app/brochures/:id` in App.tsx. Archived brochures display read-only (no edit actions).
+- **Validation:** `bun run build:api` and `bun run build:web` both pass with no TypeScript errors.

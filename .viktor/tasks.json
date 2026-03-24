@@ -92,7 +92,7 @@
 	{
 		"id": "TASK-016",
 		"title": "Build brochure detail page (staff view with edit actions)",
-		"done": false,
+		"done": true,
 		"task_file": ".viktor/tasks/TASK-016.md"
 	},
 	{
