@@ -526,7 +526,7 @@ export function SupplierCollectionDetailPage() {
 							setImportError(null);
 							try {
 								await importToCatalogMutation.mutateAsync({
-									supplierProductId: importProduct?.id,
+									supplierProductId: importProduct!.id,
 									...data,
 								});
 								setImportDialogOpen(false);

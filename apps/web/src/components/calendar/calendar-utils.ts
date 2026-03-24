@@ -218,7 +218,7 @@ export function calculateOverlapColumns(
 	for (const group of groups.values()) {
 		let maxCol = 0;
 		for (const id of group) {
-			maxCol = Math.max(maxCol, result.get(id)?.column);
+			maxCol = Math.max(maxCol, result.get(id)?.column ?? 0);
 		}
 		for (const id of group) {
 			result.get(id)!.totalColumns = maxCol + 1;
