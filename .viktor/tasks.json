@@ -2,7 +2,7 @@
   {
     "id": "TASK-001",
     "title": "Add productSupplierCost and productRetailPrice columns to quotes table",
-    "done": false,
+    "done": true,
     "task_file": ".viktor/tasks/TASK-001.md"
   },
   {

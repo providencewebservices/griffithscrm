@@ -140,6 +140,8 @@ export type QuoteOption = {
 	total: string;
 	totalCost: string;
 	vatRate: string;
+	productSupplierCost: string | null;
+	productRetailPrice: string | null;
 	product: QuoteProduct | null;
 	components: QuoteComponent[];
 	lettering: QuoteLettering[];

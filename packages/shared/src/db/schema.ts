@@ -976,6 +976,8 @@ export const quotes = pgTable('quotes', {
 	total: numeric('total', { precision: 10, scale: 2 }).notNull().default('0'),
 	totalCost: numeric('total_cost', { precision: 10, scale: 2 }).notNull().default('0'), // Sum of supplier costs
 	vatRate: numeric('vat_rate', { precision: 5, scale: 4 }).notNull().default('0'), // Snapshot of tenant VAT rate
+	productSupplierCost: numeric('product_supplier_cost', { precision: 10, scale: 2 }),
+	productRetailPrice: numeric('product_retail_price', { precision: 10, scale: 2 }),
 	notes: text('notes'), // Customer-visible notes
 	internalNotes: text('internal_notes'), // Tenant-only notes (hidden from customer)
 	flowerHoles: text('flower_holes'), // From FLOWER_HOLE_CHOICES

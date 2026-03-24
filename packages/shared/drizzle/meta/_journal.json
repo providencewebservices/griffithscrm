@@ -295,6 +295,13 @@
       "when": 1773940589191,
       "tag": "0041_slim_red_ghost",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1774367080030,
+      "tag": "0042_wonderful_hairball",
+      "breakpoints": true
     }
   ]
 }
