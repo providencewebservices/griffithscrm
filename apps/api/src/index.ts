@@ -24,6 +24,7 @@ import { finishesRoutes } from './routes/finishes';
 import { tenantPricingSettingsRoutes } from './routes/tenant-pricing-settings';
 import { quotesRoutes } from './routes/quotes';
 import { publicQuotesRoutes } from './routes/public-quotes';
+import { brochuresRoutes } from './routes/brochures';
 import { jobsRouter } from './routes/jobs';
 import { dashboardRoutes } from './routes/dashboard';
 import { pipelineRoutes } from './routes/pipeline';
@@ -148,6 +149,9 @@ app.route('/api/payments', paymentsRoutes);
 
 // Quote routes (for tenant users)
 app.route('/api/quotes', quotesRoutes);
+
+// Brochure routes (for tenant users)
+app.route('/api/brochures', brochuresRoutes);
 
 // Job routes (for tenant users)
 app.route('/api/jobs', jobsRouter);

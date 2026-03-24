@@ -62,7 +62,7 @@
   {
     "id": "TASK-011",
     "title": "Create authenticated brochure API routes (staff CRUD)",
-    "done": false,
+    "done": true,
     "task_file": ".viktor/tasks/TASK-011.md"
   },
   {

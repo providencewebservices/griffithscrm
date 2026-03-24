@@ -59,3 +59,9 @@
 - **Outcome:** done
 - **Summary:** Added `brochures` and `brochureProducts` table definitions to `schema.ts` with all required columns, FK constraints (cascade delete on tenantId/brochureId, set null on customerId/createdById/productId), unique accessToken, and a partial unique index `brochures_active_per_customer` enforcing one active brochure per customer per tenant. Generated migration `0043_perfect_peter_parker.sql` and applied it successfully.
 - **Validation:** `bun run db:generate` produced correct migration SQL. `bun run db:migrate` applied successfully. Migration SQL verified: both tables created with correct columns, FKs, and unique partial index.
+
+### TASK-011: Create authenticated brochure API routes (staff CRUD)
+- **Timestamp:** 2026-03-24T23:30:00Z
+- **Outcome:** done
+- **Summary:** Created `apps/api/src/routes/brochures.ts` with five endpoints: POST (create with auto-archive of existing active brochure, access token generation, brochure_products insertion), GET list (paginated with customer name join, product count subquery, status filtering for active/expired/archived/all, search by customer name), GET detail (with products join, customer email lookup from contactInfo), PATCH (update message/expiresAt, replace products array), DELETE (soft archive). Mounted at `/api/brochures` in `index.ts`.
+- **Validation:** `bun run build:api` compiles successfully with no errors.
