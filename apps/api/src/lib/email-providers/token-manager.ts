@@ -1,6 +1,6 @@
+import { emailIntegrations } from '@griffiths-crm/shared/db/schema';
 import { eq } from 'drizzle-orm';
 import { db } from '../auth';
-import { emailIntegrations } from '@griffiths-crm/shared/db/schema';
 import { getEmailProvider } from './index';
 
 const TOKEN_REFRESH_BUFFER_MS = 5 * 60 * 1000; // 5 minutes
@@ -54,10 +54,7 @@ export async function getValidAccessToken(integrationId: string): Promise<{
 			updates.refreshToken = result.refreshToken;
 		}
 
-		await db
-			.update(emailIntegrations)
-			.set(updates)
-			.where(eq(emailIntegrations.id, integrationId));
+		await db.update(emailIntegrations).set(updates).where(eq(emailIntegrations.id, integrationId));
 
 		return {
 			accessToken: result.accessToken,
@@ -66,8 +63,7 @@ export async function getValidAccessToken(integrationId: string): Promise<{
 	} catch (err: any) {
 		// Mark as token_expired if refresh fails
 		const isInvalidGrant =
-			err?.message?.includes('invalid_grant') ||
-			err?.response?.data?.error === 'invalid_grant';
+			err?.message?.includes('invalid_grant') || err?.response?.data?.error === 'invalid_grant';
 
 		await db
 			.update(emailIntegrations)
@@ -81,7 +77,7 @@ export async function getValidAccessToken(integrationId: string): Promise<{
 		throw new Error(
 			isInvalidGrant
 				? 'Gmail access expired. Please reconnect your account.'
-				: `Token refresh failed: ${err?.message}`
+				: `Token refresh failed: ${err?.message}`,
 		);
 	}
 }

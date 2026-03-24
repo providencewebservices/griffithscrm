@@ -1,4 +1,6 @@
-import { useState, useMemo } from 'react';
+import { ChevronDown, ChevronRight, Folder, FolderOpen, Home } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Button } from '@/components/ui/button';
 import {
 	Dialog,
 	DialogContent,
@@ -7,23 +9,15 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
 import {
-	ChevronRight,
-	ChevronDown,
-	Folder,
-	FolderOpen,
-	Home,
-} from 'lucide-react';
-import {
-	useAllFoldersQuery,
-	useMoveFolderMutation,
-	useMoveDocumentMutation,
-	useBulkMoveDocumentsMutation,
 	buildFolderTree,
 	type DocumentFolder,
+	useAllFoldersQuery,
+	useBulkMoveDocumentsMutation,
+	useMoveDocumentMutation,
+	useMoveFolderMutation,
 } from '@/hooks/use-document-folders';
+import { cn } from '@/lib/utils';
 
 type MoveItemType = 'folder' | 'document' | 'documents';
 
@@ -72,7 +66,7 @@ function FolderSelectItem({
 			<div
 				className={cn(
 					'flex items-center gap-1 py-1 px-2 rounded-md cursor-pointer hover:bg-accent text-sm',
-					isSelected && 'bg-accent'
+					isSelected && 'bg-accent',
 				)}
 				style={{ paddingLeft: `${level * 16 + 8}px` }}
 				onClick={() => onSelect(folder.id)}
@@ -97,15 +91,9 @@ function FolderSelectItem({
 					<span className="w-5" />
 				)}
 				{isExpanded ? (
-					<FolderOpen
-						className="h-4 w-4 shrink-0"
-						style={{ color: folder.color || undefined }}
-					/>
+					<FolderOpen className="h-4 w-4 shrink-0" style={{ color: folder.color || undefined }} />
 				) : (
-					<Folder
-						className="h-4 w-4 shrink-0"
-						style={{ color: folder.color || undefined }}
-					/>
+					<Folder className="h-4 w-4 shrink-0" style={{ color: folder.color || undefined }} />
 				)}
 				<span className="truncate">{folder.name}</span>
 			</div>
@@ -153,9 +141,7 @@ export function MoveItemDialog({
 	const folderTree = useMemo(() => (folders ? buildFolderTree(folders) : []), [folders]);
 
 	const isLoading =
-		moveFolderMutation.isPending ||
-		moveDocumentMutation.isPending ||
-		bulkMoveMutation.isPending;
+		moveFolderMutation.isPending || moveDocumentMutation.isPending || bulkMoveMutation.isPending;
 
 	const handleToggleExpand = (folderId: string) => {
 		setExpandedFolders((prev) => {
@@ -189,7 +175,7 @@ export function MoveItemDialog({
 			}
 			onOpenChange(false);
 			onSuccess?.();
-		} catch (error) {
+		} catch (_error) {
 			// Error is handled by mutation
 		}
 	};
@@ -214,10 +200,7 @@ export function MoveItemDialog({
 		return `Select a destination folder for "${itemName}".`;
 	};
 
-	const error =
-		moveFolderMutation.error ||
-		moveDocumentMutation.error ||
-		bulkMoveMutation.error;
+	const error = moveFolderMutation.error || moveDocumentMutation.error || bulkMoveMutation.error;
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
@@ -232,7 +215,7 @@ export function MoveItemDialog({
 					<div
 						className={cn(
 							'flex items-center gap-2 py-2 px-3 cursor-pointer hover:bg-accent text-sm',
-							selectedFolderId === null && 'bg-accent'
+							selectedFolderId === null && 'bg-accent',
 						)}
 						onClick={() => setSelectedFolderId(null)}
 					>
@@ -257,22 +240,13 @@ export function MoveItemDialog({
 						))}
 				</div>
 
-				{error && (
-					<div className="text-sm text-destructive">{error.message}</div>
-				)}
+				{error && <div className="text-sm text-destructive">{error.message}</div>}
 
 				<DialogFooter>
-					<Button
-						variant="outline"
-						onClick={() => onOpenChange(false)}
-						disabled={isLoading}
-					>
+					<Button variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
 						Cancel
 					</Button>
-					<Button
-						onClick={handleMove}
-						disabled={isLoading || selectedFolderId === currentFolderId}
-					>
+					<Button onClick={handleMove} disabled={isLoading || selectedFolderId === currentFolderId}>
 						{isLoading ? 'Moving...' : 'Move Here'}
 					</Button>
 				</DialogFooter>

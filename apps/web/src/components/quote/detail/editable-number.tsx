@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect } from 'react';
-import { Input } from '@/components/ui/input';
 import { Loader2 } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Input } from '@/components/ui/input';
 
 export function EditableNumber({
 	value,
@@ -33,7 +33,7 @@ export function EditableNumber({
 
 	const handleSave = async () => {
 		const numValue = parseFloat(editValue);
-		if (isNaN(numValue) || numValue < min) {
+		if (Number.isNaN(numValue) || numValue < min) {
 			setEditValue(String(value));
 			setIsEditing(false);
 			return;
@@ -48,7 +48,7 @@ export function EditableNumber({
 		try {
 			await onSave(numValue);
 			setIsEditing(false);
-		} catch (error) {
+		} catch (_error) {
 			setEditValue(String(value));
 		} finally {
 			setIsSaving(false);

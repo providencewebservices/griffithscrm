@@ -1,17 +1,9 @@
+import { AlertCircle, ArrowRight, Calendar, CheckCircle2, Circle } from 'lucide-react';
 import { Link } from 'react-router';
-import { Button } from '@/components/ui/button';
-import {
-	Card,
-	CardContent,
-	CardHeader,
-	CardTitle,
-} from '@/components/ui/card';
-import {
-	useTaskSummaryQuery,
-	useUpdateTaskStatusMutation,
-} from '@/hooks/use-tasks';
-import { CheckCircle2, Circle, ArrowRight, AlertCircle, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useTaskSummaryQuery, useUpdateTaskStatusMutation } from '@/hooks/use-tasks';
 
 export function MyTasksWidget() {
 	const { data: summary, isLoading } = useTaskSummaryQuery();
@@ -23,7 +15,7 @@ export function MyTasksWidget() {
 				id: taskId,
 				status: currentStatus === 'done' ? 'todo' : 'done',
 			});
-		} catch (e) {
+		} catch (_e) {
 			toast.error('Failed to update task');
 		}
 	};
@@ -73,7 +65,9 @@ export function MyTasksWidget() {
 										{task.title}
 									</Link>
 									{task.dueDate && (
-										<span className={`text-xs shrink-0 flex items-center gap-1 ${isOverdue ? 'text-red-600 font-medium' : 'text-muted-foreground'}`}>
+										<span
+											className={`text-xs shrink-0 flex items-center gap-1 ${isOverdue ? 'text-red-600 font-medium' : 'text-muted-foreground'}`}
+										>
 											{isOverdue ? (
 												<AlertCircle className="h-3 w-3" />
 											) : (

@@ -1,14 +1,14 @@
+import { ArrowLeft, Loader2, MoreHorizontal, Package, Plus, Upload, X } from 'lucide-react';
 import { useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router';
-import { Button } from '@/components/ui/button';
+import { Link, useNavigate, useParams } from 'react-router';
+import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
+import { DimensionCombosCard } from '@/components/customer/products/dimension-combos-card';
+import { OptionFormDialog } from '@/components/customer/products/option-form-dialog';
+import { ProductComponentsCard } from '@/components/customer/products/product-components-card';
+import { ProductFormDialog } from '@/components/customer/products/product-form-dialog';
+import { ProductOptionCard } from '@/components/customer/products/product-option-card';
+import { DocumentsCard } from '@/components/documents';
 import { Badge } from '@/components/ui/badge';
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from '@/components/ui/card';
 import {
 	Breadcrumb,
 	BreadcrumbItem,
@@ -17,37 +17,31 @@ import {
 	BreadcrumbPage,
 	BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
-	DropdownMenuTrigger,
 	DropdownMenuSeparator,
+	DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Separator } from '@/components/ui/separator';
-import { ProductFormDialog } from '@/components/customer/products/product-form-dialog';
-import { OptionFormDialog } from '@/components/customer/products/option-form-dialog';
-import { ProductOptionCard } from '@/components/customer/products/product-option-card';
-import { ProductComponentsCard } from '@/components/customer/products/product-components-card';
-import { DimensionCombosCard } from '@/components/customer/products/dimension-combos-card';
-import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
 import { ImageUpload } from '@/components/ui/image-upload';
+import { Separator } from '@/components/ui/separator';
 import {
-	useProductQuery,
-	useUpdateProductMutation,
+	type ProductOptionType,
+	useCreateProductOptionMutation,
+} from '@/hooks/use-product-options';
+import {
+	type UpdateProductInput,
 	useArchiveProductMutation,
-	useUnarchiveProductMutation,
 	useDeleteProductMutation,
 	useDuplicateProductMutation,
-	type UpdateProductInput,
+	useProductQuery,
+	useUnarchiveProductMutation,
+	useUpdateProductMutation,
 } from '@/hooks/use-products';
-import {
-	useCreateProductOptionMutation,
-	type ProductOptionType,
-} from '@/hooks/use-product-options';
-import { useUploadImageMutation, useSignedUrl } from '@/hooks/use-uploads';
-import { ArrowLeft, MoreHorizontal, Plus, Package, Upload, X, Loader2 } from 'lucide-react';
-import { DocumentsCard } from '@/components/documents';
+import { useSignedUrl, useUploadImageMutation } from '@/hooks/use-uploads';
 
 export function ProductDetailPage() {
 	const { id } = useParams<{ id: string }>();
@@ -113,7 +107,7 @@ export function ProductDetailPage() {
 		try {
 			await archiveMutation.mutateAsync(id);
 			setArchiveDialogOpen(false);
-		} catch (err) {
+		} catch (_err) {
 			// Error handled by mutation
 		}
 	};
@@ -122,7 +116,7 @@ export function ProductDetailPage() {
 		if (!id) return;
 		try {
 			await unarchiveMutation.mutateAsync(id);
-		} catch (err) {
+		} catch (_err) {
 			// Error handled by mutation
 		}
 	};
@@ -133,7 +127,7 @@ export function ProductDetailPage() {
 			await deleteMutation.mutateAsync(id);
 			setDeleteDialogOpen(false);
 			navigate('/app/products');
-		} catch (err) {
+		} catch (_err) {
 			// Error handled by mutation
 		}
 	};
@@ -143,7 +137,7 @@ export function ProductDetailPage() {
 		try {
 			const newProduct = await duplicateMutation.mutateAsync(id);
 			navigate(`/app/products/${newProduct.id}`);
-		} catch (err) {
+		} catch (_err) {
 			// Error handled by mutation
 		}
 	};
@@ -172,7 +166,7 @@ export function ProductDetailPage() {
 		if (!id || !product) return;
 		try {
 			await updateMutation.mutateAsync({ id, isActive: !product.isActive });
-		} catch (err) {
+		} catch (_err) {
 			// Error handled by mutation
 		}
 	};
@@ -266,15 +260,11 @@ export function ProductDetailPage() {
 							<DropdownMenuItem onClick={toggleActive}>
 								{product.isActive ? 'Deactivate' : 'Activate'}
 							</DropdownMenuItem>
-							<DropdownMenuItem onClick={handleDuplicate}>
-								Duplicate
-							</DropdownMenuItem>
+							<DropdownMenuItem onClick={handleDuplicate}>Duplicate</DropdownMenuItem>
 							<DropdownMenuSeparator />
 							{product.archivedAt ? (
 								<>
-									<DropdownMenuItem onClick={handleUnarchive}>
-										Restore
-									</DropdownMenuItem>
+									<DropdownMenuItem onClick={handleUnarchive}>Restore</DropdownMenuItem>
 									<DropdownMenuItem
 										className="text-destructive"
 										onClick={() => setDeleteDialogOpen(true)}
@@ -313,11 +303,7 @@ export function ProductDetailPage() {
 											<Upload className="h-4 w-4 mr-2" />
 											Replace
 										</Button>
-										<Button
-											variant="outline"
-											size="sm"
-											onClick={() => handleImageChange(null)}
-										>
+										<Button variant="outline" size="sm" onClick={() => handleImageChange(null)}>
 											<X className="h-4 w-4 mr-2" />
 											Remove
 										</Button>
@@ -370,9 +356,7 @@ export function ProductDetailPage() {
 								<CardTitle>Description</CardTitle>
 							</CardHeader>
 							<CardContent>
-								<p className="text-muted-foreground whitespace-pre-wrap">
-									{product.description}
-								</p>
+								<p className="text-muted-foreground whitespace-pre-wrap">{product.description}</p>
 							</CardContent>
 						</Card>
 					)}
@@ -408,11 +392,7 @@ export function ProductDetailPage() {
 							) : (
 								<div className="space-y-4">
 									{product.options?.map((option, index) => (
-										<ProductOptionCard
-											key={option.id}
-											option={option}
-											defaultOpen={index === 0}
-										/>
+										<ProductOptionCard key={option.id} option={option} defaultOpen={index === 0} />
 									))}
 								</div>
 							)}
@@ -471,13 +451,7 @@ export function ProductDetailPage() {
 							<Separator />
 							<div>
 								<p className="text-sm font-medium text-muted-foreground">Status</p>
-								<p>
-									{product.archivedAt
-										? 'Archived'
-										: product.isActive
-											? 'Active'
-											: 'Inactive'}
-								</p>
+								<p>{product.archivedAt ? 'Archived' : product.isActive ? 'Active' : 'Inactive'}</p>
 							</div>
 							<Separator />
 							<div>

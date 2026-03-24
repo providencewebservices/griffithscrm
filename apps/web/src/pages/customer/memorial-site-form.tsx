@@ -1,16 +1,6 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from '@/components/ui/card';
+import { Building, Building2, Church, Flame, Plus, Trash2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router';
 import {
 	Breadcrumb,
 	BreadcrumbItem,
@@ -19,6 +9,11 @@ import {
 	BreadcrumbPage,
 	BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
 import {
 	Select,
 	SelectContent,
@@ -26,23 +21,18 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import {
-	Field,
-	FieldGroup,
-	FieldLabel,
-} from '@/components/ui/field';
-import { Plus, Trash2, Church, Flame, Building2, Building } from 'lucide-react';
-import {
-	useMemorialSiteQuery,
-	useCreateMemorialSiteMutation,
-	useUpdateMemorialSiteMutation,
-	SITE_TYPE_LABELS,
-	PAYMENT_METHOD_LABELS,
-	type CreateMemorialSiteInput,
-	type ContactInfoInput,
 	type AddressInput,
-	type MemorialSiteType,
+	type ContactInfoInput,
+	type CreateMemorialSiteInput,
 	type MemorialSitePaymentMethod,
+	type MemorialSiteType,
+	PAYMENT_METHOD_LABELS,
+	SITE_TYPE_LABELS,
+	useCreateMemorialSiteMutation,
+	useMemorialSiteQuery,
+	useUpdateMemorialSiteMutation,
 } from '@/hooks/use-memorial-sites';
 
 const CONTACT_TYPES = [
@@ -84,7 +74,9 @@ export function MemorialSiteFormPage() {
 	// Common fields
 	const [name, setName] = useState('');
 	const [siteType, setSiteType] = useState<MemorialSiteType>('churchyard');
-	const [preferredPaymentMethod, setPreferredPaymentMethod] = useState<MemorialSitePaymentMethod | ''>('');
+	const [preferredPaymentMethod, setPreferredPaymentMethod] = useState<
+		MemorialSitePaymentMethod | ''
+	>('');
 	const [paymentDetails, setPaymentDetails] = useState('');
 	const [notes, setNotes] = useState('');
 
@@ -106,7 +98,7 @@ export function MemorialSiteFormPage() {
 					value: c.value,
 					label: c.label || '',
 					isPrimary: c.isPrimary,
-				}))
+				})),
 			);
 			setAddresses(
 				existingData.addresses.map((a) => ({
@@ -119,7 +111,7 @@ export function MemorialSiteFormPage() {
 					formattedAddress: a.formattedAddress,
 					label: a.label || '',
 					isPrimary: a.isPrimary,
-				}))
+				})),
 			);
 		}
 	}, [existingData]);
@@ -212,9 +204,7 @@ export function MemorialSiteFormPage() {
 					</BreadcrumbItem>
 					<BreadcrumbSeparator />
 					<BreadcrumbItem>
-						<BreadcrumbPage>
-							{isEditing ? 'Edit' : 'New Memorial Site'}
-						</BreadcrumbPage>
+						<BreadcrumbPage>{isEditing ? 'Edit' : 'New Memorial Site'}</BreadcrumbPage>
 					</BreadcrumbItem>
 				</BreadcrumbList>
 			</Breadcrumb>
@@ -224,16 +214,12 @@ export function MemorialSiteFormPage() {
 					{isEditing ? 'Edit Memorial Site' : 'New Memorial Site'}
 				</h2>
 				<p className="text-muted-foreground mt-1">
-					{isEditing
-						? 'Update memorial site details'
-						: 'Add a new memorial site to your records'}
+					{isEditing ? 'Update memorial site details' : 'Add a new memorial site to your records'}
 				</p>
 			</div>
 
 			{error && (
-				<div className="bg-destructive/10 text-destructive px-4 py-2 rounded mb-4">
-					{error}
-				</div>
+				<div className="bg-destructive/10 text-destructive px-4 py-2 rounded mb-4">{error}</div>
 			)}
 
 			<form onSubmit={handleSubmit}>
@@ -311,7 +297,9 @@ export function MemorialSiteFormPage() {
 										<FieldLabel htmlFor="paymentMethod">Preferred Payment Method</FieldLabel>
 										<Select
 											value={preferredPaymentMethod}
-											onValueChange={(v) => setPreferredPaymentMethod(v as MemorialSitePaymentMethod)}
+											onValueChange={(v) =>
+												setPreferredPaymentMethod(v as MemorialSitePaymentMethod)
+											}
 										>
 											<SelectTrigger>
 												<SelectValue placeholder="Select payment method" />
@@ -355,9 +343,7 @@ export function MemorialSiteFormPage() {
 						</CardHeader>
 						<CardContent>
 							{contacts.length === 0 ? (
-								<p className="text-sm text-muted-foreground">
-									No contact information added.
-								</p>
+								<p className="text-sm text-muted-foreground">No contact information added.</p>
 							) : (
 								<div className="space-y-3">
 									{contacts.map((contact, index) => (
@@ -381,7 +367,9 @@ export function MemorialSiteFormPage() {
 													</SelectContent>
 												</Select>
 												<Input
-													placeholder={contact.type === 'email' ? 'email@example.com' : '01234 567890'}
+													placeholder={
+														contact.type === 'email' ? 'email@example.com' : '01234 567890'
+													}
 													value={contact.value}
 													onChange={(e) => updateContact(index, { value: e.target.value })}
 													className="flex-1"
@@ -477,7 +465,10 @@ export function MemorialSiteFormPage() {
 													placeholder="County"
 													value={address.administrativeAreaLevel1 || ''}
 													onChange={(e) => {
-														const updated = { ...address, administrativeAreaLevel1: e.target.value };
+														const updated = {
+															...address,
+															administrativeAreaLevel1: e.target.value,
+														};
 														updated.formattedAddress = generateFormattedAddress(updated);
 														updateAddress(index, updated);
 													}}

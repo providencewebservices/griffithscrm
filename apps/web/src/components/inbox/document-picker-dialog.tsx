@@ -1,4 +1,8 @@
-import { useState, useCallback, useMemo } from 'react';
+import { Search } from 'lucide-react';
+import { useCallback, useMemo, useState } from 'react';
+import { FileTypeIcon } from '@/components/documents/file-type-icon';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
 	Dialog,
 	DialogContent,
@@ -6,13 +10,13 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Search } from 'lucide-react';
-import { FileTypeIcon } from '@/components/documents/file-type-icon';
+import {
+	DOCUMENT_ENTITY_LABELS,
+	type DocumentEntityType,
+	useDocumentsQuery,
+} from '@/hooks/use-documents';
 import { formatFileSize } from '@/lib/file-utils';
-import { useDocumentsQuery, DOCUMENT_ENTITY_LABELS, type DocumentEntityType } from '@/hooks/use-documents';
 
 interface DocumentPickerDialogProps {
 	open: boolean;
@@ -38,7 +42,7 @@ export function DocumentPickerDialog({
 					search: search || undefined,
 					limit: 50,
 				}
-			: undefined
+			: undefined,
 	);
 
 	const documents = useMemo(() => {
@@ -48,8 +52,10 @@ export function DocumentPickerDialog({
 		// If we have entity context, sort those to the top
 		if (entityContext) {
 			return [...filtered].sort((a, b) => {
-				const aMatch = a.entityType === entityContext.entityType && a.entityId === entityContext.entityId;
-				const bMatch = b.entityType === entityContext.entityType && b.entityId === entityContext.entityId;
+				const aMatch =
+					a.entityType === entityContext.entityType && a.entityId === entityContext.entityId;
+				const bMatch =
+					b.entityType === entityContext.entityType && b.entityId === entityContext.entityId;
 				if (aMatch && !bMatch) return -1;
 				if (!aMatch && bMatch) return 1;
 				return 0;
@@ -78,7 +84,7 @@ export function DocumentPickerDialog({
 				name: d.name || d.filename,
 				size: d.size || 0,
 				contentType: d.contentType,
-			}))
+			})),
 		);
 		setSelectedIds(new Set());
 		setSearch('');
@@ -93,7 +99,7 @@ export function DocumentPickerDialog({
 			}
 			onOpenChange(isOpen);
 		},
-		[onOpenChange]
+		[onOpenChange],
 	);
 
 	return (
@@ -137,24 +143,19 @@ export function DocumentPickerDialog({
 										isSelected ? 'bg-muted/50' : ''
 									}`}
 								>
-									<Checkbox
-										checked={isSelected}
-										onCheckedChange={() => handleToggle(doc.id)}
-									/>
+									<Checkbox checked={isSelected} onCheckedChange={() => handleToggle(doc.id)} />
 									<FileTypeIcon contentType={doc.contentType} className="w-8 h-8 shrink-0" />
 									<div className="flex-1 min-w-0">
-										<p className="text-sm font-medium truncate">
-											{doc.name || doc.filename}
-										</p>
+										<p className="text-sm font-medium truncate">{doc.name || doc.filename}</p>
 										<div className="flex items-center gap-2 text-xs text-muted-foreground">
 											{doc.entityName && (
 												<span className="truncate max-w-[150px]">
-													{DOCUMENT_ENTITY_LABELS[doc.entityType as DocumentEntityType] || doc.entityType}: {doc.entityName}
+													{DOCUMENT_ENTITY_LABELS[doc.entityType as DocumentEntityType] ||
+														doc.entityType}
+													: {doc.entityName}
 												</span>
 											)}
-											{isEntityMatch && (
-												<span className="text-primary font-medium">Related</span>
-											)}
+											{isEntityMatch && <span className="text-primary font-medium">Related</span>}
 										</div>
 									</div>
 									<span className="text-xs text-muted-foreground whitespace-nowrap">

@@ -1,23 +1,23 @@
-import { eq, and, inArray, sql } from 'drizzle-orm';
-import { db } from './auth';
+import crypto from 'node:crypto';
 import {
 	contactInfo,
 	customerContactInfo,
-	funeralDirectorContactInfo,
-	supplierContactInfo,
 	customers,
-	funeralDirectors,
-	suppliers,
 	emailEntityLinks,
+	funeralDirectorContactInfo,
+	funeralDirectors,
+	supplierContactInfo,
+	suppliers,
 } from '@griffiths-crm/shared/db/schema';
-import crypto from 'crypto';
+import { and, eq, inArray, sql } from 'drizzle-orm';
+import { db } from './auth';
 
 /**
  * Collect all unique email addresses from thread messages.
  * Parses JSON-encoded toAddresses/ccAddresses fields.
  */
 export function collectEmailAddresses(
-	messages: { fromAddress: string | null; toAddresses: string; ccAddresses: string }[]
+	messages: { fromAddress: string | null; toAddresses: string; ccAddresses: string }[],
 ): string[] {
 	const addresses = new Set<string>();
 
@@ -52,7 +52,7 @@ export function collectEmailAddresses(
 export async function autoLinkThreadByEmail(
 	threadId: string,
 	tenantId: string,
-	emailAddresses: string[]
+	emailAddresses: string[],
 ): Promise<void> {
 	if (emailAddresses.length === 0) return;
 
@@ -61,12 +61,7 @@ export async function autoLinkThreadByEmail(
 	const matchingContacts = await db
 		.select({ id: contactInfo.id })
 		.from(contactInfo)
-		.where(
-			and(
-				eq(contactInfo.type, 'email'),
-				sql`LOWER(${contactInfo.value}) IN ${lowered}`
-			)
-		);
+		.where(and(eq(contactInfo.type, 'email'), sql`LOWER(${contactInfo.value}) IN ${lowered}`));
 
 	if (matchingContacts.length === 0) return;
 
@@ -83,8 +78,8 @@ export async function autoLinkThreadByEmail(
 		.where(
 			and(
 				inArray(customerContactInfo.contactInfoId, contactInfoIds),
-				eq(customers.tenantId, tenantId)
-			)
+				eq(customers.tenantId, tenantId),
+			),
 		);
 	for (const m of customerMatches) {
 		entityMatches.push({ entityType: 'customer', entityId: m.entityId });
@@ -96,13 +91,13 @@ export async function autoLinkThreadByEmail(
 		.from(funeralDirectorContactInfo)
 		.innerJoin(
 			funeralDirectors,
-			eq(funeralDirectors.id, funeralDirectorContactInfo.funeralDirectorId)
+			eq(funeralDirectors.id, funeralDirectorContactInfo.funeralDirectorId),
 		)
 		.where(
 			and(
 				inArray(funeralDirectorContactInfo.contactInfoId, contactInfoIds),
-				eq(funeralDirectors.tenantId, tenantId)
-			)
+				eq(funeralDirectors.tenantId, tenantId),
+			),
 		);
 	for (const m of fdMatches) {
 		entityMatches.push({ entityType: 'funeral_director', entityId: m.entityId });
@@ -116,8 +111,8 @@ export async function autoLinkThreadByEmail(
 		.where(
 			and(
 				inArray(supplierContactInfo.contactInfoId, contactInfoIds),
-				eq(suppliers.tenantId, tenantId)
-			)
+				eq(suppliers.tenantId, tenantId),
+			),
 		);
 	for (const m of supplierMatches) {
 		entityMatches.push({ entityType: 'supplier', entityId: m.entityId });

@@ -1,5 +1,5 @@
-import type { IEmailProvider } from './types';
 import { GmailProvider } from './gmail';
+import type { IEmailProvider } from './types';
 
 const providers: Record<string, IEmailProvider> = {
 	gmail: new GmailProvider(),

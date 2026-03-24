@@ -2,60 +2,60 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { auth } from './lib/auth';
+import { startEmailSyncScheduler } from './lib/email-sync-scheduler';
 import { adminRoutes } from './routes/admin';
-import { teamRoutes } from './routes/team';
-import { customerRoutes } from './routes/customers';
-import { tenantSettingsRoutes } from './routes/tenant-settings';
-import { uploadRoutes } from './routes/uploads';
-import { letteringTechniquesRoutes } from './routes/lettering-techniques';
-import { letteringCostsRoutes } from './routes/lettering-costs';
-import { letteringColorsRoutes } from './routes/lettering-colors';
-import { sundriesRoutes } from './routes/sundries';
-import { lineItemPresetsRoutes } from './routes/line-item-presets';
-import { productCategoriesRoutes } from './routes/product-categories';
-import { productsRoutes } from './routes/products';
-import { productOptionsRoutes } from './routes/product-options';
-import { optionChoicesRoutes } from './routes/option-choices';
-import { productComponentsRoutes } from './routes/product-components';
-import { dimensionCombosRoutes } from './routes/dimension-combos';
-import { materialSectionsRoutes } from './routes/material-sections';
-import { materialsRoutes } from './routes/materials';
-import { finishesRoutes } from './routes/finishes';
-import { tenantPricingSettingsRoutes } from './routes/tenant-pricing-settings';
-import { quotesRoutes } from './routes/quotes';
-import { publicQuotesRoutes } from './routes/public-quotes';
 import { brochuresRoutes } from './routes/brochures';
-import { publicBrochuresRoutes } from './routes/public-brochures';
-import { jobsRouter } from './routes/jobs';
-import { dashboardRoutes } from './routes/dashboard';
-import { pipelineRoutes } from './routes/pipeline';
-import { funeralDirectorsRoutes } from './routes/funeral-directors';
-import { memorialSitesRoutes } from './routes/memorial-sites';
-import { suppliersRoutes } from './routes/suppliers';
-import { supplierCollectionsRoutes } from './routes/supplier-collections';
-import { supplierCategoriesRoutes } from './routes/supplier-categories';
-import { supplierProductsRoutes } from './routes/supplier-products';
 import { calendarRoutes } from './routes/calendar';
-import { timeOffRoutes } from './routes/time-off';
-import { documentsRoutes } from './routes/documents';
+import { customerRoutes } from './routes/customers';
+import { dashboardRoutes } from './routes/dashboard';
+import { dimensionCombosRoutes } from './routes/dimension-combos';
 import { documentFoldersRoutes } from './routes/document-folders';
+import { documentsRoutes } from './routes/documents';
 import { emailIntegrationsRoutes } from './routes/email-integrations';
+import { externalProductsRoutes } from './routes/external-products';
+import { finishesRoutes } from './routes/finishes';
+import { fontProxyRoutes } from './routes/font-proxy';
+import { fontsRoutes } from './routes/fonts';
+import { funeralDirectorsRoutes } from './routes/funeral-directors';
 import { inboxRoutes } from './routes/inbox';
 import { inboxWebhookRoutes } from './routes/inbox-webhook';
-import { tasksRoutes } from './routes/tasks';
-import { worksheetsRoutes } from './routes/worksheets';
-import { takepaymentsSettingsRoutes } from './routes/takepayments-settings';
-import { paymentsRoutes } from './routes/payments';
-import { publicPaymentsRoutes } from './routes/public-payments';
-import { fontsRoutes } from './routes/fonts';
-import { fontProxyRoutes } from './routes/font-proxy';
-import { logoProxyRoutes } from './routes/logo-proxy';
-import { workflowTemplatesRoutes } from './routes/workflow-templates';
-import { jobWorkflowTasksRoutes } from './routes/job-workflow-tasks';
 import { jobFormsRoutes } from './routes/job-forms';
 import { jobProofsRoutes } from './routes/job-proofs';
-import { externalProductsRoutes } from './routes/external-products';
-import { startEmailSyncScheduler } from './lib/email-sync-scheduler';
+import { jobWorkflowTasksRoutes } from './routes/job-workflow-tasks';
+import { jobsRouter } from './routes/jobs';
+import { letteringColorsRoutes } from './routes/lettering-colors';
+import { letteringCostsRoutes } from './routes/lettering-costs';
+import { letteringTechniquesRoutes } from './routes/lettering-techniques';
+import { lineItemPresetsRoutes } from './routes/line-item-presets';
+import { logoProxyRoutes } from './routes/logo-proxy';
+import { materialSectionsRoutes } from './routes/material-sections';
+import { materialsRoutes } from './routes/materials';
+import { memorialSitesRoutes } from './routes/memorial-sites';
+import { optionChoicesRoutes } from './routes/option-choices';
+import { paymentsRoutes } from './routes/payments';
+import { pipelineRoutes } from './routes/pipeline';
+import { productCategoriesRoutes } from './routes/product-categories';
+import { productComponentsRoutes } from './routes/product-components';
+import { productOptionsRoutes } from './routes/product-options';
+import { productsRoutes } from './routes/products';
+import { publicBrochuresRoutes } from './routes/public-brochures';
+import { publicPaymentsRoutes } from './routes/public-payments';
+import { publicQuotesRoutes } from './routes/public-quotes';
+import { quotesRoutes } from './routes/quotes';
+import { sundriesRoutes } from './routes/sundries';
+import { supplierCategoriesRoutes } from './routes/supplier-categories';
+import { supplierCollectionsRoutes } from './routes/supplier-collections';
+import { supplierProductsRoutes } from './routes/supplier-products';
+import { suppliersRoutes } from './routes/suppliers';
+import { takepaymentsSettingsRoutes } from './routes/takepayments-settings';
+import { tasksRoutes } from './routes/tasks';
+import { teamRoutes } from './routes/team';
+import { tenantPricingSettingsRoutes } from './routes/tenant-pricing-settings';
+import { tenantSettingsRoutes } from './routes/tenant-settings';
+import { timeOffRoutes } from './routes/time-off';
+import { uploadRoutes } from './routes/uploads';
+import { workflowTemplatesRoutes } from './routes/workflow-templates';
+import { worksheetsRoutes } from './routes/worksheets';
 
 const app = new Hono();
 
@@ -64,12 +64,9 @@ app.use('*', logger());
 app.use(
 	'*',
 	cors({
-		origin: [
-			'http://localhost:5173',
-			process.env.CORS_ORIGIN,
-		].filter(Boolean) as string[],
+		origin: ['http://localhost:5173', process.env.CORS_ORIGIN].filter(Boolean) as string[],
 		credentials: true,
-	})
+	}),
 );
 
 // Health check

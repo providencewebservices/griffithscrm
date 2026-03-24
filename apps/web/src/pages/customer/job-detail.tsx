@@ -1,17 +1,51 @@
-import { useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router';
-import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
+import { FORM_STATUSES, WORKFLOW_STEP_CATEGORIES } from '@griffiths-crm/shared/db/schema';
 import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from '@/components/ui/card';
-import { Textarea } from '@/components/ui/textarea';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+	AlertCircle,
+	ArrowLeft,
+	Blocks,
+	Calendar,
+	Check,
+	CheckCircle2,
+	ChevronDown,
+	ChevronRight,
+	Circle,
+	CircleCheck,
+	CircleDashed,
+	CircleMinus,
+	ClipboardList,
+	CreditCard,
+	ExternalLink,
+	Eye,
+	Factory,
+	FileImage,
+	FileText,
+	History,
+	Image,
+	Link2,
+	ListChecks,
+	Loader2,
+	MessageSquare,
+	MoreHorizontal,
+	Package,
+	Paperclip,
+	Play,
+	Plus,
+	Printer,
+	Receipt,
+	RefreshCw,
+	Save,
+	Star,
+	Trash2,
+	Truck,
+	Upload,
+	User,
+	X,
+} from 'lucide-react';
+import { useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router';
+import { toast } from 'sonner';
+import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
+import { JobTasksSection } from '@/components/tasks/job-tasks-section';
 import { Badge } from '@/components/ui/badge';
 import {
 	Breadcrumb,
@@ -21,13 +55,9 @@ import {
 	BreadcrumbPage,
 	BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
-import {
-	Collapsible,
-	CollapsibleContent,
-	CollapsibleTrigger,
-} from '@/components/ui/collapsible';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
 	Dialog,
 	DialogContent,
@@ -38,145 +68,98 @@ import {
 	DialogTrigger,
 } from '@/components/ui/dialog';
 import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Progress } from '@/components/ui/progress';
+import {
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
 import {
-	useJobQuery,
-	useUpdateJobStatusMutation,
-	useUpdateJobNotesMutation,
-	useDeleteJobMutation,
-	usePaymentScheduleQuery,
-	useUpdatePaymentScheduleItemMutation,
-	useCreatePaymentScheduleItemMutation,
-	useDeletePaymentScheduleItemMutation,
-	useAttachmentsQuery,
-	usePresignAttachmentMutation,
-	useConfirmAttachmentMutation,
-	useDeleteAttachmentMutation,
-	useGeneratePaymentLinkMutation,
-	useUpdateJobDatesMutation,
-	useMarkInvoicedMutation,
-	useUpdateAccountStatusMutation,
-	useRecalculateAccountStatusMutation,
-	useSubmitReviewMutation,
-	formatJobStatus,
-	getNextJobStatus,
-	getNextStatusButtonLabel,
-	getJobStatusSequence,
-	formatAttachmentCategory,
-	formatAccountStatus,
-	getAccountStatusColor,
-	formatDepositStatus,
-	getDepositStatusColor,
-	ACCOUNT_STATUSES,
-	REVIEW_OUTCOMES,
-	type JobStatus,
-	type AccountStatus,
-	type ReviewOutcome,
-	type PaymentScheduleItem,
-	type JobAttachment,
-	type JobAttachmentCategory,
-} from '@/hooks/use-jobs';
-import {
-	QUOTE_TYPE_LABELS,
-	QUOTE_TYPE_SECTION_CONFIG,
-	getQuoteTypeVariant,
-	type QuoteType,
-} from '@/hooks/use-quotes';
-import { useTasksQuery, type TaskListItem } from '@/hooks/use-tasks';
-import {
-	ArrowLeft,
-	Package,
-	Factory,
-	Truck,
-	CheckCircle2,
-	Trash2,
-	ExternalLink,
-	Loader2,
-	Save,
-	ChevronDown,
-	Check,
-	Plus,
-	AlertCircle,
-	Calendar,
-	CreditCard,
-	Paperclip,
-	FileText,
-	Image,
-	Upload,
-	X,
-	Link2,
-	Printer,
-	ClipboardList,
-	Blocks,
-	Receipt,
-	RefreshCw,
-	ListChecks,
-	User,
-	Circle,
-	CircleCheck,
-	CircleDashed,
-	CircleMinus,
-	ChevronRight,
-	MoreHorizontal,
-	Play,
-	FileImage,
-	Eye,
-	MessageSquare,
-	History,
-	Star,
-} from 'lucide-react';
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { JobTasksSection } from '@/components/tasks/job-tasks-section';
-import {
-	useMemorialWorksheetQuery,
-	useCreateMemorialWorksheetMutation,
-	useUpdateMemorialWorksheetMutation,
-	type MemorialWorksheet,
-} from '@/hooks/use-memorial-worksheet';
-import {
-	useJobWorkflowTasksQuery,
-	useGenerateWorkflowMutation,
-	useCompleteWorkflowTaskMutation,
-	useSkipWorkflowTaskMutation,
-	useUpdateWorkflowTaskMutation,
-	useAddWorkflowTaskMutation,
-	useDeleteWorkflowTaskMutation,
-	type WorkflowTask,
-	type WorkflowTaskStatus,
-	type WorkflowStepCategory,
-} from '@/hooks/use-job-workflow-tasks';
-import { useTeamQuery } from '@/hooks/use-team';
-import { WORKFLOW_STEP_CATEGORIES, FORM_STATUSES } from '@griffiths-crm/shared/db/schema';
-import { Progress } from '@/components/ui/progress';
-import {
-	useJobFormsQuery,
-	useFormSuggestionsQuery,
 	useAddFormMutation,
-	useUpdateFormMutation,
 	useDeleteFormMutation,
-	type JobForm,
-	type FormStatus,
+	useFormSuggestionsQuery,
+	useJobFormsQuery,
+	useUpdateFormMutation,
 } from '@/hooks/use-job-forms';
 import {
+	type ProofStatus,
+	useApproveProofMutation,
+	useConfirmProofMutation,
 	useJobProofsQuery,
 	usePresignProofMutation,
-	useConfirmProofMutation,
-	useSendProofMutation,
-	useApproveProofMutation,
 	useRequestRevisionMutation,
-	type JobProof,
-	type ProofStatus,
+	useSendProofMutation,
 } from '@/hooks/use-job-proofs';
+import {
+	useAddWorkflowTaskMutation,
+	useCompleteWorkflowTaskMutation,
+	useDeleteWorkflowTaskMutation,
+	useGenerateWorkflowMutation,
+	useJobWorkflowTasksQuery,
+	useSkipWorkflowTaskMutation,
+	useUpdateWorkflowTaskMutation,
+	type WorkflowStepCategory,
+} from '@/hooks/use-job-workflow-tasks';
+import {
+	ACCOUNT_STATUSES,
+	type AccountStatus,
+	formatAccountStatus,
+	formatAttachmentCategory,
+	formatDepositStatus,
+	formatJobStatus,
+	getAccountStatusColor,
+	getDepositStatusColor,
+	getJobStatusSequence,
+	getNextJobStatus,
+	getNextStatusButtonLabel,
+	type JobAttachmentCategory,
+	type JobStatus,
+	type PaymentScheduleItem,
+	REVIEW_OUTCOMES,
+	type ReviewOutcome,
+	useAttachmentsQuery,
+	useConfirmAttachmentMutation,
+	useCreatePaymentScheduleItemMutation,
+	useDeleteAttachmentMutation,
+	useDeleteJobMutation,
+	useDeletePaymentScheduleItemMutation,
+	useGeneratePaymentLinkMutation,
+	useJobQuery,
+	useMarkInvoicedMutation,
+	usePaymentScheduleQuery,
+	usePresignAttachmentMutation,
+	useRecalculateAccountStatusMutation,
+	useSubmitReviewMutation,
+	useUpdateAccountStatusMutation,
+	useUpdateJobDatesMutation,
+	useUpdateJobNotesMutation,
+	useUpdateJobStatusMutation,
+	useUpdatePaymentScheduleItemMutation,
+} from '@/hooks/use-jobs';
+import {
+	useCreateMemorialWorksheetMutation,
+	useMemorialWorksheetQuery,
+	useUpdateMemorialWorksheetMutation,
+} from '@/hooks/use-memorial-worksheet';
+import {
+	getQuoteTypeVariant,
+	QUOTE_TYPE_LABELS,
+	QUOTE_TYPE_SECTION_CONFIG,
+	type QuoteType,
+} from '@/hooks/use-quotes';
+import { useTasksQuery } from '@/hooks/use-tasks';
+import { useTeamQuery } from '@/hooks/use-team';
 
 // Review outcome labels
 function formatReviewOutcome(outcome: string): string {
@@ -266,7 +249,9 @@ export function JobDetailPage() {
 	const [showFormSuggestions, setShowFormSuggestions] = useState(false);
 
 	// Proof state
-	const [proofUploadProgress, setProofUploadProgress] = useState<'idle' | 'uploading' | 'confirming'>('idle');
+	const [proofUploadProgress, setProofUploadProgress] = useState<
+		'idle' | 'uploading' | 'confirming'
+	>('idle');
 	const [revisionDialogOpen, setRevisionDialogOpen] = useState(false);
 	const [revisionProofId, setRevisionProofId] = useState<string | null>(null);
 	const [revisionFeedback, setRevisionFeedback] = useState('');
@@ -627,15 +612,30 @@ export function JobDetailPage() {
 	};
 
 	const getProofStatusBadge = (status: ProofStatus) => {
-		const config: Record<ProofStatus, { label: string; variant: 'secondary' | 'default' | 'destructive' | 'outline' ; className?: string }> = {
+		const config: Record<
+			ProofStatus,
+			{
+				label: string;
+				variant: 'secondary' | 'default' | 'destructive' | 'outline';
+				className?: string;
+			}
+		> = {
 			draft: { label: 'Draft', variant: 'secondary' },
 			sent_to_customer: { label: 'Sent to Customer', variant: 'default', className: 'bg-blue-500' },
 			approved: { label: 'Approved', variant: 'default', className: 'bg-green-500' },
-			revision_requested: { label: 'Revision Requested', variant: 'default', className: 'bg-orange-500' },
+			revision_requested: {
+				label: 'Revision Requested',
+				variant: 'default',
+				className: 'bg-orange-500',
+			},
 			superseded: { label: 'Superseded', variant: 'secondary', className: 'opacity-60' },
 		};
 		const c = config[status];
-		return <Badge variant={c.variant} className={c.className}>{c.label}</Badge>;
+		return (
+			<Badge variant={c.variant} className={c.className}>
+				{c.label}
+			</Badge>
+		);
 	};
 
 	// Worksheet handlers
@@ -750,9 +750,8 @@ export function JobDetailPage() {
 		return <FileText className="h-5 w-5 text-red-500" />;
 	};
 
-	const filteredAttachments = attachments?.filter(
-		(a) => categoryFilter === 'all' || a.category === categoryFilter
-	) || [];
+	const filteredAttachments =
+		attachments?.filter((a) => categoryFilter === 'all' || a.category === categoryFilter) || [];
 
 	if (isLoading) {
 		return (
@@ -799,7 +798,8 @@ export function JobDetailPage() {
 	// Workflow task counts
 	const workflowCompleted = workflowTasks?.filter((t) => t.status === 'completed').length ?? 0;
 	const workflowTotal = workflowTasks?.length ?? 0;
-	const workflowProgressPercent = workflowTotal > 0 ? Math.round((workflowCompleted / workflowTotal) * 100) : 0;
+	const workflowProgressPercent =
+		workflowTotal > 0 ? Math.round((workflowCompleted / workflowTotal) * 100) : 0;
 
 	// Memorial details heading per type
 	const memorialHeadings: Record<string, string> = {
@@ -812,7 +812,8 @@ export function JobDetailPage() {
 	const memorialHeading = memorialHeadings[quoteType] || 'Memorial Details';
 
 	// Check if specifications tab would have content
-	const hasSpecifications = (sectionConfig?.showComponents && job.quote.components.length > 0) ||
+	const hasSpecifications =
+		(sectionConfig?.showComponents && job.quote.components.length > 0) ||
 		(sectionConfig?.showLettering && job.quote.lettering.length > 0) ||
 		(sectionConfig?.showProposedInscription && job.quote.proposedInscription) ||
 		(sectionConfig?.showSundries && job.quote.sundries.length > 0) ||
@@ -853,9 +854,7 @@ export function JobDetailPage() {
 							<h2 className="text-2xl font-bold">{job.jobNumber}</h2>
 							<Badge variant={getQuoteTypeVariant(quoteType)}>{QUOTE_TYPE_LABELS[quoteType]}</Badge>
 						</div>
-						<p className="text-sm text-muted-foreground">
-							Created {formatDate(job.createdAt)}
-						</p>
+						<p className="text-sm text-muted-foreground">Created {formatDate(job.createdAt)}</p>
 						{/* Compact inline status */}
 						<div className="flex items-center gap-3 mt-2">
 							<div className="flex items-center gap-2">
@@ -875,7 +874,8 @@ export function JobDetailPage() {
 								})}
 							</div>
 							<span className="text-xs text-muted-foreground">
-								Step {Math.max(statusSequence.indexOf(job.status) + 1, 1)} of {statusSequence.length}
+								Step {Math.max(statusSequence.indexOf(job.status) + 1, 1)} of{' '}
+								{statusSequence.length}
 							</span>
 						</div>
 					</div>
@@ -895,10 +895,7 @@ export function JobDetailPage() {
 						</Button>
 					)}
 					{canDelete && (
-						<Button
-							variant="destructive"
-							onClick={() => setDeleteDialogOpen(true)}
-						>
+						<Button variant="destructive" onClick={() => setDeleteDialogOpen(true)}>
 							<Trash2 className="h-4 w-4 mr-2" />
 							Delete
 						</Button>
@@ -922,7 +919,8 @@ export function JobDetailPage() {
 							<span className="text-green-600 font-medium">Fully Paid</span>
 						) : (
 							<span className={paymentData.summary.hasOverdue ? 'text-red-600 font-medium' : ''}>
-								{formatCurrency(paymentData.summary.paidAmount)} / {formatCurrency(paymentData.summary.totalAmount)}
+								{formatCurrency(paymentData.summary.paidAmount)} /{' '}
+								{formatCurrency(paymentData.summary.totalAmount)}
 								{paymentData.summary.hasOverdue && ' (overdue)'}
 							</span>
 						)
@@ -941,7 +939,9 @@ export function JobDetailPage() {
 				{/* Tasks */}
 				<div className="flex items-center gap-1.5 text-sm">
 					<CheckCircle2 className="h-4 w-4 text-muted-foreground" />
-					<span>Tasks: {tasksDone}/{tasksTotal}</span>
+					<span>
+						Tasks: {tasksDone}/{tasksTotal}
+					</span>
 				</div>
 				{/* Worksheet - hide for sundry_only */}
 				{quoteType !== 'sundry_only' && (
@@ -978,7 +978,8 @@ export function JobDetailPage() {
 						Forms & Fees
 						{jobForms && jobForms.length > 0 && (
 							<Badge variant="secondary" className="h-5 text-xs px-1.5">
-								{jobForms.filter((f) => ['approved', 'received'].includes(f.status)).length}/{jobForms.length}
+								{jobForms.filter((f) => ['approved', 'received'].includes(f.status)).length}/
+								{jobForms.length}
 							</Badge>
 						)}
 					</TabsTrigger>
@@ -999,7 +1000,9 @@ export function JobDetailPage() {
 						<CreditCard className="h-4 w-4" />
 						Payments
 						{paymentData?.summary?.hasOverdue && (
-							<Badge variant="destructive" className="h-5 text-xs px-1.5">Late</Badge>
+							<Badge variant="destructive" className="h-5 text-xs px-1.5">
+								Late
+							</Badge>
 						)}
 					</TabsTrigger>
 					{quoteType !== 'sundry_only' && (
@@ -1012,7 +1015,9 @@ export function JobDetailPage() {
 						<Paperclip className="h-4 w-4" />
 						Files
 						{attachments && attachments.length > 0 && (
-							<Badge variant="secondary" className="h-5 text-xs px-1.5">{attachments.length}</Badge>
+							<Badge variant="secondary" className="h-5 text-xs px-1.5">
+								{attachments.length}
+							</Badge>
 						)}
 					</TabsTrigger>
 				</TabsList>
@@ -1020,1502 +1025,1614 @@ export function JobDetailPage() {
 				<TabsContent value="overview" className="mt-6">
 					{/* Two-column layout: Source Quote + Job Notes */}
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-				{/* Source Quote Card */}
-				<Card>
-					<CardHeader>
-						<div className="flex items-center justify-between">
-							<div>
-								<CardTitle>Source Quote</CardTitle>
-								<CardDescription>
-									{job.quote.quoteNumber}
-								</CardDescription>
-							</div>
-							<Link to={`/app/quotes/${job.quote.id}`}>
-								<Button variant="outline" size="sm">
-									<ExternalLink className="h-4 w-4 mr-2" />
-									View Quote
-								</Button>
-							</Link>
-						</div>
-					</CardHeader>
-					<CardContent className="space-y-3">
-						<div>
-							<p className="text-sm text-muted-foreground">Customer</p>
-							<p className="font-medium">
-								{job.quote.customer
-									? `${job.quote.customer.firstName} ${job.quote.customer.lastName}`
-									: 'Walk-in Customer'}
-							</p>
-						</div>
-						{sectionConfig?.showProductSelection && (
-							<div>
-								<p className="text-sm text-muted-foreground">Product</p>
-								<p className="font-medium">
-									{job.quote.product?.name || '—'}
-								</p>
-							</div>
-						)}
-						<div className="flex justify-between border-t pt-3">
-							<span className="font-medium">Total</span>
-							<span className="text-lg font-bold">{formatCurrency(job.quote.total)}</span>
-						</div>
-					</CardContent>
-				</Card>
+						{/* Source Quote Card */}
+						<Card>
+							<CardHeader>
+								<div className="flex items-center justify-between">
+									<div>
+										<CardTitle>Source Quote</CardTitle>
+										<CardDescription>{job.quote.quoteNumber}</CardDescription>
+									</div>
+									<Link to={`/app/quotes/${job.quote.id}`}>
+										<Button variant="outline" size="sm">
+											<ExternalLink className="h-4 w-4 mr-2" />
+											View Quote
+										</Button>
+									</Link>
+								</div>
+							</CardHeader>
+							<CardContent className="space-y-3">
+								<div>
+									<p className="text-sm text-muted-foreground">Customer</p>
+									<p className="font-medium">
+										{job.quote.customer
+											? `${job.quote.customer.firstName} ${job.quote.customer.lastName}`
+											: 'Walk-in Customer'}
+									</p>
+								</div>
+								{sectionConfig?.showProductSelection && (
+									<div>
+										<p className="text-sm text-muted-foreground">Product</p>
+										<p className="font-medium">{job.quote.product?.name || '—'}</p>
+									</div>
+								)}
+								<div className="flex justify-between border-t pt-3">
+									<span className="font-medium">Total</span>
+									<span className="text-lg font-bold">{formatCurrency(job.quote.total)}</span>
+								</div>
+							</CardContent>
+						</Card>
 
-				{/* Job Notes Card */}
-				<Card>
-					<CardHeader>
-						<CardTitle>Job Notes</CardTitle>
-						<CardDescription>
-							Internal notes and progress updates
-						</CardDescription>
-					</CardHeader>
-					<CardContent className="space-y-4">
-						<Textarea
-							placeholder="Add notes about materials, special instructions, or progress updates..."
-							value={notes}
-							onChange={(e) => {
-								setNotes(e.target.value);
-								setNotesSaved(false);
-							}}
-							rows={4}
-						/>
-						<div className="flex items-center justify-end gap-3">
-							{notesSaved && (
-								<span className="text-sm text-green-600 flex items-center gap-1">
-									<Check className="h-4 w-4" />
-									Saved
-								</span>
-							)}
-							<Button
-								onClick={handleSaveNotes}
-								disabled={!hasNotesChanged || updateNotesMutation.isPending}
-								size="sm"
-							>
-								{updateNotesMutation.isPending ? (
+						{/* Job Notes Card */}
+						<Card>
+							<CardHeader>
+								<CardTitle>Job Notes</CardTitle>
+								<CardDescription>Internal notes and progress updates</CardDescription>
+							</CardHeader>
+							<CardContent className="space-y-4">
+								<Textarea
+									placeholder="Add notes about materials, special instructions, or progress updates..."
+									value={notes}
+									onChange={(e) => {
+										setNotes(e.target.value);
+										setNotesSaved(false);
+									}}
+									rows={4}
+								/>
+								<div className="flex items-center justify-end gap-3">
+									{notesSaved && (
+										<span className="text-sm text-green-600 flex items-center gap-1">
+											<Check className="h-4 w-4" />
+											Saved
+										</span>
+									)}
+									<Button
+										onClick={handleSaveNotes}
+										disabled={!hasNotesChanged || updateNotesMutation.isPending}
+										size="sm"
+									>
+										{updateNotesMutation.isPending ? (
+											<>
+												<Loader2 className="h-4 w-4 mr-2 animate-spin" />
+												Saving...
+											</>
+										) : (
+											<>
+												<Save className="h-4 w-4 mr-2" />
+												Save Notes
+											</>
+										)}
+									</Button>
+								</div>
+							</CardContent>
+						</Card>
+					</div>
+
+					{/* Dates Section */}
+					<Card className="mt-6">
+						<CardHeader>
+							<CardTitle className="flex items-center gap-2">
+								<Calendar className="h-5 w-5" />
+								Dates
+							</CardTitle>
+						</CardHeader>
+						<CardContent>
+							<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+								{quoteType === 'new_memorial' && (
 									<>
-										<Loader2 className="h-4 w-4 mr-2 animate-spin" />
-										Saving...
-									</>
-								) : (
-									<>
-										<Save className="h-4 w-4 mr-2" />
-										Save Notes
+										<div>
+											<Label htmlFor="date-proposed-delivery">Proposed Delivery Date</Label>
+											<Input
+												id="date-proposed-delivery"
+												type="date"
+												value={toDateInputValue(job.proposedDeliveryDate)}
+												onChange={(e) => handleDateChange('proposedDeliveryDate', e.target.value)}
+												disabled={updateDatesMutation.isPending}
+											/>
+										</div>
+										<div>
+											<Label htmlFor="date-installation">Fixing Date</Label>
+											<Input
+												id="date-installation"
+												type="date"
+												value={toDateInputValue(job.installationDate)}
+												onChange={(e) => handleDateChange('installationDate', e.target.value)}
+												disabled={updateDatesMutation.isPending}
+											/>
+										</div>
 									</>
 								)}
-							</Button>
-						</div>
-					</CardContent>
-				</Card>
-			</div>
-
-				{/* Dates Section */}
-				<Card className="mt-6">
-					<CardHeader>
-						<CardTitle className="flex items-center gap-2">
-							<Calendar className="h-5 w-5" />
-							Dates
-						</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-							{quoteType === 'new_memorial' && (
-								<>
+								{quoteType === 'additional_inscription' && (
 									<div>
-										<Label htmlFor="date-proposed-delivery">Proposed Delivery Date</Label>
+										<Label htmlFor="date-refixing">Re-Fixing Date</Label>
 										<Input
-											id="date-proposed-delivery"
+											id="date-refixing"
 											type="date"
-											value={toDateInputValue(job.proposedDeliveryDate)}
-											onChange={(e) => handleDateChange('proposedDeliveryDate', e.target.value)}
+											value={toDateInputValue(job.refixingDate)}
+											onChange={(e) => handleDateChange('refixingDate', e.target.value)}
 											disabled={updateDatesMutation.isPending}
 										/>
 									</div>
+								)}
+								{quoteType === 'refurbishment' && (
 									<div>
-										<Label htmlFor="date-installation">Fixing Date</Label>
+										<Label htmlFor="date-job-start">Job Start Date</Label>
 										<Input
-											id="date-installation"
+											id="date-job-start"
+											type="date"
+											value={toDateInputValue(job.jobStartDate)}
+											onChange={(e) => handleDateChange('jobStartDate', e.target.value)}
+											disabled={updateDatesMutation.isPending}
+										/>
+									</div>
+								)}
+								{quoteType === 'ashes' && (
+									<div>
+										<Label htmlFor="date-ashes">Date of Ashes</Label>
+										<Input
+											id="date-ashes"
+											type="date"
+											value={toDateInputValue(job.ashesDate)}
+											onChange={(e) => handleDateChange('ashesDate', e.target.value)}
+											disabled={updateDatesMutation.isPending}
+										/>
+									</div>
+								)}
+								{quoteType !== 'new_memorial' && (
+									<div>
+										<Label htmlFor="date-installation-general">Installation Date</Label>
+										<Input
+											id="date-installation-general"
 											type="date"
 											value={toDateInputValue(job.installationDate)}
 											onChange={(e) => handleDateChange('installationDate', e.target.value)}
 											disabled={updateDatesMutation.isPending}
 										/>
 									</div>
-								</>
-							)}
-							{quoteType === 'additional_inscription' && (
-								<div>
-									<Label htmlFor="date-refixing">Re-Fixing Date</Label>
-									<Input
-										id="date-refixing"
-										type="date"
-										value={toDateInputValue(job.refixingDate)}
-										onChange={(e) => handleDateChange('refixingDate', e.target.value)}
-										disabled={updateDatesMutation.isPending}
-									/>
-								</div>
-							)}
-							{quoteType === 'refurbishment' && (
-								<div>
-									<Label htmlFor="date-job-start">Job Start Date</Label>
-									<Input
-										id="date-job-start"
-										type="date"
-										value={toDateInputValue(job.jobStartDate)}
-										onChange={(e) => handleDateChange('jobStartDate', e.target.value)}
-										disabled={updateDatesMutation.isPending}
-									/>
-								</div>
-							)}
-							{quoteType === 'ashes' && (
-								<div>
-									<Label htmlFor="date-ashes">Date of Ashes</Label>
-									<Input
-										id="date-ashes"
-										type="date"
-										value={toDateInputValue(job.ashesDate)}
-										onChange={(e) => handleDateChange('ashesDate', e.target.value)}
-										disabled={updateDatesMutation.isPending}
-									/>
-								</div>
-							)}
-							{quoteType !== 'new_memorial' && (
-								<div>
-									<Label htmlFor="date-installation-general">Installation Date</Label>
-									<Input
-										id="date-installation-general"
-										type="date"
-										value={toDateInputValue(job.installationDate)}
-										onChange={(e) => handleDateChange('installationDate', e.target.value)}
-										disabled={updateDatesMutation.isPending}
-									/>
-								</div>
-							)}
-							<div>
-								<Label htmlFor="date-deadline">Deadline</Label>
-								<Input
-									id="date-deadline"
-									type="date"
-									value={toDateInputValue(job.deadline)}
-									disabled
-									className="bg-muted"
-								/>
-								<p className="text-xs text-muted-foreground mt-1">Set from quote</p>
-							</div>
-						</div>
-					</CardContent>
-				</Card>
-
-				{/* Invoicing Section */}
-				<Card className="mt-6">
-					<CardHeader>
-						<div className="flex items-center justify-between">
-							<div className="flex items-center gap-3">
-								<CardTitle>Invoicing</CardTitle>
-								<span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${getAccountStatusColor(job.accountStatus)}`}>
-									{formatAccountStatus(job.accountStatus)}
-								</span>
-							</div>
-							<div className="flex items-center gap-2">
-								{!job.invoicedAt && (
-									<Dialog open={invoiceDialogOpen} onOpenChange={setInvoiceDialogOpen}>
-										<DialogTrigger asChild>
-											<Button size="sm">
-												<Receipt className="h-4 w-4 mr-2" />
-												Mark as Invoiced
-											</Button>
-										</DialogTrigger>
-										<DialogContent>
-											<DialogHeader>
-												<DialogTitle>Mark as Invoiced</DialogTitle>
-												<DialogDescription>
-													This will set the invoice date to now and update the account status to "Invoiced".
-												</DialogDescription>
-											</DialogHeader>
-											<div className="py-4">
-												<Label htmlFor="invoice-number">Invoice Number (optional)</Label>
-												<Input
-													id="invoice-number"
-													placeholder="e.g., INV-001"
-													value={invoiceNumber}
-													onChange={(e) => setInvoiceNumber(e.target.value)}
-												/>
-											</div>
-											<DialogFooter>
-												<Button
-													variant="outline"
-													onClick={() => {
-														setInvoiceDialogOpen(false);
-														setInvoiceNumber('');
-													}}
-												>
-													Cancel
-												</Button>
-												<Button
-													onClick={handleMarkInvoiced}
-													disabled={markInvoicedMutation.isPending}
-												>
-													{markInvoicedMutation.isPending ? (
-														<Loader2 className="h-4 w-4 mr-2 animate-spin" />
-													) : (
-														<Receipt className="h-4 w-4 mr-2" />
-													)}
-													Mark as Invoiced
-												</Button>
-											</DialogFooter>
-										</DialogContent>
-									</Dialog>
 								)}
-								<Button
-									variant="outline"
-									size="sm"
-									onClick={handleRecalculateStatus}
-									disabled={recalculateAccountStatusMutation.isPending}
-									title="Recalculate from payment schedule"
-								>
-									{recalculateAccountStatusMutation.isPending ? (
-										<Loader2 className="h-4 w-4 animate-spin" />
-									) : (
-										<RefreshCw className="h-4 w-4" />
-									)}
-								</Button>
-							</div>
-						</div>
-					</CardHeader>
-					<CardContent className="space-y-4">
-						{job.invoicedAt && (
-							<div className="flex items-center gap-6 text-sm">
 								<div>
-									<span className="text-muted-foreground">Invoiced: </span>
-									<span className="font-medium">{formatDate(job.invoicedAt)}</span>
+									<Label htmlFor="date-deadline">Deadline</Label>
+									<Input
+										id="date-deadline"
+										type="date"
+										value={toDateInputValue(job.deadline)}
+										disabled
+										className="bg-muted"
+									/>
+									<p className="text-xs text-muted-foreground mt-1">Set from quote</p>
 								</div>
-								{job.invoiceNumber && (
-									<div>
-										<span className="text-muted-foreground">Invoice #: </span>
-										<span className="font-medium">{job.invoiceNumber}</span>
-									</div>
-								)}
 							</div>
-						)}
-						<div className="flex items-center gap-3">
-							<Label className="text-sm text-muted-foreground whitespace-nowrap">Account Status:</Label>
-							<Select
-								value={job.accountStatus || 'not_invoiced'}
-								onValueChange={handleAccountStatusChange}
-								disabled={updateAccountStatusMutation.isPending}
-							>
-								<SelectTrigger className="w-48">
-									<SelectValue />
-								</SelectTrigger>
-								<SelectContent>
-									{ACCOUNT_STATUSES.map((status) => (
-										<SelectItem key={status} value={status}>
-											{formatAccountStatus(status)}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</div>
-					</CardContent>
-				</Card>
-
-				{/* Post-Sales Review Section */}
-				{(job.status === 'installed' || job.status === 'completed') && (
-					<Card className="mt-6">
-						<CardHeader>
-							<div className="flex items-center gap-3">
-								<CardTitle className="flex items-center gap-2">
-									<Star className="h-5 w-5" />
-									Post-Sales Review
-								</CardTitle>
-								{job.reviewOutcome && (
-									<Badge
-										variant={
-											job.reviewOutcome === 'satisfied' ? 'success' :
-											job.reviewOutcome === 'issue_reported' ? 'destructive' :
-											job.reviewOutcome === 'follow_up_needed' ? 'warning' :
-											'secondary'
-										}
-									>
-										{formatReviewOutcome(job.reviewOutcome)}
-									</Badge>
-								)}
-							</div>
-						</CardHeader>
-						<CardContent>
-							{job.reviewCompletedAt ? (
-								<div className="space-y-3">
-									<div className="flex items-center gap-6 text-sm">
-										<div>
-											<span className="text-muted-foreground">Reviewed: </span>
-											<span className="font-medium">{formatDate(job.reviewCompletedAt)}</span>
-										</div>
-										{job.reviewCompletedBy && (
-											<div>
-												<span className="text-muted-foreground">By: </span>
-												<span className="font-medium">
-													{teamMembers?.find((m) => m.id === job.reviewCompletedBy)?.name || 'Unknown'}
-												</span>
-											</div>
-										)}
-									</div>
-									{job.reviewNotes && (
-										<div>
-											<p className="text-sm text-muted-foreground mb-1">Notes</p>
-											<p className="text-sm whitespace-pre-wrap">{job.reviewNotes}</p>
-										</div>
-									)}
-								</div>
-							) : (
-								<div className="space-y-4">
-									<div>
-										<Label htmlFor="review-outcome">Outcome</Label>
-										<Select
-											value={reviewOutcome}
-											onValueChange={(v) => setReviewOutcome(v as ReviewOutcome)}
-										>
-											<SelectTrigger id="review-outcome" className="w-64">
-												<SelectValue placeholder="Select outcome..." />
-											</SelectTrigger>
-											<SelectContent>
-												{REVIEW_OUTCOMES.map((outcome) => (
-													<SelectItem key={outcome} value={outcome}>
-														{formatReviewOutcome(outcome)}
-													</SelectItem>
-												))}
-											</SelectContent>
-										</Select>
-									</div>
-									<div>
-										<Label htmlFor="review-notes">Notes (optional)</Label>
-										<Textarea
-											id="review-notes"
-											placeholder="Add any notes about the customer's feedback..."
-											value={reviewNotes}
-											onChange={(e) => setReviewNotes(e.target.value)}
-											rows={3}
-										/>
-									</div>
-									<Button
-										onClick={async () => {
-											if (!id || !reviewOutcome) return;
-											try {
-												await submitReviewMutation.mutateAsync({
-													id,
-													reviewOutcome,
-													reviewNotes: reviewNotes || undefined,
-												});
-												toast.success('Review submitted');
-												setReviewOutcome('');
-												setReviewNotes('');
-											} catch (err) {
-												toast.error(err instanceof Error ? err.message : 'Failed to submit review');
-											}
-										}}
-										disabled={!reviewOutcome || submitReviewMutation.isPending}
-									>
-										{submitReviewMutation.isPending ? (
-											<Loader2 className="h-4 w-4 mr-2 animate-spin" />
-										) : (
-											<Star className="h-4 w-4 mr-2" />
-										)}
-										Submit Review
-									</Button>
-								</div>
-							)}
 						</CardContent>
 					</Card>
-				)}
 
-				{/* Tasks Section */}
-				<div className="mt-6">
-					<JobTasksSection jobId={id!} tasks={jobTasks} />
-				</div>
-
-				{/* Collapsible Details Section */}
-				<Collapsible open={detailsOpen} onOpenChange={setDetailsOpen} className="mt-6">
-					<CollapsibleTrigger asChild>
-						<Button variant="ghost" className="w-full justify-between text-muted-foreground hover:text-foreground">
-							<span className="text-sm">Details</span>
-							<ChevronDown className={`h-4 w-4 transition-transform ${detailsOpen ? 'rotate-180' : ''}`} />
-						</Button>
-					</CollapsibleTrigger>
-					<CollapsibleContent>
-						<div className="flex items-center gap-6 py-3 px-4 text-sm text-muted-foreground border-t">
-							<span>Job ID: <span className="font-mono text-xs">{job.id}</span></span>
-							<span>•</span>
-							<span>Created: {formatDate(job.createdAt)}</span>
-							<span>•</span>
-							<span>Updated: {formatDate(job.updatedAt)}</span>
-						</div>
-					</CollapsibleContent>
-				</Collapsible>
-			</TabsContent>
-
-			{/* Workflow Tab */}
-			<TabsContent value="workflow" className="mt-6">
-				<div className="max-w-2xl space-y-6">
-					{workflowTasksLoading ? (
-						<div className="text-muted-foreground flex items-center gap-2">
-							<Loader2 className="h-4 w-4 animate-spin" />
-							Loading workflow...
-						</div>
-					) : !workflowTasks || workflowTasks.length === 0 ? (
-						<Card>
-							<CardContent className="pt-6">
-								<div className="text-center py-8">
-									<ListChecks className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-									<p className="text-muted-foreground mb-4">
-										No workflow tasks have been created for this job yet.
-									</p>
-									<Button
-										onClick={() => {
-											generateWorkflowMutation.mutate(undefined, {
-												onSuccess: () => toast.success('Workflow generated'),
-												onError: (err) => toast.error(err.message),
-											});
-										}}
-										disabled={generateWorkflowMutation.isPending}
+					{/* Invoicing Section */}
+					<Card className="mt-6">
+						<CardHeader>
+							<div className="flex items-center justify-between">
+								<div className="flex items-center gap-3">
+									<CardTitle>Invoicing</CardTitle>
+									<span
+										className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${getAccountStatusColor(job.accountStatus)}`}
 									>
-										{generateWorkflowMutation.isPending ? (
-											<Loader2 className="h-4 w-4 mr-2 animate-spin" />
-										) : (
-											<ListChecks className="h-4 w-4 mr-2" />
-										)}
-										Generate Workflow
-									</Button>
+										{formatAccountStatus(job.accountStatus)}
+									</span>
 								</div>
-							</CardContent>
-						</Card>
-					) : (
-						<>
-							{/* Progress indicator */}
-							<Card>
-								<CardContent className="pt-6">
-									<div className="flex items-center justify-between mb-2">
-										<span className="text-sm font-medium">
-											{workflowCompleted} of {workflowTotal} steps complete
-										</span>
-										<span className="text-sm text-muted-foreground">
-											{workflowProgressPercent}%
-										</span>
-									</div>
-									<Progress value={workflowProgressPercent} />
-								</CardContent>
-							</Card>
-
-							{/* Task list */}
-							<Card>
-								<CardHeader>
-									<CardTitle>Workflow Steps</CardTitle>
-								</CardHeader>
-								<CardContent>
-									<div className="space-y-1">
-										{workflowTasks.map((task, index) => {
-											const isCompleted = task.status === 'completed';
-											const isSkipped = task.status === 'skipped';
-											const isInProgress = task.status === 'in_progress';
-											const isPending = task.status === 'pending';
-											const isExpanded = expandedTaskId === task.id;
-											const isAdHoc = !task.workflowStepId;
-											const taskNotes = editingTaskNotes[task.id] ?? task.notes ?? '';
-
-											return (
-												<div
-													key={task.id}
-													className={index < workflowTasks.length - 1 ? 'border-b' : ''}
-												>
-													{/* Task row - clickable */}
-													<div
-														className="flex items-center gap-3 py-3 cursor-pointer hover:bg-muted/50 rounded-md px-2 -mx-2"
-														onClick={() => setExpandedTaskId(isExpanded ? null : task.id)}
-													>
-														{/* Expand chevron */}
-														<ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform flex-shrink-0 ${isExpanded ? 'rotate-90' : ''}`} />
-
-														{/* Status icon */}
-														<div className="flex-shrink-0">
-															{isCompleted ? (
-																<CircleCheck className="h-5 w-5 text-green-500" />
-															) : isSkipped ? (
-																<CircleMinus className="h-5 w-5 text-gray-400" />
-															) : isInProgress ? (
-																<CircleDashed className="h-5 w-5 text-blue-500" />
-															) : (
-																<Circle className="h-5 w-5 text-gray-300" />
-															)}
-														</div>
-
-														{/* Task info */}
-														<div className="flex-1 min-w-0">
-															<div className="flex items-center gap-2">
-																<span className={`font-medium text-sm ${isSkipped ? 'line-through text-muted-foreground' : ''}`}>
-																	{task.name}
-																</span>
-																<Badge variant="outline" className="text-xs capitalize">
-																	{task.category}
-																</Badge>
-																{isAdHoc && (
-																	<Badge variant="secondary" className="text-xs">Ad-hoc</Badge>
-																)}
-															</div>
-															<div className="flex items-center gap-3 mt-0.5">
-																<span className="text-xs text-muted-foreground flex items-center gap-1">
-																	<User className="h-3 w-3" />
-																	{task.assigneeName || 'Unassigned'}
-																</span>
-																{task.dueDate && (
-																	<span className="text-xs text-muted-foreground flex items-center gap-1">
-																		<Calendar className="h-3 w-3" />
-																		{formatDate(task.dueDate)}
-																	</span>
-																)}
-															</div>
-														</div>
-
-														{/* Status badge */}
-														<div className="flex-shrink-0">
-															<Badge
-																variant={
-																	isCompleted ? 'default' :
-																	isInProgress ? 'default' :
-																	'secondary'
-																}
-																className={
-																	isCompleted ? 'bg-green-100 text-green-800 hover:bg-green-100' :
-																	isInProgress ? 'bg-blue-100 text-blue-800 hover:bg-blue-100' :
-																	isSkipped ? 'bg-gray-100 text-gray-500 hover:bg-gray-100' :
-																	''
-																}
-															>
-																{isCompleted ? 'Completed' :
-																 isInProgress ? 'In Progress' :
-																 isSkipped ? 'Skipped' :
-																 'Pending'}
-															</Badge>
-														</div>
-													</div>
-
-													{/* Expanded panel */}
-													{isExpanded && (
-														<div className="ml-9 pb-4 pt-1 space-y-4">
-															{/* Description */}
-															{task.description && (
-																<p className="text-sm text-muted-foreground">{task.description}</p>
-															)}
-
-															{/* Editable fields */}
-															<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-																{/* Assignee */}
-																<div>
-																	<Label className="text-xs text-muted-foreground">Assignee</Label>
-																	<Select
-																		value={task.assigneeId || 'unassigned'}
-																		onValueChange={(value) => {
-																			updateTaskMutation.mutate({
-																				taskId: task.id,
-																				input: { assigneeId: value === 'unassigned' ? null : value },
-																			}, {
-																				onError: (err) => toast.error(err.message),
-																			});
-																		}}
-																	>
-																		<SelectTrigger className="h-8 mt-1">
-																			<SelectValue />
-																		</SelectTrigger>
-																		<SelectContent>
-																			<SelectItem value="unassigned">Unassigned</SelectItem>
-																			{teamMembers?.map((member) => (
-																				<SelectItem key={member.id} value={member.id}>
-																					{member.name}
-																				</SelectItem>
-																			))}
-																		</SelectContent>
-																	</Select>
-																</div>
-
-																{/* Due date */}
-																<div>
-																	<Label className="text-xs text-muted-foreground">Due Date</Label>
-																	<Input
-																		type="date"
-																		className="h-8 mt-1"
-																		value={task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ''}
-																		onChange={(e) => {
-																			updateTaskMutation.mutate({
-																				taskId: task.id,
-																				input: { dueDate: e.target.value || null },
-																			}, {
-																				onError: (err) => toast.error(err.message),
-																			});
-																		}}
-																	/>
-																</div>
-
-																{/* Task date (for requiresDate steps) */}
-																{task.taskDate !== undefined && (
-																	<div>
-																		<Label className="text-xs text-muted-foreground">Task Date</Label>
-																		<Input
-																			type="date"
-																			className="h-8 mt-1"
-																			value={task.taskDate ? new Date(task.taskDate).toISOString().split('T')[0] : ''}
-																			onChange={(e) => {
-																				updateTaskMutation.mutate({
-																					taskId: task.id,
-																					input: { taskDate: e.target.value || null },
-																				}, {
-																					onError: (err) => toast.error(err.message),
-																				});
-																			}}
-																		/>
-																	</div>
-																)}
-															</div>
-
-															{/* Notes */}
-															<div>
-																<Label className="text-xs text-muted-foreground">Notes</Label>
-																<div className="flex gap-2 mt-1">
-																	<Textarea
-																		className="text-sm min-h-[60px]"
-																		placeholder="Add notes..."
-																		value={taskNotes}
-																		onChange={(e) => setEditingTaskNotes((prev) => ({ ...prev, [task.id]: e.target.value }))}
-																	/>
-																</div>
-																{(editingTaskNotes[task.id] !== undefined && editingTaskNotes[task.id] !== (task.notes ?? '')) && (
-																	<div className="flex gap-2 mt-2">
-																		<Button
-																			size="sm"
-																			variant="outline"
-																			onClick={() => {
-																				updateTaskMutation.mutate({
-																					taskId: task.id,
-																					input: { notes: editingTaskNotes[task.id] || null },
-																				}, {
-																					onSuccess: () => {
-																						toast.success('Notes saved');
-																						setEditingTaskNotes((prev) => {
-																							const next = { ...prev };
-																							delete next[task.id];
-																							return next;
-																						});
-																					},
-																					onError: (err) => toast.error(err.message),
-																				});
-																			}}
-																		>
-																			<Save className="h-3 w-3 mr-1" />
-																			Save
-																		</Button>
-																		<Button
-																			size="sm"
-																			variant="ghost"
-																			onClick={() => setEditingTaskNotes((prev) => {
-																				const next = { ...prev };
-																				delete next[task.id];
-																				return next;
-																			})}
-																		>
-																			Cancel
-																		</Button>
-																	</div>
-																)}
-															</div>
-
-															{/* Action buttons */}
-															<div className="flex items-center gap-2 pt-1">
-																{(isPending || isInProgress) && (
-																	<Button
-																		size="sm"
-																		onClick={(e) => {
-																			e.stopPropagation();
-																			completeTaskMutation.mutate(task.id, {
-																				onSuccess: () => toast.success(`"${task.name}" completed`),
-																				onError: (err) => toast.error(err.message),
-																			});
-																		}}
-																		disabled={completeTaskMutation.isPending}
-																	>
-																		<Check className="h-3 w-3 mr-1" />
-																		Complete
-																	</Button>
-																)}
-																{isPending && (
-																	<Button
-																		size="sm"
-																		variant="outline"
-																		onClick={(e) => {
-																			e.stopPropagation();
-																			updateTaskMutation.mutate({
-																				taskId: task.id,
-																				input: { status: 'in_progress' },
-																			}, {
-																				onSuccess: () => toast.success(`"${task.name}" started`),
-																				onError: (err) => toast.error(err.message),
-																			});
-																		}}
-																		disabled={updateTaskMutation.isPending}
-																	>
-																		<Play className="h-3 w-3 mr-1" />
-																		In Progress
-																	</Button>
-																)}
-																{(isPending || isInProgress) && (
-																	<DropdownMenu>
-																		<DropdownMenuTrigger asChild>
-																			<Button size="sm" variant="ghost">
-																				<MoreHorizontal className="h-4 w-4" />
-																			</Button>
-																		</DropdownMenuTrigger>
-																		<DropdownMenuContent align="end">
-																			<DropdownMenuItem
-																				onClick={() => {
-																					skipTaskMutation.mutate(task.id, {
-																						onSuccess: () => toast.success(`"${task.name}" skipped`),
-																						onError: (err) => toast.error(err.message),
-																					});
-																				}}
-																			>
-																				<CircleMinus className="h-4 w-4 mr-2" />
-																				Skip
-																			</DropdownMenuItem>
-																			{isAdHoc && (
-																				<DropdownMenuItem
-																					className="text-destructive"
-																					onClick={() => {
-																						deleteTaskMutation.mutate(task.id, {
-																							onSuccess: () => {
-																								toast.success(`"${task.name}" deleted`);
-																								setExpandedTaskId(null);
-																							},
-																							onError: (err) => toast.error(err.message),
-																						});
-																					}}
-																				>
-																					<Trash2 className="h-4 w-4 mr-2" />
-																					Delete
-																				</DropdownMenuItem>
-																			)}
-																		</DropdownMenuContent>
-																	</DropdownMenu>
-																)}
-																{/* Delete for ad-hoc tasks that are completed/skipped */}
-																{(isCompleted || isSkipped) && isAdHoc && (
-																	<Button
-																		size="sm"
-																		variant="ghost"
-																		className="text-destructive hover:text-destructive"
-																		onClick={(e) => {
-																			e.stopPropagation();
-																			deleteTaskMutation.mutate(task.id, {
-																				onSuccess: () => {
-																					toast.success(`"${task.name}" deleted`);
-																					setExpandedTaskId(null);
-																				},
-																				onError: (err) => toast.error(err.message),
-																			});
-																		}}
-																	>
-																		<Trash2 className="h-3 w-3 mr-1" />
-																		Delete
-																	</Button>
-																)}
-															</div>
-
-															{/* Completed info */}
-															{isCompleted && task.completedAt && (
-																<p className="text-xs text-muted-foreground">
-																	Completed {formatDate(task.completedAt)}
-																</p>
-															)}
-														</div>
-													)}
+								<div className="flex items-center gap-2">
+									{!job.invoicedAt && (
+										<Dialog open={invoiceDialogOpen} onOpenChange={setInvoiceDialogOpen}>
+											<DialogTrigger asChild>
+												<Button size="sm">
+													<Receipt className="h-4 w-4 mr-2" />
+													Mark as Invoiced
+												</Button>
+											</DialogTrigger>
+											<DialogContent>
+												<DialogHeader>
+													<DialogTitle>Mark as Invoiced</DialogTitle>
+													<DialogDescription>
+														This will set the invoice date to now and update the account status to
+														"Invoiced".
+													</DialogDescription>
+												</DialogHeader>
+												<div className="py-4">
+													<Label htmlFor="invoice-number">Invoice Number (optional)</Label>
+													<Input
+														id="invoice-number"
+														placeholder="e.g., INV-001"
+														value={invoiceNumber}
+														onChange={(e) => setInvoiceNumber(e.target.value)}
+													/>
 												</div>
-											);
-										})}
-									</div>
-
-									{/* Add Task button & form */}
-									<div className="mt-4 pt-4 border-t">
-										{showAddTask ? (
-											<div className="space-y-3">
-												<h4 className="font-medium text-sm">Add Task</h4>
-												<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-													<div>
-														<Label className="text-xs text-muted-foreground">Name</Label>
-														<Input
-															className="h-8 mt-1"
-															placeholder="Task name"
-															value={newTaskName}
-															onChange={(e) => setNewTaskName(e.target.value)}
-														/>
-													</div>
-													<div>
-														<Label className="text-xs text-muted-foreground">Category</Label>
-														<Select value={newTaskCategory} onValueChange={(v) => setNewTaskCategory(v as WorkflowStepCategory)}>
-															<SelectTrigger className="h-8 mt-1">
-																<SelectValue />
-															</SelectTrigger>
-															<SelectContent>
-																{WORKFLOW_STEP_CATEGORIES.map((cat) => (
-																	<SelectItem key={cat} value={cat} className="capitalize">
-																		{cat}
-																	</SelectItem>
-																))}
-															</SelectContent>
-														</Select>
-													</div>
-													<div>
-														<Label className="text-xs text-muted-foreground">Assignee</Label>
-														<Select value={newTaskAssigneeId || 'unassigned'} onValueChange={setNewTaskAssigneeId}>
-															<SelectTrigger className="h-8 mt-1">
-																<SelectValue />
-															</SelectTrigger>
-															<SelectContent>
-																<SelectItem value="unassigned">Unassigned</SelectItem>
-																{teamMembers?.map((member) => (
-																	<SelectItem key={member.id} value={member.id}>
-																		{member.name}
-																	</SelectItem>
-																))}
-															</SelectContent>
-														</Select>
-													</div>
-													<div>
-														<Label className="text-xs text-muted-foreground">Due Date</Label>
-														<Input
-															type="date"
-															className="h-8 mt-1"
-															value={newTaskDueDate}
-															onChange={(e) => setNewTaskDueDate(e.target.value)}
-														/>
-													</div>
-												</div>
-												<div className="flex justify-end gap-2">
+												<DialogFooter>
 													<Button
 														variant="outline"
-														size="sm"
 														onClick={() => {
-															setShowAddTask(false);
-															setNewTaskName('');
-															setNewTaskCategory('admin');
-															setNewTaskAssigneeId('');
-															setNewTaskDueDate('');
+															setInvoiceDialogOpen(false);
+															setInvoiceNumber('');
 														}}
 													>
 														Cancel
 													</Button>
 													<Button
-														size="sm"
-														disabled={!newTaskName.trim() || addTaskMutation.isPending}
-														onClick={() => {
-															addTaskMutation.mutate({
-																name: newTaskName.trim(),
-																category: newTaskCategory,
-																assigneeId: newTaskAssigneeId && newTaskAssigneeId !== 'unassigned' ? newTaskAssigneeId : null,
-																dueDate: newTaskDueDate || null,
-															}, {
-																onSuccess: () => {
-																	toast.success('Task added');
-																	setShowAddTask(false);
-																	setNewTaskName('');
-																	setNewTaskCategory('admin');
-																	setNewTaskAssigneeId('');
-																	setNewTaskDueDate('');
-																},
-																onError: (err) => toast.error(err.message),
-															});
-														}}
+														onClick={handleMarkInvoiced}
+														disabled={markInvoicedMutation.isPending}
 													>
-														{addTaskMutation.isPending && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
-														Add
+														{markInvoicedMutation.isPending ? (
+															<Loader2 className="h-4 w-4 mr-2 animate-spin" />
+														) : (
+															<Receipt className="h-4 w-4 mr-2" />
+														)}
+														Mark as Invoiced
 													</Button>
-												</div>
-											</div>
+												</DialogFooter>
+											</DialogContent>
+										</Dialog>
+									)}
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={handleRecalculateStatus}
+										disabled={recalculateAccountStatusMutation.isPending}
+										title="Recalculate from payment schedule"
+									>
+										{recalculateAccountStatusMutation.isPending ? (
+											<Loader2 className="h-4 w-4 animate-spin" />
 										) : (
-											<Button
-												variant="outline"
-												size="sm"
-												onClick={() => setShowAddTask(true)}
-											>
-												<Plus className="h-4 w-4 mr-1" />
-												Add Task
-											</Button>
+											<RefreshCw className="h-4 w-4" />
 										)}
-									</div>
-								</CardContent>
-							</Card>
-						</>
-					)}
-				</div>
-			</TabsContent>
-
-			{/* Forms & Fees Tab */}
-			<TabsContent value="forms" className="mt-6">
-				<div className="max-w-2xl space-y-6">
-					<Card>
-						<CardHeader>
-							<div className="flex items-center justify-between">
-								<div>
-									<CardTitle>Forms & Fees</CardTitle>
-									<CardDescription>
-										Track forms, applications and associated fees
-									</CardDescription>
+									</Button>
 								</div>
 							</div>
 						</CardHeader>
-						<CardContent>
-							{formsLoading ? (
-								<div className="text-muted-foreground flex items-center gap-2">
-									<Loader2 className="h-4 w-4 animate-spin" />
-									Loading forms...
-								</div>
-							) : (
-								<>
-									{/* Form list */}
-									{jobForms && jobForms.length > 0 ? (
-										<div className="space-y-2">
-											{jobForms.map((form) => (
-												<div
-													key={form.id}
-													className="flex items-center gap-3 p-3 border rounded-lg"
-												>
-													{/* Name */}
-													<div className="flex-1 min-w-0">
-														<span className="font-medium text-sm">{form.name}</span>
-														{form.referenceNumber && (
-															<span className="text-xs text-muted-foreground ml-2">
-																Ref: {form.referenceNumber}
-															</span>
-														)}
-														<div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-															{form.submittedAt && (
-																<span>Submitted: {formatDate(form.submittedAt)}</span>
-															)}
-															{form.approvedAt && (
-																<span>Approved: {formatDate(form.approvedAt)}</span>
-															)}
-														</div>
-													</div>
-
-													{/* Status select */}
-													<Select
-														value={form.status}
-														onValueChange={(value) => {
-															const input: Record<string, unknown> = { status: value };
-															if (value === 'submitted' && !form.submittedAt) {
-																input.submittedAt = new Date().toISOString();
-															}
-															if (value === 'approved' && !form.approvedAt) {
-																input.approvedAt = new Date().toISOString();
-															}
-															updateFormMutation.mutate(
-																{ formId: form.id, input },
-																{
-																	onError: (err) => toast.error(err.message),
-																}
-															);
-														}}
-													>
-														<SelectTrigger className="w-36 h-8">
-															<SelectValue />
-														</SelectTrigger>
-														<SelectContent>
-															{FORM_STATUSES.map((status) => (
-																<SelectItem key={status} value={status}>
-																	<div className="flex items-center gap-2">
-																		<div className={`w-2 h-2 rounded-full ${
-																			status === 'not_started' ? 'bg-gray-400' :
-																			status === 'submitted' ? 'bg-blue-500' :
-																			status === 'approved' ? 'bg-green-500' :
-																			status === 'received' ? 'bg-green-500' :
-																			'bg-gray-400'
-																		}`} />
-																		{status.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
-																	</div>
-																</SelectItem>
-															))}
-														</SelectContent>
-													</Select>
-
-													{/* Fee input */}
-													<div className="w-24">
-														<Input
-															type="number"
-															step="0.01"
-															placeholder="Fee"
-															className="h-8 text-sm"
-															defaultValue={form.fee || ''}
-															onBlur={(e) => {
-																const newFee = e.target.value || null;
-																if (newFee !== form.fee) {
-																	updateFormMutation.mutate(
-																		{ formId: form.id, input: { fee: newFee } },
-																		{
-																			onError: (err) => toast.error(err.message),
-																		}
-																	);
-																}
-															}}
-														/>
-													</div>
-
-													{/* Delete */}
-													<Button
-														variant="ghost"
-														size="sm"
-														onClick={() => {
-															deleteFormMutation.mutate(form.id, {
-																onSuccess: () => toast.success(`"${form.name}" removed`),
-																onError: (err) => toast.error(err.message),
-															});
-														}}
-														disabled={deleteFormMutation.isPending}
-													>
-														<Trash2 className="h-4 w-4" />
-													</Button>
-												</div>
-											))}
-										</div>
-									) : (
-										<div className="text-muted-foreground text-center py-6">
-											No forms added yet.
-										</div>
-									)}
-
-									{/* Total fees */}
-									{jobForms && jobForms.length > 0 && (
-										<div className="flex items-center justify-between pt-4 mt-4 border-t">
-											<span className="font-medium text-sm">Total Fees</span>
-											<span className="font-bold">
-												{formatCurrency(
-													jobForms.reduce((sum, f) => sum + (f.fee ? parseFloat(f.fee) : 0), 0)
-												)}
-											</span>
-										</div>
-									)}
-
-									{/* Quick-add form */}
-									<div className="mt-4 pt-4 border-t">
-										<div className="flex items-center gap-2 relative">
-											<div className="flex-1 relative">
-												<Input
-													placeholder="Add a form (e.g., Faculty Application, Burial Rights)..."
-													className="h-8"
-													value={newFormName}
-													onChange={(e) => {
-														setNewFormName(e.target.value);
-														setShowFormSuggestions(e.target.value.length > 0);
-													}}
-													onFocus={() => {
-														if (newFormName.length > 0) setShowFormSuggestions(true);
-													}}
-													onBlur={() => {
-														// Delay to allow click on suggestion
-														setTimeout(() => setShowFormSuggestions(false), 200);
-													}}
-													onKeyDown={(e) => {
-														if (e.key === 'Enter' && newFormName.trim()) {
-															addFormMutation.mutate(
-																{ name: newFormName.trim() },
-																{
-																	onSuccess: () => {
-																		toast.success('Form added');
-																		setNewFormName('');
-																		setShowFormSuggestions(false);
-																	},
-																	onError: (err) => toast.error(err.message),
-																}
-															);
-														}
-													}}
-												/>
-												{showFormSuggestions && formSuggestions && formSuggestions.length > 0 && (
-													<div className="absolute top-full left-0 right-0 mt-1 bg-popover border rounded-md shadow-md z-10 max-h-40 overflow-y-auto">
-														{formSuggestions
-															.filter((s) =>
-																s.toLowerCase().includes(newFormName.toLowerCase())
-															)
-															.map((suggestion) => (
-																<button
-																	key={suggestion}
-																	type="button"
-																	className="w-full text-left px-3 py-2 text-sm hover:bg-muted"
-																	onMouseDown={(e) => e.preventDefault()}
-																	onClick={() => {
-																		setNewFormName(suggestion);
-																		setShowFormSuggestions(false);
-																	}}
-																>
-																	{suggestion}
-																</button>
-															))}
-													</div>
-												)}
-											</div>
-											<Button
-												size="sm"
-												disabled={!newFormName.trim() || addFormMutation.isPending}
-												onClick={() => {
-													addFormMutation.mutate(
-														{ name: newFormName.trim() },
-														{
-															onSuccess: () => {
-																toast.success('Form added');
-																setNewFormName('');
-															},
-															onError: (err) => toast.error(err.message),
-														}
-													);
-												}}
-											>
-												{addFormMutation.isPending ? (
-													<Loader2 className="h-4 w-4 animate-spin" />
-												) : (
-													<Plus className="h-4 w-4" />
-												)}
-											</Button>
-										</div>
+						<CardContent className="space-y-4">
+							{job.invoicedAt && (
+								<div className="flex items-center gap-6 text-sm">
+									<div>
+										<span className="text-muted-foreground">Invoiced: </span>
+										<span className="font-medium">{formatDate(job.invoicedAt)}</span>
 									</div>
-								</>
+									{job.invoiceNumber && (
+										<div>
+											<span className="text-muted-foreground">Invoice #: </span>
+											<span className="font-medium">{job.invoiceNumber}</span>
+										</div>
+									)}
+								</div>
 							)}
+							<div className="flex items-center gap-3">
+								<Label className="text-sm text-muted-foreground whitespace-nowrap">
+									Account Status:
+								</Label>
+								<Select
+									value={job.accountStatus || 'not_invoiced'}
+									onValueChange={handleAccountStatusChange}
+									disabled={updateAccountStatusMutation.isPending}
+								>
+									<SelectTrigger className="w-48">
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										{ACCOUNT_STATUSES.map((status) => (
+											<SelectItem key={status} value={status}>
+												{formatAccountStatus(status)}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							</div>
 						</CardContent>
 					</Card>
-				</div>
-			</TabsContent>
 
-			{/* Proof Tab */}
-			{quoteType === 'new_memorial' && (
-				<TabsContent value="proof" className="mt-6">
+					{/* Post-Sales Review Section */}
+					{(job.status === 'installed' || job.status === 'completed') && (
+						<Card className="mt-6">
+							<CardHeader>
+								<div className="flex items-center gap-3">
+									<CardTitle className="flex items-center gap-2">
+										<Star className="h-5 w-5" />
+										Post-Sales Review
+									</CardTitle>
+									{job.reviewOutcome && (
+										<Badge
+											variant={
+												job.reviewOutcome === 'satisfied'
+													? 'success'
+													: job.reviewOutcome === 'issue_reported'
+														? 'destructive'
+														: job.reviewOutcome === 'follow_up_needed'
+															? 'warning'
+															: 'secondary'
+											}
+										>
+											{formatReviewOutcome(job.reviewOutcome)}
+										</Badge>
+									)}
+								</div>
+							</CardHeader>
+							<CardContent>
+								{job.reviewCompletedAt ? (
+									<div className="space-y-3">
+										<div className="flex items-center gap-6 text-sm">
+											<div>
+												<span className="text-muted-foreground">Reviewed: </span>
+												<span className="font-medium">{formatDate(job.reviewCompletedAt)}</span>
+											</div>
+											{job.reviewCompletedBy && (
+												<div>
+													<span className="text-muted-foreground">By: </span>
+													<span className="font-medium">
+														{teamMembers?.find((m) => m.id === job.reviewCompletedBy)?.name ||
+															'Unknown'}
+													</span>
+												</div>
+											)}
+										</div>
+										{job.reviewNotes && (
+											<div>
+												<p className="text-sm text-muted-foreground mb-1">Notes</p>
+												<p className="text-sm whitespace-pre-wrap">{job.reviewNotes}</p>
+											</div>
+										)}
+									</div>
+								) : (
+									<div className="space-y-4">
+										<div>
+											<Label htmlFor="review-outcome">Outcome</Label>
+											<Select
+												value={reviewOutcome}
+												onValueChange={(v) => setReviewOutcome(v as ReviewOutcome)}
+											>
+												<SelectTrigger id="review-outcome" className="w-64">
+													<SelectValue placeholder="Select outcome..." />
+												</SelectTrigger>
+												<SelectContent>
+													{REVIEW_OUTCOMES.map((outcome) => (
+														<SelectItem key={outcome} value={outcome}>
+															{formatReviewOutcome(outcome)}
+														</SelectItem>
+													))}
+												</SelectContent>
+											</Select>
+										</div>
+										<div>
+											<Label htmlFor="review-notes">Notes (optional)</Label>
+											<Textarea
+												id="review-notes"
+												placeholder="Add any notes about the customer's feedback..."
+												value={reviewNotes}
+												onChange={(e) => setReviewNotes(e.target.value)}
+												rows={3}
+											/>
+										</div>
+										<Button
+											onClick={async () => {
+												if (!id || !reviewOutcome) return;
+												try {
+													await submitReviewMutation.mutateAsync({
+														id,
+														reviewOutcome,
+														reviewNotes: reviewNotes || undefined,
+													});
+													toast.success('Review submitted');
+													setReviewOutcome('');
+													setReviewNotes('');
+												} catch (err) {
+													toast.error(
+														err instanceof Error ? err.message : 'Failed to submit review',
+													);
+												}
+											}}
+											disabled={!reviewOutcome || submitReviewMutation.isPending}
+										>
+											{submitReviewMutation.isPending ? (
+												<Loader2 className="h-4 w-4 mr-2 animate-spin" />
+											) : (
+												<Star className="h-4 w-4 mr-2" />
+											)}
+											Submit Review
+										</Button>
+									</div>
+								)}
+							</CardContent>
+						</Card>
+					)}
+
+					{/* Tasks Section */}
+					<div className="mt-6">
+						<JobTasksSection jobId={id!} tasks={jobTasks} />
+					</div>
+
+					{/* Collapsible Details Section */}
+					<Collapsible open={detailsOpen} onOpenChange={setDetailsOpen} className="mt-6">
+						<CollapsibleTrigger asChild>
+							<Button
+								variant="ghost"
+								className="w-full justify-between text-muted-foreground hover:text-foreground"
+							>
+								<span className="text-sm">Details</span>
+								<ChevronDown
+									className={`h-4 w-4 transition-transform ${detailsOpen ? 'rotate-180' : ''}`}
+								/>
+							</Button>
+						</CollapsibleTrigger>
+						<CollapsibleContent>
+							<div className="flex items-center gap-6 py-3 px-4 text-sm text-muted-foreground border-t">
+								<span>
+									Job ID: <span className="font-mono text-xs">{job.id}</span>
+								</span>
+								<span>•</span>
+								<span>Created: {formatDate(job.createdAt)}</span>
+								<span>•</span>
+								<span>Updated: {formatDate(job.updatedAt)}</span>
+							</div>
+						</CollapsibleContent>
+					</Collapsible>
+				</TabsContent>
+
+				{/* Workflow Tab */}
+				<TabsContent value="workflow" className="mt-6">
 					<div className="max-w-2xl space-y-6">
-						{/* Current Proof */}
+						{workflowTasksLoading ? (
+							<div className="text-muted-foreground flex items-center gap-2">
+								<Loader2 className="h-4 w-4 animate-spin" />
+								Loading workflow...
+							</div>
+						) : !workflowTasks || workflowTasks.length === 0 ? (
+							<Card>
+								<CardContent className="pt-6">
+									<div className="text-center py-8">
+										<ListChecks className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+										<p className="text-muted-foreground mb-4">
+											No workflow tasks have been created for this job yet.
+										</p>
+										<Button
+											onClick={() => {
+												generateWorkflowMutation.mutate(undefined, {
+													onSuccess: () => toast.success('Workflow generated'),
+													onError: (err) => toast.error(err.message),
+												});
+											}}
+											disabled={generateWorkflowMutation.isPending}
+										>
+											{generateWorkflowMutation.isPending ? (
+												<Loader2 className="h-4 w-4 mr-2 animate-spin" />
+											) : (
+												<ListChecks className="h-4 w-4 mr-2" />
+											)}
+											Generate Workflow
+										</Button>
+									</div>
+								</CardContent>
+							</Card>
+						) : (
+							<>
+								{/* Progress indicator */}
+								<Card>
+									<CardContent className="pt-6">
+										<div className="flex items-center justify-between mb-2">
+											<span className="text-sm font-medium">
+												{workflowCompleted} of {workflowTotal} steps complete
+											</span>
+											<span className="text-sm text-muted-foreground">
+												{workflowProgressPercent}%
+											</span>
+										</div>
+										<Progress value={workflowProgressPercent} />
+									</CardContent>
+								</Card>
+
+								{/* Task list */}
+								<Card>
+									<CardHeader>
+										<CardTitle>Workflow Steps</CardTitle>
+									</CardHeader>
+									<CardContent>
+										<div className="space-y-1">
+											{workflowTasks.map((task, index) => {
+												const isCompleted = task.status === 'completed';
+												const isSkipped = task.status === 'skipped';
+												const isInProgress = task.status === 'in_progress';
+												const isPending = task.status === 'pending';
+												const isExpanded = expandedTaskId === task.id;
+												const isAdHoc = !task.workflowStepId;
+												const taskNotes = editingTaskNotes[task.id] ?? task.notes ?? '';
+
+												return (
+													<div
+														key={task.id}
+														className={index < workflowTasks.length - 1 ? 'border-b' : ''}
+													>
+														{/* Task row - clickable */}
+														<div
+															className="flex items-center gap-3 py-3 cursor-pointer hover:bg-muted/50 rounded-md px-2 -mx-2"
+															onClick={() => setExpandedTaskId(isExpanded ? null : task.id)}
+														>
+															{/* Expand chevron */}
+															<ChevronRight
+																className={`h-4 w-4 text-muted-foreground transition-transform flex-shrink-0 ${isExpanded ? 'rotate-90' : ''}`}
+															/>
+
+															{/* Status icon */}
+															<div className="flex-shrink-0">
+																{isCompleted ? (
+																	<CircleCheck className="h-5 w-5 text-green-500" />
+																) : isSkipped ? (
+																	<CircleMinus className="h-5 w-5 text-gray-400" />
+																) : isInProgress ? (
+																	<CircleDashed className="h-5 w-5 text-blue-500" />
+																) : (
+																	<Circle className="h-5 w-5 text-gray-300" />
+																)}
+															</div>
+
+															{/* Task info */}
+															<div className="flex-1 min-w-0">
+																<div className="flex items-center gap-2">
+																	<span
+																		className={`font-medium text-sm ${isSkipped ? 'line-through text-muted-foreground' : ''}`}
+																	>
+																		{task.name}
+																	</span>
+																	<Badge variant="outline" className="text-xs capitalize">
+																		{task.category}
+																	</Badge>
+																	{isAdHoc && (
+																		<Badge variant="secondary" className="text-xs">
+																			Ad-hoc
+																		</Badge>
+																	)}
+																</div>
+																<div className="flex items-center gap-3 mt-0.5">
+																	<span className="text-xs text-muted-foreground flex items-center gap-1">
+																		<User className="h-3 w-3" />
+																		{task.assigneeName || 'Unassigned'}
+																	</span>
+																	{task.dueDate && (
+																		<span className="text-xs text-muted-foreground flex items-center gap-1">
+																			<Calendar className="h-3 w-3" />
+																			{formatDate(task.dueDate)}
+																		</span>
+																	)}
+																</div>
+															</div>
+
+															{/* Status badge */}
+															<div className="flex-shrink-0">
+																<Badge
+																	variant={
+																		isCompleted ? 'default' : isInProgress ? 'default' : 'secondary'
+																	}
+																	className={
+																		isCompleted
+																			? 'bg-green-100 text-green-800 hover:bg-green-100'
+																			: isInProgress
+																				? 'bg-blue-100 text-blue-800 hover:bg-blue-100'
+																				: isSkipped
+																					? 'bg-gray-100 text-gray-500 hover:bg-gray-100'
+																					: ''
+																	}
+																>
+																	{isCompleted
+																		? 'Completed'
+																		: isInProgress
+																			? 'In Progress'
+																			: isSkipped
+																				? 'Skipped'
+																				: 'Pending'}
+																</Badge>
+															</div>
+														</div>
+
+														{/* Expanded panel */}
+														{isExpanded && (
+															<div className="ml-9 pb-4 pt-1 space-y-4">
+																{/* Description */}
+																{task.description && (
+																	<p className="text-sm text-muted-foreground">
+																		{task.description}
+																	</p>
+																)}
+
+																{/* Editable fields */}
+																<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+																	{/* Assignee */}
+																	<div>
+																		<Label className="text-xs text-muted-foreground">
+																			Assignee
+																		</Label>
+																		<Select
+																			value={task.assigneeId || 'unassigned'}
+																			onValueChange={(value) => {
+																				updateTaskMutation.mutate(
+																					{
+																						taskId: task.id,
+																						input: {
+																							assigneeId: value === 'unassigned' ? null : value,
+																						},
+																					},
+																					{
+																						onError: (err) => toast.error(err.message),
+																					},
+																				);
+																			}}
+																		>
+																			<SelectTrigger className="h-8 mt-1">
+																				<SelectValue />
+																			</SelectTrigger>
+																			<SelectContent>
+																				<SelectItem value="unassigned">Unassigned</SelectItem>
+																				{teamMembers?.map((member) => (
+																					<SelectItem key={member.id} value={member.id}>
+																						{member.name}
+																					</SelectItem>
+																				))}
+																			</SelectContent>
+																		</Select>
+																	</div>
+
+																	{/* Due date */}
+																	<div>
+																		<Label className="text-xs text-muted-foreground">
+																			Due Date
+																		</Label>
+																		<Input
+																			type="date"
+																			className="h-8 mt-1"
+																			value={
+																				task.dueDate
+																					? new Date(task.dueDate).toISOString().split('T')[0]
+																					: ''
+																			}
+																			onChange={(e) => {
+																				updateTaskMutation.mutate(
+																					{
+																						taskId: task.id,
+																						input: { dueDate: e.target.value || null },
+																					},
+																					{
+																						onError: (err) => toast.error(err.message),
+																					},
+																				);
+																			}}
+																		/>
+																	</div>
+
+																	{/* Task date (for requiresDate steps) */}
+																	{task.taskDate !== undefined && (
+																		<div>
+																			<Label className="text-xs text-muted-foreground">
+																				Task Date
+																			</Label>
+																			<Input
+																				type="date"
+																				className="h-8 mt-1"
+																				value={
+																					task.taskDate
+																						? new Date(task.taskDate).toISOString().split('T')[0]
+																						: ''
+																				}
+																				onChange={(e) => {
+																					updateTaskMutation.mutate(
+																						{
+																							taskId: task.id,
+																							input: { taskDate: e.target.value || null },
+																						},
+																						{
+																							onError: (err) => toast.error(err.message),
+																						},
+																					);
+																				}}
+																			/>
+																		</div>
+																	)}
+																</div>
+
+																{/* Notes */}
+																<div>
+																	<Label className="text-xs text-muted-foreground">Notes</Label>
+																	<div className="flex gap-2 mt-1">
+																		<Textarea
+																			className="text-sm min-h-[60px]"
+																			placeholder="Add notes..."
+																			value={taskNotes}
+																			onChange={(e) =>
+																				setEditingTaskNotes((prev) => ({
+																					...prev,
+																					[task.id]: e.target.value,
+																				}))
+																			}
+																		/>
+																	</div>
+																	{editingTaskNotes[task.id] !== undefined &&
+																		editingTaskNotes[task.id] !== (task.notes ?? '') && (
+																			<div className="flex gap-2 mt-2">
+																				<Button
+																					size="sm"
+																					variant="outline"
+																					onClick={() => {
+																						updateTaskMutation.mutate(
+																							{
+																								taskId: task.id,
+																								input: { notes: editingTaskNotes[task.id] || null },
+																							},
+																							{
+																								onSuccess: () => {
+																									toast.success('Notes saved');
+																									setEditingTaskNotes((prev) => {
+																										const next = { ...prev };
+																										delete next[task.id];
+																										return next;
+																									});
+																								},
+																								onError: (err) => toast.error(err.message),
+																							},
+																						);
+																					}}
+																				>
+																					<Save className="h-3 w-3 mr-1" />
+																					Save
+																				</Button>
+																				<Button
+																					size="sm"
+																					variant="ghost"
+																					onClick={() =>
+																						setEditingTaskNotes((prev) => {
+																							const next = { ...prev };
+																							delete next[task.id];
+																							return next;
+																						})
+																					}
+																				>
+																					Cancel
+																				</Button>
+																			</div>
+																		)}
+																</div>
+
+																{/* Action buttons */}
+																<div className="flex items-center gap-2 pt-1">
+																	{(isPending || isInProgress) && (
+																		<Button
+																			size="sm"
+																			onClick={(e) => {
+																				e.stopPropagation();
+																				completeTaskMutation.mutate(task.id, {
+																					onSuccess: () =>
+																						toast.success(`"${task.name}" completed`),
+																					onError: (err) => toast.error(err.message),
+																				});
+																			}}
+																			disabled={completeTaskMutation.isPending}
+																		>
+																			<Check className="h-3 w-3 mr-1" />
+																			Complete
+																		</Button>
+																	)}
+																	{isPending && (
+																		<Button
+																			size="sm"
+																			variant="outline"
+																			onClick={(e) => {
+																				e.stopPropagation();
+																				updateTaskMutation.mutate(
+																					{
+																						taskId: task.id,
+																						input: { status: 'in_progress' },
+																					},
+																					{
+																						onSuccess: () =>
+																							toast.success(`"${task.name}" started`),
+																						onError: (err) => toast.error(err.message),
+																					},
+																				);
+																			}}
+																			disabled={updateTaskMutation.isPending}
+																		>
+																			<Play className="h-3 w-3 mr-1" />
+																			In Progress
+																		</Button>
+																	)}
+																	{(isPending || isInProgress) && (
+																		<DropdownMenu>
+																			<DropdownMenuTrigger asChild>
+																				<Button size="sm" variant="ghost">
+																					<MoreHorizontal className="h-4 w-4" />
+																				</Button>
+																			</DropdownMenuTrigger>
+																			<DropdownMenuContent align="end">
+																				<DropdownMenuItem
+																					onClick={() => {
+																						skipTaskMutation.mutate(task.id, {
+																							onSuccess: () =>
+																								toast.success(`"${task.name}" skipped`),
+																							onError: (err) => toast.error(err.message),
+																						});
+																					}}
+																				>
+																					<CircleMinus className="h-4 w-4 mr-2" />
+																					Skip
+																				</DropdownMenuItem>
+																				{isAdHoc && (
+																					<DropdownMenuItem
+																						className="text-destructive"
+																						onClick={() => {
+																							deleteTaskMutation.mutate(task.id, {
+																								onSuccess: () => {
+																									toast.success(`"${task.name}" deleted`);
+																									setExpandedTaskId(null);
+																								},
+																								onError: (err) => toast.error(err.message),
+																							});
+																						}}
+																					>
+																						<Trash2 className="h-4 w-4 mr-2" />
+																						Delete
+																					</DropdownMenuItem>
+																				)}
+																			</DropdownMenuContent>
+																		</DropdownMenu>
+																	)}
+																	{/* Delete for ad-hoc tasks that are completed/skipped */}
+																	{(isCompleted || isSkipped) && isAdHoc && (
+																		<Button
+																			size="sm"
+																			variant="ghost"
+																			className="text-destructive hover:text-destructive"
+																			onClick={(e) => {
+																				e.stopPropagation();
+																				deleteTaskMutation.mutate(task.id, {
+																					onSuccess: () => {
+																						toast.success(`"${task.name}" deleted`);
+																						setExpandedTaskId(null);
+																					},
+																					onError: (err) => toast.error(err.message),
+																				});
+																			}}
+																		>
+																			<Trash2 className="h-3 w-3 mr-1" />
+																			Delete
+																		</Button>
+																	)}
+																</div>
+
+																{/* Completed info */}
+																{isCompleted && task.completedAt && (
+																	<p className="text-xs text-muted-foreground">
+																		Completed {formatDate(task.completedAt)}
+																	</p>
+																)}
+															</div>
+														)}
+													</div>
+												);
+											})}
+										</div>
+
+										{/* Add Task button & form */}
+										<div className="mt-4 pt-4 border-t">
+											{showAddTask ? (
+												<div className="space-y-3">
+													<h4 className="font-medium text-sm">Add Task</h4>
+													<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+														<div>
+															<Label className="text-xs text-muted-foreground">Name</Label>
+															<Input
+																className="h-8 mt-1"
+																placeholder="Task name"
+																value={newTaskName}
+																onChange={(e) => setNewTaskName(e.target.value)}
+															/>
+														</div>
+														<div>
+															<Label className="text-xs text-muted-foreground">Category</Label>
+															<Select
+																value={newTaskCategory}
+																onValueChange={(v) => setNewTaskCategory(v as WorkflowStepCategory)}
+															>
+																<SelectTrigger className="h-8 mt-1">
+																	<SelectValue />
+																</SelectTrigger>
+																<SelectContent>
+																	{WORKFLOW_STEP_CATEGORIES.map((cat) => (
+																		<SelectItem key={cat} value={cat} className="capitalize">
+																			{cat}
+																		</SelectItem>
+																	))}
+																</SelectContent>
+															</Select>
+														</div>
+														<div>
+															<Label className="text-xs text-muted-foreground">Assignee</Label>
+															<Select
+																value={newTaskAssigneeId || 'unassigned'}
+																onValueChange={setNewTaskAssigneeId}
+															>
+																<SelectTrigger className="h-8 mt-1">
+																	<SelectValue />
+																</SelectTrigger>
+																<SelectContent>
+																	<SelectItem value="unassigned">Unassigned</SelectItem>
+																	{teamMembers?.map((member) => (
+																		<SelectItem key={member.id} value={member.id}>
+																			{member.name}
+																		</SelectItem>
+																	))}
+																</SelectContent>
+															</Select>
+														</div>
+														<div>
+															<Label className="text-xs text-muted-foreground">Due Date</Label>
+															<Input
+																type="date"
+																className="h-8 mt-1"
+																value={newTaskDueDate}
+																onChange={(e) => setNewTaskDueDate(e.target.value)}
+															/>
+														</div>
+													</div>
+													<div className="flex justify-end gap-2">
+														<Button
+															variant="outline"
+															size="sm"
+															onClick={() => {
+																setShowAddTask(false);
+																setNewTaskName('');
+																setNewTaskCategory('admin');
+																setNewTaskAssigneeId('');
+																setNewTaskDueDate('');
+															}}
+														>
+															Cancel
+														</Button>
+														<Button
+															size="sm"
+															disabled={!newTaskName.trim() || addTaskMutation.isPending}
+															onClick={() => {
+																addTaskMutation.mutate(
+																	{
+																		name: newTaskName.trim(),
+																		category: newTaskCategory,
+																		assigneeId:
+																			newTaskAssigneeId && newTaskAssigneeId !== 'unassigned'
+																				? newTaskAssigneeId
+																				: null,
+																		dueDate: newTaskDueDate || null,
+																	},
+																	{
+																		onSuccess: () => {
+																			toast.success('Task added');
+																			setShowAddTask(false);
+																			setNewTaskName('');
+																			setNewTaskCategory('admin');
+																			setNewTaskAssigneeId('');
+																			setNewTaskDueDate('');
+																		},
+																		onError: (err) => toast.error(err.message),
+																	},
+																);
+															}}
+														>
+															{addTaskMutation.isPending && (
+																<Loader2 className="h-3 w-3 mr-1 animate-spin" />
+															)}
+															Add
+														</Button>
+													</div>
+												</div>
+											) : (
+												<Button variant="outline" size="sm" onClick={() => setShowAddTask(true)}>
+													<Plus className="h-4 w-4 mr-1" />
+													Add Task
+												</Button>
+											)}
+										</div>
+									</CardContent>
+								</Card>
+							</>
+						)}
+					</div>
+				</TabsContent>
+
+				{/* Forms & Fees Tab */}
+				<TabsContent value="forms" className="mt-6">
+					<div className="max-w-2xl space-y-6">
 						<Card>
 							<CardHeader>
 								<div className="flex items-center justify-between">
 									<div>
-										<CardTitle>Memorial Proof</CardTitle>
-										<CardDescription>
-											Upload and manage proof designs for customer approval
-										</CardDescription>
+										<CardTitle>Forms & Fees</CardTitle>
+										<CardDescription>Track forms, applications and associated fees</CardDescription>
 									</div>
-									<label>
-										<Button
-											disabled={proofUploadProgress !== 'idle'}
-											asChild
-										>
-											<span>
-												<Upload className="h-4 w-4 mr-2" />
-												{currentProof ? 'Upload New Version' : 'Upload Proof'}
-											</span>
-										</Button>
-										<input
-											type="file"
-											className="hidden"
-											accept="image/jpeg,image/png,image/gif,image/webp,application/pdf"
-											onChange={handleProofUpload}
-											disabled={proofUploadProgress !== 'idle'}
-										/>
-									</label>
 								</div>
 							</CardHeader>
 							<CardContent>
-								{proofUploadProgress !== 'idle' && (
-									<div className="flex items-center justify-center py-8 bg-muted rounded-lg mb-4">
-										<Loader2 className="h-6 w-6 animate-spin mr-2" />
-										<span>{proofUploadProgress === 'uploading' ? 'Uploading...' : 'Saving...'}</span>
-									</div>
-								)}
-
-								{proofsLoading ? (
+								{formsLoading ? (
 									<div className="text-muted-foreground flex items-center gap-2">
 										<Loader2 className="h-4 w-4 animate-spin" />
-										Loading proofs...
-									</div>
-								) : !currentProof ? (
-									<div className="text-center py-12 text-muted-foreground">
-										<FileImage className="h-12 w-12 mx-auto mb-3 opacity-40" />
-										<p className="font-medium">No proof uploaded yet</p>
-										<p className="text-sm mt-1">Upload a proof design to begin the approval workflow</p>
+										Loading forms...
 									</div>
 								) : (
-									<div className="space-y-4">
-										{/* Proof preview */}
-										<div className="flex items-start gap-4 p-4 border rounded-lg">
-											<div className="flex-shrink-0">
-												{currentProof.contentType.startsWith('image/') ? (
-													<Image className="h-10 w-10 text-blue-500" />
-												) : (
-													<FileText className="h-10 w-10 text-red-500" />
-												)}
-											</div>
-											<div className="flex-1 min-w-0">
-												<div className="flex items-center gap-2 flex-wrap">
-													<span className="font-medium truncate">{currentProof.filename}</span>
-													{getProofStatusBadge(currentProof.status as ProofStatus)}
-													<Badge variant="outline" className="text-xs">v{currentProof.version}</Badge>
-												</div>
-												<div className="text-sm text-muted-foreground mt-1 space-y-0.5">
-													<div>Uploaded by {currentProof.createdByName || 'Unknown'} on {formatDate(currentProof.createdAt)}</div>
-													{currentProof.sentAt && <div>Sent {formatDate(currentProof.sentAt)}</div>}
-													{currentProof.approvedAt && <div>Approved {formatDate(currentProof.approvedAt)}</div>}
-													{currentProof.size && <div>{(currentProof.size / 1024).toFixed(1)} KB</div>}
-												</div>
-												{currentProof.notes && (
-													<div className="text-sm mt-2 text-muted-foreground italic">{currentProof.notes}</div>
-												)}
-											</div>
-										</div>
+									<>
+										{/* Form list */}
+										{jobForms && jobForms.length > 0 ? (
+											<div className="space-y-2">
+												{jobForms.map((form) => (
+													<div
+														key={form.id}
+														className="flex items-center gap-3 p-3 border rounded-lg"
+													>
+														{/* Name */}
+														<div className="flex-1 min-w-0">
+															<span className="font-medium text-sm">{form.name}</span>
+															{form.referenceNumber && (
+																<span className="text-xs text-muted-foreground ml-2">
+																	Ref: {form.referenceNumber}
+																</span>
+															)}
+															<div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+																{form.submittedAt && (
+																	<span>Submitted: {formatDate(form.submittedAt)}</span>
+																)}
+																{form.approvedAt && (
+																	<span>Approved: {formatDate(form.approvedAt)}</span>
+																)}
+															</div>
+														</div>
 
-										{/* Customer feedback */}
-										{currentProof.status === 'revision_requested' && currentProof.customerFeedback && (
-											<div className="p-4 border border-orange-200 bg-orange-50 rounded-lg">
-												<div className="flex items-center gap-2 text-sm font-medium text-orange-800 mb-1">
-													<MessageSquare className="h-4 w-4" />
-													Customer Feedback
-												</div>
-												<p className="text-sm text-orange-700">{currentProof.customerFeedback}</p>
+														{/* Status select */}
+														<Select
+															value={form.status}
+															onValueChange={(value) => {
+																const input: Record<string, unknown> = { status: value };
+																if (value === 'submitted' && !form.submittedAt) {
+																	input.submittedAt = new Date().toISOString();
+																}
+																if (value === 'approved' && !form.approvedAt) {
+																	input.approvedAt = new Date().toISOString();
+																}
+																updateFormMutation.mutate(
+																	{ formId: form.id, input },
+																	{
+																		onError: (err) => toast.error(err.message),
+																	},
+																);
+															}}
+														>
+															<SelectTrigger className="w-36 h-8">
+																<SelectValue />
+															</SelectTrigger>
+															<SelectContent>
+																{FORM_STATUSES.map((status) => (
+																	<SelectItem key={status} value={status}>
+																		<div className="flex items-center gap-2">
+																			<div
+																				className={`w-2 h-2 rounded-full ${
+																					status === 'not_started'
+																						? 'bg-gray-400'
+																						: status === 'submitted'
+																							? 'bg-blue-500'
+																							: status === 'approved'
+																								? 'bg-green-500'
+																								: status === 'received'
+																									? 'bg-green-500'
+																									: 'bg-gray-400'
+																				}`}
+																			/>
+																			{status
+																				.split('_')
+																				.map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+																				.join(' ')}
+																		</div>
+																	</SelectItem>
+																))}
+															</SelectContent>
+														</Select>
+
+														{/* Fee input */}
+														<div className="w-24">
+															<Input
+																type="number"
+																step="0.01"
+																placeholder="Fee"
+																className="h-8 text-sm"
+																defaultValue={form.fee || ''}
+																onBlur={(e) => {
+																	const newFee = e.target.value || null;
+																	if (newFee !== form.fee) {
+																		updateFormMutation.mutate(
+																			{ formId: form.id, input: { fee: newFee } },
+																			{
+																				onError: (err) => toast.error(err.message),
+																			},
+																		);
+																	}
+																}}
+															/>
+														</div>
+
+														{/* Delete */}
+														<Button
+															variant="ghost"
+															size="sm"
+															onClick={() => {
+																deleteFormMutation.mutate(form.id, {
+																	onSuccess: () => toast.success(`"${form.name}" removed`),
+																	onError: (err) => toast.error(err.message),
+																});
+															}}
+															disabled={deleteFormMutation.isPending}
+														>
+															<Trash2 className="h-4 w-4" />
+														</Button>
+													</div>
+												))}
+											</div>
+										) : (
+											<div className="text-muted-foreground text-center py-6">
+												No forms added yet.
 											</div>
 										)}
 
-										{/* Action buttons */}
-										<div className="flex items-center gap-2">
-											{currentProof.status === 'draft' && (
-												<Button
-													onClick={() => handleSendProof(currentProof.id)}
-													disabled={sendProofMutation.isPending}
-												>
-													{sendProofMutation.isPending ? (
-														<Loader2 className="h-4 w-4 mr-2 animate-spin" />
-													) : (
-														<Eye className="h-4 w-4 mr-2" />
+										{/* Total fees */}
+										{jobForms && jobForms.length > 0 && (
+											<div className="flex items-center justify-between pt-4 mt-4 border-t">
+												<span className="font-medium text-sm">Total Fees</span>
+												<span className="font-bold">
+													{formatCurrency(
+														jobForms.reduce((sum, f) => sum + (f.fee ? parseFloat(f.fee) : 0), 0),
 													)}
-													Send to Customer
+												</span>
+											</div>
+										)}
+
+										{/* Quick-add form */}
+										<div className="mt-4 pt-4 border-t">
+											<div className="flex items-center gap-2 relative">
+												<div className="flex-1 relative">
+													<Input
+														placeholder="Add a form (e.g., Faculty Application, Burial Rights)..."
+														className="h-8"
+														value={newFormName}
+														onChange={(e) => {
+															setNewFormName(e.target.value);
+															setShowFormSuggestions(e.target.value.length > 0);
+														}}
+														onFocus={() => {
+															if (newFormName.length > 0) setShowFormSuggestions(true);
+														}}
+														onBlur={() => {
+															// Delay to allow click on suggestion
+															setTimeout(() => setShowFormSuggestions(false), 200);
+														}}
+														onKeyDown={(e) => {
+															if (e.key === 'Enter' && newFormName.trim()) {
+																addFormMutation.mutate(
+																	{ name: newFormName.trim() },
+																	{
+																		onSuccess: () => {
+																			toast.success('Form added');
+																			setNewFormName('');
+																			setShowFormSuggestions(false);
+																		},
+																		onError: (err) => toast.error(err.message),
+																	},
+																);
+															}
+														}}
+													/>
+													{showFormSuggestions && formSuggestions && formSuggestions.length > 0 && (
+														<div className="absolute top-full left-0 right-0 mt-1 bg-popover border rounded-md shadow-md z-10 max-h-40 overflow-y-auto">
+															{formSuggestions
+																.filter((s) => s.toLowerCase().includes(newFormName.toLowerCase()))
+																.map((suggestion) => (
+																	<button
+																		key={suggestion}
+																		type="button"
+																		className="w-full text-left px-3 py-2 text-sm hover:bg-muted"
+																		onMouseDown={(e) => e.preventDefault()}
+																		onClick={() => {
+																			setNewFormName(suggestion);
+																			setShowFormSuggestions(false);
+																		}}
+																	>
+																		{suggestion}
+																	</button>
+																))}
+														</div>
+													)}
+												</div>
+												<Button
+													size="sm"
+													disabled={!newFormName.trim() || addFormMutation.isPending}
+													onClick={() => {
+														addFormMutation.mutate(
+															{ name: newFormName.trim() },
+															{
+																onSuccess: () => {
+																	toast.success('Form added');
+																	setNewFormName('');
+																},
+																onError: (err) => toast.error(err.message),
+															},
+														);
+													}}
+												>
+													{addFormMutation.isPending ? (
+														<Loader2 className="h-4 w-4 animate-spin" />
+													) : (
+														<Plus className="h-4 w-4" />
+													)}
 												</Button>
-											)}
-											{currentProof.status === 'sent_to_customer' && (
-												<>
+											</div>
+										</div>
+									</>
+								)}
+							</CardContent>
+						</Card>
+					</div>
+				</TabsContent>
+
+				{/* Proof Tab */}
+				{quoteType === 'new_memorial' && (
+					<TabsContent value="proof" className="mt-6">
+						<div className="max-w-2xl space-y-6">
+							{/* Current Proof */}
+							<Card>
+								<CardHeader>
+									<div className="flex items-center justify-between">
+										<div>
+											<CardTitle>Memorial Proof</CardTitle>
+											<CardDescription>
+												Upload and manage proof designs for customer approval
+											</CardDescription>
+										</div>
+										<label>
+											<Button disabled={proofUploadProgress !== 'idle'} asChild>
+												<span>
+													<Upload className="h-4 w-4 mr-2" />
+													{currentProof ? 'Upload New Version' : 'Upload Proof'}
+												</span>
+											</Button>
+											<input
+												type="file"
+												className="hidden"
+												accept="image/jpeg,image/png,image/gif,image/webp,application/pdf"
+												onChange={handleProofUpload}
+												disabled={proofUploadProgress !== 'idle'}
+											/>
+										</label>
+									</div>
+								</CardHeader>
+								<CardContent>
+									{proofUploadProgress !== 'idle' && (
+										<div className="flex items-center justify-center py-8 bg-muted rounded-lg mb-4">
+											<Loader2 className="h-6 w-6 animate-spin mr-2" />
+											<span>
+												{proofUploadProgress === 'uploading' ? 'Uploading...' : 'Saving...'}
+											</span>
+										</div>
+									)}
+
+									{proofsLoading ? (
+										<div className="text-muted-foreground flex items-center gap-2">
+											<Loader2 className="h-4 w-4 animate-spin" />
+											Loading proofs...
+										</div>
+									) : !currentProof ? (
+										<div className="text-center py-12 text-muted-foreground">
+											<FileImage className="h-12 w-12 mx-auto mb-3 opacity-40" />
+											<p className="font-medium">No proof uploaded yet</p>
+											<p className="text-sm mt-1">
+												Upload a proof design to begin the approval workflow
+											</p>
+										</div>
+									) : (
+										<div className="space-y-4">
+											{/* Proof preview */}
+											<div className="flex items-start gap-4 p-4 border rounded-lg">
+												<div className="flex-shrink-0">
+													{currentProof.contentType.startsWith('image/') ? (
+														<Image className="h-10 w-10 text-blue-500" />
+													) : (
+														<FileText className="h-10 w-10 text-red-500" />
+													)}
+												</div>
+												<div className="flex-1 min-w-0">
+													<div className="flex items-center gap-2 flex-wrap">
+														<span className="font-medium truncate">{currentProof.filename}</span>
+														{getProofStatusBadge(currentProof.status as ProofStatus)}
+														<Badge variant="outline" className="text-xs">
+															v{currentProof.version}
+														</Badge>
+													</div>
+													<div className="text-sm text-muted-foreground mt-1 space-y-0.5">
+														<div>
+															Uploaded by {currentProof.createdByName || 'Unknown'} on{' '}
+															{formatDate(currentProof.createdAt)}
+														</div>
+														{currentProof.sentAt && (
+															<div>Sent {formatDate(currentProof.sentAt)}</div>
+														)}
+														{currentProof.approvedAt && (
+															<div>Approved {formatDate(currentProof.approvedAt)}</div>
+														)}
+														{currentProof.size && (
+															<div>{(currentProof.size / 1024).toFixed(1)} KB</div>
+														)}
+													</div>
+													{currentProof.notes && (
+														<div className="text-sm mt-2 text-muted-foreground italic">
+															{currentProof.notes}
+														</div>
+													)}
+												</div>
+											</div>
+
+											{/* Customer feedback */}
+											{currentProof.status === 'revision_requested' &&
+												currentProof.customerFeedback && (
+													<div className="p-4 border border-orange-200 bg-orange-50 rounded-lg">
+														<div className="flex items-center gap-2 text-sm font-medium text-orange-800 mb-1">
+															<MessageSquare className="h-4 w-4" />
+															Customer Feedback
+														</div>
+														<p className="text-sm text-orange-700">
+															{currentProof.customerFeedback}
+														</p>
+													</div>
+												)}
+
+											{/* Action buttons */}
+											<div className="flex items-center gap-2">
+												{currentProof.status === 'draft' && (
 													<Button
-														onClick={() => handleApproveProof(currentProof.id)}
-														disabled={approveProofMutation.isPending}
-														className="bg-green-600 hover:bg-green-700"
+														onClick={() => handleSendProof(currentProof.id)}
+														disabled={sendProofMutation.isPending}
 													>
-														{approveProofMutation.isPending ? (
+														{sendProofMutation.isPending ? (
 															<Loader2 className="h-4 w-4 mr-2 animate-spin" />
 														) : (
-															<Check className="h-4 w-4 mr-2" />
+															<Eye className="h-4 w-4 mr-2" />
 														)}
-														Mark Approved
+														Send to Customer
 													</Button>
-													<Button
-														variant="outline"
-														onClick={() => {
-															setRevisionProofId(currentProof.id);
-															setRevisionFeedback('');
-															setRevisionDialogOpen(true);
-														}}
-													>
-														<MessageSquare className="h-4 w-4 mr-2" />
-														Request Revision
-													</Button>
-												</>
-											)}
-											{currentProof.status === 'revision_requested' && (
-												<label>
-													<Button asChild>
-														<span>
-															<Upload className="h-4 w-4 mr-2" />
-															Upload New Version
-														</span>
-													</Button>
-													<input
-														type="file"
-														className="hidden"
-														accept="image/jpeg,image/png,image/gif,image/webp,application/pdf"
-														onChange={handleProofUpload}
-														disabled={proofUploadProgress !== 'idle'}
-													/>
-												</label>
-											)}
+												)}
+												{currentProof.status === 'sent_to_customer' && (
+													<>
+														<Button
+															onClick={() => handleApproveProof(currentProof.id)}
+															disabled={approveProofMutation.isPending}
+															className="bg-green-600 hover:bg-green-700"
+														>
+															{approveProofMutation.isPending ? (
+																<Loader2 className="h-4 w-4 mr-2 animate-spin" />
+															) : (
+																<Check className="h-4 w-4 mr-2" />
+															)}
+															Mark Approved
+														</Button>
+														<Button
+															variant="outline"
+															onClick={() => {
+																setRevisionProofId(currentProof.id);
+																setRevisionFeedback('');
+																setRevisionDialogOpen(true);
+															}}
+														>
+															<MessageSquare className="h-4 w-4 mr-2" />
+															Request Revision
+														</Button>
+													</>
+												)}
+												{currentProof.status === 'revision_requested' && (
+													<label>
+														<Button asChild>
+															<span>
+																<Upload className="h-4 w-4 mr-2" />
+																Upload New Version
+															</span>
+														</Button>
+														<input
+															type="file"
+															className="hidden"
+															accept="image/jpeg,image/png,image/gif,image/webp,application/pdf"
+															onChange={handleProofUpload}
+															disabled={proofUploadProgress !== 'idle'}
+														/>
+													</label>
+												)}
+											</div>
+										</div>
+									)}
+								</CardContent>
+							</Card>
+
+							{/* Version History */}
+							{supersededProofs.length > 0 && (
+								<Collapsible open={proofHistoryOpen} onOpenChange={setProofHistoryOpen}>
+									<Card>
+										<CardHeader className="pb-3">
+											<CollapsibleTrigger className="flex items-center justify-between w-full">
+												<div className="flex items-center gap-2">
+													<History className="h-4 w-4 text-muted-foreground" />
+													<CardTitle className="text-base">Version History</CardTitle>
+													<Badge variant="secondary" className="text-xs">
+														{supersededProofs.length}
+													</Badge>
+												</div>
+												<ChevronDown
+													className={`h-4 w-4 text-muted-foreground transition-transform ${proofHistoryOpen ? 'rotate-180' : ''}`}
+												/>
+											</CollapsibleTrigger>
+										</CardHeader>
+										<CollapsibleContent>
+											<CardContent className="pt-0">
+												<div className="space-y-2">
+													{supersededProofs.map((proof) => (
+														<div
+															key={proof.id}
+															className="flex items-center justify-between p-3 border rounded-lg opacity-70"
+														>
+															<div className="flex items-center gap-3">
+																{proof.contentType.startsWith('image/') ? (
+																	<Image className="h-5 w-5 text-blue-500" />
+																) : (
+																	<FileText className="h-5 w-5 text-red-500" />
+																)}
+																<div>
+																	<div className="flex items-center gap-2">
+																		<span className="font-medium text-sm">{proof.filename}</span>
+																		<Badge variant="outline" className="text-xs">
+																			v{proof.version}
+																		</Badge>
+																		{getProofStatusBadge(proof.status as ProofStatus)}
+																	</div>
+																	<div className="text-xs text-muted-foreground mt-0.5">
+																		{proof.createdByName || 'Unknown'} &middot;{' '}
+																		{formatDate(proof.createdAt)}
+																		{proof.sentAt && <> &middot; Sent {formatDate(proof.sentAt)}</>}
+																		{proof.approvedAt && (
+																			<> &middot; Approved {formatDate(proof.approvedAt)}</>
+																		)}
+																	</div>
+																</div>
+															</div>
+														</div>
+													))}
+												</div>
+											</CardContent>
+										</CollapsibleContent>
+									</Card>
+								</Collapsible>
+							)}
+						</div>
+					</TabsContent>
+				)}
+
+				{/* Specifications Tab */}
+				{hasSpecifications && (
+					<TabsContent value="specifications" className="mt-6">
+						<Card>
+							<CardHeader>
+								<CardTitle>{memorialHeading}</CardTitle>
+								<CardDescription>Specifications from source quote</CardDescription>
+							</CardHeader>
+							<CardContent className="space-y-6">
+								{/* Existing Memorial Description */}
+								{sectionConfig?.showExistingMemorial && job.quote.existingMemorialDescription && (
+									<div>
+										<h4 className="text-sm font-medium text-muted-foreground mb-2">
+											EXISTING MEMORIAL
+										</h4>
+										<div className="bg-muted/50 rounded-lg p-3 text-sm">
+											{job.quote.existingMemorialDescription}
+										</div>
+									</div>
+								)}
+
+								{/* Related Job */}
+								{sectionConfig?.showRelatedJob && job.quote.relatedJobId && (
+									<div>
+										<h4 className="text-sm font-medium text-muted-foreground mb-2">RELATED JOB</h4>
+										<Link to={`/app/jobs/${job.quote.relatedJobId}`}>
+											<Button variant="outline" size="sm">
+												<ExternalLink className="h-4 w-4 mr-2" />
+												View Related Job
+											</Button>
+										</Link>
+									</div>
+								)}
+
+								{/* Components */}
+								{sectionConfig?.showComponents && job.quote.components.length > 0 && (
+									<div>
+										<h4 className="text-sm font-medium text-muted-foreground mb-2">COMPONENTS</h4>
+										<div className="space-y-2">
+											{job.quote.components.map((comp) => (
+												<div key={comp.id} className="bg-muted/50 rounded-lg p-3">
+													<div className="font-medium">
+														{comp.componentType
+															.split('_')
+															.map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+															.join(' ')}
+														{comp.materialName && ` • ${comp.materialName}`}
+														{comp.finishName && ` (${comp.finishName})`}
+													</div>
+													{(comp.height || comp.width || comp.depth) && (
+														<div className="text-sm text-muted-foreground mt-1">
+															{[comp.height, comp.width, comp.depth].filter(Boolean).join('" × ')}"
+															{comp.quantity > 1 && ` × ${comp.quantity}`}
+														</div>
+													)}
+												</div>
+											))}
+										</div>
+									</div>
+								)}
+
+								{/* Lettering */}
+								{sectionConfig?.showLettering && job.quote.lettering.length > 0 && (
+									<div>
+										<h4 className="text-sm font-medium text-muted-foreground mb-2">LETTERING</h4>
+										<div className="space-y-2">
+											{job.quote.lettering.map((lett) => (
+												<div key={lett.id} className="bg-muted/50 rounded-lg p-3">
+													{lett.text && <div className="font-medium">"{lett.text}"</div>}
+													<div className="text-sm text-muted-foreground mt-1">
+														{lett.techniqueName}
+														{lett.colorName && ` • ${lett.colorName}`}
+														{` • ${lett.letterCount} letters`}
+													</div>
+												</div>
+											))}
+										</div>
+									</div>
+								)}
+
+								{/* Proposed Inscription */}
+								{sectionConfig?.showProposedInscription && job.quote.proposedInscription && (
+									<div>
+										<h4 className="text-sm font-medium text-muted-foreground mb-2">INSCRIPTION</h4>
+										<div className="bg-muted/50 rounded-lg p-4 font-mono text-sm text-center whitespace-pre-wrap">
+											{job.quote.proposedInscription}
+										</div>
+									</div>
+								)}
+
+								{/* Sundries */}
+								{sectionConfig?.showSundries && job.quote.sundries.length > 0 && (
+									<div>
+										<h4 className="text-sm font-medium text-muted-foreground mb-2">
+											ADDITIONAL ITEMS
+										</h4>
+										<ul className="space-y-1">
+											{job.quote.sundries.map((sundry) => (
+												<li key={sundry.id} className="flex items-center gap-2 text-sm">
+													<span className="w-1.5 h-1.5 rounded-full bg-muted-foreground" />
+													{sundry.sundryName}
+													{sundry.quantity > 1 && ` × ${sundry.quantity}`}
+												</li>
+											))}
+										</ul>
+									</div>
+								)}
+
+								{/* Flower Holes */}
+								{sectionConfig?.showFlowerHoles && job.quote.flowerHoles && (
+									<div>
+										<h4 className="text-sm font-medium text-muted-foreground mb-2">FLOWER HOLES</h4>
+										<div className="text-sm">
+											{job.quote.flowerHoles
+												.split('_')
+												.map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+												.join(' ')}
 										</div>
 									</div>
 								)}
 							</CardContent>
 						</Card>
-
-						{/* Version History */}
-						{supersededProofs.length > 0 && (
-							<Collapsible open={proofHistoryOpen} onOpenChange={setProofHistoryOpen}>
-								<Card>
-									<CardHeader className="pb-3">
-										<CollapsibleTrigger className="flex items-center justify-between w-full">
-											<div className="flex items-center gap-2">
-												<History className="h-4 w-4 text-muted-foreground" />
-												<CardTitle className="text-base">Version History</CardTitle>
-												<Badge variant="secondary" className="text-xs">{supersededProofs.length}</Badge>
-											</div>
-											<ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${proofHistoryOpen ? 'rotate-180' : ''}`} />
-										</CollapsibleTrigger>
-									</CardHeader>
-									<CollapsibleContent>
-										<CardContent className="pt-0">
-											<div className="space-y-2">
-												{supersededProofs.map((proof) => (
-													<div
-														key={proof.id}
-														className="flex items-center justify-between p-3 border rounded-lg opacity-70"
-													>
-														<div className="flex items-center gap-3">
-															{proof.contentType.startsWith('image/') ? (
-																<Image className="h-5 w-5 text-blue-500" />
-															) : (
-																<FileText className="h-5 w-5 text-red-500" />
-															)}
-															<div>
-																<div className="flex items-center gap-2">
-																	<span className="font-medium text-sm">{proof.filename}</span>
-																	<Badge variant="outline" className="text-xs">v{proof.version}</Badge>
-																	{getProofStatusBadge(proof.status as ProofStatus)}
-																</div>
-																<div className="text-xs text-muted-foreground mt-0.5">
-																	{proof.createdByName || 'Unknown'} &middot; {formatDate(proof.createdAt)}
-																	{proof.sentAt && <> &middot; Sent {formatDate(proof.sentAt)}</>}
-																	{proof.approvedAt && <> &middot; Approved {formatDate(proof.approvedAt)}</>}
-																</div>
-															</div>
-														</div>
-													</div>
-												))}
-											</div>
-										</CardContent>
-									</CollapsibleContent>
-								</Card>
-							</Collapsible>
-						)}
-					</div>
-				</TabsContent>
-			)}
-
-			{/* Specifications Tab */}
-			{hasSpecifications && (
-				<TabsContent value="specifications" className="mt-6">
-					<Card>
-						<CardHeader>
-							<CardTitle>{memorialHeading}</CardTitle>
-							<CardDescription>
-								Specifications from source quote
-							</CardDescription>
-						</CardHeader>
-						<CardContent className="space-y-6">
-							{/* Existing Memorial Description */}
-							{sectionConfig?.showExistingMemorial && job.quote.existingMemorialDescription && (
-								<div>
-									<h4 className="text-sm font-medium text-muted-foreground mb-2">EXISTING MEMORIAL</h4>
-									<div className="bg-muted/50 rounded-lg p-3 text-sm">
-										{job.quote.existingMemorialDescription}
-									</div>
-								</div>
-							)}
-
-							{/* Related Job */}
-							{sectionConfig?.showRelatedJob && job.quote.relatedJobId && (
-								<div>
-									<h4 className="text-sm font-medium text-muted-foreground mb-2">RELATED JOB</h4>
-									<Link to={`/app/jobs/${job.quote.relatedJobId}`}>
-										<Button variant="outline" size="sm">
-											<ExternalLink className="h-4 w-4 mr-2" />
-											View Related Job
-										</Button>
-									</Link>
-								</div>
-							)}
-
-							{/* Components */}
-							{sectionConfig?.showComponents && job.quote.components.length > 0 && (
-								<div>
-									<h4 className="text-sm font-medium text-muted-foreground mb-2">COMPONENTS</h4>
-									<div className="space-y-2">
-										{job.quote.components.map((comp) => (
-											<div key={comp.id} className="bg-muted/50 rounded-lg p-3">
-												<div className="font-medium">
-													{comp.componentType.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
-													{comp.materialName && ` • ${comp.materialName}`}
-													{comp.finishName && ` (${comp.finishName})`}
-												</div>
-												{(comp.height || comp.width || comp.depth) && (
-													<div className="text-sm text-muted-foreground mt-1">
-														{[comp.height, comp.width, comp.depth].filter(Boolean).join('" × ')}"
-														{comp.quantity > 1 && ` × ${comp.quantity}`}
-													</div>
-												)}
-											</div>
-										))}
-									</div>
-								</div>
-							)}
-
-							{/* Lettering */}
-							{sectionConfig?.showLettering && job.quote.lettering.length > 0 && (
-								<div>
-									<h4 className="text-sm font-medium text-muted-foreground mb-2">LETTERING</h4>
-									<div className="space-y-2">
-										{job.quote.lettering.map((lett) => (
-											<div key={lett.id} className="bg-muted/50 rounded-lg p-3">
-												{lett.text && (
-													<div className="font-medium">"{lett.text}"</div>
-												)}
-												<div className="text-sm text-muted-foreground mt-1">
-													{lett.techniqueName}
-													{lett.colorName && ` • ${lett.colorName}`}
-													{` • ${lett.letterCount} letters`}
-												</div>
-											</div>
-										))}
-									</div>
-								</div>
-							)}
-
-							{/* Proposed Inscription */}
-							{sectionConfig?.showProposedInscription && job.quote.proposedInscription && (
-								<div>
-									<h4 className="text-sm font-medium text-muted-foreground mb-2">INSCRIPTION</h4>
-									<div className="bg-muted/50 rounded-lg p-4 font-mono text-sm text-center whitespace-pre-wrap">
-										{job.quote.proposedInscription}
-									</div>
-								</div>
-							)}
-
-							{/* Sundries */}
-							{sectionConfig?.showSundries && job.quote.sundries.length > 0 && (
-								<div>
-									<h4 className="text-sm font-medium text-muted-foreground mb-2">ADDITIONAL ITEMS</h4>
-									<ul className="space-y-1">
-										{job.quote.sundries.map((sundry) => (
-											<li key={sundry.id} className="flex items-center gap-2 text-sm">
-												<span className="w-1.5 h-1.5 rounded-full bg-muted-foreground" />
-												{sundry.sundryName}
-												{sundry.quantity > 1 && ` × ${sundry.quantity}`}
-											</li>
-										))}
-									</ul>
-								</div>
-							)}
-
-							{/* Flower Holes */}
-							{sectionConfig?.showFlowerHoles && job.quote.flowerHoles && (
-								<div>
-									<h4 className="text-sm font-medium text-muted-foreground mb-2">FLOWER HOLES</h4>
-									<div className="text-sm">
-										{job.quote.flowerHoles.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
-									</div>
-								</div>
-							)}
-						</CardContent>
-					</Card>
-				</TabsContent>
-			)}
-
+					</TabsContent>
+				)}
 
 				<TabsContent value="payments" className="mt-6">
 					<div className="max-w-2xl space-y-6">
@@ -2525,15 +2642,9 @@ export function JobDetailPage() {
 								<div className="flex items-center justify-between">
 									<div>
 										<CardTitle>Payment Schedule</CardTitle>
-										<CardDescription>
-											Track payments for this job
-										</CardDescription>
+										<CardDescription>Track payments for this job</CardDescription>
 									</div>
-									<Button
-										variant="outline"
-										size="sm"
-										onClick={() => setShowAddPayment(true)}
-									>
+									<Button variant="outline" size="sm" onClick={() => setShowAddPayment(true)}>
 										<Plus className="h-4 w-4 mr-2" />
 										Add Payment
 									</Button>
@@ -2625,7 +2736,9 @@ export function JobDetailPage() {
 																				className="h-6 px-2 ml-1"
 																				onClick={() => {
 																					setEditingPaymentId(item.id);
-																					setEditingDueDate(item.dueDate ? item.dueDate.split('T')[0] : '');
+																					setEditingDueDate(
+																						item.dueDate ? item.dueDate.split('T')[0] : '',
+																					);
 																				}}
 																			>
 																				Edit
@@ -2743,7 +2856,11 @@ export function JobDetailPage() {
 											</Button>
 											<Button
 												onClick={handleAddPayment}
-												disabled={!newPaymentDescription || !newPaymentAmount || createPaymentMutation.isPending}
+												disabled={
+													!newPaymentDescription ||
+													!newPaymentAmount ||
+													createPaymentMutation.isPending
+												}
 											>
 												{createPaymentMutation.isPending ? (
 													<Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -2765,15 +2882,21 @@ export function JobDetailPage() {
 									<div className="grid grid-cols-3 gap-4 text-center">
 										<div>
 											<div className="text-sm text-muted-foreground">Total</div>
-											<div className="text-xl font-bold">{formatCurrency(paymentData.summary.totalAmount)}</div>
+											<div className="text-xl font-bold">
+												{formatCurrency(paymentData.summary.totalAmount)}
+											</div>
 										</div>
 										<div>
 											<div className="text-sm text-muted-foreground">Paid</div>
-											<div className="text-xl font-bold text-green-600">{formatCurrency(paymentData.summary.paidAmount)}</div>
+											<div className="text-xl font-bold text-green-600">
+												{formatCurrency(paymentData.summary.paidAmount)}
+											</div>
 										</div>
 										<div>
 											<div className="text-sm text-muted-foreground">Outstanding</div>
-											<div className={`text-xl font-bold ${paymentData.summary.hasOverdue ? 'text-red-600' : ''}`}>
+											<div
+												className={`text-xl font-bold ${paymentData.summary.hasOverdue ? 'text-red-600' : ''}`}
+											>
 												{formatCurrency(paymentData.summary.outstandingAmount)}
 											</div>
 										</div>
@@ -2814,126 +2937,119 @@ export function JobDetailPage() {
 								</CardContent>
 							</Card>
 						) : worksheetForm ? (
-							<>
-								<Card>
-									<CardHeader>
-										<div className="flex items-center justify-between">
-											<div>
-												<CardTitle>Memorial Worksheet</CardTitle>
-												<CardDescription>
-													Reference: {job.jobNumber}
-												</CardDescription>
-											</div>
-											<div className="flex items-center gap-2">
-												{worksheetSaved && (
-													<span className="text-sm text-green-600 flex items-center gap-1">
-														<Check className="h-4 w-4" />
-														Saved
-													</span>
+							<Card>
+								<CardHeader>
+									<div className="flex items-center justify-between">
+										<div>
+											<CardTitle>Memorial Worksheet</CardTitle>
+											<CardDescription>Reference: {job.jobNumber}</CardDescription>
+										</div>
+										<div className="flex items-center gap-2">
+											{worksheetSaved && (
+												<span className="text-sm text-green-600 flex items-center gap-1">
+													<Check className="h-4 w-4" />
+													Saved
+												</span>
+											)}
+											<Button
+												variant="outline"
+												size="sm"
+												onClick={handleSaveWorksheet}
+												disabled={updateWorksheetMutation.isPending}
+											>
+												{updateWorksheetMutation.isPending ? (
+													<Loader2 className="h-4 w-4 mr-2 animate-spin" />
+												) : (
+													<Save className="h-4 w-4 mr-2" />
 												)}
-												<Button
-													variant="outline"
-													size="sm"
-													onClick={handleSaveWorksheet}
-													disabled={updateWorksheetMutation.isPending}
-												>
-													{updateWorksheetMutation.isPending ? (
-														<Loader2 className="h-4 w-4 mr-2 animate-spin" />
-													) : (
-														<Save className="h-4 w-4 mr-2" />
-													)}
-													Save
+												Save
+											</Button>
+											<Link to={`/app/jobs/${id}/worksheet/print`} target="_blank">
+												<Button variant="outline" size="sm">
+													<Printer className="h-4 w-4 mr-2" />
+													Print
 												</Button>
-												<Link
-													to={`/app/jobs/${id}/worksheet/print`}
-													target="_blank"
-												>
-													<Button variant="outline" size="sm">
-														<Printer className="h-4 w-4 mr-2" />
-														Print
-													</Button>
-												</Link>
-											</div>
+											</Link>
 										</div>
-									</CardHeader>
-									<CardContent className="space-y-4">
-										<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-											<div>
-												<Label htmlFor="ws-date">Date</Label>
-												<Input
-													id="ws-date"
-													type="date"
-													value={worksheetForm.date}
-													onChange={(e) => updateWorksheetField('date', e.target.value)}
-												/>
-											</div>
-											<div>
-												<Label htmlFor="ws-deceased">Memorial Of</Label>
-												<Input
-													id="ws-deceased"
-													placeholder="Name of deceased"
-													value={worksheetForm.deceasedName}
-													onChange={(e) => updateWorksheetField('deceasedName', e.target.value)}
-												/>
-											</div>
-										</div>
-
-										<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-											<div>
-												<Label htmlFor="ws-cemetery">Cemetery / Churchyard</Label>
-												<Input
-													id="ws-cemetery"
-													placeholder="Cemetery or churchyard name"
-													value={worksheetForm.cemeteryChurchyard}
-													onChange={(e) => updateWorksheetField('cemeteryChurchyard', e.target.value)}
-												/>
-											</div>
-											<div>
-												<Label htmlFor="ws-location">Location</Label>
-												<Input
-													id="ws-location"
-													placeholder="Location details"
-													value={worksheetForm.location}
-													onChange={(e) => updateWorksheetField('location', e.target.value)}
-												/>
-											</div>
-										</div>
-
+									</div>
+								</CardHeader>
+								<CardContent className="space-y-4">
+									<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 										<div>
-											<Label htmlFor="ws-existing">Existing Memorial Description</Label>
+											<Label htmlFor="ws-date">Date</Label>
 											<Input
-												id="ws-existing"
-												placeholder="Description of existing memorial"
-												value={worksheetForm.existingDescription}
-												onChange={(e) => updateWorksheetField('existingDescription', e.target.value)}
+												id="ws-date"
+												type="date"
+												value={worksheetForm.date}
+												onChange={(e) => updateWorksheetField('date', e.target.value)}
 											/>
 										</div>
-
 										<div>
-											<Label htmlFor="ws-requirements">Requirements</Label>
-											<Textarea
-												id="ws-requirements"
-												placeholder="Describe the work required..."
-												value={worksheetForm.requirements}
-												onChange={(e) => updateWorksheetField('requirements', e.target.value)}
-												rows={6}
+											<Label htmlFor="ws-deceased">Memorial Of</Label>
+											<Input
+												id="ws-deceased"
+												placeholder="Name of deceased"
+												value={worksheetForm.deceasedName}
+												onChange={(e) => updateWorksheetField('deceasedName', e.target.value)}
 											/>
 										</div>
+									</div>
 
+									<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 										<div>
-											<Label htmlFor="ws-inscription">Proposed Inscription</Label>
-											<Textarea
-												id="ws-inscription"
-												placeholder="Enter the proposed inscription text..."
-												value={worksheetForm.inscription}
-												onChange={(e) => updateWorksheetField('inscription', e.target.value)}
-												rows={6}
-												className="font-serif text-center"
+											<Label htmlFor="ws-cemetery">Cemetery / Churchyard</Label>
+											<Input
+												id="ws-cemetery"
+												placeholder="Cemetery or churchyard name"
+												value={worksheetForm.cemeteryChurchyard}
+												onChange={(e) => updateWorksheetField('cemeteryChurchyard', e.target.value)}
 											/>
 										</div>
-									</CardContent>
-								</Card>
-							</>
+										<div>
+											<Label htmlFor="ws-location">Location</Label>
+											<Input
+												id="ws-location"
+												placeholder="Location details"
+												value={worksheetForm.location}
+												onChange={(e) => updateWorksheetField('location', e.target.value)}
+											/>
+										</div>
+									</div>
+
+									<div>
+										<Label htmlFor="ws-existing">Existing Memorial Description</Label>
+										<Input
+											id="ws-existing"
+											placeholder="Description of existing memorial"
+											value={worksheetForm.existingDescription}
+											onChange={(e) => updateWorksheetField('existingDescription', e.target.value)}
+										/>
+									</div>
+
+									<div>
+										<Label htmlFor="ws-requirements">Requirements</Label>
+										<Textarea
+											id="ws-requirements"
+											placeholder="Describe the work required..."
+											value={worksheetForm.requirements}
+											onChange={(e) => updateWorksheetField('requirements', e.target.value)}
+											rows={6}
+										/>
+									</div>
+
+									<div>
+										<Label htmlFor="ws-inscription">Proposed Inscription</Label>
+										<Textarea
+											id="ws-inscription"
+											placeholder="Enter the proposed inscription text..."
+											value={worksheetForm.inscription}
+											onChange={(e) => updateWorksheetField('inscription', e.target.value)}
+											rows={6}
+											className="font-serif text-center"
+										/>
+									</div>
+								</CardContent>
+							</Card>
 						) : null}
 					</div>
 				</TabsContent>
@@ -2945,14 +3061,9 @@ export function JobDetailPage() {
 								<div className="flex items-center justify-between">
 									<div>
 										<CardTitle>Files & Attachments</CardTitle>
-										<CardDescription>
-											Artwork, proofs, and documents for this job
-										</CardDescription>
+										<CardDescription>Artwork, proofs, and documents for this job</CardDescription>
 									</div>
-									<Button
-										onClick={() => setShowUpload(true)}
-										disabled={uploadProgress !== 'idle'}
-									>
+									<Button onClick={() => setShowUpload(true)} disabled={uploadProgress !== 'idle'}>
 										<Upload className="h-4 w-4 mr-2" />
 										Upload File
 									</Button>
@@ -2997,7 +3108,9 @@ export function JobDetailPage() {
 											</div>
 
 											<div>
-												<label className="text-sm text-muted-foreground block mb-1">Notes (optional)</label>
+												<label className="text-sm text-muted-foreground block mb-1">
+													Notes (optional)
+												</label>
 												<Input
 													placeholder="Add a description..."
 													value={uploadNotes}
@@ -3097,11 +3210,7 @@ export function JobDetailPage() {
 													</div>
 												</div>
 												<div className="flex items-center gap-2">
-													<a
-														href={attachment.publicUrl}
-														target="_blank"
-														rel="noopener noreferrer"
-													>
+													<a href={attachment.publicUrl} target="_blank" rel="noopener noreferrer">
 														<Button variant="ghost" size="sm">
 															<ExternalLink className="h-4 w-4" />
 														</Button>
@@ -3123,7 +3232,8 @@ export function JobDetailPage() {
 								{/* File Count */}
 								{attachments && attachments.length > 0 && (
 									<div className="text-sm text-muted-foreground mt-4 pt-4 border-t">
-										{filteredAttachments.length} of {attachments.length} file{attachments.length !== 1 ? 's' : ''}
+										{filteredAttachments.length} of {attachments.length} file
+										{attachments.length !== 1 ? 's' : ''}
 									</div>
 								)}
 							</CardContent>

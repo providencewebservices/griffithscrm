@@ -1,20 +1,15 @@
-import { useState } from 'react';
-import { Link } from 'react-router';
 import {
+	Briefcase,
 	Calendar,
 	Clock,
-	FileText,
-	Briefcase,
-	User,
 	ExternalLink,
+	FileText,
 	Pencil,
 	Trash2,
+	User,
 } from 'lucide-react';
-import {
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-} from '@/components/ui/popover';
+import { useState } from 'react';
+import { Link } from 'react-router';
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -25,11 +20,12 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { parseISO, format, formatDateRange } from './calendar-utils';
-import { getEventSourceLabel } from './types';
+import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { format, formatDateRange, parseISO } from './calendar-utils';
 import type { CalendarEvent } from './types';
+import { getEventSourceLabel } from './types';
 
 type EventDetailPopoverProps = {
 	event: CalendarEvent;
@@ -38,12 +34,7 @@ type EventDetailPopoverProps = {
 	onDelete?: (eventId: string) => void;
 };
 
-export function EventDetailPopover({
-	event,
-	children,
-	onEdit,
-	onDelete,
-}: EventDetailPopoverProps) {
+export function EventDetailPopover({ event, children, onEdit, onDelete }: EventDetailPopoverProps) {
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 	const startDate = parseISO(event.start);
 	const endDate = event.end ? parseISO(event.end) : null;
@@ -52,9 +43,7 @@ export function EventDetailPopover({
 	const getDetailLink = (): string | null => {
 		switch (event.sourceType) {
 			case 'quote_valid_until':
-				return event.linkedQuoteId
-					? `/app/quotes/${event.linkedQuoteId}`
-					: null;
+				return event.linkedQuoteId ? `/app/quotes/${event.linkedQuoteId}` : null;
 			case 'job_installation':
 			case 'job_deadline':
 				return event.linkedJobId ? `/app/jobs/${event.linkedJobId}` : null;
@@ -95,9 +84,7 @@ export function EventDetailPopover({
 							</div>
 							<h4 className="font-semibold text-base">{event.title}</h4>
 							{event.description && (
-								<p className="text-sm text-muted-foreground mt-1">
-									{event.description}
-								</p>
+								<p className="text-sm text-muted-foreground mt-1">{event.description}</p>
 							)}
 						</div>
 
@@ -105,18 +92,14 @@ export function EventDetailPopover({
 						<div className="flex items-start gap-3">
 							<Calendar className="h-4 w-4 text-muted-foreground mt-0.5" />
 							<div>
-								<div className="text-sm font-medium">
-									{formatDateRange(startDate, endDate)}
-								</div>
+								<div className="text-sm font-medium">{formatDateRange(startDate, endDate)}</div>
 								{!event.allDay && (
 									<div className="text-xs text-muted-foreground">
 										{format(startDate, 'h:mm a')}
 										{endDate && ` - ${format(endDate, 'h:mm a')}`}
 									</div>
 								)}
-								{event.allDay && (
-									<div className="text-xs text-muted-foreground">All day</div>
-								)}
+								{event.allDay && <div className="text-xs text-muted-foreground">All day</div>}
 							</div>
 						</div>
 
@@ -133,15 +116,12 @@ export function EventDetailPopover({
 							</div>
 						)}
 
-						{(event.sourceType === 'job_installation' ||
-							event.sourceType === 'job_deadline') && (
+						{(event.sourceType === 'job_installation' || event.sourceType === 'job_deadline') && (
 							<div className="flex items-start gap-3">
 								<Briefcase className="h-4 w-4 text-muted-foreground mt-0.5" />
 								<div>
 									<div className="text-sm font-medium">
-										{event.sourceType === 'job_installation'
-											? 'Installation Date'
-											: 'Job Deadline'}
+										{event.sourceType === 'job_installation' ? 'Installation Date' : 'Job Deadline'}
 									</div>
 									<div className="text-xs text-muted-foreground">
 										{event.sourceType === 'job_installation'

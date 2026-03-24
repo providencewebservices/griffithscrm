@@ -1,10 +1,10 @@
-import { Hono } from 'hono';
-import { zValidator } from '@hono/zod-validator';
-import { z } from 'zod';
-import { eq } from 'drizzle-orm';
-import { requireAuth, requireTenant } from '../middleware/auth';
-import { db } from '../lib/auth';
 import { tenantPricingSettings } from '@griffiths-crm/shared/db/schema';
+import { zValidator } from '@hono/zod-validator';
+import { eq } from 'drizzle-orm';
+import { Hono } from 'hono';
+import { z } from 'zod';
+import { db } from '../lib/auth';
+import { requireAuth, requireTenant } from '../middleware/auth';
 
 // Validation schema
 const updateSchema = z.object({
@@ -87,8 +87,7 @@ const tenantPricingSettingsRoutes = new Hono()
 		if (data.vatRate !== undefined) updateData.vatRate = String(data.vatRate);
 		if (data.defaultDepositPercent !== undefined)
 			updateData.defaultDepositPercent = String(data.defaultDepositPercent);
-		if (data.quoteValidityDays !== undefined)
-			updateData.quoteValidityDays = data.quoteValidityDays;
+		if (data.quoteValidityDays !== undefined) updateData.quoteValidityDays = data.quoteValidityDays;
 
 		const [updated] = await db
 			.update(tenantPricingSettings)

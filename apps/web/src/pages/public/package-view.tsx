@@ -1,17 +1,12 @@
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { AlertCircle, CheckCircle, Clock, Loader2, XCircle } from 'lucide-react';
 import { useState } from 'react';
 import { useParams } from 'react-router';
+import { toast } from 'sonner';
 import { InscriptionText } from '@/components/inscription-text';
-import { useQuery, useMutation } from '@tanstack/react-query';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardFooter,
-	CardHeader,
-	CardTitle,
-} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import {
 	Dialog,
 	DialogContent,
@@ -20,17 +15,8 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import {
-	CheckCircle,
-	XCircle,
-	Loader2,
-	Package,
-	AlertCircle,
-	Clock,
-} from 'lucide-react';
-import { toast } from 'sonner';
+import { Textarea } from '@/components/ui/textarea';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -281,7 +267,7 @@ export function PublicPackageViewPage() {
 	const hasDecided = !!pkg.customerDecisionAt;
 	const isExpired = pkg.validUntil && new Date(pkg.validUntil) < new Date();
 	const canRespond = pkg.status === 'presented' && !hasDecided && !isExpired;
-	const acceptedOption = options.find(o => o.id === pkg.acceptedOptionId);
+	const acceptedOption = options.find((o) => o.id === pkg.acceptedOptionId);
 
 	return (
 		<div className="min-h-screen bg-gray-50">
@@ -299,9 +285,7 @@ export function PublicPackageViewPage() {
 							)}
 							<div>
 								<h1 className="text-2xl font-bold">{tenant?.name || 'Quote Package'}</h1>
-								<p className="text-muted-foreground mt-1">
-									Package {pkg.packageNumber}
-								</p>
+								<p className="text-muted-foreground mt-1">Package {pkg.packageNumber}</p>
 							</div>
 						</div>
 						{pkg.status === 'accepted' && (
@@ -367,9 +351,7 @@ export function PublicPackageViewPage() {
 								<p className="font-medium text-red-800">
 									You declined all options on {formatDate(pkg.customerDecisionAt)}
 								</p>
-								<p className="text-red-700 text-sm mt-1">
-									Thank you for your feedback.
-								</p>
+								<p className="text-red-700 text-sm mt-1">Thank you for your feedback.</p>
 							</div>
 						</div>
 					</div>
@@ -377,9 +359,13 @@ export function PublicPackageViewPage() {
 
 				{/* Validity Notice */}
 				{!hasDecided && pkg.validUntil && (
-					<div className={`border rounded-lg p-4 mb-6 ${isExpired ? 'bg-yellow-50 border-yellow-200' : 'bg-gray-50'}`}>
+					<div
+						className={`border rounded-lg p-4 mb-6 ${isExpired ? 'bg-yellow-50 border-yellow-200' : 'bg-gray-50'}`}
+					>
 						<div className="flex items-center gap-2">
-							<Clock className={`h-4 w-4 ${isExpired ? 'text-yellow-600' : 'text-muted-foreground'}`} />
+							<Clock
+								className={`h-4 w-4 ${isExpired ? 'text-yellow-600' : 'text-muted-foreground'}`}
+							/>
 							<span className={isExpired ? 'text-yellow-800' : 'text-muted-foreground'}>
 								{isExpired
 									? `This quote expired on ${formatDate(pkg.validUntil)}`
@@ -430,9 +416,7 @@ export function PublicPackageViewPage() {
 							onClick={() => setShowAcceptDialog(true)}
 							disabled={!selectedOption || respondMutation.isPending}
 						>
-							{respondMutation.isPending && (
-								<Loader2 className="h-4 w-4 mr-2 animate-spin" />
-							)}
+							{respondMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
 							<CheckCircle className="h-4 w-4 mr-2" />
 							Accept Selected Option
 						</Button>
@@ -474,11 +458,11 @@ export function PublicPackageViewPage() {
 								<>
 									You are accepting{' '}
 									<strong>
-										{options.find(o => o.id === selectedOption)?.optionLabel || 'this option'}
+										{options.find((o) => o.id === selectedOption)?.optionLabel || 'this option'}
 									</strong>{' '}
 									for{' '}
 									<strong>
-										{formatCurrency(options.find(o => o.id === selectedOption)?.total || '0')}
+										{formatCurrency(options.find((o) => o.id === selectedOption)?.total || '0')}
 									</strong>
 								</>
 							)}
@@ -500,9 +484,7 @@ export function PublicPackageViewPage() {
 							Cancel
 						</Button>
 						<Button onClick={handleAccept} disabled={respondMutation.isPending}>
-							{respondMutation.isPending && (
-								<Loader2 className="h-4 w-4 mr-2 animate-spin" />
-							)}
+							{respondMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
 							Confirm Acceptance
 						</Button>
 					</DialogFooter>
@@ -515,8 +497,8 @@ export function PublicPackageViewPage() {
 					<DialogHeader>
 						<DialogTitle>Decline All Options</DialogTitle>
 						<DialogDescription>
-							Are you sure you want to decline all options? We would appreciate
-							your feedback on why these options don't meet your needs.
+							Are you sure you want to decline all options? We would appreciate your feedback on why
+							these options don't meet your needs.
 						</DialogDescription>
 					</DialogHeader>
 					<div className="space-y-4 py-4">
@@ -539,9 +521,7 @@ export function PublicPackageViewPage() {
 							onClick={handleReject}
 							disabled={respondMutation.isPending}
 						>
-							{respondMutation.isPending && (
-								<Loader2 className="h-4 w-4 mr-2 animate-spin" />
-							)}
+							{respondMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
 							Decline All
 						</Button>
 					</DialogFooter>
@@ -573,9 +553,7 @@ export function PublicPackageViewPage() {
 							Cancel
 						</Button>
 						<Button onClick={handleSaveNotes} disabled={notesMutation.isPending}>
-							{notesMutation.isPending && (
-								<Loader2 className="h-4 w-4 mr-2 animate-spin" />
-							)}
+							{notesMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
 							Save Notes
 						</Button>
 					</DialogFooter>
@@ -626,9 +604,7 @@ function OptionCard({
 								</Badge>
 							)}
 						</CardTitle>
-						{option.product && (
-							<p className="text-lg font-medium mt-1">{option.product.name}</p>
-						)}
+						{option.product && <p className="text-lg font-medium mt-1">{option.product.name}</p>}
 					</div>
 					<div className="text-right">
 						<div className="text-2xl font-bold">{formatCurrency(option.total)}</div>
@@ -683,8 +659,7 @@ function OptionCard({
 											<div className="flex justify-between">
 												<span>
 													{lett.techniqueName}
-													{lett.colorName && ` - ${lett.colorName}`}
-													{' '}({lett.letterCount} letters)
+													{lett.colorName && ` - ${lett.colorName}`} ({lett.letterCount} letters)
 												</span>
 												<span>{formatCurrency(lett.lineTotal)}</span>
 											</div>

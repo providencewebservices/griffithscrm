@@ -1,35 +1,28 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router';
+import { ArrowLeft, Download, ExternalLink, FileQuestion, FileText, Loader2 } from 'lucide-react';
 import mammoth from 'mammoth';
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router';
+import { FileTypeIcon } from '@/components/documents/file-type-icon';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { FileTypeIcon } from '@/components/documents/file-type-icon';
 import {
-	useDocumentQuery,
-	useDownloadUrl,
 	DOCUMENT_ENTITY_LABELS,
 	type DocumentEntityType,
+	useDocumentQuery,
+	useDownloadUrl,
 } from '@/hooks/use-documents';
 import {
 	formatFileSize,
-	parseTags,
 	getFileTypeLabel,
 	isImageType,
+	isLegacyWordDocument,
 	isPdfType,
 	isPreviewable,
 	isWordDocument,
-	isLegacyWordDocument,
+	parseTags,
 } from '@/lib/file-utils';
-import {
-	ArrowLeft,
-	Download,
-	ExternalLink,
-	FileQuestion,
-	FileText,
-	Loader2,
-} from 'lucide-react';
 
 const ENTITY_ROUTES: Record<DocumentEntityType, string> = {
 	customer: '/app/contacts',
@@ -176,9 +169,7 @@ export function DocumentViewerPage() {
 							<p className="text-muted-foreground mb-4">
 								{error?.message || 'The requested document could not be found.'}
 							</p>
-							<Button onClick={() => navigate('/app/documents')}>
-								Go to Documents
-							</Button>
+							<Button onClick={() => navigate('/app/documents')}>Go to Documents</Button>
 						</CardContent>
 					</Card>
 				</div>
@@ -197,10 +188,7 @@ export function DocumentViewerPage() {
 					<Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
 						<ArrowLeft className="h-4 w-4" />
 					</Button>
-					<FileTypeIcon
-						contentType={doc.contentType}
-						className="w-10 h-10"
-					/>
+					<FileTypeIcon contentType={doc.contentType} className="w-10 h-10" />
 					<div className="flex-1 min-w-0">
 						<h1 className="text-lg font-semibold truncate">{doc.name}</h1>
 						<div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -210,10 +198,7 @@ export function DocumentViewerPage() {
 							{doc.entityType && doc.entityId && (
 								<>
 									<span>·</span>
-									<button
-										onClick={navigateToEntity}
-										className="text-primary hover:underline"
-									>
+									<button onClick={navigateToEntity} className="text-primary hover:underline">
 										{DOCUMENT_ENTITY_LABELS[doc.entityType]}
 									</button>
 								</>
@@ -227,11 +212,7 @@ export function DocumentViewerPage() {
 								Open in New Tab
 							</Button>
 						)}
-						<Button
-							size="sm"
-							onClick={handleDownload}
-							disabled={downloadMutation.isPending}
-						>
+						<Button size="sm" onClick={handleDownload} disabled={downloadMutation.isPending}>
 							{downloadMutation.isPending ? (
 								<Loader2 className="h-4 w-4 mr-2 animate-spin" />
 							) : (
@@ -267,8 +248,7 @@ export function DocumentViewerPage() {
 								<FileText className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
 								<h3 className="font-semibold mb-2">Preview Not Available</h3>
 								<p className="text-sm text-muted-foreground mb-4">
-									Preview is not available for legacy .doc files.
-									Download the file to view it.
+									Preview is not available for legacy .doc files. Download the file to view it.
 								</p>
 								<Button onClick={handleDownload} disabled={downloadMutation.isPending}>
 									{downloadMutation.isPending ? (
@@ -283,14 +263,10 @@ export function DocumentViewerPage() {
 					) : (
 						<Card className="max-w-md">
 							<CardContent className="p-8 text-center">
-								<FileTypeIcon
-									contentType={doc.contentType}
-									className="w-16 h-16 mx-auto mb-4"
-								/>
+								<FileTypeIcon contentType={doc.contentType} className="w-16 h-16 mx-auto mb-4" />
 								<h3 className="font-semibold mb-2">Preview Not Available</h3>
 								<p className="text-sm text-muted-foreground mb-4">
-									This file type cannot be previewed in the browser.
-									Download the file to view it.
+									This file type cannot be previewed in the browser. Download the file to view it.
 								</p>
 								<Button onClick={handleDownload} disabled={downloadMutation.isPending}>
 									{downloadMutation.isPending ? (
@@ -361,10 +337,7 @@ export function DocumentViewerPage() {
 							<div>
 								<dt className="text-muted-foreground">Linked To</dt>
 								<dd className="mt-1">
-									<button
-										onClick={navigateToEntity}
-										className="text-primary hover:underline"
-									>
+									<button onClick={navigateToEntity} className="text-primary hover:underline">
 										{DOCUMENT_ENTITY_LABELS[doc.entityType]}
 									</button>
 								</dd>

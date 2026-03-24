@@ -1,19 +1,19 @@
-import { useMemo, useEffect, useState, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
-import {
-	getWeekDays,
-	getEventsForDay,
-	isToday,
-	format,
-	formatHour,
-	calculateEventPosition,
-	calculateOverlapColumns,
-	CALENDAR_HOURS,
-	BUSINESS_HOURS_START,
-	BUSINESS_HOURS_END,
-} from './calendar-utils';
 import { CalendarEventBlock } from './calendar-event-block';
 import { CalendarEventPill } from './calendar-event-pill';
+import {
+	BUSINESS_HOURS_END,
+	BUSINESS_HOURS_START,
+	CALENDAR_HOURS,
+	calculateEventPosition,
+	calculateOverlapColumns,
+	format,
+	formatHour,
+	getEventsForDay,
+	getWeekDays,
+	isToday,
+} from './calendar-utils';
 import type { CalendarEvent } from './types';
 
 const HOUR_HEIGHT = 48;
@@ -41,7 +41,7 @@ export function WeekView({
 			allDayEvents: events.filter((e) => e.allDay),
 			timedEvents: events.filter((e) => !e.allDay),
 		}),
-		[events]
+		[events],
 	);
 
 	const dayData = useMemo(
@@ -54,7 +54,7 @@ export function WeekView({
 					columns: calculateOverlapColumns(dayTimedEvents),
 				};
 			}),
-		[days, timedEvents]
+		[days, timedEvents],
 	);
 
 	// Auto-scroll to current time on mount/date change
@@ -64,7 +64,7 @@ export function WeekView({
 			const scrollTarget = Math.max(0, (currentHour - 1) * HOUR_HEIGHT);
 			scrollRef.current.scrollTop = scrollTarget;
 		}
-	}, [currentDate]);
+	}, []);
 
 	return (
 		<div className="flex-1 overflow-auto" ref={scrollRef}>
@@ -80,18 +80,13 @@ export function WeekView({
 								className={cn(
 									'text-center py-2 border-r',
 									isToday(day) && 'bg-primary/10',
-									day.getDay() === 0 ||
-										(day.getDay() === 6 &&
-											!isToday(day) &&
-											'bg-muted/5')
+									day.getDay() === 0 || (day.getDay() === 6 && !isToday(day) && 'bg-muted/5'),
 								)}
 							>
 								<div
 									className={cn(
 										'text-xs font-medium uppercase tracking-wide',
-										isToday(day)
-											? 'text-primary'
-											: 'text-muted-foreground'
+										isToday(day) ? 'text-primary' : 'text-muted-foreground',
 									)}
 								>
 									{format(day, 'EEE')}
@@ -100,7 +95,7 @@ export function WeekView({
 									className={cn(
 										'text-lg font-normal mt-0.5 text-muted-foreground',
 										isToday(day) &&
-											'bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center mx-auto text-base'
+											'bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center mx-auto text-base',
 									)}
 								>
 									{format(day, 'd')}
@@ -115,8 +110,7 @@ export function WeekView({
 							<div className="border-r" />
 							{days.map((day) => {
 								const dayAllDayEvents = allDayEvents.filter(
-									(e) =>
-										getEventsForDay([e], day).length > 0
+									(e) => getEventsForDay([e], day).length > 0,
 								);
 								return (
 									<div
@@ -124,34 +118,21 @@ export function WeekView({
 										className={cn(
 											'border-r px-1 py-1.5 overflow-hidden min-w-0',
 											isToday(day) && 'bg-primary/10',
-											(day.getDay() === 0 ||
-												day.getDay() === 6) &&
-												!isToday(day) &&
-												'bg-muted/5'
+											(day.getDay() === 0 || day.getDay() === 6) && !isToday(day) && 'bg-muted/5',
 										)}
 									>
-										{dayAllDayEvents
-											.slice(0, 2)
-											.map((event) => (
-												<div
-													key={event.id}
-													className="mb-0.5"
-												>
-													<CalendarEventPill
-														event={event}
-														onEditEvent={
-															onEditEvent
-														}
-														onDeleteEvent={
-															onDeleteEvent
-														}
-													/>
-												</div>
-											))}
+										{dayAllDayEvents.slice(0, 2).map((event) => (
+											<div key={event.id} className="mb-0.5">
+												<CalendarEventPill
+													event={event}
+													onEditEvent={onEditEvent}
+													onDeleteEvent={onDeleteEvent}
+												/>
+											</div>
+										))}
 										{dayAllDayEvents.length > 2 && (
 											<div className="text-xs text-muted-foreground px-2">
-												+{dayAllDayEvents.length - 2}{' '}
-												more
+												+{dayAllDayEvents.length - 2} more
 											</div>
 										)}
 									</div>
@@ -181,90 +162,63 @@ export function WeekView({
 					</div>
 
 					{/* Day columns */}
-					{dayData.map(
-						({
-							day,
-							timedEvents: dayTimedEvents,
-							columns: dayColumns,
-						}) => {
-							const dayIsToday = isToday(day);
-							const isWeekend =
-								day.getDay() === 0 || day.getDay() === 6;
+					{dayData.map(({ day, timedEvents: dayTimedEvents, columns: dayColumns }) => {
+						const dayIsToday = isToday(day);
+						const isWeekend = day.getDay() === 0 || day.getDay() === 6;
 
-							return (
-								<div
-									key={day.toISOString()}
-									className="flex-1 relative border-r min-w-0"
-								>
-									{/* Hour cells (click targets + visual dividers) */}
-									{CALENDAR_HOURS.map((hour) => {
-										const isOffHours =
-											hour < BUSINESS_HOURS_START ||
-											hour >= BUSINESS_HOURS_END;
+						return (
+							<div key={day.toISOString()} className="flex-1 relative border-r min-w-0">
+								{/* Hour cells (click targets + visual dividers) */}
+								{CALENDAR_HOURS.map((hour) => {
+									const isOffHours = hour < BUSINESS_HOURS_START || hour >= BUSINESS_HOURS_END;
+									return (
+										<div
+											key={hour}
+											className={cn(
+												'border-b border-border transition-colors cursor-pointer hover:bg-muted/30',
+												isOffHours && 'bg-muted/40',
+												isWeekend && !dayIsToday && !isOffHours && 'bg-muted/5',
+												dayIsToday && !isOffHours && 'bg-primary/10',
+											)}
+											style={{
+												height: HOUR_HEIGHT,
+											}}
+											onClick={() => onTimeSlotClick(day, hour)}
+										/>
+									);
+								})}
+
+								{/* Events overlay */}
+								<div className="absolute inset-0 pointer-events-none">
+									{dayTimedEvents.map((event) => {
+										const { top, height } = calculateEventPosition(event, HOUR_HEIGHT);
+										const cols = dayColumns.get(event.id) || {
+											column: 0,
+											totalColumns: 1,
+										};
+										const colWidth = `calc((100% - 4px) / ${cols.totalColumns})`;
+										const colLeft = `calc(2px + (100% - 4px) * ${cols.column} / ${cols.totalColumns})`;
+
 										return (
-											<div
-												key={hour}
-												className={cn(
-													'border-b border-border transition-colors cursor-pointer hover:bg-muted/30',
-													isOffHours && 'bg-muted/40',
-													isWeekend &&
-														!dayIsToday &&
-														!isOffHours &&
-														'bg-muted/5',
-													dayIsToday &&
-														!isOffHours &&
-														'bg-primary/10'
-												)}
-												style={{
-													height: HOUR_HEIGHT,
-												}}
-												onClick={() =>
-													onTimeSlotClick(day, hour)
-												}
+											<CalendarEventBlock
+												key={event.id}
+												event={event}
+												top={top}
+												height={height}
+												left={colLeft}
+												width={colWidth}
+												onEditEvent={onEditEvent}
+												onDeleteEvent={onDeleteEvent}
 											/>
 										);
 									})}
-
-									{/* Events overlay */}
-									<div className="absolute inset-0 pointer-events-none">
-										{dayTimedEvents.map((event) => {
-											const { top, height } =
-												calculateEventPosition(
-													event,
-													HOUR_HEIGHT
-												);
-											const cols = dayColumns.get(
-												event.id
-											) || {
-												column: 0,
-												totalColumns: 1,
-											};
-											const colWidth = `calc((100% - 4px) / ${cols.totalColumns})`;
-											const colLeft = `calc(2px + (100% - 4px) * ${cols.column} / ${cols.totalColumns})`;
-
-											return (
-												<CalendarEventBlock
-													key={event.id}
-													event={event}
-													top={top}
-													height={height}
-													left={colLeft}
-													width={colWidth}
-													onEditEvent={onEditEvent}
-													onDeleteEvent={
-														onDeleteEvent
-													}
-												/>
-											);
-										})}
-									</div>
-
-									{/* Current time indicator */}
-									{dayIsToday && <CurrentTimeIndicator />}
 								</div>
-							);
-						}
-					)}
+
+								{/* Current time indicator */}
+								{dayIsToday && <CurrentTimeIndicator />}
+							</div>
+						);
+					})}
 				</div>
 			</div>
 		</div>
@@ -283,10 +237,7 @@ function CurrentTimeIndicator() {
 	const top = (now.getHours() + now.getMinutes() / 60) * HOUR_HEIGHT;
 
 	return (
-		<div
-			className="absolute left-0 right-0 z-20 pointer-events-none"
-			style={{ top: `${top}px` }}
-		>
+		<div className="absolute left-0 right-0 z-20 pointer-events-none" style={{ top: `${top}px` }}>
 			<div className="flex items-center">
 				<div className="w-2.5 h-2.5 rounded-full bg-red-500 -ml-1" />
 				<div className="flex-1 h-0.5 bg-red-500" />

@@ -1,16 +1,13 @@
 import { Link } from 'react-router';
 import { Badge } from '@/components/ui/badge';
 import {
-	formatQuoteStatus,
-	getQuoteStatusVariant,
-} from '@/hooks/use-quotes';
-import {
-	formatJobStatus,
-	getJobStatusVariant,
 	formatAccountStatus,
+	formatJobStatus,
 	getAccountStatusColor,
+	getJobStatusVariant,
 } from '@/hooks/use-jobs';
-import { formatCurrency, type PipelineQuoteItem, type PipelineJobItem } from '@/hooks/use-pipeline';
+import { formatCurrency, type PipelineJobItem, type PipelineQuoteItem } from '@/hooks/use-pipeline';
+import { formatQuoteStatus, getQuoteStatusVariant } from '@/hooks/use-quotes';
 
 type PipelineQuoteCardProps = {
 	item: PipelineQuoteItem;
@@ -31,18 +28,19 @@ export function PipelineQuoteCard({ item }: PipelineQuoteCardProps) {
 					<p className="font-display text-sm font-semibold truncate text-foreground">
 						{item.customerName}
 					</p>
-					<span className="text-xs text-muted-foreground">
-						{item.quoteNumber}
-					</span>
+					<span className="text-xs text-muted-foreground">{item.quoteNumber}</span>
 				</div>
-				<Badge variant={getQuoteStatusVariant(item.status as Parameters<typeof getQuoteStatusVariant>[0])} className="text-[10px] px-1.5 shrink-0">
+				<Badge
+					variant={getQuoteStatusVariant(
+						item.status as Parameters<typeof getQuoteStatusVariant>[0],
+					)}
+					className="text-[10px] px-1.5 shrink-0"
+				>
 					{formatQuoteStatus(item.status as Parameters<typeof formatQuoteStatus>[0])}
 				</Badge>
 			</div>
 			<div className="flex items-center justify-between pt-2 border-t border-black/5">
-				<span className="text-sm font-bold text-foreground">
-					{formatCurrency(item.total)}
-				</span>
+				<span className="text-sm font-bold text-foreground">{formatCurrency(item.total)}</span>
 			</div>
 		</Link>
 	);
@@ -59,21 +57,22 @@ export function PipelineJobCard({ item }: PipelineJobCardProps) {
 					<p className="font-display text-sm font-semibold truncate text-foreground">
 						{item.customerName}
 					</p>
-					<span className="text-xs text-muted-foreground">
-						{item.jobNumber}
-					</span>
+					<span className="text-xs text-muted-foreground">{item.jobNumber}</span>
 				</div>
-				<Badge variant={getJobStatusVariant(item.status as Parameters<typeof getJobStatusVariant>[0])} className="text-[10px] px-1.5 shrink-0">
+				<Badge
+					variant={getJobStatusVariant(item.status as Parameters<typeof getJobStatusVariant>[0])}
+					className="text-[10px] px-1.5 shrink-0"
+				>
 					{formatJobStatus(item.status as Parameters<typeof formatJobStatus>[0])}
 				</Badge>
 			</div>
 			<div className="flex items-center justify-between pt-2 border-t border-black/5">
-				<span className="text-sm font-bold text-foreground">
-					{formatCurrency(item.total)}
-				</span>
+				<span className="text-sm font-bold text-foreground">{formatCurrency(item.total)}</span>
 				<div className="flex items-center gap-1">
 					{item.accountStatus && item.accountStatus !== 'not_invoiced' && (
-						<span className={`text-[10px] px-1.5 py-0.5 rounded ${getAccountStatusColor(item.accountStatus)}`}>
+						<span
+							className={`text-[10px] px-1.5 py-0.5 rounded ${getAccountStatusColor(item.accountStatus)}`}
+						>
 							{formatAccountStatus(item.accountStatus)}
 						</span>
 					)}

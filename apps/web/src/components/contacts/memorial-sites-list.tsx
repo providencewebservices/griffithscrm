@@ -1,5 +1,30 @@
-import { useState, useEffect } from 'react';
+import {
+	Building,
+	Building2,
+	Church,
+	Flame,
+	LayoutGrid,
+	List,
+	MapPin,
+	Phone,
+	Plus,
+	Search,
+	X,
+} from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Pagination, usePagination } from '@/components/ui/pagination';
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from '@/components/ui/select';
 import {
 	Table,
 	TableBody,
@@ -8,31 +33,13 @@ import {
 	TableHeader,
 	TableRow,
 } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import {
-	Card,
-	CardContent,
-	CardHeader,
-	CardTitle,
-} from '@/components/ui/card';
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from '@/components/ui/select';
-import { Pagination, usePagination } from '@/components/ui/pagination';
-import {
-	useMemorialSitesQuery,
-	SITE_TYPE_LABELS,
-	type MemorialSiteType,
 	type MemorialSiteListItem,
+	type MemorialSiteType,
+	SITE_TYPE_LABELS,
+	useMemorialSitesQuery,
 } from '@/hooks/use-memorial-sites';
 import { getAvatarColor } from '@/lib/avatar-utils';
-import { Search, Church, Flame, Building2, Building, List, LayoutGrid, Phone, MapPin, X, Plus } from 'lucide-react';
 
 type ViewMode = 'active' | 'archived';
 type DisplayMode = 'table' | 'cards';
@@ -69,7 +76,11 @@ export function MemorialSitesList() {
 		return () => clearTimeout(timer);
 	}, [searchQuery]);
 
-	const { data: memorialSites, isLoading, error } = useMemorialSitesQuery({
+	const {
+		data: memorialSites,
+		isLoading,
+		error,
+	} = useMemorialSitesQuery({
 		q: debouncedSearch || undefined,
 		archivedOnly: viewMode === 'archived',
 		siteType: siteTypeFilter === 'all' ? undefined : siteTypeFilter,
@@ -93,11 +104,7 @@ export function MemorialSitesList() {
 	}
 
 	if (error) {
-		return (
-			<div className="text-destructive">
-				Error loading memorial sites: {error.message}
-			</div>
-		);
+		return <div className="text-destructive">Error loading memorial sites: {error.message}</div>;
 	}
 
 	return (
@@ -137,10 +144,7 @@ export function MemorialSitesList() {
 								<SelectItem value="archived">Archived</SelectItem>
 							</SelectContent>
 						</Select>
-						<Select
-							value={siteTypeFilter}
-							onValueChange={handleSiteTypeChange}
-						>
+						<Select value={siteTypeFilter} onValueChange={handleSiteTypeChange}>
 							<SelectTrigger className="w-[120px] sm:w-[180px]">
 								<SelectValue placeholder="All types" />
 							</SelectTrigger>
@@ -245,9 +249,7 @@ export function MemorialSitesList() {
 											<SiteTypeBadge siteType={site.siteType} />
 										</TableCell>
 										<TableCell>
-											{site.primaryPhone?.value || (
-												<span className="text-muted-foreground">-</span>
-											)}
+											{site.primaryPhone?.value || <span className="text-muted-foreground">-</span>}
 										</TableCell>
 										<TableCell>
 											{site.primaryAddress?.formattedAddress ? (

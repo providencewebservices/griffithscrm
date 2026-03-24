@@ -1,16 +1,16 @@
-import { useState, useEffect } from 'react';
+import { addHours, format, parseISO } from 'date-fns';
+import { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
 	Dialog,
 	DialogContent,
+	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-	DialogFooter,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
 	Select,
 	SelectContent,
@@ -18,7 +18,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select';
-import { format, addHours, parseISO } from 'date-fns';
+import { Textarea } from '@/components/ui/textarea';
 import type { CalendarEvent } from './types';
 
 type EventFormData = {
@@ -73,7 +73,8 @@ export function EventFormDialog({
 				endDate: format(end, 'yyyy-MM-dd'),
 				endTime: format(end, 'HH:mm'),
 				isAllDay: event.allDay,
-				recurrencePattern: (event.recurrencePattern as EventFormData['recurrencePattern']) || 'none',
+				recurrencePattern:
+					(event.recurrencePattern as EventFormData['recurrencePattern']) || 'none',
 			};
 		}
 
@@ -105,7 +106,7 @@ export function EventFormDialog({
 			setFormData(getInitialFormData());
 			setError(null);
 		}
-	}, [open, initialDate, initialHour, mode, event?.id]);
+	}, [open, getInitialFormData]);
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -122,17 +123,13 @@ export function EventFormDialog({
 
 			if (formData.isAllDay) {
 				// For all-day events, use date at midnight UTC
-				startAt = new Date(formData.startDate + 'T00:00:00').toISOString();
+				startAt = new Date(`${formData.startDate}T00:00:00`).toISOString();
 				if (formData.endDate && formData.endDate !== formData.startDate) {
-					endAt = new Date(formData.endDate + 'T23:59:59').toISOString();
+					endAt = new Date(`${formData.endDate}T23:59:59`).toISOString();
 				}
 			} else {
-				startAt = new Date(
-					`${formData.startDate}T${formData.startTime}`
-				).toISOString();
-				endAt = new Date(
-					`${formData.endDate}T${formData.endTime}`
-				).toISOString();
+				startAt = new Date(`${formData.startDate}T${formData.startTime}`).toISOString();
+				endAt = new Date(`${formData.endDate}T${formData.endTime}`).toISOString();
 			}
 
 			await onSubmit({
@@ -146,7 +143,13 @@ export function EventFormDialog({
 
 			onOpenChange(false);
 		} catch (err) {
-			setError(err instanceof Error ? err.message : mode === 'edit' ? 'Failed to update event' : 'Failed to create event');
+			setError(
+				err instanceof Error
+					? err.message
+					: mode === 'edit'
+						? 'Failed to update event'
+						: 'Failed to create event',
+			);
 		}
 	};
 
@@ -172,9 +175,7 @@ export function EventFormDialog({
 						<Input
 							id="title"
 							value={formData.title}
-							onChange={(e) =>
-								setFormData((prev) => ({ ...prev, title: e.target.value }))
-							}
+							onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
 							placeholder="Event title"
 							autoFocus
 						/>
@@ -210,10 +211,7 @@ export function EventFormDialog({
 										...prev,
 										startDate: e.target.value,
 										// Also update end date if it's before start
-										endDate:
-											prev.endDate < e.target.value
-												? e.target.value
-												: prev.endDate,
+										endDate: prev.endDate < e.target.value ? e.target.value : prev.endDate,
 									}))
 								}
 							/>
@@ -322,8 +320,12 @@ export function EventFormDialog({
 						</Button>
 						<Button type="submit" disabled={isLoading}>
 							{isLoading
-								? isEdit ? 'Saving...' : 'Creating...'
-								: isEdit ? 'Save Changes' : 'Create Event'}
+								? isEdit
+									? 'Saving...'
+									: 'Creating...'
+								: isEdit
+									? 'Save Changes'
+									: 'Create Event'}
 						</Button>
 					</DialogFooter>
 				</form>

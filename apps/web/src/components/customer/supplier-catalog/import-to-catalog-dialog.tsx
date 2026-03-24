@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { CategorySelect } from '@/components/customer/products/category-select';
+import { Button } from '@/components/ui/button';
 import {
 	Dialog,
 	DialogContent,
@@ -7,12 +9,10 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { ImageUpload } from '@/components/ui/image-upload';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
-import { CategorySelect } from '@/components/customer/products/category-select';
-import { ImageUpload } from '@/components/ui/image-upload';
 import type { SupplierProduct } from '@/hooks/use-supplier-products';
 
 type ImportToCatalogDialogProps = {
@@ -79,15 +79,13 @@ export function ImportToCatalogDialog({
 				<DialogHeader>
 					<DialogTitle>Import to My Catalog</DialogTitle>
 					<DialogDescription>
-						Import this supplier product into your customer-facing catalog.
-						You can customize the details below.
+						Import this supplier product into your customer-facing catalog. You can customize the
+						details below.
 					</DialogDescription>
 				</DialogHeader>
 
 				{error && (
-					<div className="bg-destructive/10 text-destructive px-4 py-2 rounded">
-						{error}
-					</div>
+					<div className="bg-destructive/10 text-destructive px-4 py-2 rounded">{error}</div>
 				)}
 
 				{product?.supplierCost && (

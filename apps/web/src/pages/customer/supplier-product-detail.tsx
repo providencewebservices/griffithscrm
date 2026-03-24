@@ -1,14 +1,11 @@
+import { ShoppingCart } from 'lucide-react';
 import { useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router';
-import { Button } from '@/components/ui/button';
+import { Link, useNavigate, useParams } from 'react-router';
+import { toast } from 'sonner';
+import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
+import { ImportToCatalogDialog } from '@/components/customer/supplier-catalog/import-to-catalog-dialog';
+import { SupplierProductFormDialog } from '@/components/customer/supplier-catalog/supplier-product-form-dialog';
 import { Badge } from '@/components/ui/badge';
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from '@/components/ui/card';
 import {
 	Breadcrumb,
 	BreadcrumbItem,
@@ -17,20 +14,17 @@ import {
 	BreadcrumbPage,
 	BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
-import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useSupplierCategoriesQuery } from '@/hooks/use-supplier-categories';
 import {
-	useSupplierProductQuery,
-	useUpdateSupplierProductMutation,
 	useArchiveSupplierProductMutation,
-	useUnarchiveSupplierProductMutation,
 	useDeleteSupplierProductMutation,
 	useImportToCatalogMutation,
+	useSupplierProductQuery,
+	useUnarchiveSupplierProductMutation,
+	useUpdateSupplierProductMutation,
 } from '@/hooks/use-supplier-products';
-import { useSupplierCategoriesQuery } from '@/hooks/use-supplier-categories';
-import { SupplierProductFormDialog } from '@/components/customer/supplier-catalog/supplier-product-form-dialog';
-import { ImportToCatalogDialog } from '@/components/customer/supplier-catalog/import-to-catalog-dialog';
-import { toast } from 'sonner';
-import { ShoppingCart } from 'lucide-react';
 
 export function SupplierProductDetailPage() {
 	const { supplierId, collectionId, productId } = useParams<{
@@ -85,9 +79,7 @@ export function SupplierProductDetailPage() {
 				<Button
 					variant="outline"
 					className="mt-4"
-					onClick={() =>
-						navigate(`/app/suppliers/${supplierId}/collections/${collectionId}`)
-					}
+					onClick={() => navigate(`/app/suppliers/${supplierId}/collections/${collectionId}`)}
 				>
 					Back to Collection
 				</Button>
@@ -107,9 +99,7 @@ export function SupplierProductDetailPage() {
 					<BreadcrumbSeparator />
 					<BreadcrumbItem>
 						<BreadcrumbLink asChild>
-							<Link to={`/app/suppliers/${supplierId}`}>
-								{product.supplierName || 'Supplier'}
-							</Link>
+							<Link to={`/app/suppliers/${supplierId}`}>{product.supplierName || 'Supplier'}</Link>
 						</BreadcrumbLink>
 					</BreadcrumbItem>
 					<BreadcrumbSeparator />
@@ -137,9 +127,7 @@ export function SupplierProductDetailPage() {
 							<Badge variant="default">Active</Badge>
 						)}
 					</div>
-					{product.sku && (
-						<p className="text-sm text-muted-foreground mt-1">SKU: {product.sku}</p>
-					)}
+					{product.sku && <p className="text-sm text-muted-foreground mt-1">SKU: {product.sku}</p>}
 				</div>
 				<div className="flex gap-2">
 					<Button
@@ -174,18 +162,12 @@ export function SupplierProductDetailPage() {
 							>
 								{unarchiveMutation.isPending ? 'Restoring...' : 'Restore'}
 							</Button>
-							<Button
-								variant="destructive"
-								onClick={() => setDeleteDialogOpen(true)}
-							>
+							<Button variant="destructive" onClick={() => setDeleteDialogOpen(true)}>
 								Delete
 							</Button>
 						</>
 					) : (
-						<Button
-							variant="destructive"
-							onClick={() => setArchiveDialogOpen(true)}
-						>
+						<Button variant="destructive" onClick={() => setArchiveDialogOpen(true)}>
 							Archive
 						</Button>
 					)}
@@ -214,9 +196,7 @@ export function SupplierProductDetailPage() {
 								<div>
 									<p className="text-sm font-medium mb-1">Supplier Cost</p>
 									<p className="text-lg font-semibold">
-										{product.supplierCost
-											? formatCurrency(product.supplierCost)
-											: '-'}
+										{product.supplierCost ? formatCurrency(product.supplierCost) : '-'}
 									</p>
 								</div>
 							</div>
@@ -334,9 +314,7 @@ export function SupplierProductDetailPage() {
 						onConfirm={async () => {
 							try {
 								await deleteMutation.mutateAsync(productId);
-								navigate(
-									`/app/suppliers/${supplierId}/collections/${collectionId}`
-								);
+								navigate(`/app/suppliers/${supplierId}/collections/${collectionId}`);
 								toast.success('Product deleted');
 							} catch {}
 						}}

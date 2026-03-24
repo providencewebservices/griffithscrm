@@ -1,10 +1,10 @@
-import { Hono } from 'hono';
-import { zValidator } from '@hono/zod-validator';
-import { z } from 'zod';
-import { eq } from 'drizzle-orm';
-import { requireAuth, requireAdmin } from '../middleware/auth';
-import { auth, db } from '../lib/auth';
 import { tenants, users } from '@griffiths-crm/shared/db/schema';
+import { zValidator } from '@hono/zod-validator';
+import { eq } from 'drizzle-orm';
+import { Hono } from 'hono';
+import { z } from 'zod';
+import { auth, db } from '../lib/auth';
+import { requireAdmin, requireAuth } from '../middleware/auth';
 
 // Validation schemas
 const createTenantSchema = z.object({
@@ -147,7 +147,7 @@ const adminRoutes = new Hono()
 		if (tenantUsers.length > 0) {
 			return c.json(
 				{ error: 'Cannot delete tenant with assigned users. Reassign or delete users first.' },
-				400
+				400,
 			);
 		}
 
@@ -257,7 +257,7 @@ const adminRoutes = new Hono()
 					},
 					message: 'Invitation sent. User will receive an email to set their password.',
 				},
-				201
+				201,
 			);
 		} catch (error) {
 			console.error('Error creating user:', error);
@@ -312,11 +312,7 @@ const adminRoutes = new Hono()
 
 		// Verify tenant exists if provided
 		if (newTenantId) {
-			const [tenant] = await db
-				.select()
-				.from(tenants)
-				.where(eq(tenants.id, newTenantId))
-				.limit(1);
+			const [tenant] = await db.select().from(tenants).where(eq(tenants.id, newTenantId)).limit(1);
 
 			if (!tenant) {
 				return c.json({ error: 'Tenant not found' }, 400);

@@ -1,16 +1,16 @@
-import { Hono } from 'hono';
-import { zValidator } from '@hono/zod-validator';
-import { z } from 'zod';
-import { eq, and, like, isNull, isNotNull } from 'drizzle-orm';
-import { requireAuth, requireTenant } from '../middleware/auth';
-import { db } from '../lib/auth';
 import {
-	funeralDirectors,
-	contactInfo,
 	addresses,
-	funeralDirectorContactInfo,
+	contactInfo,
 	funeralDirectorAddresses,
+	funeralDirectorContactInfo,
+	funeralDirectors,
 } from '@griffiths-crm/shared/db/schema';
+import { zValidator } from '@hono/zod-validator';
+import { and, eq, isNotNull, isNull, like } from 'drizzle-orm';
+import { Hono } from 'hono';
+import { z } from 'zod';
+import { db } from '../lib/auth';
+import { requireAuth, requireTenant } from '../middleware/auth';
 
 // Validation schemas
 const contactInfoSchema = z.object({
@@ -99,7 +99,7 @@ const funeralDirectorsRoutes = new Hono()
 		const tenantId = currentUser.tenantId!;
 		const { q, archivedOnly } = c.req.valid('query');
 
-		let baseConditions = [eq(funeralDirectors.tenantId, tenantId)];
+		const baseConditions = [eq(funeralDirectors.tenantId, tenantId)];
 
 		if (archivedOnly === 'true') {
 			baseConditions.push(isNotNull(funeralDirectors.archivedAt));
@@ -115,14 +115,14 @@ const funeralDirectorsRoutes = new Hono()
 
 		let filteredIds: string[] = allDirectors.map((d) => d.id);
 
-		if (q && q.trim()) {
+		if (q?.trim()) {
 			const searchTerm = `%${q.trim().toLowerCase()}%`;
 
 			const nameMatches = allDirectors
 				.filter(
 					(d) =>
 						d.businessName.toLowerCase().includes(q.toLowerCase()) ||
-						d.tradingName?.toLowerCase().includes(q.toLowerCase())
+						d.tradingName?.toLowerCase().includes(q.toLowerCase()),
 				)
 				.map((d) => d.id);
 
@@ -159,8 +159,8 @@ const funeralDirectorsRoutes = new Hono()
 							and(
 								eq(funeralDirectorContactInfo.funeralDirectorId, director.id),
 								eq(contactInfo.type, 'email'),
-								eq(contactInfo.isPrimary, true)
-							)
+								eq(contactInfo.isPrimary, true),
+							),
 						)
 						.limit(1);
 
@@ -172,8 +172,8 @@ const funeralDirectorsRoutes = new Hono()
 							and(
 								eq(funeralDirectorContactInfo.funeralDirectorId, director.id),
 								eq(contactInfo.type, 'phone'),
-								eq(contactInfo.isPrimary, true)
-							)
+								eq(contactInfo.isPrimary, true),
+							),
 						)
 						.limit(1);
 
@@ -184,8 +184,8 @@ const funeralDirectorsRoutes = new Hono()
 						.where(
 							and(
 								eq(funeralDirectorAddresses.funeralDirectorId, director.id),
-								eq(addresses.isPrimary, true)
-							)
+								eq(addresses.isPrimary, true),
+							),
 						)
 						.limit(1);
 
@@ -195,7 +195,7 @@ const funeralDirectorsRoutes = new Hono()
 						primaryPhone: primaryPhone[0]?.contactInfo || null,
 						primaryAddress: primaryAddress[0]?.address || null,
 					};
-				})
+				}),
 		);
 
 		return c.json({ funeralDirectors: result });
@@ -328,7 +328,9 @@ const funeralDirectorsRoutes = new Hono()
 				for (const ec of existingContacts) {
 					await db.delete(contactInfo).where(eq(contactInfo.id, ec.contactInfoId));
 				}
-				await db.delete(funeralDirectorContactInfo).where(eq(funeralDirectorContactInfo.funeralDirectorId, id));
+				await db
+					.delete(funeralDirectorContactInfo)
+					.where(eq(funeralDirectorContactInfo.funeralDirectorId, id));
 
 				for (const contact of updates.contactInfo) {
 					const contactId = crypto.randomUUID();
@@ -358,7 +360,9 @@ const funeralDirectorsRoutes = new Hono()
 				for (const ea of existingAddrs) {
 					await db.delete(addresses).where(eq(addresses.id, ea.addressId));
 				}
-				await db.delete(funeralDirectorAddresses).where(eq(funeralDirectorAddresses.funeralDirectorId, id));
+				await db
+					.delete(funeralDirectorAddresses)
+					.where(eq(funeralDirectorAddresses.funeralDirectorId, id));
 
 				for (const addr of updates.addresses) {
 					const addressId = crypto.randomUUID();

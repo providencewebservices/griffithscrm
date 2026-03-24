@@ -1,7 +1,7 @@
-import { Hono } from 'hono';
-import { eq, and } from 'drizzle-orm';
-import { db } from '../lib/auth';
 import { emailIntegrations } from '@griffiths-crm/shared/db/schema';
+import { and, eq } from 'drizzle-orm';
+import { Hono } from 'hono';
+import { db } from '../lib/auth';
 import { doSync } from '../lib/email-sync';
 
 const inboxWebhookRoutes = new Hono()
@@ -44,8 +44,8 @@ const inboxWebhookRoutes = new Hono()
 					and(
 						eq(emailIntegrations.emailAddress, emailAddress),
 						eq(emailIntegrations.provider, 'gmail'),
-						eq(emailIntegrations.status, 'active')
-					)
+						eq(emailIntegrations.status, 'active'),
+					),
 				)
 				.limit(1);
 

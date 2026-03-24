@@ -14,7 +14,7 @@ export function FileTypeIcon({ contentType, className, previewUrl }: FileTypeIco
 			<div
 				className={cn(
 					'w-10 h-10 rounded overflow-hidden bg-muted flex items-center justify-center',
-					className
+					className,
 				)}
 			>
 				<img
@@ -34,12 +34,7 @@ export function FileTypeIcon({ contentType, className, previewUrl }: FileTypeIco
 	// Show icon for other file types
 	const Icon = getFileIcon(contentType);
 	return (
-		<div
-			className={cn(
-				'w-10 h-10 rounded bg-muted flex items-center justify-center',
-				className
-			)}
-		>
+		<div className={cn('w-10 h-10 rounded bg-muted flex items-center justify-center', className)}>
 			<Icon className="h-5 w-5 text-muted-foreground" />
 		</div>
 	);

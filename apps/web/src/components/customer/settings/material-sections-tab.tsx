@@ -1,15 +1,8 @@
+import { Plus } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from '@/components/ui/table';
 import {
 	Dialog,
 	DialogContent,
@@ -19,13 +12,20 @@ import {
 	DialogTitle,
 } from '@/components/ui/dialog';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
-import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Plus } from 'lucide-react';
 import {
-	useMaterialSectionsQuery,
-	useCreateMaterialSectionMutation,
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from '@/components/ui/table';
+import {
 	type CreateMaterialSectionInput,
+	useCreateMaterialSectionMutation,
+	useMaterialSectionsQuery,
 } from '@/hooks/use-material-sections';
 
 const colorSwatchMap: Record<string, string> = {
@@ -130,11 +130,7 @@ export function MaterialSectionsTab() {
 	}
 
 	if (error) {
-		return (
-			<div className="text-destructive">
-				Error loading material sections: {error.message}
-			</div>
-		);
+		return <div className="text-destructive">Error loading material sections: {error.message}</div>;
 	}
 
 	return (
@@ -168,10 +164,16 @@ export function MaterialSectionsTab() {
 						</TableHeader>
 						<TableBody>
 							{sections?.map((item) => (
-								<TableRow key={item.id} className="cursor-pointer" onClick={() => navigate(`/app/material-sections/${item.id}`)}>
+								<TableRow
+									key={item.id}
+									className="cursor-pointer"
+									onClick={() => navigate(`/app/material-sections/${item.id}`)}
+								>
 									<TableCell className="font-medium">
 										<div className="flex items-center gap-2">
-											<span className={`h-4 w-4 rounded-full shrink-0 ${getSwatchClass(item.name)}`} />
+											<span
+												className={`h-4 w-4 rounded-full shrink-0 ${getSwatchClass(item.name)}`}
+											/>
 											{item.name}
 										</div>
 									</TableCell>
@@ -236,10 +238,7 @@ export function MaterialSectionsTab() {
 						<Button variant="outline" onClick={() => setDialogOpen(false)}>
 							Cancel
 						</Button>
-						<Button
-							onClick={handleFormSubmit}
-							disabled={!formName || createMutation.isPending}
-						>
+						<Button onClick={handleFormSubmit} disabled={!formName || createMutation.isPending}>
 							{createMutation.isPending ? 'Creating...' : 'Create'}
 						</Button>
 					</DialogFooter>

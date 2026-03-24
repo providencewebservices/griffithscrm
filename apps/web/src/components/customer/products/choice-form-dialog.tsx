@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
 import {
 	Dialog,
 	DialogContent,
@@ -7,10 +8,9 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { ImageUpload } from '@/components/ui/image-upload';
+import { Input } from '@/components/ui/input';
 import type { OptionChoice } from '@/hooks/use-option-choices';
 
 type ChoiceFormDialogProps = {
@@ -64,16 +64,12 @@ export function ChoiceFormDialog({
 				<DialogHeader>
 					<DialogTitle>{isEditing ? 'Edit Choice' : 'Add Choice'}</DialogTitle>
 					<DialogDescription>
-						{isEditing
-							? 'Update the option choice details.'
-							: 'Add a new choice for this option.'}
+						{isEditing ? 'Update the option choice details.' : 'Add a new choice for this option.'}
 					</DialogDescription>
 				</DialogHeader>
 
 				{error && (
-					<div className="bg-destructive/10 text-destructive px-4 py-2 rounded">
-						{error}
-					</div>
+					<div className="bg-destructive/10 text-destructive px-4 py-2 rounded">{error}</div>
 				)}
 
 				<FieldGroup>

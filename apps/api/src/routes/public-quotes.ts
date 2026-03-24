@@ -1,23 +1,23 @@
-import { Hono } from 'hono';
-import { zValidator } from '@hono/zod-validator';
-import { z } from 'zod';
-import { eq, asc } from 'drizzle-orm';
-import crypto from 'crypto';
-import { db } from '../lib/auth';
+import crypto from 'node:crypto';
 import {
-	quotePackages,
-	quotes,
+	customers,
+	jobPaymentScheduleItems,
+	jobs,
+	products,
 	quoteComponents,
 	quoteLettering,
-	quoteSundries,
 	quoteLineItems,
-	customers,
-	products,
-	tenants,
-	jobs,
-	jobPaymentScheduleItems,
+	quotePackages,
+	quoteSundries,
+	quotes,
 	tenantPricingSettings,
+	tenants,
 } from '@griffiths-crm/shared/db/schema';
+import { zValidator } from '@hono/zod-validator';
+import { asc, eq } from 'drizzle-orm';
+import { Hono } from 'hono';
+import { z } from 'zod';
+import { db } from '../lib/auth';
 import { generateJobNumber } from './jobs';
 
 // Validation schemas
@@ -63,10 +63,26 @@ const publicQuotesRoutes = new Hono()
 		const options = await Promise.all(
 			optionRows.map(async (opt) => {
 				const [components, lettering, sundryItems, lineItems] = await Promise.all([
-					db.select().from(quoteComponents).where(eq(quoteComponents.quoteId, opt.id)).orderBy(asc(quoteComponents.sortOrder)),
-					db.select().from(quoteLettering).where(eq(quoteLettering.quoteId, opt.id)).orderBy(asc(quoteLettering.sortOrder)),
-					db.select().from(quoteSundries).where(eq(quoteSundries.quoteId, opt.id)).orderBy(asc(quoteSundries.sortOrder)),
-					db.select().from(quoteLineItems).where(eq(quoteLineItems.quoteId, opt.id)).orderBy(asc(quoteLineItems.sortOrder)),
+					db
+						.select()
+						.from(quoteComponents)
+						.where(eq(quoteComponents.quoteId, opt.id))
+						.orderBy(asc(quoteComponents.sortOrder)),
+					db
+						.select()
+						.from(quoteLettering)
+						.where(eq(quoteLettering.quoteId, opt.id))
+						.orderBy(asc(quoteLettering.sortOrder)),
+					db
+						.select()
+						.from(quoteSundries)
+						.where(eq(quoteSundries.quoteId, opt.id))
+						.orderBy(asc(quoteSundries.sortOrder)),
+					db
+						.select()
+						.from(quoteLineItems)
+						.where(eq(quoteLineItems.quoteId, opt.id))
+						.orderBy(asc(quoteLineItems.sortOrder)),
 				]);
 
 				// Get product name if set
@@ -121,22 +137,20 @@ const publicQuotesRoutes = new Hono()
 						sundryName: s.sundryName,
 					})),
 					// Only show line items marked as visible to customer
-					lineItems: lineItems.filter((li) => li.visibleToCustomer).map((li) => ({
-						description: li.description,
-						price: li.priceVisibleToCustomer ? li.price : null,
-						vatExempt: li.vatExempt,
-						priceHidden: !li.priceVisibleToCustomer,
-					})),
+					lineItems: lineItems
+						.filter((li) => li.visibleToCustomer)
+						.map((li) => ({
+							description: li.description,
+							price: li.priceVisibleToCustomer ? li.price : null,
+							vatExempt: li.vatExempt,
+							priceHidden: !li.priceVisibleToCustomer,
+						})),
 				};
-			})
+			}),
 		);
 
 		// Get tenant info for branding
-		const [tenant] = await db
-			.select()
-			.from(tenants)
-			.where(eq(tenants.id, pkg.tenantId))
-			.limit(1);
+		const [tenant] = await db.select().from(tenants).where(eq(tenants.id, pkg.tenantId)).limit(1);
 
 		// Get customer name
 		let customer = null;
@@ -209,11 +223,7 @@ const publicQuotesRoutes = new Hono()
 		// Verify the accepted option exists in this package
 		let acceptedOption = null;
 		if (decision === 'accepted') {
-			const [opt] = await db
-				.select()
-				.from(quotes)
-				.where(eq(quotes.id, acceptedOptionId!))
-				.limit(1);
+			const [opt] = await db.select().from(quotes).where(eq(quotes.id, acceptedOptionId!)).limit(1);
 
 			if (!opt || opt.packageId !== pkg.id) {
 				return c.json({ error: 'Invalid option selected' }, 400);

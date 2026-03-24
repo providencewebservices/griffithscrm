@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -87,10 +87,7 @@ async function createSundry(input: CreateSundryInput): Promise<Sundry> {
 	return data.sundry;
 }
 
-async function updateSundry({
-	id,
-	...input
-}: UpdateSundryInput & { id: string }): Promise<Sundry> {
+async function updateSundry({ id, ...input }: UpdateSundryInput & { id: string }): Promise<Sundry> {
 	const response = await fetch(`${API_URL}/api/tenant/sundries/${id}`, {
 		method: 'PUT',
 		headers: { 'Content-Type': 'application/json' },

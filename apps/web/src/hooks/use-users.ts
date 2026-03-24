@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -72,10 +72,7 @@ async function createUser(input: CreateUserInput): Promise<User> {
 	return data.user;
 }
 
-async function updateUser({
-	id,
-	...input
-}: UpdateUserInput & { id: string }): Promise<User> {
+async function updateUser({ id, ...input }: UpdateUserInput & { id: string }): Promise<User> {
 	const response = await fetch(`${API_URL}/api/admin/users/${id}`, {
 		method: 'PUT',
 		headers: { 'Content-Type': 'application/json' },

@@ -1,11 +1,11 @@
-import { Hono } from 'hono';
-import { zValidator } from '@hono/zod-validator';
-import { z } from 'zod';
-import { eq, and, desc, asc, count, sql, isNull } from 'drizzle-orm';
-import { requireAuth, requireTenant } from '../middleware/auth';
-import { db } from '../lib/auth';
 import { documentFolders, documents } from '@griffiths-crm/shared/db/schema';
+import { zValidator } from '@hono/zod-validator';
+import { and, asc, count, desc, eq, isNull, sql } from 'drizzle-orm';
+import { Hono } from 'hono';
+import { z } from 'zod';
+import { db } from '../lib/auth';
 import { getSignedImageUrl } from '../lib/s3';
+import { requireAuth, requireTenant } from '../middleware/auth';
 
 // Constants
 const MAX_FOLDER_NAME_LENGTH = 100;
@@ -15,12 +15,20 @@ const MAX_FOLDER_DEPTH = 10;
 const createFolderSchema = z.object({
 	name: z.string().min(1).max(MAX_FOLDER_NAME_LENGTH),
 	parentId: z.string().nullable().optional(),
-	color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).nullable().optional(),
+	color: z
+		.string()
+		.regex(/^#[0-9A-Fa-f]{6}$/)
+		.nullable()
+		.optional(),
 });
 
 const updateFolderSchema = z.object({
 	name: z.string().min(1).max(MAX_FOLDER_NAME_LENGTH).optional(),
-	color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).nullable().optional(),
+	color: z
+		.string()
+		.regex(/^#[0-9A-Fa-f]{6}$/)
+		.nullable()
+		.optional(),
 	sortOrder: z.number().int().optional(),
 });
 
@@ -31,7 +39,7 @@ const moveFolderSchema = z.object({
 // Helper function to build breadcrumb path from folder to root
 async function buildBreadcrumb(
 	tenantId: string,
-	folderId: string | null
+	folderId: string | null,
 ): Promise<Array<{ id: string; name: string }>> {
 	if (!folderId) return [];
 
@@ -40,7 +48,11 @@ async function buildBreadcrumb(
 
 	while (currentId) {
 		const [folder] = await db
-			.select({ id: documentFolders.id, name: documentFolders.name, parentId: documentFolders.parentId })
+			.select({
+				id: documentFolders.id,
+				name: documentFolders.name,
+				parentId: documentFolders.parentId,
+			})
 			.from(documentFolders)
 			.where(and(eq(documentFolders.id, currentId), eq(documentFolders.tenantId, tenantId)))
 			.limit(1);
@@ -55,7 +67,11 @@ async function buildBreadcrumb(
 }
 
 // Helper function to compute materialized path
-async function computePath(tenantId: string, parentId: string | null, folderId: string): Promise<string> {
+async function computePath(
+	tenantId: string,
+	parentId: string | null,
+	folderId: string,
+): Promise<string> {
 	if (!parentId) {
 		return `/${folderId}`;
 	}
@@ -91,12 +107,9 @@ async function isNameUniqueInParent(
 	tenantId: string,
 	name: string,
 	parentId: string | null,
-	excludeId?: string
+	excludeId?: string,
 ): Promise<boolean> {
-	const conditions = [
-		eq(documentFolders.tenantId, tenantId),
-		eq(documentFolders.name, name),
-	];
+	const conditions = [eq(documentFolders.tenantId, tenantId), eq(documentFolders.name, name)];
 
 	if (parentId === null) {
 		conditions.push(isNull(documentFolders.parentId));
@@ -157,7 +170,11 @@ const documentFoldersRoutes = new Hono()
 			.select()
 			.from(documentFolders)
 			.where(eq(documentFolders.tenantId, tenantId))
-			.orderBy(asc(documentFolders.path), asc(documentFolders.sortOrder), asc(documentFolders.name));
+			.orderBy(
+				asc(documentFolders.path),
+				asc(documentFolders.sortOrder),
+				asc(documentFolders.name),
+			);
 
 		return c.json({ folders });
 	})
@@ -192,7 +209,7 @@ const documentFoldersRoutes = new Hono()
 			z.object({
 				limit: z.coerce.number().min(1).max(100).optional().default(25),
 				offset: z.coerce.number().min(0).optional().default(0),
-			})
+			}),
 		),
 		async (c) => {
 			const currentUser = c.get('user');
@@ -256,7 +273,7 @@ const documentFoldersRoutes = new Hono()
 				folderDocuments.map(async (doc) => ({
 					...doc,
 					publicUrl: await getSignedImageUrl(doc.s3Key),
-				}))
+				})),
 			);
 
 			// Build breadcrumb (empty for root)
@@ -273,7 +290,7 @@ const documentFoldersRoutes = new Hono()
 					hasMore: offset + limit < total,
 				},
 			});
-		}
+		},
 	)
 
 	// Create folder
@@ -410,7 +427,10 @@ const documentFoldersRoutes = new Hono()
 			}
 
 			// Check if target's path includes this folder (cycle detection)
-			if (potentialParent.path.includes(`/${folderId}/`) || potentialParent.path.endsWith(`/${folderId}`)) {
+			if (
+				potentialParent.path.includes(`/${folderId}/`) ||
+				potentialParent.path.endsWith(`/${folderId}`)
+			) {
 				return c.json({ error: 'Cannot move folder into its own descendant' }, 400);
 			}
 		}
@@ -424,7 +444,10 @@ const documentFoldersRoutes = new Hono()
 		// Check name uniqueness in new location
 		const isUnique = await isNameUniqueInParent(tenantId, existing.name, parentId, folderId);
 		if (!isUnique) {
-			return c.json({ error: 'A folder with this name already exists in the target location' }, 400);
+			return c.json(
+				{ error: 'A folder with this name already exists in the target location' },
+				400,
+			);
 		}
 
 		// Calculate new path
@@ -450,7 +473,7 @@ const documentFoldersRoutes = new Hono()
 				depth = depth + ${newDepth - existing.depth},
 				updated_at = NOW()
 			WHERE tenant_id = ${tenantId}
-			AND path LIKE ${oldPath + '/%'}
+			AND path LIKE ${`${oldPath}/%`}
 		`);
 
 		// Get updated folder
@@ -487,7 +510,10 @@ const documentFoldersRoutes = new Hono()
 			.where(and(eq(documentFolders.parentId, folderId), eq(documentFolders.tenantId, tenantId)));
 
 		if (Number(subfolderCount.count) > 0) {
-			return c.json({ error: 'Cannot delete folder containing subfolders. Please move or delete them first.' }, 400);
+			return c.json(
+				{ error: 'Cannot delete folder containing subfolders. Please move or delete them first.' },
+				400,
+			);
 		}
 
 		// Check if folder has documents
@@ -497,7 +523,10 @@ const documentFoldersRoutes = new Hono()
 			.where(and(eq(documents.folderId, folderId), eq(documents.tenantId, tenantId)));
 
 		if (Number(documentCount.count) > 0) {
-			return c.json({ error: 'Cannot delete folder containing documents. Please move or delete them first.' }, 400);
+			return c.json(
+				{ error: 'Cannot delete folder containing documents. Please move or delete them first.' },
+				400,
+			);
 		}
 
 		// Delete folder

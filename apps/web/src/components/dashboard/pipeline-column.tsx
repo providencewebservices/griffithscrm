@@ -1,7 +1,12 @@
-import { Link } from 'react-router';
 import { ArrowRight, Inbox } from 'lucide-react';
-import { PipelineQuoteCard, PipelineJobCard } from './pipeline-card';
-import { formatCurrency, type PipelineColumn, type PipelineQuoteItem, type PipelineJobItem } from '@/hooks/use-pipeline';
+import { Link } from 'react-router';
+import {
+	formatCurrency,
+	type PipelineColumn,
+	type PipelineJobItem,
+	type PipelineQuoteItem,
+} from '@/hooks/use-pipeline';
+import { PipelineJobCard, PipelineQuoteCard } from './pipeline-card';
 
 type PipelineQuoteColumnProps = {
 	column: PipelineColumn<PipelineQuoteItem>;
@@ -32,7 +37,9 @@ export function PipelineQuoteColumn({ column, maxCards = 5 }: PipelineQuoteColum
 					<span className="font-semibold text-sm">{column.label}</span>
 				</div>
 				<div className="flex items-center justify-between text-xs text-muted-foreground pl-4">
-					<span>{column.count} {column.count === 1 ? 'quote' : 'quotes'}</span>
+					<span>
+						{column.count} {column.count === 1 ? 'quote' : 'quotes'}
+					</span>
 					<span className="font-medium">{formatCurrency(column.totalValue)}</span>
 				</div>
 			</div>
@@ -45,11 +52,7 @@ export function PipelineQuoteColumn({ column, maxCards = 5 }: PipelineQuoteColum
 						<span className="text-xs">No quotes</span>
 					</div>
 				) : (
-					<>
-						{column.items.map((item) => (
-							<PipelineQuoteCard key={item.id} item={item} />
-						))}
-					</>
+					column.items.map((item) => <PipelineQuoteCard key={item.id} item={item} />)
 				)}
 			</div>
 
@@ -83,7 +86,9 @@ export function PipelineJobColumn({ column, maxCards = 5 }: PipelineJobColumnPro
 					<span className="font-semibold text-sm">{column.label}</span>
 				</div>
 				<div className="flex items-center justify-between text-xs text-muted-foreground pl-4">
-					<span>{column.count} {column.count === 1 ? 'job' : 'jobs'}</span>
+					<span>
+						{column.count} {column.count === 1 ? 'job' : 'jobs'}
+					</span>
 					<span className="font-medium">{formatCurrency(column.totalValue)}</span>
 				</div>
 			</div>
@@ -96,11 +101,7 @@ export function PipelineJobColumn({ column, maxCards = 5 }: PipelineJobColumnPro
 						<span className="text-xs">No jobs</span>
 					</div>
 				) : (
-					<>
-						{column.items.map((item) => (
-							<PipelineJobCard key={item.id} item={item} />
-						))}
-					</>
+					column.items.map((item) => <PipelineJobCard key={item.id} item={item} />)
 				)}
 			</div>
 

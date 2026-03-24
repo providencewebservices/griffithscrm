@@ -1,14 +1,10 @@
-import { Outlet } from 'react-router'
-import { AppSidebar } from "@/components/app-sidebar"
-import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
-import {
-	SidebarInset,
-	SidebarProvider,
-	SidebarTrigger,
-} from "@/components/ui/sidebar"
-import { Eye, EyeOff } from "lucide-react"
-import { CustomerViewProvider, useCustomerView } from "@/contexts/customer-view-context"
+import { Eye, EyeOff } from 'lucide-react';
+import { Outlet } from 'react-router';
+import { AppSidebar } from '@/components/app-sidebar';
+import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
+import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
+import { CustomerViewProvider, useCustomerView } from '@/contexts/customer-view-context';
 
 export function CustomerLayout() {
 	return (
@@ -17,11 +13,11 @@ export function CustomerLayout() {
 				<CustomerLayoutInner />
 			</SidebarProvider>
 		</CustomerViewProvider>
-	)
+	);
 }
 
 function CustomerLayoutInner() {
-	const { isCustomerView, toggleCustomerView } = useCustomerView()
+	const { isCustomerView, toggleCustomerView } = useCustomerView();
 
 	return (
 		<>
@@ -34,12 +30,12 @@ function CustomerLayoutInner() {
 					</div>
 					<div className="flex items-center gap-2 px-4">
 						<Button
-							variant={isCustomerView ? "default" : "outline"}
+							variant={isCustomerView ? 'default' : 'outline'}
 							size="sm"
 							onClick={toggleCustomerView}
 						>
 							{isCustomerView ? <EyeOff /> : <Eye />}
-							{isCustomerView ? "Exit Customer View" : "Customer View"}
+							{isCustomerView ? 'Exit Customer View' : 'Customer View'}
 						</Button>
 					</div>
 				</header>
@@ -48,5 +44,5 @@ function CustomerLayoutInner() {
 				</main>
 			</SidebarInset>
 		</>
-	)
+	);
 }

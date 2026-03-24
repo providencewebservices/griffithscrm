@@ -1,14 +1,10 @@
+import { ArrowLeft, Clock, ExternalLink, FileText, Globe, Mail, MapPin, Phone } from 'lucide-react';
 import { useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router';
-import { Button } from '@/components/ui/button';
+import { Link, useNavigate, useParams } from 'react-router';
+import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
+import { DocumentsCard } from '@/components/documents';
+import { EmailThreadsCard } from '@/components/inbox/email-threads-card';
 import { Badge } from '@/components/ui/badge';
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from '@/components/ui/card';
 import {
 	Breadcrumb,
 	BreadcrumbItem,
@@ -17,6 +13,9 @@ import {
 	BreadcrumbPage,
 	BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
 import {
 	Table,
 	TableBody,
@@ -25,26 +24,12 @@ import {
 	TableHeader,
 	TableRow,
 } from '@/components/ui/table';
-import { Separator } from '@/components/ui/separator';
-import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
 import {
-	useFuneralDirectorQuery,
 	useArchiveFuneralDirectorMutation,
+	useFuneralDirectorQuery,
 	useUnarchiveFuneralDirectorMutation,
 } from '@/hooks/use-funeral-directors';
-import { useQuotesQuery, formatPriceRange, formatQuoteNumberWithOptions } from '@/hooks/use-quotes';
-import {
-	Mail,
-	Phone,
-	MapPin,
-	Globe,
-	ArrowLeft,
-	ExternalLink,
-	Clock,
-	FileText,
-} from 'lucide-react';
-import { DocumentsCard } from '@/components/documents';
-import { EmailThreadsCard } from '@/components/inbox/email-threads-card';
+import { formatPriceRange, formatQuoteNumberWithOptions, useQuotesQuery } from '@/hooks/use-quotes';
 
 export function FuneralDirectorDetailPage() {
 	const { id } = useParams<{ id: string }>();
@@ -57,7 +42,7 @@ export function FuneralDirectorDetailPage() {
 	const archiveMutation = useArchiveFuneralDirectorMutation();
 	const unarchiveMutation = useUnarchiveFuneralDirectorMutation();
 	const { data: fdQuotes, isLoading: quotesLoading } = useQuotesQuery(
-		id ? { funeralDirectorId: id } : undefined
+		id ? { funeralDirectorId: id } : undefined,
 	);
 
 	const handleArchive = () => {
@@ -83,9 +68,7 @@ export function FuneralDirectorDetailPage() {
 		try {
 			await unarchiveMutation.mutateAsync(id);
 		} catch (err) {
-			setMutationError(
-				err instanceof Error ? err.message : 'Failed to restore funeral director'
-			);
+			setMutationError(err instanceof Error ? err.message : 'Failed to restore funeral director');
 		}
 	};
 
@@ -123,12 +106,9 @@ export function FuneralDirectorDetailPage() {
 		);
 	}
 
-	const getEmailContacts = () =>
-		funeralDirector.contactInfo.filter((c) => c.type === 'email');
+	const getEmailContacts = () => funeralDirector.contactInfo.filter((c) => c.type === 'email');
 	const getPhoneContacts = () =>
-		funeralDirector.contactInfo.filter(
-			(c) => c.type === 'phone' || c.type === 'mobile'
-		);
+		funeralDirector.contactInfo.filter((c) => c.type === 'phone' || c.type === 'mobile');
 
 	const displayName = funeralDirector.tradingName || funeralDirector.businessName;
 
@@ -178,9 +158,7 @@ export function FuneralDirectorDetailPage() {
 				<div>
 					<div className="flex items-center gap-3">
 						<h2 className="text-2xl font-bold">{displayName}</h2>
-						{funeralDirector.archivedAt && (
-							<Badge variant="secondary">Archived</Badge>
-						)}
+						{funeralDirector.archivedAt && <Badge variant="secondary">Archived</Badge>}
 					</div>
 					{funeralDirector.tradingName && (
 						<p className="text-sm text-muted-foreground">
@@ -260,8 +238,7 @@ export function FuneralDirectorDetailPage() {
 										<TableCell>{formatDate(quote.createdAt)}</TableCell>
 										<TableCell>
 											<Badge variant={getStatusVariant(quote.status)}>
-												{quote.status.charAt(0).toUpperCase() +
-													quote.status.slice(1)}
+												{quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}
 											</Badge>
 										</TableCell>
 										<TableCell className="text-right">
@@ -295,9 +272,7 @@ export function FuneralDirectorDetailPage() {
 								Email Addresses
 							</h4>
 							{getEmailContacts().length === 0 ? (
-								<p className="text-sm text-muted-foreground">
-									No email addresses
-								</p>
+								<p className="text-sm text-muted-foreground">No email addresses</p>
 							) : (
 								<div className="space-y-2">
 									{getEmailContacts().map((contact) => (
@@ -306,9 +281,7 @@ export function FuneralDirectorDetailPage() {
 												{contact.value}
 											</a>
 											{contact.label && (
-												<span className="text-xs text-muted-foreground">
-													({contact.label})
-												</span>
+												<span className="text-xs text-muted-foreground">({contact.label})</span>
 											)}
 											{contact.isPrimary && (
 												<Badge variant="secondary" className="text-xs">
@@ -338,9 +311,7 @@ export function FuneralDirectorDetailPage() {
 												{contact.value}
 											</a>
 											{contact.label && (
-												<span className="text-xs text-muted-foreground">
-													({contact.label})
-												</span>
+												<span className="text-xs text-muted-foreground">({contact.label})</span>
 											)}
 											{contact.isPrimary && (
 												<Badge variant="secondary" className="text-xs">
@@ -393,9 +364,7 @@ export function FuneralDirectorDetailPage() {
 											<p>{address.formattedAddress}</p>
 											<div className="flex items-center gap-2 mt-1">
 												{address.label && (
-													<span className="text-xs text-muted-foreground">
-														({address.label})
-													</span>
+													<span className="text-xs text-muted-foreground">({address.label})</span>
 												)}
 												{address.isPrimary && (
 													<Badge variant="secondary" className="text-xs">

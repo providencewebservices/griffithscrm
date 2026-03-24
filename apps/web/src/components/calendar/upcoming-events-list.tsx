@@ -1,17 +1,16 @@
 import { useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
-import { EventDetailPopover } from './event-detail-popover';
 import {
-	getUpcomingEvents,
-	parseISO,
-	format,
-	isToday,
-	isSameDay,
 	addDays,
+	format,
+	getUpcomingEvents,
+	isSameDay,
+	parseISO,
 	startOfDay,
 } from './calendar-utils';
-import { getEventSourceLabel } from './types';
+import { EventDetailPopover } from './event-detail-popover';
 import type { CalendarEvent, CalendarView } from './types';
+import { getEventSourceLabel } from './types';
 
 type UpcomingEventsListProps = {
 	events: CalendarEvent[];
@@ -73,7 +72,7 @@ export function UpcomingEventsList({
 }: UpcomingEventsListProps) {
 	const upcoming = useMemo(
 		() => getUpcomingEvents(events, currentDate, view),
-		[events, currentDate, view]
+		[events, currentDate, view],
 	);
 
 	const truncated = upcoming.length > MAX_EVENTS;
@@ -100,9 +99,7 @@ export function UpcomingEventsList({
 				{grouped.map((group) => (
 					<div key={group.label}>
 						{view !== 'day' && (
-							<div className="text-xs font-medium text-muted-foreground mb-1.5">
-								{group.label}
-							</div>
+							<div className="text-xs font-medium text-muted-foreground mb-1.5">{group.label}</div>
 						)}
 						<div className="space-y-0.5">
 							{group.events.map((event) => (
@@ -121,9 +118,7 @@ export function UpcomingEventsList({
 												className="w-2 h-2 rounded-full shrink-0"
 												style={{ backgroundColor: event.color }}
 											/>
-											<span className="text-sm truncate">
-												{event.title}
-											</span>
+											<span className="text-sm truncate">{event.title}</span>
 										</span>
 										<span className="flex items-center gap-1.5 pl-4">
 											{!event.allDay && (

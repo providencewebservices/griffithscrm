@@ -1,4 +1,7 @@
-import { useState, useEffect } from 'react';
+import { Plus, Trash2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
 	Dialog,
 	DialogContent,
@@ -7,9 +10,8 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
 	Select,
 	SelectContent,
@@ -17,19 +19,12 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select';
-import {
-	Field,
-	FieldGroup,
-	FieldLabel,
-	FieldError,
-} from '@/components/ui/field';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Trash2 } from 'lucide-react';
 import type {
-	CustomerWithRelations,
-	ContactInfoInput,
 	AddressInput,
+	ContactInfoInput,
 	CreateCustomerInput,
+	CustomerWithRelations,
 } from '@/hooks/use-customers';
 
 interface CustomerFormDialogProps {
@@ -112,7 +107,7 @@ export function CustomerFormDialog({
 					value: c.value,
 					label: c.label || '',
 					isPrimary: c.isPrimary,
-				}))
+				})),
 			);
 			setAddresses(
 				customer.addresses.map((a) => ({
@@ -130,7 +125,7 @@ export function CustomerFormDialog({
 					longitude: a.longitude || '',
 					label: a.label || '',
 					isPrimary: a.isPrimary,
-				}))
+				})),
 			);
 			setDoNotCall(customer.doNotCall);
 			setDoNotEmail(customer.doNotEmail);
@@ -146,7 +141,7 @@ export function CustomerFormDialog({
 			setDoNotMail(false);
 			setCommunicationNotes('');
 		}
-	}, [customer, open]);
+	}, [customer]);
 
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
@@ -171,9 +166,7 @@ export function CustomerFormDialog({
 	};
 
 	const updateContact = (index: number, updates: Partial<ContactInfoInput>) => {
-		setContacts(
-			contacts.map((c, i) => (i === index ? { ...c, ...updates } : c))
-		);
+		setContacts(contacts.map((c, i) => (i === index ? { ...c, ...updates } : c)));
 	};
 
 	const addAddress = () => {
@@ -185,9 +178,7 @@ export function CustomerFormDialog({
 	};
 
 	const updateAddress = (index: number, updates: Partial<AddressInput>) => {
-		setAddresses(
-			addresses.map((a, i) => (i === index ? { ...a, ...updates } : a))
-		);
+		setAddresses(addresses.map((a, i) => (i === index ? { ...a, ...updates } : a)));
 	};
 
 	// Auto-generate formatted address when address components change
@@ -199,11 +190,9 @@ export function CustomerFormDialog({
 			parts.push(address.route);
 		}
 		if (address.locality) parts.push(address.locality);
-		if (address.administrativeAreaLevel1)
-			parts.push(address.administrativeAreaLevel1);
+		if (address.administrativeAreaLevel1) parts.push(address.administrativeAreaLevel1);
 		if (address.postalCode) parts.push(address.postalCode);
-		if (address.country && address.country !== 'US')
-			parts.push(address.country);
+		if (address.country && address.country !== 'US') parts.push(address.country);
 		return parts.join(', ');
 	};
 
@@ -211,13 +200,9 @@ export function CustomerFormDialog({
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
 				<DialogHeader>
-					<DialogTitle>
-						{isEditing ? 'Edit Customer' : 'Add Customer'}
-					</DialogTitle>
+					<DialogTitle>{isEditing ? 'Edit Customer' : 'Add Customer'}</DialogTitle>
 					<DialogDescription>
-						{isEditing
-							? 'Update the customer details.'
-							: 'Add a new customer to your database.'}
+						{isEditing ? 'Update the customer details.' : 'Add a new customer to your database.'}
 					</DialogDescription>
 				</DialogHeader>
 				<form onSubmit={handleSubmit}>
@@ -261,27 +246,17 @@ export function CustomerFormDialog({
 						<div>
 							<div className="flex justify-between items-center mb-3">
 								<h3 className="text-sm font-medium">Contact Information</h3>
-								<Button
-									type="button"
-									variant="outline"
-									size="sm"
-									onClick={addContact}
-								>
+								<Button type="button" variant="outline" size="sm" onClick={addContact}>
 									<Plus className="h-4 w-4 mr-1" />
 									Add Contact
 								</Button>
 							</div>
 							{contacts.length === 0 ? (
-								<p className="text-sm text-muted-foreground">
-									No contact information added.
-								</p>
+								<p className="text-sm text-muted-foreground">No contact information added.</p>
 							) : (
 								<div className="space-y-3">
 									{contacts.map((contact, index) => (
-										<div
-											key={index}
-											className="p-3 border rounded-lg space-y-2"
-										>
+										<div key={index} className="p-3 border rounded-lg space-y-2">
 											<div className="flex gap-2">
 												<Select
 													value={contact.type}
@@ -304,14 +279,10 @@ export function CustomerFormDialog({
 												</Select>
 												<Input
 													placeholder={
-														contact.type === 'email'
-															? 'email@example.com'
-															: '(555) 123-4567'
+														contact.type === 'email' ? 'email@example.com' : '(555) 123-4567'
 													}
 													value={contact.value}
-													onChange={(e) =>
-														updateContact(index, { value: e.target.value })
-													}
+													onChange={(e) => updateContact(index, { value: e.target.value })}
 													className="flex-1"
 												/>
 											</div>
@@ -319,9 +290,7 @@ export function CustomerFormDialog({
 												<Input
 													placeholder="Label (optional)"
 													value={contact.label || ''}
-													onChange={(e) =>
-														updateContact(index, { label: e.target.value })
-													}
+													onChange={(e) => updateContact(index, { label: e.target.value })}
 													className="flex-1"
 												/>
 												<label className="flex items-center gap-1.5 text-sm whitespace-nowrap">
@@ -391,20 +360,13 @@ export function CustomerFormDialog({
 						<div>
 							<div className="flex justify-between items-center mb-3">
 								<h3 className="text-sm font-medium">Addresses</h3>
-								<Button
-									type="button"
-									variant="outline"
-									size="sm"
-									onClick={addAddress}
-								>
+								<Button type="button" variant="outline" size="sm" onClick={addAddress}>
 									<Plus className="h-4 w-4 mr-1" />
 									Add Address
 								</Button>
 							</div>
 							{addresses.length === 0 ? (
-								<p className="text-sm text-muted-foreground">
-									No addresses added.
-								</p>
+								<p className="text-sm text-muted-foreground">No addresses added.</p>
 							) : (
 								<div className="space-y-3">
 									{addresses.map((address, index) => {
@@ -412,16 +374,12 @@ export function CustomerFormDialog({
 										const labels = ADDRESS_LABELS[countryCode] || ADDRESS_LABELS.US;
 										const countryData = COUNTRIES.find((c) => c.value === countryCode);
 										return (
-											<div
-												key={index}
-												className="p-3 border rounded-lg space-y-2"
-											>
+											<div key={index} className="p-3 border rounded-lg space-y-2">
 												<Select
 													value={address.country}
 													onValueChange={(value) => {
 														const updated = { ...address, country: value };
-														updated.formattedAddress =
-															generateFormattedAddress(updated);
+														updated.formattedAddress = generateFormattedAddress(updated);
 														updateAddress(index, updated);
 													}}
 												>
@@ -447,8 +405,7 @@ export function CustomerFormDialog({
 																...address,
 																streetNumber: e.target.value,
 															};
-															updated.formattedAddress =
-																generateFormattedAddress(updated);
+															updated.formattedAddress = generateFormattedAddress(updated);
 															updateAddress(index, updated);
 														}}
 														className="w-28"
@@ -461,8 +418,7 @@ export function CustomerFormDialog({
 																...address,
 																route: e.target.value,
 															};
-															updated.formattedAddress =
-																generateFormattedAddress(updated);
+															updated.formattedAddress = generateFormattedAddress(updated);
 															updateAddress(index, updated);
 														}}
 														className="flex-1"
@@ -477,8 +433,7 @@ export function CustomerFormDialog({
 																...address,
 																locality: e.target.value,
 															};
-															updated.formattedAddress =
-																generateFormattedAddress(updated);
+															updated.formattedAddress = generateFormattedAddress(updated);
 															updateAddress(index, updated);
 														}}
 														className="flex-1"
@@ -491,8 +446,7 @@ export function CustomerFormDialog({
 																...address,
 																administrativeAreaLevel1: e.target.value,
 															};
-															updated.formattedAddress =
-																generateFormattedAddress(updated);
+															updated.formattedAddress = generateFormattedAddress(updated);
 															updateAddress(index, updated);
 														}}
 														className="w-24"
@@ -505,8 +459,7 @@ export function CustomerFormDialog({
 																...address,
 																postalCode: e.target.value,
 															};
-															updated.formattedAddress =
-																generateFormattedAddress(updated);
+															updated.formattedAddress = generateFormattedAddress(updated);
 															updateAddress(index, updated);
 														}}
 														className="w-28"
@@ -516,9 +469,7 @@ export function CustomerFormDialog({
 													<Input
 														placeholder="Label (optional)"
 														value={address.label || ''}
-														onChange={(e) =>
-															updateAddress(index, { label: e.target.value })
-														}
+														onChange={(e) => updateAddress(index, { label: e.target.value })}
 														className="flex-1"
 													/>
 													<label className="flex items-center gap-1.5 text-sm whitespace-nowrap">

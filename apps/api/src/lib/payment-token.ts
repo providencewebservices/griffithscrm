@@ -1,4 +1,4 @@
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 
 const TOKEN_EXPIRY_DAYS = 7;
 
@@ -31,7 +31,9 @@ export function createPaymentToken(milestoneId: string, tenantId: string, amount
 	return `${payload}.${signature}`;
 }
 
-export function verifyPaymentToken(token: string): { milestoneId: string; tenantId: string; amount: string } | null {
+export function verifyPaymentToken(
+	token: string,
+): { milestoneId: string; tenantId: string; amount: string } | null {
 	const parts = token.split('.');
 	if (parts.length !== 2) return null;
 

@@ -1,12 +1,12 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-	QUOTE_STATUSES,
-	QUOTE_TYPES,
-	COMPONENT_TYPES,
+	type COMPONENT_TYPES,
 	FLOWER_HOLE_CHOICES,
 	FLOWER_TOP_COLOR_CHOICES,
 	PRODUCTION_METHODS,
+	type QUOTE_STATUSES,
+	QUOTE_TYPES,
 } from '@griffiths-crm/shared/db/schema';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -411,7 +411,10 @@ async function createQuote(input: CreateQuoteInput): Promise<QuotePackageWithOpt
 	return data.package;
 }
 
-async function addOption({ packageId, ...input }: AddOptionInput): Promise<QuotePackageWithOptions> {
+async function addOption({
+	packageId,
+	...input
+}: AddOptionInput): Promise<QuotePackageWithOptions> {
 	const response = await fetch(`${API_URL}/api/quotes/${packageId}/options`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
@@ -821,7 +824,7 @@ async function updateComponentPricing({
 			headers: { 'Content-Type': 'application/json' },
 			credentials: 'include',
 			body: JSON.stringify(input),
-		}
+		},
 	);
 
 	if (!response.ok) {
@@ -846,7 +849,7 @@ async function updateLetteringPricing({
 			headers: { 'Content-Type': 'application/json' },
 			credentials: 'include',
 			body: JSON.stringify(input),
-		}
+		},
 	);
 
 	if (!response.ok) {
@@ -871,7 +874,7 @@ async function updateSundryPricing({
 			headers: { 'Content-Type': 'application/json' },
 			credentials: 'include',
 			body: JSON.stringify(input),
-		}
+		},
 	);
 
 	if (!response.ok) {
@@ -903,7 +906,7 @@ async function updateProductPricing({
 			headers: { 'Content-Type': 'application/json' },
 			credentials: 'include',
 			body: JSON.stringify(input),
-		}
+		},
 	);
 
 	if (!response.ok) {
@@ -974,12 +977,21 @@ async function addLineItem({
 	visibleToCustomer,
 	priceVisibleToCustomer,
 }: AddLineItemInput): Promise<QuotePackageWithOptions> {
-	const response = await fetch(`${API_URL}/api/quotes/${packageId}/options/${optionId}/line-items`, {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		credentials: 'include',
-		body: JSON.stringify({ description, price, vatExempt, visibleToCustomer, priceVisibleToCustomer }),
-	});
+	const response = await fetch(
+		`${API_URL}/api/quotes/${packageId}/options/${optionId}/line-items`,
+		{
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			credentials: 'include',
+			body: JSON.stringify({
+				description,
+				price,
+				vatExempt,
+				visibleToCustomer,
+				priceVisibleToCustomer,
+			}),
+		},
+	);
 
 	if (!response.ok) {
 		const error = await response.json();
@@ -1006,8 +1018,14 @@ async function updateLineItem({
 			method: 'PUT',
 			headers: { 'Content-Type': 'application/json' },
 			credentials: 'include',
-			body: JSON.stringify({ description, price, vatExempt, visibleToCustomer, priceVisibleToCustomer }),
-		}
+			body: JSON.stringify({
+				description,
+				price,
+				vatExempt,
+				visibleToCustomer,
+				priceVisibleToCustomer,
+			}),
+		},
 	);
 
 	if (!response.ok) {
@@ -1029,7 +1047,7 @@ async function deleteLineItem({
 		{
 			method: 'DELETE',
 			credentials: 'include',
-		}
+		},
 	);
 
 	if (!response.ok) {
@@ -1124,8 +1142,17 @@ async function updateLettering({
 			method: 'PUT',
 			headers: { 'Content-Type': 'application/json' },
 			credentials: 'include',
-			body: JSON.stringify({ techniqueId, colorId, fontId, text, appliesTo, notes, supplierCost, markupPercent }),
-		}
+			body: JSON.stringify({
+				techniqueId,
+				colorId,
+				fontId,
+				text,
+				appliesTo,
+				notes,
+				supplierCost,
+				markupPercent,
+			}),
+		},
 	);
 
 	if (!response.ok) {
@@ -1147,7 +1174,7 @@ async function deleteLettering({
 		{
 			method: 'DELETE',
 			credentials: 'include',
-		}
+		},
 	);
 
 	if (!response.ok) {
@@ -1202,12 +1229,15 @@ async function addComponent({
 	optionId,
 	...input
 }: AddComponentInput): Promise<QuotePackageWithOptions> {
-	const response = await fetch(`${API_URL}/api/quotes/${packageId}/options/${optionId}/components`, {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		credentials: 'include',
-		body: JSON.stringify(input),
-	});
+	const response = await fetch(
+		`${API_URL}/api/quotes/${packageId}/options/${optionId}/components`,
+		{
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			credentials: 'include',
+			body: JSON.stringify(input),
+		},
+	);
 
 	if (!response.ok) {
 		const error = await response.json();
@@ -1228,7 +1258,7 @@ async function deleteComponent({
 		{
 			method: 'DELETE',
 			credentials: 'include',
-		}
+		},
 	);
 
 	if (!response.ok) {
@@ -1289,7 +1319,7 @@ export function formatQuoteStatus(status: QuoteStatus): string {
 
 // Helper: Get status color for badges
 export function getQuoteStatusVariant(
-	status: QuoteStatus
+	status: QuoteStatus,
 ): 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning' {
 	switch (status) {
 		case 'draft':
@@ -1333,7 +1363,7 @@ export function formatQuoteType(type: QuoteType): string {
 }
 
 export function getQuoteTypeVariant(
-	type: QuoteType
+	type: QuoteType,
 ): 'default' | 'secondary' | 'destructive' | 'outline' {
 	switch (type) {
 		case 'new_memorial':
@@ -1436,7 +1466,9 @@ export const QUOTE_TYPE_SECTION_CONFIG: Record<
 };
 
 // Helper to format price range for display
-export function formatPriceRange(priceRange: { minPrice: string; maxPrice: string } | undefined | null): string {
+export function formatPriceRange(
+	priceRange: { minPrice: string; maxPrice: string } | undefined | null,
+): string {
 	if (!priceRange) {
 		return '£0.00';
 	}
@@ -1453,7 +1485,7 @@ export function formatPriceRange(priceRange: { minPrice: string; maxPrice: strin
 // Helper to format quote number with option count
 export function formatQuoteNumberWithOptions(
 	firstQuoteNumber: string,
-	optionCount: number
+	optionCount: number,
 ): string {
 	if (optionCount <= 1) {
 		return firstQuoteNumber;

@@ -1,14 +1,14 @@
+import { ChevronLeft, ChevronRight, Search, Upload } from 'lucide-react';
 import { useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router';
-import { Button } from '@/components/ui/button';
+import { Link, useNavigate, useParams } from 'react-router';
+import { toast } from 'sonner';
+import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
+import { CategoryFormDialog } from '@/components/customer/supplier-catalog/category-form-dialog';
+import { CollectionFormDialog } from '@/components/customer/supplier-catalog/collection-form-dialog';
+import { CsvImportDialog } from '@/components/customer/supplier-catalog/csv-import-dialog';
+import { ImportToCatalogDialog } from '@/components/customer/supplier-catalog/import-to-catalog-dialog';
+import { SupplierProductFormDialog } from '@/components/customer/supplier-catalog/supplier-product-form-dialog';
 import { Badge } from '@/components/ui/badge';
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from '@/components/ui/card';
 import {
 	Breadcrumb,
 	BreadcrumbItem,
@@ -17,6 +17,16 @@ import {
 	BreadcrumbPage,
 	BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from '@/components/ui/select';
 import {
 	Table,
 	TableBody,
@@ -26,42 +36,24 @@ import {
 	TableRow,
 } from '@/components/ui/table';
 import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
-import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
-import {
-	useSupplierCollectionQuery,
-	useUpdateSupplierCollectionMutation,
-	useArchiveSupplierCollectionMutation,
-	useUnarchiveSupplierCollectionMutation,
-	useDeleteSupplierCollectionMutation,
-} from '@/hooks/use-supplier-collections';
-import {
-	useSupplierCategoriesQuery,
 	useCreateSupplierCategoryMutation,
 	useDeleteSupplierCategoryMutation,
+	useSupplierCategoriesQuery,
 } from '@/hooks/use-supplier-categories';
 import {
-	useSupplierProductsQuery,
-	useCreateSupplierProductMutation,
-} from '@/hooks/use-supplier-products';
-import { CollectionFormDialog } from '@/components/customer/supplier-catalog/collection-form-dialog';
-import { CategoryFormDialog } from '@/components/customer/supplier-catalog/category-form-dialog';
-import { SupplierProductFormDialog } from '@/components/customer/supplier-catalog/supplier-product-form-dialog';
-import { ImportToCatalogDialog } from '@/components/customer/supplier-catalog/import-to-catalog-dialog';
-import { CsvImportDialog } from '@/components/customer/supplier-catalog/csv-import-dialog';
+	useArchiveSupplierCollectionMutation,
+	useDeleteSupplierCollectionMutation,
+	useSupplierCollectionQuery,
+	useUnarchiveSupplierCollectionMutation,
+	useUpdateSupplierCollectionMutation,
+} from '@/hooks/use-supplier-collections';
 import {
-	useImportToCatalogMutation,
-	useCsvImportMutation,
 	type SupplierProduct,
+	useCreateSupplierProductMutation,
+	useCsvImportMutation,
+	useImportToCatalogMutation,
+	useSupplierProductsQuery,
 } from '@/hooks/use-supplier-products';
-import { toast } from 'sonner';
-import { Search, Upload, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export function SupplierCollectionDetailPage() {
 	const { supplierId, collectionId } = useParams<{
@@ -188,9 +180,7 @@ export function SupplierCollectionDetailPage() {
 						)}
 					</div>
 					{collection.description && (
-						<p className="text-sm text-muted-foreground mt-1">
-							{collection.description}
-						</p>
+						<p className="text-sm text-muted-foreground mt-1">{collection.description}</p>
 					)}
 				</div>
 				<div className="flex gap-2">
@@ -216,18 +206,12 @@ export function SupplierCollectionDetailPage() {
 							>
 								{unarchiveMutation.isPending ? 'Restoring...' : 'Restore'}
 							</Button>
-							<Button
-								variant="destructive"
-								onClick={() => setDeleteDialogOpen(true)}
-							>
+							<Button variant="destructive" onClick={() => setDeleteDialogOpen(true)}>
 								Delete
 							</Button>
 						</>
 					) : (
-						<Button
-							variant="destructive"
-							onClick={() => setArchiveDialogOpen(true)}
-						>
+						<Button variant="destructive" onClick={() => setArchiveDialogOpen(true)}>
 							Archive
 						</Button>
 					)}
@@ -347,7 +331,13 @@ export function SupplierCollectionDetailPage() {
 							/>
 						</div>
 						{categories && categories.length > 0 && (
-							<Select value={categoryFilter} onValueChange={(v) => { setCategoryFilter(v); setPage(1); }}>
+							<Select
+								value={categoryFilter}
+								onValueChange={(v) => {
+									setCategoryFilter(v);
+									setPage(1);
+								}}
+							>
 								<SelectTrigger className="w-48">
 									<SelectValue placeholder="All categories" />
 								</SelectTrigger>
@@ -384,16 +374,12 @@ export function SupplierCollectionDetailPage() {
 									{productsData.products.map((product) => (
 										<TableRow key={product.id}>
 											<TableCell className="font-medium">{product.name}</TableCell>
-											<TableCell className="text-muted-foreground">
-												{product.sku || '-'}
-											</TableCell>
+											<TableCell className="text-muted-foreground">{product.sku || '-'}</TableCell>
 											<TableCell className="text-muted-foreground">
 												{product.material || '-'}
 											</TableCell>
 											<TableCell className="text-right">
-												{product.supplierCost
-													? formatCurrency(product.supplierCost)
-													: '-'}
+												{product.supplierCost ? formatCurrency(product.supplierCost) : '-'}
 											</TableCell>
 											<TableCell>
 												<Badge variant={product.isActive ? 'default' : 'secondary'}>
@@ -402,8 +388,12 @@ export function SupplierCollectionDetailPage() {
 											</TableCell>
 											<TableCell>
 												<div className="flex gap-1">
-													<Link to={`/app/suppliers/${supplierId}/collections/${collectionId}/products/${product.id}`}>
-														<Button variant="ghost" size="sm">View</Button>
+													<Link
+														to={`/app/suppliers/${supplierId}/collections/${collectionId}/products/${product.id}`}
+													>
+														<Button variant="ghost" size="sm">
+															View
+														</Button>
 													</Link>
 													<Button
 														variant="ghost"
@@ -426,9 +416,13 @@ export function SupplierCollectionDetailPage() {
 							{productsData.pagination.totalPages > 1 && (
 								<div className="flex items-center justify-between mt-4">
 									<div className="text-sm text-muted-foreground">
-										Showing {(productsData.pagination.page - 1) * productsData.pagination.limit + 1} to{' '}
-										{Math.min(productsData.pagination.page * productsData.pagination.limit, productsData.pagination.total)} of{' '}
-										{productsData.pagination.total} products
+										Showing {(productsData.pagination.page - 1) * productsData.pagination.limit + 1}{' '}
+										to{' '}
+										{Math.min(
+											productsData.pagination.page * productsData.pagination.limit,
+											productsData.pagination.total,
+										)}{' '}
+										of {productsData.pagination.total} products
 									</div>
 									<div className="flex items-center gap-2">
 										<Button
@@ -532,7 +526,7 @@ export function SupplierCollectionDetailPage() {
 							setImportError(null);
 							try {
 								await importToCatalogMutation.mutateAsync({
-									supplierProductId: importProduct!.id,
+									supplierProductId: importProduct?.id,
 									...data,
 								});
 								setImportDialogOpen(false);

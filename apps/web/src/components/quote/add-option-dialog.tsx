@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { Loader2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
 import {
 	Dialog,
 	DialogContent,
@@ -7,7 +9,6 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -18,10 +19,9 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select';
-import { Loader2 } from 'lucide-react';
+import { type DimensionCombo, useDimensionCombosQuery } from '@/hooks/use-dimension-combos';
 import { useProductsQuery } from '@/hooks/use-products';
-import { useDimensionCombosQuery, type DimensionCombo } from '@/hooks/use-dimension-combos';
-import { useAddOptionMutation, type QuoteOption } from '@/hooks/use-quotes';
+import { type QuoteOption, useAddOptionMutation } from '@/hooks/use-quotes';
 
 interface AddOptionDialogProps {
 	open: boolean;
@@ -58,7 +58,7 @@ export function AddOptionDialog({
 
 	// Fetch dimension combos when a product is selected
 	const { data: dimensionCombos, isLoading: combosLoading } = useDimensionCombosQuery(
-		productId || undefined
+		productId || undefined,
 	);
 
 	// Filter to only active dimension combos
@@ -79,7 +79,7 @@ export function AddOptionDialog({
 	// Reset dimension combo when product changes
 	useEffect(() => {
 		setDimensionComboId('');
-	}, [productId]);
+	}, []);
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -90,7 +90,8 @@ export function AddOptionDialog({
 				packageId,
 				copyFromOptionId: mode === 'clone' ? sourceOptionId : undefined,
 				productId: productId && productId !== '__none__' ? productId : undefined,
-				dimensionComboId: dimensionComboId && dimensionComboId !== '__none__' ? dimensionComboId : undefined,
+				dimensionComboId:
+					dimensionComboId && dimensionComboId !== '__none__' ? dimensionComboId : undefined,
 				optionLabel: optionLabel || undefined,
 			});
 			onOpenChange(false);
@@ -115,9 +116,7 @@ export function AddOptionDialog({
 			<DialogContent className="sm:max-w-md">
 				<DialogHeader>
 					<DialogTitle>Add Quote Option</DialogTitle>
-					<DialogDescription>
-						Create a new pricing option for this quote
-					</DialogDescription>
+					<DialogDescription>Create a new pricing option for this quote</DialogDescription>
 				</DialogHeader>
 				<form onSubmit={handleSubmit}>
 					<div className="space-y-6 py-4">

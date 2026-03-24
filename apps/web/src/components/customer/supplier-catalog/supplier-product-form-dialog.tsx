@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
 import {
 	Dialog,
 	DialogContent,
@@ -7,10 +8,8 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
 import {
 	Select,
 	SelectContent,
@@ -18,8 +17,9 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select';
-import type { SupplierProduct, CreateSupplierProductInput } from '@/hooks/use-supplier-products';
+import { Textarea } from '@/components/ui/textarea';
 import type { SupplierCategory } from '@/hooks/use-supplier-categories';
+import type { CreateSupplierProductInput, SupplierProduct } from '@/hooks/use-supplier-products';
 
 type SupplierProductFormDialogProps = {
 	open: boolean;
@@ -115,9 +115,7 @@ export function SupplierProductFormDialog({
 				</DialogHeader>
 
 				{error && (
-					<div className="bg-destructive/10 text-destructive px-4 py-2 rounded">
-						{error}
-					</div>
+					<div className="bg-destructive/10 text-destructive px-4 py-2 rounded">{error}</div>
 				)}
 
 				<FieldGroup>

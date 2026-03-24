@@ -1,4 +1,4 @@
-import { parseISO, format, getContrastTextColor } from './calendar-utils';
+import { format, getContrastTextColor, parseISO } from './calendar-utils';
 import { EventDetailPopover } from './event-detail-popover';
 import type { CalendarEvent } from './types';
 
@@ -27,8 +27,7 @@ export function CalendarEventBlock({
 	const endTime = event.end ? parseISO(event.end) : null;
 	const isCompact = height < 40;
 	const textColor = getContrastTextColor(event.color);
-	const subTextColor =
-		textColor === '#ffffff' ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.6)';
+	const subTextColor = textColor === '#ffffff' ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.6)';
 
 	const blockContent = (
 		<button
@@ -56,14 +55,9 @@ export function CalendarEventBlock({
 				</div>
 			) : (
 				<>
-					<div className="text-xs font-medium truncate leading-tight">
-						{event.title}
-					</div>
+					<div className="text-xs font-medium truncate leading-tight">{event.title}</div>
 					{height > 48 && (
-						<div
-							className="text-[11px] truncate mt-0.5"
-							style={{ color: subTextColor }}
-						>
+						<div className="text-[11px] truncate mt-0.5" style={{ color: subTextColor }}>
 							{format(startTime, 'h:mm a')}
 							{endTime && ` - ${format(endTime, 'h:mm a')}`}
 						</div>
@@ -74,11 +68,7 @@ export function CalendarEventBlock({
 	);
 
 	return (
-		<EventDetailPopover
-			event={event}
-			onEdit={onEditEvent}
-			onDelete={onDeleteEvent}
-		>
+		<EventDetailPopover event={event} onEdit={onEditEvent} onDelete={onDeleteEvent}>
 			{blockContent}
 		</EventDetailPopover>
 	);

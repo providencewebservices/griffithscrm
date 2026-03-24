@@ -1,13 +1,23 @@
-import { useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import {
-	Card,
-	CardContent,
-	CardHeader,
-	CardTitle,
-} from '@/components/ui/card';
+	ArrowLeft,
+	BookOpen,
+	Copy,
+	CreditCard,
+	Globe,
+	Mail,
+	MapPin,
+	Package,
+	Phone,
+	ShoppingBag,
+} from 'lucide-react';
+import { useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router';
+import { toast } from 'sonner';
+import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
+import { CollectionFormDialog } from '@/components/customer/supplier-catalog/collection-form-dialog';
+import { DocumentsCard } from '@/components/documents';
+import { EmailThreadsCard } from '@/components/inbox/email-threads-card';
+import { Badge } from '@/components/ui/badge';
 import {
 	Breadcrumb,
 	BreadcrumbItem,
@@ -16,6 +26,9 @@ import {
 	BreadcrumbPage,
 	BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
 import {
 	Table,
 	TableBody,
@@ -25,37 +38,19 @@ import {
 	TableRow,
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Separator } from '@/components/ui/separator';
-import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
 import {
-	useSupplierQuery,
-	useSupplierMaterialsQuery,
-	useSupplierSundriesQuery,
-	useArchiveSupplierMutation,
-	useUnarchiveSupplierMutation,
+	useCreateSupplierCollectionMutation,
+	useSupplierCollectionsQuery,
+} from '@/hooks/use-supplier-collections';
+import {
 	PAYMENT_TERM_LABELS,
 	type PaymentTerms,
+	useArchiveSupplierMutation,
+	useSupplierMaterialsQuery,
+	useSupplierQuery,
+	useSupplierSundriesQuery,
+	useUnarchiveSupplierMutation,
 } from '@/hooks/use-suppliers';
-import {
-	Mail,
-	Phone,
-	MapPin,
-	Globe,
-	ArrowLeft,
-	CreditCard,
-	Package,
-	ShoppingBag,
-	BookOpen,
-	Copy,
-} from 'lucide-react';
-import { toast } from 'sonner';
-import { DocumentsCard } from '@/components/documents';
-import { EmailThreadsCard } from '@/components/inbox/email-threads-card';
-import {
-	useSupplierCollectionsQuery,
-	useCreateSupplierCollectionMutation,
-} from '@/hooks/use-supplier-collections';
-import { CollectionFormDialog } from '@/components/customer/supplier-catalog/collection-form-dialog';
 
 export function SupplierDetailPage() {
 	const { id } = useParams<{ id: string }>();
@@ -109,9 +104,7 @@ export function SupplierDetailPage() {
 		try {
 			await unarchiveMutation.mutateAsync(id);
 		} catch (err) {
-			setMutationError(
-				err instanceof Error ? err.message : 'Failed to restore supplier'
-			);
+			setMutationError(err instanceof Error ? err.message : 'Failed to restore supplier');
 		}
 	};
 
@@ -133,15 +126,9 @@ export function SupplierDetailPage() {
 					<h2 className="text-2xl font-bold">Supplier Details</h2>
 				</div>
 				<div className="text-destructive">
-					{error
-						? `Error loading supplier: ${error.message}`
-						: 'Supplier not found'}
+					{error ? `Error loading supplier: ${error.message}` : 'Supplier not found'}
 				</div>
-				<Button
-					variant="outline"
-					className="mt-4"
-					onClick={() => navigate('/app/suppliers')}
-				>
+				<Button variant="outline" className="mt-4" onClick={() => navigate('/app/suppliers')}>
 					<ArrowLeft className="h-4 w-4 mr-2" />
 					Back to Suppliers
 				</Button>
@@ -149,12 +136,9 @@ export function SupplierDetailPage() {
 		);
 	}
 
-	const getEmailContacts = () =>
-		supplier.contactInfo.filter((c) => c.type === 'email');
+	const getEmailContacts = () => supplier.contactInfo.filter((c) => c.type === 'email');
 	const getPhoneContacts = () =>
-		supplier.contactInfo.filter(
-			(c) => c.type === 'phone' || c.type === 'mobile'
-		);
+		supplier.contactInfo.filter((c) => c.type === 'phone' || c.type === 'mobile');
 
 	const displayName = supplier.tradingName || supplier.businessName;
 
@@ -178,14 +162,10 @@ export function SupplierDetailPage() {
 				<div>
 					<div className="flex items-center gap-3">
 						<h2 className="text-2xl font-bold">{displayName}</h2>
-						{supplier.archivedAt && (
-							<Badge variant="secondary">Archived</Badge>
-						)}
+						{supplier.archivedAt && <Badge variant="secondary">Archived</Badge>}
 					</div>
 					{supplier.tradingName && supplier.tradingName !== supplier.businessName && (
-						<p className="text-sm text-muted-foreground">
-							Legal name: {supplier.businessName}
-						</p>
+						<p className="text-sm text-muted-foreground">Legal name: {supplier.businessName}</p>
 					)}
 				</div>
 				<div className="flex gap-2">
@@ -234,9 +214,7 @@ export function SupplierDetailPage() {
 										Email Addresses
 									</h4>
 									{getEmailContacts().length === 0 ? (
-										<p className="text-sm text-muted-foreground">
-											No email addresses
-										</p>
+										<p className="text-sm text-muted-foreground">No email addresses</p>
 									) : (
 										<div className="space-y-2">
 											{getEmailContacts().map((contact) => (
@@ -250,9 +228,7 @@ export function SupplierDetailPage() {
 														<Copy className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
 													</button>
 													{contact.label && (
-														<span className="text-xs text-muted-foreground">
-															({contact.label})
-														</span>
+														<span className="text-xs text-muted-foreground">({contact.label})</span>
 													)}
 													{contact.isPrimary && (
 														<Badge variant="secondary" className="text-xs">
@@ -287,9 +263,7 @@ export function SupplierDetailPage() {
 														<Copy className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
 													</button>
 													{contact.label && (
-														<span className="text-xs text-muted-foreground">
-															({contact.label})
-														</span>
+														<span className="text-xs text-muted-foreground">({contact.label})</span>
 													)}
 													{contact.isPrimary && (
 														<Badge variant="secondary" className="text-xs">
@@ -370,30 +344,40 @@ export function SupplierDetailPage() {
 							<div className="grid grid-cols-1 md:grid-cols-4 gap-6">
 								<div>
 									<p className="text-sm font-medium mb-1">Account Number</p>
-									<p>{supplier.accountNumber || <span className="text-muted-foreground">Not set</span>}</p>
+									<p>
+										{supplier.accountNumber || (
+											<span className="text-muted-foreground">Not set</span>
+										)}
+									</p>
 								</div>
 								<div>
 									<p className="text-sm font-medium mb-1">Payment Terms</p>
 									<p>
-										{supplier.paymentTerms
-											? PAYMENT_TERM_LABELS[supplier.paymentTerms as PaymentTerms]
-											: <span className="text-muted-foreground">Not set</span>}
+										{supplier.paymentTerms ? (
+											PAYMENT_TERM_LABELS[supplier.paymentTerms as PaymentTerms]
+										) : (
+											<span className="text-muted-foreground">Not set</span>
+										)}
 									</p>
 								</div>
 								<div>
 									<p className="text-sm font-medium mb-1">Default Lead Time</p>
 									<p>
-										{supplier.defaultLeadTimeDays
-											? `${supplier.defaultLeadTimeDays} days`
-											: <span className="text-muted-foreground">Not set</span>}
+										{supplier.defaultLeadTimeDays ? (
+											`${supplier.defaultLeadTimeDays} days`
+										) : (
+											<span className="text-muted-foreground">Not set</span>
+										)}
 									</p>
 								</div>
 								<div>
 									<p className="text-sm font-medium mb-1">Minimum Order Value</p>
 									<p>
-										{supplier.minimumOrderValue
-											? formatCurrency(supplier.minimumOrderValue)
-											: <span className="text-muted-foreground">Not set</span>}
+										{supplier.minimumOrderValue ? (
+											formatCurrency(supplier.minimumOrderValue)
+										) : (
+											<span className="text-muted-foreground">Not set</span>
+										)}
 									</p>
 								</div>
 							</div>
@@ -438,17 +422,15 @@ export function SupplierDetailPage() {
 										<TableBody>
 											{materials.map((material) => (
 												<TableRow key={material.id}>
-													<TableCell className="font-medium">
-														{material.name}
-													</TableCell>
+													<TableCell className="font-medium">{material.name}</TableCell>
 													<TableCell>
-														{!material.isActive && (
-															<Badge variant="secondary">Inactive</Badge>
-														)}
+														{!material.isActive && <Badge variant="secondary">Inactive</Badge>}
 													</TableCell>
 													<TableCell>
 														<Link to={`/app/materials/${material.id}`}>
-															<Button variant="ghost" size="sm">View</Button>
+															<Button variant="ghost" size="sm">
+																View
+															</Button>
 														</Link>
 													</TableCell>
 												</TableRow>
@@ -484,20 +466,18 @@ export function SupplierDetailPage() {
 										<TableBody>
 											{sundries.map((sundry) => (
 												<TableRow key={sundry.id}>
-													<TableCell className="font-medium">
-														{sundry.name}
-													</TableCell>
+													<TableCell className="font-medium">{sundry.name}</TableCell>
 													<TableCell className="text-right">
 														{formatCurrency(sundry.price)}
 													</TableCell>
 													<TableCell>
-														{!sundry.isActive && (
-															<Badge variant="secondary">Inactive</Badge>
-														)}
+														{!sundry.isActive && <Badge variant="secondary">Inactive</Badge>}
 													</TableCell>
 													<TableCell>
 														<Link to={`/app/sundries/${sundry.id}`}>
-															<Button variant="ghost" size="sm">View</Button>
+															<Button variant="ghost" size="sm">
+																View
+															</Button>
 														</Link>
 													</TableCell>
 												</TableRow>
@@ -516,10 +496,12 @@ export function SupplierDetailPage() {
 									<BookOpen className="h-5 w-5" />
 									Supplier Catalog
 								</CardTitle>
-								<Button onClick={() => {
-									setCollectionError(null);
-									setCollectionDialogOpen(true);
-								}}>
+								<Button
+									onClick={() => {
+										setCollectionError(null);
+										setCollectionDialogOpen(true);
+									}}
+								>
 									Add Collection
 								</Button>
 							</div>
@@ -542,20 +524,16 @@ export function SupplierDetailPage() {
 									<TableBody>
 										{collections.map((collection) => (
 											<TableRow key={collection.id}>
-												<TableCell className="font-medium">
-													{collection.name}
-												</TableCell>
-												<TableCell className="text-right">
-													{collection.categoryCount}
-												</TableCell>
+												<TableCell className="font-medium">{collection.name}</TableCell>
+												<TableCell className="text-right">{collection.categoryCount}</TableCell>
 												<TableCell>
-													{!collection.isActive && (
-														<Badge variant="secondary">Inactive</Badge>
-													)}
+													{!collection.isActive && <Badge variant="secondary">Inactive</Badge>}
 												</TableCell>
 												<TableCell>
 													<Link to={`/app/suppliers/${id}/collections/${collection.id}`}>
-														<Button variant="ghost" size="sm">View</Button>
+														<Button variant="ghost" size="sm">
+															View
+														</Button>
 													</Link>
 												</TableCell>
 											</TableRow>
@@ -568,11 +546,7 @@ export function SupplierDetailPage() {
 				</TabsContent>
 
 				<TabsContent value="activity" className="space-y-6 mt-6">
-					<EmailThreadsCard
-						entityType="supplier"
-						entityId={supplier.id}
-						entityName={displayName}
-					/>
+					<EmailThreadsCard entityType="supplier" entityId={supplier.id} entityName={displayName} />
 					<DocumentsCard
 						entityType="supplier"
 						entityId={supplier.id}
@@ -593,7 +567,9 @@ export function SupplierDetailPage() {
 							await createCollectionMutation.mutateAsync(data);
 							setCollectionDialogOpen(false);
 						} catch (err) {
-							setCollectionError(err instanceof Error ? err.message : 'Failed to create collection');
+							setCollectionError(
+								err instanceof Error ? err.message : 'Failed to create collection',
+							);
 						}
 					}}
 					isLoading={createCollectionMutation.isPending}

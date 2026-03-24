@@ -1,21 +1,16 @@
-import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
+import { Hono } from 'hono';
 import { z } from 'zod';
-import { requireAuth, requireTenant } from '../middleware/auth';
 import {
 	generatePresignedUploadUrl,
-	isS3Configured,
 	getSignedImageUrl,
+	isS3Configured,
 	type UploadCategory,
 } from '../lib/s3';
+import { requireAuth, requireTenant } from '../middleware/auth';
 
 // Allowed content types for images
-const ALLOWED_CONTENT_TYPES = [
-	'image/jpeg',
-	'image/png',
-	'image/gif',
-	'image/webp',
-] as const;
+const ALLOWED_CONTENT_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'] as const;
 
 // Validation schema for presigned URL request
 const presignRequestSchema = z.object({
@@ -40,9 +35,10 @@ const uploadRoutes = new Hono()
 		if (!isS3Configured()) {
 			return c.json(
 				{
-					error: 'S3 is not configured. Please set S3_BUCKET, AWS_ACCESS_KEY_ID, and AWS_SECRET_ACCESS_KEY environment variables.',
+					error:
+						'S3 is not configured. Please set S3_BUCKET, AWS_ACCESS_KEY_ID, and AWS_SECRET_ACCESS_KEY environment variables.',
 				},
-				503
+				503,
 			);
 		}
 
@@ -77,7 +73,7 @@ const uploadRoutes = new Hono()
 			'json',
 			z.object({
 				url: z.string().min(1, 'URL is required'),
-			})
+			}),
 		),
 		async (c) => {
 			if (!isS3Configured()) {
@@ -96,7 +92,7 @@ const uploadRoutes = new Hono()
 				console.error('Error generating signed URL:', error);
 				return c.json({ error: 'Failed to generate signed URL' }, 500);
 			}
-		}
+		},
 	)
 
 	// Batch sign multiple URLs
@@ -106,7 +102,7 @@ const uploadRoutes = new Hono()
 			'json',
 			z.object({
 				urls: z.array(z.string()).min(1).max(50),
-			})
+			}),
 		),
 		async (c) => {
 			if (!isS3Configured()) {
@@ -120,14 +116,14 @@ const uploadRoutes = new Hono()
 					urls.map(async (url) => ({
 						original: url,
 						signed: await getSignedImageUrl(url),
-					}))
+					})),
 				);
 				return c.json({ signedUrls });
 			} catch (error) {
 				console.error('Error generating signed URLs:', error);
 				return c.json({ error: 'Failed to generate signed URLs' }, 500);
 			}
-		}
+		},
 	);
 
 export { uploadRoutes };

@@ -1,15 +1,8 @@
+import { ArrowLeft, Plus } from 'lucide-react';
 import { useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router';
-import { Button } from '@/components/ui/button';
+import { Link, useNavigate, useParams } from 'react-router';
+import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from '@/components/ui/card';
 import {
 	Breadcrumb,
 	BreadcrumbItem,
@@ -18,14 +11,8 @@ import {
 	BreadcrumbPage,
 	BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
-import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
 	Dialog,
 	DialogContent,
@@ -34,6 +21,8 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from '@/components/ui/dialog';
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
 import {
 	Select,
 	SelectContent,
@@ -41,24 +30,29 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select';
-import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
-import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
 import {
-	useLetteringTechniqueQuery,
-	useUpdateLetteringTechniqueMutation,
-	useDeleteLetteringTechniqueMutation,
-	type UpdateLetteringTechniqueInput,
-} from '@/hooks/use-lettering-techniques';
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from '@/components/ui/table';
+import { useLetteringColorsQuery } from '@/hooks/use-lettering-colors';
 import {
-	useCreateLetteringCostMutation,
-	useUpdateLetteringCostMutation,
-	useDeleteLetteringCostMutation,
+	type CreateLetteringCostInput,
 	type LetteringCost,
 	type LetteringCostAppliesTo,
-	type CreateLetteringCostInput,
+	useCreateLetteringCostMutation,
+	useDeleteLetteringCostMutation,
+	useUpdateLetteringCostMutation,
 } from '@/hooks/use-lettering-costs';
-import { useLetteringColorsQuery } from '@/hooks/use-lettering-colors';
-import { ArrowLeft, Plus } from 'lucide-react';
+import {
+	type UpdateLetteringTechniqueInput,
+	useDeleteLetteringTechniqueMutation,
+	useLetteringTechniqueQuery,
+	useUpdateLetteringTechniqueMutation,
+} from '@/hooks/use-lettering-techniques';
 
 const APPLIES_TO_LABELS: Record<LetteringCostAppliesTo, string> = {
 	new_memorial: 'New Memorial',
@@ -125,7 +119,7 @@ export function LetteringTechniqueDetailPage() {
 				id,
 				isActive: !technique.isActive,
 			});
-		} catch (err) {
+		} catch (_err) {
 			// Error handled by mutation
 		}
 	};
@@ -136,7 +130,7 @@ export function LetteringTechniqueDetailPage() {
 			await deleteMutation.mutateAsync(id);
 			setDeleteDialogOpen(false);
 			navigate('/app/settings?tab=lettering-techniques');
-		} catch (err) {
+		} catch (_err) {
 			// Error handled by mutation
 		}
 	};
@@ -209,7 +203,7 @@ export function LetteringTechniqueDetailPage() {
 			await deleteCostMutation.mutateAsync(selectedCost.id);
 			setDeleteCostDialogOpen(false);
 			setSelectedCost(null);
-		} catch (err) {
+		} catch (_err) {
 			// Error handled by mutation
 		}
 	};
@@ -337,9 +331,7 @@ export function LetteringTechniqueDetailPage() {
 													<TableCell className="font-medium">
 														{getColorName(cost.colorId)}
 													</TableCell>
-													<TableCell>
-														{APPLIES_TO_LABELS[cost.appliesTo]}
-													</TableCell>
+													<TableCell>{APPLIES_TO_LABELS[cost.appliesTo]}</TableCell>
 													<TableCell>{cost.freeLetters}</TableCell>
 													<TableCell>£{cost.pricePerLetter}</TableCell>
 													<TableCell>
@@ -404,9 +396,7 @@ export function LetteringTechniqueDetailPage() {
 				<DialogContent>
 					<DialogHeader>
 						<DialogTitle>Edit Technique</DialogTitle>
-						<DialogDescription>
-							Update the technique details.
-						</DialogDescription>
+						<DialogDescription>Update the technique details.</DialogDescription>
 					</DialogHeader>
 
 					{mutationError && (
@@ -431,10 +421,7 @@ export function LetteringTechniqueDetailPage() {
 						<Button variant="outline" onClick={() => setEditDialogOpen(false)}>
 							Cancel
 						</Button>
-						<Button
-							onClick={handleEditSubmit}
-							disabled={!formName || updateMutation.isPending}
-						>
+						<Button onClick={handleEditSubmit} disabled={!formName || updateMutation.isPending}>
 							{updateMutation.isPending ? 'Saving...' : 'Update'}
 						</Button>
 					</DialogFooter>
@@ -491,7 +478,8 @@ export function LetteringTechniqueDetailPage() {
 								</SelectContent>
 							</Select>
 							<p className="text-sm text-muted-foreground mt-1">
-								Select a specific color for color-specific pricing, or leave as default for base pricing.
+								Select a specific color for color-specific pricing, or leave as default for base
+								pricing.
 							</p>
 						</Field>
 

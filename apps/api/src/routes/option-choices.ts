@@ -1,10 +1,10 @@
-import { Hono } from 'hono';
+import { optionChoices, productOptions, products } from '@griffiths-crm/shared/db/schema';
 import { zValidator } from '@hono/zod-validator';
+import { and, asc, eq } from 'drizzle-orm';
+import { Hono } from 'hono';
 import { z } from 'zod';
-import { eq, and, asc } from 'drizzle-orm';
-import { requireAuth, requireTenant } from '../middleware/auth';
 import { db } from '../lib/auth';
-import { products, productOptions, optionChoices } from '@griffiths-crm/shared/db/schema';
+import { requireAuth, requireTenant } from '../middleware/auth';
 
 // Validation schemas
 const createSchema = z.object({

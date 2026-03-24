@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -39,7 +39,7 @@ async function fetchTenantPricingSettings(): Promise<TenantPricingSettings> {
 }
 
 async function updateTenantPricingSettings(
-	input: UpdateTenantPricingSettingsInput
+	input: UpdateTenantPricingSettingsInput,
 ): Promise<TenantPricingSettings> {
 	const response = await fetch(`${API_URL}/api/tenant/pricing-settings`, {
 		method: 'PUT',

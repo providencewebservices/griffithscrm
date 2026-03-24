@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect } from 'react';
-import { Input } from '@/components/ui/input';
 import { Loader2 } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Input } from '@/components/ui/input';
 
 export function EditableText({
 	value,
@@ -39,7 +39,7 @@ export function EditableText({
 		try {
 			await onSave(trimmed);
 			setIsEditing(false);
-		} catch (error) {
+		} catch (_error) {
 			setEditValue(value);
 		} finally {
 			setIsSaving(false);

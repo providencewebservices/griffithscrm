@@ -1,22 +1,9 @@
-import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
+import { MoreHorizontal, Plus, Ruler } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from '@/components/ui/card';
-import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
 	Dialog,
 	DialogContent,
@@ -31,20 +18,31 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Field, FieldGroup, FieldLabel, FieldDescription } from '@/components/ui/field';
-import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import {
-	useDimensionCombosQuery,
-	useCreateDimensionComboMutation,
-	useUpdateDimensionComboMutation,
-	useDeleteDimensionComboMutation,
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from '@/components/ui/table';
+import {
 	type DimensionCombo,
 	type DimensionValueInput,
+	useCreateDimensionComboMutation,
+	useDeleteDimensionComboMutation,
+	useDimensionCombosQuery,
+	useUpdateDimensionComboMutation,
 } from '@/hooks/use-dimension-combos';
-import { useProductComponentsQuery, type ProductComponent } from '@/hooks/use-product-components';
-import { Plus, MoreHorizontal, Ruler } from 'lucide-react';
-import { COMPONENT_TYPE_LABELS, getDimensionLabels, formatPriceAdjustment } from '@/lib/product-utils';
+import { useProductComponentsQuery } from '@/hooks/use-product-components';
+import {
+	COMPONENT_TYPE_LABELS,
+	formatPriceAdjustment,
+	getDimensionLabels,
+} from '@/lib/product-utils';
 
 function formatComboDisplay(combo: DimensionCombo): string {
 	return combo.values
@@ -73,8 +71,7 @@ export function DimensionCombosCard({ productId }: DimensionCombosCardProps) {
 	>({});
 
 	const { data: combos, isLoading: combosLoading } = useDimensionCombosQuery(productId);
-	const { data: components, isLoading: componentsLoading } =
-		useProductComponentsQuery(productId);
+	const { data: components, isLoading: componentsLoading } = useProductComponentsQuery(productId);
 	const createMutation = useCreateDimensionComboMutation();
 	const updateMutation = useUpdateDimensionComboMutation();
 	const deleteMutation = useDeleteDimensionComboMutation();
@@ -128,7 +125,7 @@ export function DimensionCombosCard({ productId }: DimensionCombosCardProps) {
 	const handleDimensionChange = (
 		componentId: string,
 		field: 'dim1' | 'dim2' | 'dim3',
-		value: string
+		value: string,
 	) => {
 		setDimensionValues((prev) => ({
 			...prev,
@@ -198,9 +195,7 @@ export function DimensionCombosCard({ productId }: DimensionCombosCardProps) {
 					<div className="flex items-center justify-between">
 						<div>
 							<CardTitle>Dimension Combos</CardTitle>
-							<CardDescription>
-								Predefined size configurations for this product
-							</CardDescription>
+							<CardDescription>Predefined size configurations for this product</CardDescription>
 						</div>
 						<Button onClick={handleAdd} disabled={!hasComponents}>
 							<Plus className="h-4 w-4 mr-2" />
@@ -240,9 +235,7 @@ export function DimensionCombosCard({ productId }: DimensionCombosCardProps) {
 												{formatComboDisplay(combo)}
 											</TableCell>
 											<TableCell>
-												{combo.name || (
-													<span className="text-muted-foreground">-</span>
-												)}
+												{combo.name || <span className="text-muted-foreground">-</span>}
 											</TableCell>
 											<TableCell>{formatPriceAdjustment(combo.priceAdjustment)}</TableCell>
 											<TableCell>

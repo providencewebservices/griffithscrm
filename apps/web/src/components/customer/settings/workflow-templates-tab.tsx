@@ -1,20 +1,15 @@
+import {
+	ArrowDown,
+	ArrowUp,
+	CalendarClock,
+	ChevronDown,
+	ChevronUp,
+	Plus,
+	RotateCcw,
+	Trash2,
+} from 'lucide-react';
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from '@/components/ui/select';
-import {
-	Collapsible,
-	CollapsibleContent,
-	CollapsibleTrigger,
-} from '@/components/ui/collapsible';
+import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -25,30 +20,31 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Input } from '@/components/ui/input';
 import {
-	ChevronDown,
-	ChevronUp,
-	ArrowUp,
-	ArrowDown,
-	Plus,
-	Trash2,
-	CalendarClock,
-	RotateCcw,
-} from 'lucide-react';
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
+import { QUOTE_TYPE_LABELS, type QuoteType } from '@/hooks/use-quotes';
+import { type TeamMember, useTeamQuery } from '@/hooks/use-team';
 import {
-	useWorkflowTemplatesQuery,
-	useWorkflowTemplateQuery,
 	useCreateStepMutation,
-	useUpdateStepMutation,
 	useDeleteStepMutation,
 	useReorderStepsMutation,
 	useSeedTemplatesMutation,
-	type WorkflowTemplate,
+	useUpdateStepMutation,
+	useWorkflowTemplateQuery,
+	useWorkflowTemplatesQuery,
 	type WorkflowStep,
+	type WorkflowTemplate,
 } from '@/hooks/use-workflow-templates';
-import { useTeamQuery, type TeamMember } from '@/hooks/use-team';
-import { QUOTE_TYPE_LABELS, type QuoteType } from '@/hooks/use-quotes';
 
 const CATEGORY_LABELS: Record<string, string> = {
 	admin: 'Admin',
@@ -104,9 +100,7 @@ export function WorkflowTemplatesTab() {
 
 	if (error) {
 		return (
-			<div className="text-destructive">
-				Error loading workflow templates: {error.message}
-			</div>
+			<div className="text-destructive">Error loading workflow templates: {error.message}</div>
 		);
 	}
 
@@ -115,9 +109,7 @@ export function WorkflowTemplatesTab() {
 			<div className="flex justify-between items-center">
 				<div>
 					<h3 className="text-lg font-semibold">Workflow Templates</h3>
-					<p className="text-sm text-muted-foreground">
-						Define the steps for each job type
-					</p>
+					<p className="text-sm text-muted-foreground">Define the steps for each job type</p>
 				</div>
 				<Button
 					variant="outline"
@@ -148,9 +140,7 @@ export function WorkflowTemplatesTab() {
 							key={template.id}
 							template={template}
 							isExpanded={expandedId === template.id}
-							onToggle={() =>
-								setExpandedId(expandedId === template.id ? null : template.id)
-							}
+							onToggle={() => setExpandedId(expandedId === template.id ? null : template.id)}
 						/>
 					))}
 				</div>
@@ -161,18 +151,13 @@ export function WorkflowTemplatesTab() {
 					<AlertDialogHeader>
 						<AlertDialogTitle>Reset to Defaults</AlertDialogTitle>
 						<AlertDialogDescription>
-							This will create any missing default workflow templates. Existing
-							templates will not be modified.
+							This will create any missing default workflow templates. Existing templates will not
+							be modified.
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
-						<AlertDialogCancel disabled={seedMutation.isPending}>
-							Cancel
-						</AlertDialogCancel>
-						<AlertDialogAction
-							onClick={handleReset}
-							disabled={seedMutation.isPending}
-						>
+						<AlertDialogCancel disabled={seedMutation.isPending}>Cancel</AlertDialogCancel>
+						<AlertDialogAction onClick={handleReset} disabled={seedMutation.isPending}>
 							{seedMutation.isPending ? 'Resetting...' : 'Reset'}
 						</AlertDialogAction>
 					</AlertDialogFooter>
@@ -206,9 +191,7 @@ function TemplateRow({
 									{PRODUCTION_METHOD_LABELS[template.productionMethod] || template.productionMethod}
 								</Badge>
 							)}
-							{!template.isActive && (
-								<Badge variant="secondary">Inactive</Badge>
-							)}
+							{!template.isActive && <Badge variant="secondary">Inactive</Badge>}
 						</div>
 						<div className="flex items-center gap-3">
 							<span className="text-sm text-muted-foreground">
@@ -383,12 +366,7 @@ function TemplateSteps({ templateId }: { templateId: string }) {
 					</Button>
 				</div>
 			) : (
-				<Button
-					variant="outline"
-					size="sm"
-					className="w-full"
-					onClick={() => setShowAddForm(true)}
-				>
+				<Button variant="outline" size="sm" className="w-full" onClick={() => setShowAddForm(true)}>
 					<Plus className="h-4 w-4 mr-2" />
 					Add Step
 				</Button>
@@ -396,7 +374,9 @@ function TemplateSteps({ templateId }: { templateId: string }) {
 
 			<DeleteConfirmDialog
 				open={!!deleteStep}
-				onOpenChange={(open) => { if (!open) setDeleteStep(null); }}
+				onOpenChange={(open) => {
+					if (!open) setDeleteStep(null);
+				}}
 				onConfirm={handleDeleteConfirm}
 				title="Delete Step"
 				description={`Are you sure you want to delete "${deleteStep?.name}"? This will not affect existing jobs that already use this template.`}
@@ -435,18 +415,15 @@ function StepRow({
 			<span className="text-sm font-medium flex-1 min-w-0 truncate">{step.name}</span>
 			{step.requiresDate && (
 				<span className="flex-shrink-0" title={step.dateFieldLabel || 'Requires date'}>
-				<CalendarClock className="h-3.5 w-3.5 text-muted-foreground" />
-			</span>
+					<CalendarClock className="h-3.5 w-3.5 text-muted-foreground" />
+				</span>
 			)}
 			<span
 				className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${CATEGORY_COLORS[step.category] || 'bg-gray-100 text-gray-800'}`}
 			>
 				{CATEGORY_LABELS[step.category] || step.category}
 			</span>
-			<Select
-				value={step.defaultAssigneeId || 'unassigned'}
-				onValueChange={onAssigneeChange}
-			>
+			<Select value={step.defaultAssigneeId || 'unassigned'} onValueChange={onAssigneeChange}>
 				<SelectTrigger className="w-[140px] h-7 text-xs flex-shrink-0">
 					<SelectValue placeholder="Unassigned" />
 				</SelectTrigger>

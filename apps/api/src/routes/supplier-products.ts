@@ -1,17 +1,17 @@
-import { Hono } from 'hono';
-import { zValidator } from '@hono/zod-validator';
-import { z } from 'zod';
-import { eq, and, or, isNull, isNotNull, asc, desc, count, sql } from 'drizzle-orm';
-import { requireAuth, requireTenant } from '../middleware/auth';
-import { db } from '../lib/auth';
-import Papa from 'papaparse';
 import {
-	supplierProducts,
-	supplierCollections,
-	supplierCategories,
-	suppliers,
 	products,
+	supplierCategories,
+	supplierCollections,
+	supplierProducts,
+	suppliers,
 } from '@griffiths-crm/shared/db/schema';
+import { zValidator } from '@hono/zod-validator';
+import { and, asc, count, eq, isNotNull, isNull, or, sql } from 'drizzle-orm';
+import { Hono } from 'hono';
+import Papa from 'papaparse';
+import { z } from 'zod';
+import { db } from '../lib/auth';
+import { requireAuth, requireTenant } from '../middleware/auth';
 
 const createSchema = z.object({
 	supplierId: z.string().min(1, 'Supplier is required'),
@@ -84,14 +84,14 @@ const supplierProductsRoutes = new Hono()
 			conditions.push(isNull(supplierProducts.archivedAt));
 		}
 
-		if (q && q.trim()) {
+		if (q?.trim()) {
 			const searchTerm = `%${q.trim().toLowerCase()}%`;
 			conditions.push(
 				or(
 					sql`LOWER(${supplierProducts.name}) LIKE ${searchTerm}`,
 					sql`LOWER(${supplierProducts.sku}) LIKE ${searchTerm}`,
-					sql`LOWER(${supplierProducts.material}) LIKE ${searchTerm}`
-				)!
+					sql`LOWER(${supplierProducts.material}) LIKE ${searchTerm}`,
+				)!,
 			);
 		}
 
@@ -150,7 +150,7 @@ const supplierProductsRoutes = new Hono()
 	})
 
 	// CSV template download
-	.get('/csv-template', async (c) => {
+	.get('/csv-template', async (_c) => {
 		const csv = 'name,sku,description,supplier_cost,height,width,depth,weight,material,category\n';
 		return new Response(csv, {
 			headers: {
@@ -235,8 +235,8 @@ const supplierProductsRoutes = new Hono()
 			.where(
 				and(
 					eq(supplierCollections.id, data.collectionId),
-					eq(supplierCollections.tenantId, tenantId)
-				)
+					eq(supplierCollections.tenantId, tenantId),
+				),
 			)
 			.limit(1);
 
@@ -402,10 +402,7 @@ const supplierProductsRoutes = new Hono()
 			.select()
 			.from(supplierProducts)
 			.where(
-				and(
-					eq(supplierProducts.id, supplierProductId),
-					eq(supplierProducts.tenantId, tenantId)
-				)
+				and(eq(supplierProducts.id, supplierProductId), eq(supplierProducts.tenantId, tenantId)),
 			)
 			.limit(1);
 
@@ -433,7 +430,8 @@ const supplierProductsRoutes = new Hono()
 				supplierProductId: supplierProductId,
 				sku: data.sku,
 				name: data.name || supplierProduct.name,
-				description: data.description !== undefined ? data.description : supplierProduct.description,
+				description:
+					data.description !== undefined ? data.description : supplierProduct.description,
 				categoryId: data.categoryId || null,
 				imageUrl: data.imageUrl !== undefined ? data.imageUrl : supplierProduct.imageUrl,
 				isActive: true,
@@ -449,10 +447,10 @@ const supplierProductsRoutes = new Hono()
 		const tenantId = currentUser.tenantId!;
 
 		const body = await c.req.parseBody();
-		const file = body['file'];
-		const supplierId = body['supplierId'] as string;
-		const collectionId = body['collectionId'] as string;
-		const defaultCategoryId = (body['categoryId'] as string) || null;
+		const file = body.file;
+		const supplierId = body.supplierId as string;
+		const collectionId = body.collectionId as string;
+		const defaultCategoryId = (body.categoryId as string) || null;
 
 		if (!file || !(file instanceof File)) {
 			return c.json({ error: 'CSV file is required' }, 400);
@@ -477,7 +475,7 @@ const supplierProductsRoutes = new Hono()
 			.select()
 			.from(supplierCollections)
 			.where(
-				and(eq(supplierCollections.id, collectionId), eq(supplierCollections.tenantId, tenantId))
+				and(eq(supplierCollections.id, collectionId), eq(supplierCollections.tenantId, tenantId)),
 			)
 			.limit(1);
 
@@ -503,8 +501,8 @@ const supplierProductsRoutes = new Hono()
 			.where(
 				and(
 					eq(supplierCategories.collectionId, collectionId),
-					eq(supplierCategories.tenantId, tenantId)
-				)
+					eq(supplierCategories.tenantId, tenantId),
+				),
 			);
 
 		const categoryMap = new Map(existingCategories.map((c) => [c.name.toLowerCase(), c.id]));

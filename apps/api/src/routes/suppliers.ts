@@ -1,19 +1,19 @@
-import { Hono } from 'hono';
-import { zValidator } from '@hono/zod-validator';
-import { z } from 'zod';
-import { eq, and, like, isNull, isNotNull } from 'drizzle-orm';
-import { requireAuth, requireTenant } from '../middleware/auth';
-import { db } from '../lib/auth';
 import {
-	suppliers,
-	contactInfo,
 	addresses,
-	supplierContactInfo,
-	supplierAddresses,
+	contactInfo,
 	materials,
-	sundries,
 	PAYMENT_TERMS,
+	sundries,
+	supplierAddresses,
+	supplierContactInfo,
+	suppliers,
 } from '@griffiths-crm/shared/db/schema';
+import { zValidator } from '@hono/zod-validator';
+import { and, eq, isNotNull, isNull, like } from 'drizzle-orm';
+import { Hono } from 'hono';
+import { z } from 'zod';
+import { db } from '../lib/auth';
+import { requireAuth, requireTenant } from '../middleware/auth';
 
 // Validation schemas
 const contactInfoSchema = z.object({
@@ -110,7 +110,7 @@ const suppliersRoutes = new Hono()
 		const tenantId = currentUser.tenantId!;
 		const { q, archivedOnly } = c.req.valid('query');
 
-		let baseConditions = [eq(suppliers.tenantId, tenantId)];
+		const baseConditions = [eq(suppliers.tenantId, tenantId)];
 
 		if (archivedOnly === 'true') {
 			baseConditions.push(isNotNull(suppliers.archivedAt));
@@ -126,7 +126,7 @@ const suppliersRoutes = new Hono()
 
 		let filteredIds: string[] = allSuppliers.map((s) => s.id);
 
-		if (q && q.trim()) {
+		if (q?.trim()) {
 			const searchTerm = `%${q.trim().toLowerCase()}%`;
 
 			const nameMatches = allSuppliers
@@ -134,7 +134,7 @@ const suppliersRoutes = new Hono()
 					(s) =>
 						s.businessName.toLowerCase().includes(q.toLowerCase()) ||
 						s.tradingName?.toLowerCase().includes(q.toLowerCase()) ||
-						s.accountNumber?.toLowerCase().includes(q.toLowerCase())
+						s.accountNumber?.toLowerCase().includes(q.toLowerCase()),
 				)
 				.map((s) => s.id);
 
@@ -171,8 +171,8 @@ const suppliersRoutes = new Hono()
 							and(
 								eq(supplierContactInfo.supplierId, supplier.id),
 								eq(contactInfo.type, 'email'),
-								eq(contactInfo.isPrimary, true)
-							)
+								eq(contactInfo.isPrimary, true),
+							),
 						)
 						.limit(1);
 
@@ -184,8 +184,8 @@ const suppliersRoutes = new Hono()
 							and(
 								eq(supplierContactInfo.supplierId, supplier.id),
 								eq(contactInfo.type, 'phone'),
-								eq(contactInfo.isPrimary, true)
-							)
+								eq(contactInfo.isPrimary, true),
+							),
 						)
 						.limit(1);
 
@@ -194,10 +194,7 @@ const suppliersRoutes = new Hono()
 						.from(supplierAddresses)
 						.innerJoin(addresses, eq(addresses.id, supplierAddresses.addressId))
 						.where(
-							and(
-								eq(supplierAddresses.supplierId, supplier.id),
-								eq(addresses.isPrimary, true)
-							)
+							and(eq(supplierAddresses.supplierId, supplier.id), eq(addresses.isPrimary, true)),
 						)
 						.limit(1);
 
@@ -220,7 +217,7 @@ const suppliersRoutes = new Hono()
 						materialsCount: materialsCount.length,
 						sundriesCount: sundriesCount.length,
 					};
-				})
+				}),
 		);
 
 		return c.json({ suppliers: result });
@@ -396,8 +393,10 @@ const suppliersRoutes = new Hono()
 			if (updates.accountNumber !== undefined) updateData.accountNumber = updates.accountNumber;
 			if (updates.website !== undefined) updateData.website = updates.website;
 			if (updates.paymentTerms !== undefined) updateData.paymentTerms = updates.paymentTerms;
-			if (updates.defaultLeadTimeDays !== undefined) updateData.defaultLeadTimeDays = updates.defaultLeadTimeDays;
-			if (updates.minimumOrderValue !== undefined) updateData.minimumOrderValue = updates.minimumOrderValue?.toString() || null;
+			if (updates.defaultLeadTimeDays !== undefined)
+				updateData.defaultLeadTimeDays = updates.defaultLeadTimeDays;
+			if (updates.minimumOrderValue !== undefined)
+				updateData.minimumOrderValue = updates.minimumOrderValue?.toString() || null;
 			if (updates.notes !== undefined) updateData.notes = updates.notes;
 
 			await db.update(suppliers).set(updateData).where(eq(suppliers.id, id));

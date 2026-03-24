@@ -1,18 +1,18 @@
-import { Hono } from 'hono';
-import { zValidator } from '@hono/zod-validator';
-import { z } from 'zod';
-import { eq, and, like, isNull, isNotNull } from 'drizzle-orm';
-import { requireAuth, requireTenant } from '../middleware/auth';
-import { db } from '../lib/auth';
 import {
-	memorialSites,
-	contactInfo,
 	addresses,
-	memorialSiteContactInfo,
-	memorialSiteAddresses,
-	MEMORIAL_SITE_TYPES,
+	contactInfo,
 	MEMORIAL_SITE_PAYMENT_METHODS,
+	MEMORIAL_SITE_TYPES,
+	memorialSiteAddresses,
+	memorialSiteContactInfo,
+	memorialSites,
 } from '@griffiths-crm/shared/db/schema';
+import { zValidator } from '@hono/zod-validator';
+import { and, eq, isNotNull, isNull, like } from 'drizzle-orm';
+import { Hono } from 'hono';
+import { z } from 'zod';
+import { db } from '../lib/auth';
+import { requireAuth, requireTenant } from '../middleware/auth';
 
 // Validation schemas
 const contactInfoSchema = z.object({
@@ -104,7 +104,7 @@ const memorialSitesRoutes = new Hono()
 		const tenantId = currentUser.tenantId!;
 		const { q, siteType, archivedOnly } = c.req.valid('query');
 
-		let baseConditions = [eq(memorialSites.tenantId, tenantId)];
+		const baseConditions = [eq(memorialSites.tenantId, tenantId)];
 
 		if (archivedOnly === 'true') {
 			baseConditions.push(isNotNull(memorialSites.archivedAt));
@@ -124,7 +124,7 @@ const memorialSitesRoutes = new Hono()
 
 		let filteredIds: string[] = allSites.map((s) => s.id);
 
-		if (q && q.trim()) {
+		if (q?.trim()) {
 			const searchTerm = `%${q.trim().toLowerCase()}%`;
 
 			const nameMatches = allSites
@@ -164,8 +164,8 @@ const memorialSitesRoutes = new Hono()
 							and(
 								eq(memorialSiteContactInfo.memorialSiteId, site.id),
 								eq(contactInfo.type, 'email'),
-								eq(contactInfo.isPrimary, true)
-							)
+								eq(contactInfo.isPrimary, true),
+							),
 						)
 						.limit(1);
 
@@ -177,8 +177,8 @@ const memorialSitesRoutes = new Hono()
 							and(
 								eq(memorialSiteContactInfo.memorialSiteId, site.id),
 								eq(contactInfo.type, 'phone'),
-								eq(contactInfo.isPrimary, true)
-							)
+								eq(contactInfo.isPrimary, true),
+							),
 						)
 						.limit(1);
 
@@ -187,10 +187,7 @@ const memorialSitesRoutes = new Hono()
 						.from(memorialSiteAddresses)
 						.innerJoin(addresses, eq(addresses.id, memorialSiteAddresses.addressId))
 						.where(
-							and(
-								eq(memorialSiteAddresses.memorialSiteId, site.id),
-								eq(addresses.isPrimary, true)
-							)
+							and(eq(memorialSiteAddresses.memorialSiteId, site.id), eq(addresses.isPrimary, true)),
 						)
 						.limit(1);
 
@@ -200,7 +197,7 @@ const memorialSitesRoutes = new Hono()
 						primaryPhone: primaryPhone[0]?.contactInfo || null,
 						primaryAddress: primaryAddress[0]?.address || null,
 					};
-				})
+				}),
 		);
 
 		return c.json({ memorialSites: result });
@@ -320,7 +317,8 @@ const memorialSitesRoutes = new Hono()
 			const updateData: Record<string, unknown> = { updatedAt: now };
 			if (updates.name !== undefined) updateData.name = updates.name;
 			if (updates.siteType !== undefined) updateData.siteType = updates.siteType;
-			if (updates.preferredPaymentMethod !== undefined) updateData.preferredPaymentMethod = updates.preferredPaymentMethod;
+			if (updates.preferredPaymentMethod !== undefined)
+				updateData.preferredPaymentMethod = updates.preferredPaymentMethod;
 			if (updates.paymentDetails !== undefined) updateData.paymentDetails = updates.paymentDetails;
 			if (updates.notes !== undefined) updateData.notes = updates.notes;
 
@@ -335,7 +333,9 @@ const memorialSitesRoutes = new Hono()
 				for (const ec of existingContacts) {
 					await db.delete(contactInfo).where(eq(contactInfo.id, ec.contactInfoId));
 				}
-				await db.delete(memorialSiteContactInfo).where(eq(memorialSiteContactInfo.memorialSiteId, id));
+				await db
+					.delete(memorialSiteContactInfo)
+					.where(eq(memorialSiteContactInfo.memorialSiteId, id));
 
 				for (const contact of updates.contactInfo) {
 					const contactId = crypto.randomUUID();

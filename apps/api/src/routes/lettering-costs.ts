@@ -1,15 +1,15 @@
-import { Hono } from 'hono';
-import { zValidator } from '@hono/zod-validator';
-import { z } from 'zod';
-import { eq, and } from 'drizzle-orm';
-import { requireAuth, requireTenant } from '../middleware/auth';
-import { db } from '../lib/auth';
 import {
+	LETTERING_COST_APPLIES_TO,
+	letteringColors,
 	letteringCosts,
 	letteringTechniques,
-	letteringColors,
-	LETTERING_COST_APPLIES_TO,
 } from '@griffiths-crm/shared/db/schema';
+import { zValidator } from '@hono/zod-validator';
+import { and, eq } from 'drizzle-orm';
+import { Hono } from 'hono';
+import { z } from 'zod';
+import { db } from '../lib/auth';
+import { requireAuth, requireTenant } from '../middleware/auth';
 
 // Validation schemas
 const createSchema = z.object({
@@ -95,11 +95,7 @@ const letteringCostsRoutes = new Hono()
 		const data = c.req.valid('json');
 
 		// Get cost and verify ownership via technique
-		const [cost] = await db
-			.select()
-			.from(letteringCosts)
-			.where(eq(letteringCosts.id, id))
-			.limit(1);
+		const [cost] = await db.select().from(letteringCosts).where(eq(letteringCosts.id, id)).limit(1);
 
 		if (!cost) {
 			return c.json({ error: 'Lettering cost not found' }, 404);
@@ -141,11 +137,7 @@ const letteringCostsRoutes = new Hono()
 		const id = c.req.param('id');
 
 		// Get cost and verify ownership via technique
-		const [cost] = await db
-			.select()
-			.from(letteringCosts)
-			.where(eq(letteringCosts.id, id))
-			.limit(1);
+		const [cost] = await db.select().from(letteringCosts).where(eq(letteringCosts.id, id)).limit(1);
 
 		if (!cost) {
 			return c.json({ error: 'Lettering cost not found' }, 404);

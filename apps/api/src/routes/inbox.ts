@@ -1,30 +1,34 @@
-import { Hono } from 'hono';
-import { zValidator } from '@hono/zod-validator';
-import { z } from 'zod';
-import { eq, and, desc, like, or, inArray, isNull, sql } from 'drizzle-orm';
-import { requireAuth, requireTenant } from '../middleware/auth';
-import { db } from '../lib/auth';
+import crypto from 'node:crypto';
 import {
-	emailIntegrations,
-	emailThreads,
-	emailMessages,
-	emailEntityLinks,
 	documents,
+	emailEntityLinks,
+	emailIntegrations,
+	emailMessages,
+	emailThreads,
 } from '@griffiths-crm/shared/db/schema';
+import { zValidator } from '@hono/zod-validator';
+import { and, desc, eq, inArray, like, or, sql } from 'drizzle-orm';
+import { Hono } from 'hono';
+import { z } from 'zod';
+import { db } from '../lib/auth';
 import { getEmailProvider, getValidAccessToken } from '../lib/email-providers';
 import type { EmailAttachment } from '../lib/email-providers/types';
-import { GmailProvider } from '../lib/email-providers/gmail';
-import { getObjectBuffer } from '../lib/s3';
-import crypto from 'crypto';
 import { syncIfNeeded } from '../lib/email-sync';
+import { getObjectBuffer } from '../lib/s3';
+import { requireAuth, requireTenant } from '../middleware/auth';
 
 const threadsQuerySchema = z.object({
 	q: z.string().optional(),
 	page: z.coerce.number().int().min(1).optional().default(1),
 	limit: z.coerce.number().int().min(1).max(100).optional().default(50),
-	filter: z.enum(['all', 'unread', 'customers', 'quotes', 'jobs', 'unlinked']).optional().default('all'),
+	filter: z
+		.enum(['all', 'unread', 'customers', 'quotes', 'jobs', 'unlinked'])
+		.optional()
+		.default('all'),
 	folder: z.enum(['inbox', 'trash']).optional().default('inbox'),
-	contactEntityType: z.enum(['customer', 'funeral_director', 'memorial_site', 'supplier', 'quote', 'job']).optional(),
+	contactEntityType: z
+		.enum(['customer', 'funeral_director', 'memorial_site', 'supplier', 'quote', 'job'])
+		.optional(),
 	contactEntityId: z.string().optional(),
 });
 
@@ -32,7 +36,6 @@ const linkSchema = z.object({
 	entityType: z.enum(['customer', 'quote', 'job', 'funeral_director', 'memorial_site', 'supplier']),
 	entityId: z.string().min(1),
 });
-
 
 const inboxRoutes = new Hono()
 	.use('*', requireAuth, requireTenant)
@@ -49,8 +52,8 @@ const inboxRoutes = new Hono()
 				and(
 					eq(emailIntegrations.userId, user.id),
 					eq(emailIntegrations.tenantId, tenantId),
-					eq(emailIntegrations.status, 'active')
-				)
+					eq(emailIntegrations.status, 'active'),
+				),
 			)
 			.limit(1);
 
@@ -67,8 +70,8 @@ const inboxRoutes = new Hono()
 					eq(emailThreads.tenantId, tenantId),
 					eq(emailThreads.isUnread, true),
 					eq(emailThreads.isArchived, false),
-					eq(emailThreads.isTrashed, false)
-				)
+					eq(emailThreads.isTrashed, false),
+				),
 			);
 
 		return c.json({ count: result?.count ?? 0 });
@@ -78,7 +81,8 @@ const inboxRoutes = new Hono()
 	.get('/threads', zValidator('query', threadsQuerySchema), async (c) => {
 		const user = c.get('user');
 		const tenantId = user.tenantId!;
-		const { q, page, limit, filter, folder, contactEntityType, contactEntityId } = c.req.valid('query');
+		const { q, page, limit, filter, folder, contactEntityType, contactEntityId } =
+			c.req.valid('query');
 
 		// Get user's active integration
 		const [integration] = await db
@@ -88,8 +92,8 @@ const inboxRoutes = new Hono()
 				and(
 					eq(emailIntegrations.userId, user.id),
 					eq(emailIntegrations.tenantId, tenantId),
-					eq(emailIntegrations.status, 'active')
-				)
+					eq(emailIntegrations.status, 'active'),
+				),
 			)
 			.limit(1);
 
@@ -110,8 +114,8 @@ const inboxRoutes = new Hono()
 					and(
 						eq(emailEntityLinks.tenantId, tenantId),
 						eq(emailEntityLinks.entityType, contactEntityType),
-						eq(emailEntityLinks.entityId, contactEntityId)
-					)
+						eq(emailEntityLinks.entityId, contactEntityId),
+					),
 				);
 			contactLinkedThreadIds = contactLinks.map((l) => l.threadId);
 			if (contactLinkedThreadIds.length === 0) {
@@ -138,10 +142,7 @@ const inboxRoutes = new Hono()
 
 		if (q) {
 			conditions.push(
-				or(
-					like(emailThreads.subject, `%${q}%`),
-					like(emailThreads.snippet, `%${q}%`)
-				)!
+				or(like(emailThreads.subject, `%${q}%`), like(emailThreads.snippet, `%${q}%`))!,
 			);
 		}
 
@@ -168,8 +169,8 @@ const inboxRoutes = new Hono()
 				.where(
 					and(
 						eq(emailEntityLinks.tenantId, tenantId),
-						inArray(emailEntityLinks.threadId, threadIds)
-					)
+						inArray(emailEntityLinks.threadId, threadIds),
+					),
 				);
 		}
 
@@ -183,16 +184,17 @@ const inboxRoutes = new Hono()
 					.orderBy(desc(emailMessages.internalDate))
 					.limit(1);
 				return { threadId: thread.id, message: msg || null };
-			})
+			}),
 		);
 
 		// Apply entity-link based filters (only for inbox folder)
 		let filteredThreads = threads;
 		if (folder !== 'trash') {
 			if (filter === 'customers' || filter === 'quotes' || filter === 'jobs') {
-				const entityType = filter === 'customers' ? 'customer' : filter === 'quotes' ? 'quote' : 'job';
+				const entityType =
+					filter === 'customers' ? 'customer' : filter === 'quotes' ? 'quote' : 'job';
 				const linkedThreadIds = new Set(
-					links.filter((l) => l.entityType === entityType).map((l) => l.threadId)
+					links.filter((l) => l.entityType === entityType).map((l) => l.threadId),
 				);
 				filteredThreads = threads.filter((t) => linkedThreadIds.has(t.id));
 			} else if (filter === 'unlinked') {
@@ -215,12 +217,14 @@ const inboxRoutes = new Hono()
 			...thread,
 			labelIds: thread.labelIds ? JSON.parse(thread.labelIds) : [],
 			links: linksByThread.get(thread.id) || [],
-			latestMessage: latestByThread.get(thread.id) ? {
-				...latestByThread.get(thread.id)!,
-				toAddresses: JSON.parse(latestByThread.get(thread.id)!.toAddresses || '[]'),
-				ccAddresses: JSON.parse(latestByThread.get(thread.id)!.ccAddresses || '[]'),
-				labelIds: JSON.parse(latestByThread.get(thread.id)!.labelIds || '[]'),
-			} : null,
+			latestMessage: latestByThread.get(thread.id)
+				? {
+						...latestByThread.get(thread.id)!,
+						toAddresses: JSON.parse(latestByThread.get(thread.id)?.toAddresses || '[]'),
+						ccAddresses: JSON.parse(latestByThread.get(thread.id)?.ccAddresses || '[]'),
+						labelIds: JSON.parse(latestByThread.get(thread.id)?.labelIds || '[]'),
+					}
+				: null,
 		}));
 
 		return c.json({ threads: result, total: filteredThreads.length, page, limit });
@@ -235,12 +239,7 @@ const inboxRoutes = new Hono()
 		const [thread] = await db
 			.select()
 			.from(emailThreads)
-			.where(
-				and(
-					eq(emailThreads.id, threadId),
-					eq(emailThreads.tenantId, tenantId)
-				)
-			)
+			.where(and(eq(emailThreads.id, threadId), eq(emailThreads.tenantId, tenantId)))
 			.limit(1);
 
 		if (!thread) {
@@ -259,12 +258,7 @@ const inboxRoutes = new Hono()
 		const links = await db
 			.select()
 			.from(emailEntityLinks)
-			.where(
-				and(
-					eq(emailEntityLinks.threadId, threadId),
-					eq(emailEntityLinks.tenantId, tenantId)
-				)
-			);
+			.where(and(eq(emailEntityLinks.threadId, threadId), eq(emailEntityLinks.tenantId, tenantId)));
 
 		return c.json({
 			thread: {
@@ -288,12 +282,7 @@ const inboxRoutes = new Hono()
 		const [thread] = await db
 			.select()
 			.from(emailThreads)
-			.where(
-				and(
-					eq(emailThreads.id, threadId),
-					eq(emailThreads.tenantId, tenantId)
-				)
-			)
+			.where(and(eq(emailThreads.id, threadId), eq(emailThreads.tenantId, tenantId)))
 			.limit(1);
 
 		if (!thread) {
@@ -304,12 +293,7 @@ const inboxRoutes = new Hono()
 		const unreadMessages = await db
 			.select({ providerMessageId: emailMessages.providerMessageId })
 			.from(emailMessages)
-			.where(
-				and(
-					eq(emailMessages.threadId, threadId),
-					eq(emailMessages.isUnread, true)
-				)
-			);
+			.where(and(eq(emailMessages.threadId, threadId), eq(emailMessages.isUnread, true)));
 
 		if (unreadMessages.length > 0) {
 			const { accessToken, integration } = await getValidAccessToken(thread.integrationId);
@@ -347,12 +331,7 @@ const inboxRoutes = new Hono()
 		const [thread] = await db
 			.select()
 			.from(emailThreads)
-			.where(
-				and(
-					eq(emailThreads.id, threadId),
-					eq(emailThreads.tenantId, tenantId)
-				)
-			)
+			.where(and(eq(emailThreads.id, threadId), eq(emailThreads.tenantId, tenantId)))
 			.limit(1);
 
 		if (!thread) {
@@ -393,12 +372,7 @@ const inboxRoutes = new Hono()
 		const [thread] = await db
 			.select()
 			.from(emailThreads)
-			.where(
-				and(
-					eq(emailThreads.id, threadId),
-					eq(emailThreads.tenantId, tenantId)
-				)
-			)
+			.where(and(eq(emailThreads.id, threadId), eq(emailThreads.tenantId, tenantId)))
 			.limit(1);
 
 		if (!thread) {
@@ -430,12 +404,7 @@ const inboxRoutes = new Hono()
 		const [thread] = await db
 			.select()
 			.from(emailThreads)
-			.where(
-				and(
-					eq(emailThreads.id, threadId),
-					eq(emailThreads.tenantId, tenantId)
-				)
-			)
+			.where(and(eq(emailThreads.id, threadId), eq(emailThreads.tenantId, tenantId)))
 			.limit(1);
 
 		if (!thread) {
@@ -457,9 +426,7 @@ const inboxRoutes = new Hono()
 		});
 
 		// Derive labels as the union of all message labelIds
-		const freshLabels = [
-			...new Set(fullThread.messages.flatMap((m) => m.labelIds)),
-		];
+		const freshLabels = [...new Set(fullThread.messages.flatMap((m) => m.labelIds))];
 
 		await db
 			.update(emailThreads)
@@ -484,12 +451,7 @@ const inboxRoutes = new Hono()
 		const [message] = await db
 			.select()
 			.from(emailMessages)
-			.where(
-				and(
-					eq(emailMessages.id, messageId),
-					eq(emailMessages.tenantId, tenantId)
-				)
-			)
+			.where(and(eq(emailMessages.id, messageId), eq(emailMessages.tenantId, tenantId)))
 			.limit(1);
 
 		if (!message) {
@@ -542,8 +504,8 @@ const inboxRoutes = new Hono()
 				and(
 					eq(emailIntegrations.userId, user.id),
 					eq(emailIntegrations.tenantId, tenantId),
-					eq(emailIntegrations.status, 'active')
-				)
+					eq(emailIntegrations.status, 'active'),
+				),
 			)
 			.limit(1);
 
@@ -593,12 +555,7 @@ const inboxRoutes = new Hono()
 						contentType: documents.contentType,
 					})
 					.from(documents)
-					.where(
-						and(
-							eq(documents.tenantId, tenantId),
-							inArray(documents.id, documentIds)
-						)
-					);
+					.where(and(eq(documents.tenantId, tenantId), inArray(documents.id, documentIds)));
 
 				if (docs.length !== documentIds.length) {
 					return c.json({ error: 'One or more documents not found' }, 404);
@@ -676,16 +633,23 @@ const inboxRoutes = new Hono()
 			},
 		});
 
-		return c.json({ success: true, messageId: result.providerMessageId, threadId: result.providerThreadId });
+		return c.json({
+			success: true,
+			messageId: result.providerMessageId,
+			threadId: result.providerThreadId,
+		});
 	})
 
 	// GET /entity-threads/:entityType/:entityId - Get threads linked to an entity
 	.get(
 		'/entity-threads/:entityType/:entityId',
-		zValidator('query', z.object({
-			page: z.coerce.number().int().min(1).optional().default(1),
-			limit: z.coerce.number().int().min(1).max(50).optional().default(10),
-		})),
+		zValidator(
+			'query',
+			z.object({
+				page: z.coerce.number().int().min(1).optional().default(1),
+				limit: z.coerce.number().int().min(1).max(50).optional().default(10),
+			}),
+		),
 		async (c) => {
 			const user = c.get('user');
 			const tenantId = user.tenantId!;
@@ -701,8 +665,8 @@ const inboxRoutes = new Hono()
 					and(
 						eq(emailIntegrations.userId, user.id),
 						eq(emailIntegrations.tenantId, tenantId),
-						eq(emailIntegrations.status, 'active')
-					)
+						eq(emailIntegrations.status, 'active'),
+					),
 				)
 				.limit(1);
 
@@ -718,8 +682,8 @@ const inboxRoutes = new Hono()
 					and(
 						eq(emailEntityLinks.tenantId, tenantId),
 						eq(emailEntityLinks.entityType, entityType),
-						eq(emailEntityLinks.entityId, entityId)
-					)
+						eq(emailEntityLinks.entityId, entityId),
+					),
 				);
 
 			if (links.length === 0) {
@@ -733,12 +697,7 @@ const inboxRoutes = new Hono()
 			const threads = await db
 				.select()
 				.from(emailThreads)
-				.where(
-					and(
-						inArray(emailThreads.id, linkedThreadIds),
-						eq(emailThreads.tenantId, tenantId)
-					)
-				)
+				.where(and(inArray(emailThreads.id, linkedThreadIds), eq(emailThreads.tenantId, tenantId)))
 				.orderBy(desc(emailThreads.lastMessageAt))
 				.limit(limit)
 				.offset((page - 1) * limit);
@@ -753,7 +712,7 @@ const inboxRoutes = new Hono()
 						.orderBy(desc(emailMessages.internalDate))
 						.limit(1);
 					return { threadId: thread.id, message: msg || null };
-				})
+				}),
 			);
 
 			const latestByThread = new Map(latestMessages.map((m) => [m.threadId, m.message]));
@@ -765,17 +724,19 @@ const inboxRoutes = new Hono()
 					...thread,
 					labelIds: thread.labelIds ? JSON.parse(thread.labelIds) : [],
 					linkSource: link?.linkSource || 'manual',
-					latestMessage: latestMsg ? {
-						fromAddress: latestMsg.fromAddress,
-						fromName: latestMsg.fromName,
-						internalDate: latestMsg.internalDate,
-						hasAttachments: latestMsg.hasAttachments,
-					} : null,
+					latestMessage: latestMsg
+						? {
+								fromAddress: latestMsg.fromAddress,
+								fromName: latestMsg.fromName,
+								internalDate: latestMsg.internalDate,
+								hasAttachments: latestMsg.hasAttachments,
+							}
+						: null,
 				};
 			});
 
 			return c.json({ threads: result, total: links.length });
-		}
+		},
 	)
 
 	// POST /threads/:threadId/links - Link thread to entity
@@ -789,12 +750,7 @@ const inboxRoutes = new Hono()
 		const [thread] = await db
 			.select({ id: emailThreads.id })
 			.from(emailThreads)
-			.where(
-				and(
-					eq(emailThreads.id, threadId),
-					eq(emailThreads.tenantId, tenantId)
-				)
-			)
+			.where(and(eq(emailThreads.id, threadId), eq(emailThreads.tenantId, tenantId)))
 			.limit(1);
 
 		if (!thread) {
@@ -822,12 +778,7 @@ const inboxRoutes = new Hono()
 
 		await db
 			.delete(emailEntityLinks)
-			.where(
-				and(
-					eq(emailEntityLinks.id, linkId),
-					eq(emailEntityLinks.tenantId, tenantId)
-				)
-			);
+			.where(and(eq(emailEntityLinks.id, linkId), eq(emailEntityLinks.tenantId, tenantId)));
 
 		return c.json({ success: true });
 	});

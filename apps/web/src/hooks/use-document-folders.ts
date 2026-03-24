@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Document } from './use-documents';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -100,7 +100,7 @@ async function fetchFolder(id: string): Promise<FolderResponse> {
 
 async function fetchFolderContents(
 	folderId: string,
-	params?: { limit?: number; offset?: number }
+	params?: { limit?: number; offset?: number },
 ): Promise<FolderContentsResponse> {
 	const url = new URL(`${API_URL}/api/document-folders/${folderId}/contents`);
 	if (params?.limit) url.searchParams.set('limit', params.limit.toString());
@@ -130,9 +130,7 @@ async function createFolder(input: CreateFolderInput): Promise<DocumentFolder> {
 	return data.folder;
 }
 
-async function updateFolder(
-	input: UpdateFolderInput & { id: string }
-): Promise<DocumentFolder> {
+async function updateFolder(input: UpdateFolderInput & { id: string }): Promise<DocumentFolder> {
 	const { id, ...data } = input;
 	const response = await fetch(`${API_URL}/api/document-folders/${id}`, {
 		method: 'PUT',
@@ -148,9 +146,7 @@ async function updateFolder(
 	return result.folder;
 }
 
-async function moveFolder(
-	input: MoveFolderInput & { id: string }
-): Promise<DocumentFolder> {
+async function moveFolder(input: MoveFolderInput & { id: string }): Promise<DocumentFolder> {
 	const { id, parentId } = input;
 	const response = await fetch(`${API_URL}/api/document-folders/${id}/move`, {
 		method: 'PUT',
@@ -235,7 +231,7 @@ export function useFolderQuery(id: string | undefined) {
 
 export function useFolderContentsQuery(
 	folderId: string | null,
-	params?: { limit?: number; offset?: number }
+	params?: { limit?: number; offset?: number },
 ) {
 	// Use 'root' for unfiled documents when folderId is null
 	const queryFolderId = folderId ?? 'root';

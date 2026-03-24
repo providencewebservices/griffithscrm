@@ -1,19 +1,18 @@
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 import { google } from 'googleapis';
 import type {
+	EmailAddress,
+	EmailAttachmentMeta,
+	EmailMessageFull,
+	EmailMessageSummary,
+	EmailThreadFull,
+	EmailThreadSummary,
 	IEmailProvider,
 	ListThreadsParams,
 	ListThreadsResult,
-	EmailThreadSummary,
-	EmailThreadFull,
-	EmailMessageFull,
-	EmailMessageSummary,
-	EmailAttachmentMeta,
-	EmailAddress,
-	EmailAttachment,
+	SendEmailParams,
 	SendEmailResult,
 	SyncResult,
-	SendEmailParams,
 } from './types';
 
 const GMAIL_SCOPES = [
@@ -25,7 +24,7 @@ function getOAuth2Client() {
 	return new google.auth.OAuth2(
 		process.env.GOOGLE_CLIENT_ID,
 		process.env.GOOGLE_CLIENT_SECRET,
-		`${process.env.BETTER_AUTH_URL}/api/email-integrations/callback/gmail`
+		`${process.env.BETTER_AUTH_URL}/api/email-integrations/callback/gmail`,
 	);
 }
 
@@ -46,10 +45,16 @@ function parseEmailAddress(raw: string): EmailAddress {
 
 function parseAddressList(raw: string | undefined): EmailAddress[] {
 	if (!raw) return [];
-	return raw.split(',').map((s) => parseEmailAddress(s.trim())).filter((a) => a.address);
+	return raw
+		.split(',')
+		.map((s) => parseEmailAddress(s.trim()))
+		.filter((a) => a.address);
 }
 
-function getHeader(headers: { name?: string | null; value?: string | null }[], name: string): string {
+function getHeader(
+	headers: { name?: string | null; value?: string | null }[],
+	name: string,
+): string {
 	const header = headers.find((h) => h.name?.toLowerCase() === name.toLowerCase());
 	return header?.value || '';
 }
@@ -59,9 +64,7 @@ function decodeBase64Url(data: string): string {
 	return Buffer.from(base64, 'base64').toString('utf-8');
 }
 
-function extractBody(
-	payload: any
-): { html: string; text: string } {
+function extractBody(payload: any): { html: string; text: string } {
 	let html = '';
 	let text = '';
 
@@ -314,15 +317,20 @@ export class GmailProvider implements IEmailProvider {
 		return result;
 	}
 
-	async sendMessage(params: { accessToken: string; email: SendEmailParams }): Promise<SendEmailResult> {
+	async sendMessage(params: {
+		accessToken: string;
+		email: SendEmailParams;
+	}): Promise<SendEmailResult> {
 		const gmail = createAuthenticatedClient(params.accessToken);
 		const { email } = params;
 
-		const formatAddr = (a: EmailAddress) => a.name ? `${a.name} <${a.address}>` : a.address;
+		const formatAddr = (a: EmailAddress) => (a.name ? `${a.name} <${a.address}>` : a.address);
 
 		// Common headers
 		const headers: string[] = [];
-		headers.push(`From: ${email.fromName ? `${email.fromName} <${email.fromAddress}>` : email.fromAddress}`);
+		headers.push(
+			`From: ${email.fromName ? `${email.fromName} <${email.fromAddress}>` : email.fromAddress}`,
+		);
 		headers.push(`To: ${email.to.map(formatAddr).join(', ')}`);
 		if (email.cc?.length) {
 			headers.push(`Cc: ${email.cc.map(formatAddr).join(', ')}`);
@@ -368,11 +376,11 @@ export class GmailProvider implements IEmailProvider {
 
 			parts.push(`--${boundary}--`);
 
-			messageBody = headers.join('\r\n') + '\r\n\r\n' + parts.join('\r\n');
+			messageBody = `${headers.join('\r\n')}\r\n\r\n${parts.join('\r\n')}`;
 		} else {
 			// Simple message without attachments
 			headers.push('Content-Type: text/html; charset=UTF-8');
-			messageBody = headers.join('\r\n') + '\r\n\r\n' + email.bodyHtml;
+			messageBody = `${headers.join('\r\n')}\r\n\r\n${email.bodyHtml}`;
 		}
 
 		const raw = Buffer.from(messageBody).toString('base64url');
@@ -458,7 +466,7 @@ export class GmailProvider implements IEmailProvider {
 					for (const mod of h.labelsRemoved) {
 						if (mod.message?.id && mod.labelIds) {
 							const existing = result.labelsModified.find(
-								(m) => m.providerMessageId === mod.message!.id
+								(m) => m.providerMessageId === mod.message?.id,
 							);
 							if (existing) {
 								existing.removedLabels.push(...mod.labelIds);
@@ -531,8 +539,8 @@ export class GmailProvider implements IEmailProvider {
 		});
 
 		return {
-			historyId: res.data.historyId!.toString(),
-			expiration: res.data.expiration!.toString(),
+			historyId: res.data.historyId?.toString(),
+			expiration: res.data.expiration?.toString(),
 		};
 	}
 

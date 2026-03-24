@@ -1,21 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { signIn, useSession } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from '@/components/ui/card';
-import {
-	Field,
-	FieldGroup,
-	FieldLabel,
-	FieldError,
-} from '@/components/ui/field';
+import { signIn, useSession } from '@/lib/auth';
 
 export function LoginPage() {
 	const navigate = useNavigate();
@@ -67,9 +56,7 @@ export function LoginPage() {
 					<CardContent>
 						<form onSubmit={handleSubmit}>
 							<FieldGroup>
-								{error && (
-									<FieldError>{error}</FieldError>
-								)}
+								{error && <FieldError>{error}</FieldError>}
 								<Field>
 									<FieldLabel htmlFor="email">Email</FieldLabel>
 									<Input
@@ -106,9 +93,7 @@ export function LoginPage() {
 								<span className="w-full border-t" />
 							</div>
 							<div className="relative flex justify-center text-xs uppercase">
-								<span className="bg-background px-2 text-muted-foreground">
-									Or continue with
-								</span>
+								<span className="bg-background px-2 text-muted-foreground">Or continue with</span>
 							</div>
 						</div>
 
@@ -117,10 +102,12 @@ export function LoginPage() {
 								variant="outline"
 								className="w-full"
 								type="button"
-								onClick={() => signIn.social({
-									provider: 'google',
-									callbackURL: window.location.origin,
-								})}
+								onClick={() =>
+									signIn.social({
+										provider: 'google',
+										callbackURL: window.location.origin,
+									})
+								}
 							>
 								<svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
 									<path
@@ -147,10 +134,12 @@ export function LoginPage() {
 								variant="outline"
 								className="w-full"
 								type="button"
-								onClick={() => signIn.social({
-									provider: 'microsoft',
-									callbackURL: window.location.origin,
-								})}
+								onClick={() =>
+									signIn.social({
+										provider: 'microsoft',
+										callbackURL: window.location.origin,
+									})
+								}
 							>
 								<svg className="mr-2 h-4 w-4" viewBox="0 0 23 23">
 									<rect x="1" y="1" width="10" height="10" fill="#F25022" />

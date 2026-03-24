@@ -1,17 +1,28 @@
-import { useSearchParams } from 'react-router';
 import {
 	Building2,
-	Percent,
+	Code2,
+	CreditCard,
 	FolderTree,
 	Layers,
-	Paintbrush,
-	Type,
 	List,
-	Mail,
-	CreditCard,
 	ListChecks,
-	Code2,
+	Mail,
+	Paintbrush,
+	Percent,
+	Type,
 } from 'lucide-react';
+import { useSearchParams } from 'react-router';
+import { ApiTab } from '@/components/customer/settings/api-tab';
+import { BusinessTab } from '@/components/customer/settings/business-tab';
+import { FinishesTab } from '@/components/customer/settings/finishes-tab';
+import { IntegrationsTab } from '@/components/customer/settings/integrations-tab';
+import { LetteringTab } from '@/components/customer/settings/lettering-tab';
+import { LineItemsTab } from '@/components/customer/settings/line-items-tab';
+import { MaterialSectionsTab } from '@/components/customer/settings/material-sections-tab';
+import { PaymentsTab } from '@/components/customer/settings/payments-tab';
+import { PricingTab } from '@/components/customer/settings/pricing-tab';
+import { ProductCategoriesTab } from '@/components/customer/settings/product-categories-tab';
+import { WorkflowTemplatesTab } from '@/components/customer/settings/workflow-templates-tab';
 import {
 	Select,
 	SelectContent,
@@ -22,17 +33,6 @@ import {
 	SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
-import { BusinessTab } from '@/components/customer/settings/business-tab';
-import { PricingTab } from '@/components/customer/settings/pricing-tab';
-import { LetteringTab } from '@/components/customer/settings/lettering-tab';
-import { LineItemsTab } from '@/components/customer/settings/line-items-tab';
-import { ProductCategoriesTab } from '@/components/customer/settings/product-categories-tab';
-import { MaterialSectionsTab } from '@/components/customer/settings/material-sections-tab';
-import { FinishesTab } from '@/components/customer/settings/finishes-tab';
-import { IntegrationsTab } from '@/components/customer/settings/integrations-tab';
-import { PaymentsTab } from '@/components/customer/settings/payments-tab';
-import { WorkflowTemplatesTab } from '@/components/customer/settings/workflow-templates-tab';
-import { ApiTab } from '@/components/customer/settings/api-tab';
 
 type SettingsTab =
 	| 'business'
@@ -52,9 +52,7 @@ type TabItem = { value: SettingsTab; label: string; icon: typeof Building2 };
 const TAB_GROUPS: { label: string | null; items: TabItem[] }[] = [
 	{
 		label: null,
-		items: [
-			{ value: 'business', label: 'Business', icon: Building2 },
-		],
+		items: [{ value: 'business', label: 'Business', icon: Building2 }],
 	},
 	{
 		label: 'Product Catalog',
@@ -69,9 +67,7 @@ const TAB_GROUPS: { label: string | null; items: TabItem[] }[] = [
 	},
 	{
 		label: 'Workflows',
-		items: [
-			{ value: 'workflows', label: 'Workflows', icon: ListChecks },
-		],
+		items: [{ value: 'workflows', label: 'Workflows', icon: ListChecks }],
 	},
 	{
 		label: 'System',
@@ -186,7 +182,7 @@ export function SettingsPage() {
 												'w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors',
 												activeTab === value
 													? 'bg-primary text-primary-foreground font-medium'
-													: 'text-muted-foreground hover:bg-muted hover:text-foreground'
+													: 'text-muted-foreground hover:bg-muted hover:text-foreground',
 											)}
 										>
 											<Icon className="h-4 w-4" />

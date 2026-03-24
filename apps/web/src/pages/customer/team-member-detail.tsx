@@ -1,29 +1,9 @@
+import { format } from 'date-fns';
+import { Calendar, CalendarDays, Check, Clock, Mail, Plus, X } from 'lucide-react';
 import { useState } from 'react';
-import { useParams, Link } from 'react-router';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import {
-	Card,
-	CardContent,
-	CardHeader,
-	CardTitle,
-} from '@/components/ui/card';
-import {
-	Breadcrumb,
-	BreadcrumbItem,
-	BreadcrumbLink,
-	BreadcrumbList,
-	BreadcrumbPage,
-	BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb';
-import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from '@/components/ui/table';
+import { Link, useParams } from 'react-router';
+import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
+import { TimeOffRequestDialog } from '@/components/time-off';
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -34,20 +14,35 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { TimeOffRequestDialog } from '@/components/time-off';
-import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
-import { useSession } from '@/lib/auth';
+import { Badge } from '@/components/ui/badge';
+import {
+	Breadcrumb,
+	BreadcrumbItem,
+	BreadcrumbLink,
+	BreadcrumbList,
+	BreadcrumbPage,
+	BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from '@/components/ui/table';
 import { useTeamMemberQuery } from '@/hooks/use-team';
 import {
-	useTimeOffRequestsQuery,
+	type TimeOffRequest,
+	useApproveTimeOffMutation,
 	useCreateTimeOffMutation,
 	useDeleteTimeOffMutation,
-	useApproveTimeOffMutation,
 	useRejectTimeOffMutation,
-	type TimeOffRequest,
+	useTimeOffRequestsQuery,
 } from '@/hooks/use-time-off';
-import { Mail, Calendar, Clock, CalendarDays, Plus, Check, X } from 'lucide-react';
-import { format } from 'date-fns';
+import { useSession } from '@/lib/auth';
 
 export function TeamMemberDetailPage() {
 	const { id } = useParams<{ id: string }>();
@@ -56,8 +51,7 @@ export function TeamMemberDetailPage() {
 	const isOwnProfile = id === currentUserId;
 
 	const { data: member, isLoading, error } = useTeamMemberQuery(id || '');
-	const { data: timeOffRequests = [], isLoading: timeOffLoading } =
-		useTimeOffRequestsQuery(id);
+	const { data: timeOffRequests = [], isLoading: timeOffLoading } = useTimeOffRequestsQuery(id);
 
 	const createTimeOffMutation = useCreateTimeOffMutation();
 	const deleteTimeOffMutation = useDeleteTimeOffMutation();
@@ -66,9 +60,7 @@ export function TeamMemberDetailPage() {
 
 	const [requestDialogOpen, setRequestDialogOpen] = useState(false);
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-	const [selectedRequest, setSelectedRequest] = useState<TimeOffRequest | null>(
-		null
-	);
+	const [selectedRequest, setSelectedRequest] = useState<TimeOffRequest | null>(null);
 	const [mutationError, setMutationError] = useState<string | null>(null);
 	const [approveDialogOpen, setApproveDialogOpen] = useState(false);
 	const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
@@ -83,9 +75,7 @@ export function TeamMemberDetailPage() {
 		try {
 			await createTimeOffMutation.mutateAsync(data);
 		} catch (err) {
-			setMutationError(
-				err instanceof Error ? err.message : 'Failed to create request'
-			);
+			setMutationError(err instanceof Error ? err.message : 'Failed to create request');
 			throw err;
 		}
 	};
@@ -103,9 +93,7 @@ export function TeamMemberDetailPage() {
 			setDeleteDialogOpen(false);
 			setSelectedRequest(null);
 		} catch (err) {
-			setMutationError(
-				err instanceof Error ? err.message : 'Failed to delete request'
-			);
+			setMutationError(err instanceof Error ? err.message : 'Failed to delete request');
 		}
 	};
 
@@ -122,9 +110,7 @@ export function TeamMemberDetailPage() {
 			setApproveDialogOpen(false);
 			setActionRequest(null);
 		} catch (err) {
-			setMutationError(
-				err instanceof Error ? err.message : 'Failed to approve request'
-			);
+			setMutationError(err instanceof Error ? err.message : 'Failed to approve request');
 		}
 	};
 
@@ -141,9 +127,7 @@ export function TeamMemberDetailPage() {
 			setRejectDialogOpen(false);
 			setActionRequest(null);
 		} catch (err) {
-			setMutationError(
-				err instanceof Error ? err.message : 'Failed to reject request'
-			);
+			setMutationError(err instanceof Error ? err.message : 'Failed to reject request');
 		}
 	};
 
@@ -153,7 +137,6 @@ export function TeamMemberDetailPage() {
 				return <Badge className="bg-green-600">Approved</Badge>;
 			case 'rejected':
 				return <Badge variant="destructive">Rejected</Badge>;
-			case 'pending':
 			default:
 				return <Badge variant="secondary">Pending</Badge>;
 		}
@@ -221,9 +204,7 @@ export function TeamMemberDetailPage() {
 				<div>
 					<div className="flex items-center gap-3">
 						<h2 className="text-2xl font-bold">{member.name}</h2>
-						{isOwnProfile && (
-							<Badge variant="outline">You</Badge>
-						)}
+						{isOwnProfile && <Badge variant="outline">You</Badge>}
 						{member.emailVerified ? (
 							<Badge variant="default">Active</Badge>
 						) : (
@@ -334,9 +315,7 @@ export function TeamMemberDetailPage() {
 											{formatDateRange(request.startDate, request.endDate)}
 										</TableCell>
 										<TableCell>
-											{request.reason || (
-												<span className="text-muted-foreground">-</span>
-											)}
+											{request.reason || <span className="text-muted-foreground">-</span>}
 										</TableCell>
 										<TableCell>{getStatusBadge(request.status)}</TableCell>
 										<TableCell>

@@ -1,18 +1,18 @@
-import { Hono } from 'hono';
-import { zValidator } from '@hono/zod-validator';
-import { z } from 'zod';
-import { eq, and, or, like, isNull, isNotNull, desc, asc, count, sql } from 'drizzle-orm';
-import { requireAuth, requireTenant } from '../middleware/auth';
-import { db } from '../lib/auth';
 import {
-	products,
+	optionChoices,
 	productCategories,
 	productOptions,
-	optionChoices,
-	suppliers,
-	supplierProducts,
+	products,
 	supplierCollections,
+	supplierProducts,
+	suppliers,
 } from '@griffiths-crm/shared/db/schema';
+import { zValidator } from '@hono/zod-validator';
+import { and, asc, count, desc, eq, isNull, or, sql } from 'drizzle-orm';
+import { Hono } from 'hono';
+import { z } from 'zod';
+import { db } from '../lib/auth';
+import { requireAuth, requireTenant } from '../middleware/auth';
 
 // Validation schemas
 const createSchema = z.object({
@@ -98,14 +98,12 @@ async function getProductWithRelations(productId: string, tenantId: string) {
 				...option,
 				choices,
 			};
-		})
+		}),
 	);
 
 	return {
 		...product,
-		category: product.categoryId
-			? { id: product.categoryId, name: product.categoryName }
-			: null,
+		category: product.categoryId ? { id: product.categoryId, name: product.categoryName } : null,
 		supplierName: product.supplierTradingName || product.supplierBusinessName || null,
 		supplierProductSource: product.supplierProductId
 			? {
@@ -113,7 +111,7 @@ async function getProductWithRelations(productId: string, tenantId: string) {
 					supplierProductName: product.supplierProductName,
 					collectionId: product.supplierProductCollectionId,
 					collectionName: product.supplierProductCollectionName,
-			  }
+				}
 			: null,
 		options: optionsWithChoices,
 	};
@@ -151,13 +149,13 @@ const productsRoutes = new Hono()
 		}
 
 		// Search filter
-		if (search && search.trim()) {
+		if (search?.trim()) {
 			const searchTerm = `%${search.trim().toLowerCase()}%`;
 			conditions.push(
 				or(
 					sql`LOWER(${products.name}) LIKE ${searchTerm}`,
-					sql`LOWER(${products.sku}) LIKE ${searchTerm}`
-				)!
+					sql`LOWER(${products.sku}) LIKE ${searchTerm}`,
+				)!,
 			);
 		}
 
@@ -267,10 +265,7 @@ const productsRoutes = new Hono()
 				.select()
 				.from(productCategories)
 				.where(
-					and(
-						eq(productCategories.id, data.categoryId),
-						eq(productCategories.tenantId, tenantId)
-					)
+					and(eq(productCategories.id, data.categoryId), eq(productCategories.tenantId, tenantId)),
 				)
 				.limit(1);
 
@@ -326,8 +321,8 @@ const productsRoutes = new Hono()
 					and(
 						eq(products.tenantId, tenantId),
 						eq(products.sku, data.sku),
-						sql`${products.id} != ${productId}`
-					)
+						sql`${products.id} != ${productId}`,
+					),
 				)
 				.limit(1);
 
@@ -342,10 +337,7 @@ const productsRoutes = new Hono()
 				.select()
 				.from(productCategories)
 				.where(
-					and(
-						eq(productCategories.id, data.categoryId),
-						eq(productCategories.tenantId, tenantId)
-					)
+					and(eq(productCategories.id, data.categoryId), eq(productCategories.tenantId, tenantId)),
 				)
 				.limit(1);
 

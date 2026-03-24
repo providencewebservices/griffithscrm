@@ -1,14 +1,8 @@
+import { ArrowLeft, FileText, ImageIcon, MoreHorizontal, Package } from 'lucide-react';
 import { useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router';
-import { Button } from '@/components/ui/button';
+import { Link, useNavigate, useParams } from 'react-router';
+import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
 import { Badge } from '@/components/ui/badge';
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from '@/components/ui/card';
 import {
 	Breadcrumb,
 	BreadcrumbItem,
@@ -17,14 +11,8 @@ import {
 	BreadcrumbPage,
 	BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
-import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
 	Dialog,
 	DialogContent,
@@ -39,19 +27,25 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { ImageUpload } from '@/components/ui/image-upload';
-import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
+import { Input } from '@/components/ui/input';
 import {
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from '@/components/ui/table';
+import { Textarea } from '@/components/ui/textarea';
+import {
+	type UpdateProductCategoryInput,
+	useDeleteProductCategoryMutation,
 	useProductCategoryQuery,
 	useUpdateProductCategoryMutation,
-	useDeleteProductCategoryMutation,
-	type UpdateProductCategoryInput,
 } from '@/hooks/use-product-categories';
 import { useSignedUrl } from '@/hooks/use-uploads';
-import { ArrowLeft, Package, ImageIcon, MoreHorizontal, FileText } from 'lucide-react';
 
 export function CategoryDetailPage() {
 	const { id } = useParams<{ id: string }>();
@@ -103,7 +97,7 @@ export function CategoryDetailPage() {
 			await deleteMutation.mutateAsync(id);
 			setDeleteDialogOpen(false);
 			navigate('/app/settings?tab=categories');
-		} catch (err) {
+		} catch (_err) {
 			// Error handled by mutation
 		}
 	};
@@ -179,7 +173,8 @@ export function CategoryDetailPage() {
 							</Badge>
 						</div>
 						<p className="text-sm text-muted-foreground mt-1">
-							Created {new Date(category.createdAt).toLocaleDateString()} · Updated {new Date(category.updatedAt).toLocaleDateString()}
+							Created {new Date(category.createdAt).toLocaleDateString()} · Updated{' '}
+							{new Date(category.updatedAt).toLocaleDateString()}
 						</p>
 					</div>
 				</div>
@@ -239,9 +234,7 @@ export function CategoryDetailPage() {
 					</CardHeader>
 					<CardContent>
 						{category.description ? (
-							<p className="text-muted-foreground whitespace-pre-wrap">
-								{category.description}
-							</p>
+							<p className="text-muted-foreground whitespace-pre-wrap">{category.description}</p>
 						) : (
 							<div className="text-center py-8 text-muted-foreground border rounded-lg">
 								<FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
@@ -255,9 +248,7 @@ export function CategoryDetailPage() {
 				<Card>
 					<CardHeader>
 						<CardTitle>Products</CardTitle>
-						<CardDescription>
-							Products in this category
-						</CardDescription>
+						<CardDescription>Products in this category</CardDescription>
 					</CardHeader>
 					<CardContent>
 						{productCount === 0 ? (
@@ -278,9 +269,7 @@ export function CategoryDetailPage() {
 									<TableBody>
 										{category.products?.map((product) => (
 											<TableRow key={product.id}>
-												<TableCell className="font-mono text-sm">
-													{product.sku}
-												</TableCell>
+												<TableCell className="font-mono text-sm">{product.sku}</TableCell>
 												<TableCell className="font-medium">
 													<Link to={`/app/products/${product.id}`} className="hover:underline">
 														{product.name}
@@ -310,9 +299,7 @@ export function CategoryDetailPage() {
 				<DialogContent>
 					<DialogHeader>
 						<DialogTitle>Edit Category</DialogTitle>
-						<DialogDescription>
-							Update the category details.
-						</DialogDescription>
+						<DialogDescription>Update the category details.</DialogDescription>
 					</DialogHeader>
 
 					{mutationError && (
@@ -358,10 +345,7 @@ export function CategoryDetailPage() {
 						<Button variant="outline" onClick={() => setFormDialogOpen(false)}>
 							Cancel
 						</Button>
-						<Button
-							onClick={handleFormSubmit}
-							disabled={!formName || updateMutation.isPending}
-						>
+						<Button onClick={handleFormSubmit} disabled={!formName || updateMutation.isPending}>
 							{updateMutation.isPending ? 'Saving...' : 'Update'}
 						</Button>
 					</DialogFooter>

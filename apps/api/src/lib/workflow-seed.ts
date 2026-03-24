@@ -1,6 +1,6 @@
-import { eq, and } from 'drizzle-orm';
+import { workflowSteps, workflowTemplates } from '@griffiths-crm/shared/db/schema';
+import { and, eq } from 'drizzle-orm';
 import { db } from './auth';
-import { workflowTemplates, workflowSteps } from '@griffiths-crm/shared/db/schema';
 
 type StepDef = {
 	name: string;
@@ -27,9 +27,19 @@ const DEFAULT_TEMPLATES: TemplateDef[] = [
 			{ name: 'Prepare Worksheet', category: 'admin' },
 			{ name: 'Create Memorial Proof', category: 'production' },
 			{ name: 'Proof Approval', category: 'production' },
-			{ name: 'Set Delivery Date', category: 'production', requiresDate: true, dateFieldLabel: 'Proposed Delivery Date' },
+			{
+				name: 'Set Delivery Date',
+				category: 'production',
+				requiresDate: true,
+				dateFieldLabel: 'Proposed Delivery Date',
+			},
 			{ name: 'Installation Worksheet', category: 'installation' },
-			{ name: 'Fixing', category: 'installation', requiresDate: true, dateFieldLabel: 'Fixing Date' },
+			{
+				name: 'Fixing',
+				category: 'installation',
+				requiresDate: true,
+				dateFieldLabel: 'Fixing Date',
+			},
 			{ name: 'Invoice', category: 'invoicing' },
 			{ name: 'Post-Sales Review', category: 'review' },
 		],
@@ -45,9 +55,19 @@ const DEFAULT_TEMPLATES: TemplateDef[] = [
 			{ name: 'Supplier Coordination', category: 'production' },
 			{ name: 'Create Memorial Proof', category: 'production' },
 			{ name: 'Proof Approval', category: 'production' },
-			{ name: 'Set Delivery Date', category: 'production', requiresDate: true, dateFieldLabel: 'Proposed Delivery Date' },
+			{
+				name: 'Set Delivery Date',
+				category: 'production',
+				requiresDate: true,
+				dateFieldLabel: 'Proposed Delivery Date',
+			},
 			{ name: 'Installation Worksheet', category: 'installation' },
-			{ name: 'Fixing', category: 'installation', requiresDate: true, dateFieldLabel: 'Fixing Date' },
+			{
+				name: 'Fixing',
+				category: 'installation',
+				requiresDate: true,
+				dateFieldLabel: 'Fixing Date',
+			},
 			{ name: 'Invoice', category: 'invoicing' },
 			{ name: 'Post-Sales Review', category: 'review' },
 		],
@@ -60,7 +80,12 @@ const DEFAULT_TEMPLATES: TemplateDef[] = [
 			{ name: 'Prepare Worksheet', category: 'admin' },
 			{ name: 'Forms & Fees', category: 'admin' },
 			{ name: 'Installation Worksheet', category: 'installation' },
-			{ name: 'Re-Fixing', category: 'installation', requiresDate: true, dateFieldLabel: 'Re-Fixing Date' },
+			{
+				name: 'Re-Fixing',
+				category: 'installation',
+				requiresDate: true,
+				dateFieldLabel: 'Re-Fixing Date',
+			},
 			{ name: 'Invoice', category: 'invoicing' },
 			{ name: 'Post-Sales Review', category: 'review' },
 		],
@@ -71,7 +96,12 @@ const DEFAULT_TEMPLATES: TemplateDef[] = [
 		productionMethod: null,
 		steps: [
 			{ name: 'Installation Worksheet', category: 'installation' },
-			{ name: 'Start Work', category: 'installation', requiresDate: true, dateFieldLabel: 'Job Start Date' },
+			{
+				name: 'Start Work',
+				category: 'installation',
+				requiresDate: true,
+				dateFieldLabel: 'Job Start Date',
+			},
 			{ name: 'Complete Work', category: 'installation' },
 			{ name: 'Invoice', category: 'invoicing' },
 			{ name: 'Post-Sales Review', category: 'review' },
@@ -83,7 +113,12 @@ const DEFAULT_TEMPLATES: TemplateDef[] = [
 		productionMethod: null,
 		steps: [
 			{ name: 'Installation Worksheet', category: 'installation' },
-			{ name: 'Ashes Interment', category: 'installation', requiresDate: true, dateFieldLabel: 'Date of Ashes' },
+			{
+				name: 'Ashes Interment',
+				category: 'installation',
+				requiresDate: true,
+				dateFieldLabel: 'Date of Ashes',
+			},
 			{ name: 'Invoice', category: 'invoicing' },
 		],
 	},

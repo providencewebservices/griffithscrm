@@ -1,4 +1,13 @@
 import { useState } from 'react';
+import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
+import { TenantFormDialog } from '@/components/admin/tenant-form-dialog';
+import { Button } from '@/components/ui/button';
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
 	Table,
 	TableBody,
@@ -8,20 +17,11 @@ import {
 	TableRow,
 } from '@/components/ui/table';
 import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Button } from '@/components/ui/button';
-import { TenantFormDialog } from '@/components/admin/tenant-form-dialog';
-import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
-import {
-	useTenantsQuery,
-	useCreateTenantMutation,
-	useUpdateTenantMutation,
-	useDeleteTenantMutation,
 	type Tenant,
+	useCreateTenantMutation,
+	useDeleteTenantMutation,
+	useTenantsQuery,
+	useUpdateTenantMutation,
 } from '@/hooks/use-tenants';
 
 export function TenantsTab() {
@@ -83,11 +83,7 @@ export function TenantsTab() {
 	}
 
 	if (error) {
-		return (
-			<div className="text-destructive">
-				Error loading tenants: {error.message}
-			</div>
-		);
+		return <div className="text-destructive">Error loading tenants: {error.message}</div>;
 	}
 
 	return (
@@ -122,12 +118,8 @@ export function TenantsTab() {
 							{tenants?.map((tenant) => (
 								<TableRow key={tenant.id}>
 									<TableCell className="font-medium">{tenant.name}</TableCell>
-									<TableCell className="font-mono text-sm">
-										{tenant.slug}
-									</TableCell>
-									<TableCell>
-										{new Date(tenant.createdAt).toLocaleDateString()}
-									</TableCell>
+									<TableCell className="font-mono text-sm">{tenant.slug}</TableCell>
+									<TableCell>{new Date(tenant.createdAt).toLocaleDateString()}</TableCell>
 									<TableCell>
 										<DropdownMenu>
 											<DropdownMenuTrigger asChild>
@@ -136,9 +128,7 @@ export function TenantsTab() {
 												</Button>
 											</DropdownMenuTrigger>
 											<DropdownMenuContent align="end">
-												<DropdownMenuItem onClick={() => handleEdit(tenant)}>
-													Edit
-												</DropdownMenuItem>
+												<DropdownMenuItem onClick={() => handleEdit(tenant)}>Edit</DropdownMenuItem>
 												<DropdownMenuItem
 													onClick={() => handleDelete(tenant)}
 													className="text-destructive"

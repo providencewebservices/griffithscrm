@@ -1,9 +1,9 @@
-import * as React from 'react';
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { ImageIcon, Loader2, Upload, X } from 'lucide-react';
+import type * as React from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { type UploadCategory, useUploadImageMutation } from '@/hooks/use-uploads';
 import { cn } from '@/lib/utils';
 import { Button } from './button';
-import { Upload, X, Loader2, ImageIcon } from 'lucide-react';
-import { useUploadImageMutation, type UploadCategory } from '@/hooks/use-uploads';
 
 interface ImageUploadProps {
 	value?: string | null;
@@ -97,7 +97,7 @@ export function ImageUpload({
 				}
 			}
 		},
-		[category, entityId, onChange, uploadMutation, value]
+		[category, entityId, onChange, uploadMutation, value],
 	);
 
 	const handleDrop = useCallback(
@@ -112,7 +112,7 @@ export function ImageUpload({
 				handleFile(file);
 			}
 		},
-		[disabled, uploadMutation.isPending, handleFile]
+		[disabled, uploadMutation.isPending, handleFile],
 	);
 
 	const handleDragOver = useCallback(
@@ -122,7 +122,7 @@ export function ImageUpload({
 				setIsDragging(true);
 			}
 		},
-		[disabled, uploadMutation.isPending]
+		[disabled, uploadMutation.isPending],
 	);
 
 	const handleDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>) => {
@@ -139,7 +139,7 @@ export function ImageUpload({
 			// Reset input
 			e.target.value = '';
 		},
-		[handleFile]
+		[handleFile],
 	);
 
 	const handleRemove = useCallback(() => {
@@ -175,7 +175,10 @@ export function ImageUpload({
 					<img
 						src={preview}
 						alt="Preview"
-						className={cn("w-full object-contain rounded-lg border", compact ? "max-h-32" : "max-h-48")}
+						className={cn(
+							'w-full object-contain rounded-lg border',
+							compact ? 'max-h-32' : 'max-h-48',
+						)}
 					/>
 					{!disabled && (
 						<div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
@@ -223,29 +226,27 @@ export function ImageUpload({
 						isDragging
 							? 'border-primary bg-primary/5'
 							: 'border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/50',
-						(disabled || uploadMutation.isPending) &&
-							'cursor-not-allowed opacity-50'
+						(disabled || uploadMutation.isPending) && 'cursor-not-allowed opacity-50',
 					)}
 				>
 					{uploadMutation.isPending ? (
 						<>
-							<Loader2 className={cn("animate-spin text-muted-foreground", compact ? "h-6 w-6" : "h-8 w-8")} />
+							<Loader2
+								className={cn(
+									'animate-spin text-muted-foreground',
+									compact ? 'h-6 w-6' : 'h-8 w-8',
+								)}
+							/>
 							<span className="text-sm text-muted-foreground">Uploading...</span>
 						</>
 					) : (
 						<>
-							<ImageIcon className={cn("text-muted-foreground", compact ? "h-6 w-6" : "h-8 w-8")} />
+							<ImageIcon className={cn('text-muted-foreground', compact ? 'h-6 w-6' : 'h-8 w-8')} />
 							<div className="text-center">
-								<span className="text-sm font-medium text-muted-foreground">
-									Click to upload
-								</span>
-								<span className="text-sm text-muted-foreground block">
-									or drag and drop
-								</span>
+								<span className="text-sm font-medium text-muted-foreground">Click to upload</span>
+								<span className="text-sm text-muted-foreground block">or drag and drop</span>
 							</div>
-							<span className="text-xs text-muted-foreground">
-								JPEG, PNG, GIF, WebP (max 5MB)
-							</span>
+							<span className="text-xs text-muted-foreground">JPEG, PNG, GIF, WebP (max 5MB)</span>
 						</>
 					)}
 				</div>

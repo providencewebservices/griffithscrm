@@ -1,11 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
 import {
 	Dialog,
 	DialogContent,
+	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-	DialogFooter,
 } from '@/components/ui/dialog';
+import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
 import {
 	Select,
 	SelectContent,
@@ -13,15 +16,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import {
-	Field,
-	FieldGroup,
-	FieldLabel,
-	FieldError,
-} from '@/components/ui/field';
-import { useTenantsQuery, type Tenant } from '@/hooks/use-tenants';
+import { type Tenant, useTenantsQuery } from '@/hooks/use-tenants';
 import type { User } from '@/hooks/use-users';
 
 type UserRole = 'app_admin' | 'manager' | 'tenant_user';
@@ -193,11 +188,7 @@ export function UserFormDialog({
 						{(role === 'tenant_user' || role === 'manager') && (
 							<Field>
 								<FieldLabel htmlFor="user-tenant">Tenant</FieldLabel>
-								<Select
-									value={tenantId}
-									onValueChange={setTenantId}
-									disabled={isLoading}
-								>
+								<Select value={tenantId} onValueChange={setTenantId} disabled={isLoading}>
 									<SelectTrigger id="user-tenant">
 										<SelectValue placeholder="Select a tenant" />
 									</SelectTrigger>

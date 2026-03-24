@@ -1,4 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { File, Upload, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Button } from '@/components/ui/button';
 import {
 	Dialog,
 	DialogContent,
@@ -7,12 +9,10 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Field, FieldGroup, FieldLabel, FieldDescription } from '@/components/ui/field';
 import { formatFileSize, getFileExtension } from '@/lib/file-utils';
-import { Upload, X, File } from 'lucide-react';
 
 interface DocumentUploadDialogProps {
 	open: boolean;
@@ -104,9 +104,7 @@ export function DocumentUploadDialog({
 			<DialogContent className="max-w-md">
 				<DialogHeader>
 					<DialogTitle>Upload Document</DialogTitle>
-					<DialogDescription>
-						Upload a file and add details to organize it.
-					</DialogDescription>
+					<DialogDescription>Upload a file and add details to organize it.</DialogDescription>
 				</DialogHeader>
 
 				{error && (
@@ -130,16 +128,9 @@ export function DocumentUploadDialog({
 								<File className="h-8 w-8 text-muted-foreground shrink-0" />
 								<div className="flex-1 min-w-0">
 									<p className="font-medium text-sm truncate">{file.name}</p>
-									<p className="text-xs text-muted-foreground">
-										{formatFileSize(file.size)}
-									</p>
+									<p className="text-xs text-muted-foreground">{formatFileSize(file.size)}</p>
 								</div>
-								<Button
-									variant="ghost"
-									size="icon"
-									onClick={handleRemoveFile}
-									className="shrink-0"
-								>
+								<Button variant="ghost" size="icon" onClick={handleRemoveFile} className="shrink-0">
 									<X className="h-4 w-4" />
 								</Button>
 							</div>
@@ -157,12 +148,9 @@ export function DocumentUploadDialog({
 							>
 								<Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
 								<p className="text-sm text-muted-foreground">
-									<span className="font-medium text-primary">Click to upload</span> or
-									drag and drop
+									<span className="font-medium text-primary">Click to upload</span> or drag and drop
 								</p>
-								<p className="text-xs text-muted-foreground mt-1">
-									Any file type accepted
-								</p>
+								<p className="text-xs text-muted-foreground mt-1">Any file type accepted</p>
 							</div>
 						)}
 					</Field>
@@ -185,9 +173,7 @@ export function DocumentUploadDialog({
 							onChange={(e) => setTags(e.target.value)}
 							placeholder="e.g., photo, installation, proof"
 						/>
-						<FieldDescription>
-							Comma-separated tags for organization
-						</FieldDescription>
+						<FieldDescription>Comma-separated tags for organization</FieldDescription>
 					</Field>
 
 					<Field>

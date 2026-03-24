@@ -1,13 +1,8 @@
 import { Copy } from 'lucide-react';
 import { toast } from 'sonner';
-import {
-	Card,
-	CardHeader,
-	CardTitle,
-	CardContent,
-} from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useTenantSettingsQuery } from '@/hooks/use-tenant-settings';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -58,7 +53,8 @@ const ENDPOINTS = [
 	},
 	{
 		path: '/products/:productId',
-		description: 'Get full product detail including options, choices, components, and dimension combinations.',
+		description:
+			'Get full product detail including options, choices, components, and dimension combinations.',
 		params: null,
 		example: `{
   "product": {
@@ -162,11 +158,7 @@ export function ApiTab() {
 	}
 
 	if (error) {
-		return (
-			<div className="text-destructive">
-				Error loading settings: {error.message}
-			</div>
-		);
+		return <div className="text-destructive">Error loading settings: {error.message}</div>;
 	}
 
 	const baseUrl = `${API_URL}/api/external/${settings?.slug}`;
@@ -257,16 +249,19 @@ export function ApiTab() {
 				<CardContent>
 					<ul className="space-y-3 text-sm text-muted-foreground">
 						<li>
-							<span className="font-medium text-foreground">Caching:</span>{' '}
-							All responses include a <code className="bg-muted px-1.5 py-0.5 rounded font-mono text-xs">Cache-Control: public, max-age=300</code> header (5 minute TTL).
+							<span className="font-medium text-foreground">Caching:</span> All responses include a{' '}
+							<code className="bg-muted px-1.5 py-0.5 rounded font-mono text-xs">
+								Cache-Control: public, max-age=300
+							</code>{' '}
+							header (5 minute TTL).
 						</li>
 						<li>
-							<span className="font-medium text-foreground">CORS:</span>{' '}
-							Requests are allowed from any origin. No preflight restrictions apply.
+							<span className="font-medium text-foreground">CORS:</span> Requests are allowed from
+							any origin. No preflight restrictions apply.
 						</li>
 						<li>
-							<span className="font-medium text-foreground">Authentication:</span>{' '}
-							No authentication is required. All endpoints are publicly accessible.
+							<span className="font-medium text-foreground">Authentication:</span> No authentication
+							is required. All endpoints are publicly accessible.
 						</li>
 					</ul>
 				</CardContent>

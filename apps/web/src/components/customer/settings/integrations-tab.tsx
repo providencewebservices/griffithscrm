@@ -1,13 +1,13 @@
+import { AlertCircle, RefreshCw, Unplug } from 'lucide-react';
 import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { RefreshCw, Unplug, AlertCircle } from 'lucide-react';
 import {
-	useEmailIntegrationsQuery,
-	useDisconnectIntegrationMutation,
-	useSyncInboxMutation,
 	getConnectGmailUrl,
+	useDisconnectIntegrationMutation,
+	useEmailIntegrationsQuery,
+	useSyncInboxMutation,
 } from '@/hooks/use-inbox';
 
 function GmailLogo({ className }: { className?: string }) {
@@ -22,7 +22,10 @@ function GmailLogo({ className }: { className?: string }) {
 	);
 }
 
-const STATUS_CONFIG: Record<string, { label: string; variant: 'success' | 'warning' | 'destructive' | 'secondary' }> = {
+const STATUS_CONFIG: Record<
+	string,
+	{ label: string; variant: 'success' | 'warning' | 'destructive' | 'secondary' }
+> = {
 	active: { label: 'Connected', variant: 'success' },
 	token_expired: { label: 'Expired', variant: 'warning' },
 	revoked: { label: 'Revoked', variant: 'destructive' },
@@ -39,7 +42,7 @@ export function IntegrationsTab() {
 		try {
 			const url = await getConnectGmailUrl();
 			window.location.href = url;
-		} catch (err) {
+		} catch (_err) {
 			toast.error('Failed to start Gmail connection');
 		}
 	};
@@ -48,7 +51,7 @@ export function IntegrationsTab() {
 		try {
 			await disconnectMutation.mutateAsync(integrationId);
 			toast.success('Email disconnected');
-		} catch (err) {
+		} catch (_err) {
 			toast.error('Failed to disconnect');
 		}
 	};
@@ -57,7 +60,7 @@ export function IntegrationsTab() {
 		try {
 			await syncMutation.mutateAsync(integrationId);
 			toast.success('Inbox synced');
-		} catch (err) {
+		} catch (_err) {
 			toast.error('Failed to sync inbox');
 		}
 	};
@@ -66,7 +69,7 @@ export function IntegrationsTab() {
 		try {
 			const url = await getConnectGmailUrl();
 			window.location.href = url;
-		} catch (err) {
+		} catch (_err) {
 			toast.error('Failed to start reconnection');
 		}
 	};
@@ -81,15 +84,15 @@ export function IntegrationsTab() {
 	}
 
 	const gmail = integrations?.find((i) => i.provider === 'gmail');
-	const status = gmail ? (STATUS_CONFIG[gmail.status] || STATUS_CONFIG.error) : STATUS_CONFIG.not_connected;
+	const status = gmail
+		? STATUS_CONFIG[gmail.status] || STATUS_CONFIG.error
+		: STATUS_CONFIG.not_connected;
 
 	return (
 		<div className="max-w-2xl space-y-6">
 			<div>
 				<h3 className="text-lg font-semibold">Email Integrations</h3>
-				<p className="text-sm text-muted-foreground mt-1">
-					Manage connected email accounts.
-				</p>
+				<p className="text-sm text-muted-foreground mt-1">Manage connected email accounts.</p>
 			</div>
 
 			<Card>
@@ -113,7 +116,9 @@ export function IntegrationsTab() {
 									onClick={() => handleSync(gmail.id)}
 									disabled={syncMutation.isPending}
 								>
-									<RefreshCw className={`h-4 w-4 mr-2 ${syncMutation.isPending ? 'animate-spin' : ''}`} />
+									<RefreshCw
+										className={`h-4 w-4 mr-2 ${syncMutation.isPending ? 'animate-spin' : ''}`}
+									/>
 									Sync
 								</Button>
 								<Button

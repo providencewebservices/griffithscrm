@@ -16,21 +16,11 @@ export function FolderBreadcrumb({
 	return (
 		<nav className="flex items-center gap-1 text-sm">
 			{showAllDocuments ? (
-				<Button
-					variant="ghost"
-					size="sm"
-					className="h-7 px-2"
-					onClick={() => onNavigate('all')}
-				>
+				<Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => onNavigate('all')}>
 					All Documents
 				</Button>
 			) : (
-				<Button
-					variant="ghost"
-					size="sm"
-					className="h-7 px-2"
-					onClick={() => onNavigate(null)}
-				>
+				<Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => onNavigate(null)}>
 					<Home className="h-4 w-4 mr-1" />
 					Documents
 				</Button>

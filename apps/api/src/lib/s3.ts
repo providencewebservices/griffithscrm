@@ -1,8 +1,8 @@
 import {
-	S3Client,
-	PutObjectCommand,
-	GetObjectCommand,
 	DeleteObjectCommand,
+	GetObjectCommand,
+	PutObjectCommand,
+	S3Client,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
@@ -43,7 +43,16 @@ function getPublicUrl(key: string): string {
 	return `https://${s3Config.bucket}.s3.${s3Config.region}.amazonaws.com/${key}`;
 }
 
-export type UploadCategory = 'products' | 'options' | 'sundries' | 'categories' | 'materials' | 'jobs' | 'documents' | 'fonts' | 'branding';
+export type UploadCategory =
+	| 'products'
+	| 'options'
+	| 'sundries'
+	| 'categories'
+	| 'materials'
+	| 'jobs'
+	| 'documents'
+	| 'fonts'
+	| 'branding';
 
 interface PresignedUrlOptions {
 	tenantId: string;
@@ -58,7 +67,7 @@ interface PresignedUrlOptions {
  * Path structure: {tenantId}/{category}/{entityId}/{filename}
  */
 export async function generatePresignedUploadUrl(
-	options: PresignedUrlOptions
+	options: PresignedUrlOptions,
 ): Promise<{ uploadUrl: string; publicUrl: string; key: string }> {
 	const { tenantId, category, entityId, filename, contentType } = options;
 
@@ -88,7 +97,7 @@ export async function generatePresignedUploadUrl(
  */
 export async function generatePresignedUploadUrlForKey(
 	key: string,
-	contentType: string
+	contentType: string,
 ): Promise<{ uploadUrl: string; publicUrl: string }> {
 	const command = new PutObjectCommand({
 		Bucket: s3Config.bucket,
@@ -134,9 +143,7 @@ export function extractKeyFromUrl(url: string): string | null {
 	}
 
 	// AWS format: https://bucket.s3.region.amazonaws.com/key
-	const awsPattern = new RegExp(
-		`https://${s3Config.bucket}\\.s3\\.[^/]+\\.amazonaws\\.com/(.+)`
-	);
+	const awsPattern = new RegExp(`https://${s3Config.bucket}\\.s3\\.[^/]+\\.amazonaws\\.com/(.+)`);
 	const match = url.match(awsPattern);
 	if (match) {
 		return match[1];
@@ -154,10 +161,7 @@ export function extractKeyFromUrl(url: string): string | null {
  * Generate a signed URL for reading/viewing an S3 object
  * URLs expire in 1 hour by default
  */
-export async function generateSignedReadUrl(
-	key: string,
-	expiresIn = 3600
-): Promise<string> {
+export async function generateSignedReadUrl(key: string, expiresIn = 3600): Promise<string> {
 	const command = new GetObjectCommand({
 		Bucket: s3Config.bucket,
 		Key: key,
@@ -174,7 +178,7 @@ export async function generateSignedReadUrl(
 export async function generateSignedDownloadUrl(
 	key: string,
 	filename: string,
-	expiresIn = 3600
+	expiresIn = 3600,
 ): Promise<string> {
 	const command = new GetObjectCommand({
 		Bucket: s3Config.bucket,
@@ -202,7 +206,9 @@ export async function getSignedImageUrl(storedUrl: string | null): Promise<strin
  * Fetch an S3 object as a Buffer
  * Used for attaching CRM documents to outgoing emails
  */
-export async function getObjectBuffer(key: string): Promise<{ buffer: Buffer; contentType: string }> {
+export async function getObjectBuffer(
+	key: string,
+): Promise<{ buffer: Buffer; contentType: string }> {
 	const command = new GetObjectCommand({
 		Bucket: s3Config.bucket,
 		Key: key,

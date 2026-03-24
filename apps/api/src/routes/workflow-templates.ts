@@ -1,11 +1,15 @@
-import { Hono } from 'hono';
+import {
+	WORKFLOW_STEP_CATEGORIES,
+	workflowSteps,
+	workflowTemplates,
+} from '@griffiths-crm/shared/db/schema';
 import { zValidator } from '@hono/zod-validator';
+import { and, asc, count, eq } from 'drizzle-orm';
+import { Hono } from 'hono';
 import { z } from 'zod';
-import { eq, and, asc, count } from 'drizzle-orm';
-import { requireAuth, requireTenant } from '../middleware/auth';
 import { db } from '../lib/auth';
-import { workflowTemplates, workflowSteps, WORKFLOW_STEP_CATEGORIES } from '@griffiths-crm/shared/db/schema';
 import { seedDefaultWorkflowTemplates } from '../lib/workflow-seed';
+import { requireAuth, requireTenant } from '../middleware/auth';
 
 // Validation schemas
 const createTemplateSchema = z.object({
@@ -39,10 +43,12 @@ const updateStepSchema = z.object({
 });
 
 const reorderStepsSchema = z.object({
-	steps: z.array(z.object({
-		id: z.string().min(1),
-		sortOrder: z.number().int().min(0),
-	})),
+	steps: z.array(
+		z.object({
+			id: z.string().min(1),
+			sortOrder: z.number().int().min(0),
+		}),
+	),
 });
 
 const workflowTemplatesRoutes = new Hono()
@@ -61,16 +67,17 @@ const workflowTemplatesRoutes = new Hono()
 
 		const templateIds = templates.map((t) => t.id);
 
-		const stepCounts = templateIds.length > 0
-			? await db
-				.select({
-					templateId: workflowSteps.templateId,
-					stepCount: count(),
-				})
-				.from(workflowSteps)
-				.where(eq(workflowSteps.tenantId, tenantId))
-				.groupBy(workflowSteps.templateId)
-			: [];
+		const stepCounts =
+			templateIds.length > 0
+				? await db
+						.select({
+							templateId: workflowSteps.templateId,
+							stepCount: count(),
+						})
+						.from(workflowSteps)
+						.where(eq(workflowSteps.tenantId, tenantId))
+						.groupBy(workflowSteps.templateId)
+				: [];
 
 		const countMap = new Map(stepCounts.map((sc) => [sc.templateId, Number(sc.stepCount)]));
 
@@ -239,11 +246,13 @@ const workflowTemplatesRoutes = new Hono()
 		const [existing] = await db
 			.select()
 			.from(workflowSteps)
-			.where(and(
-				eq(workflowSteps.id, stepId),
-				eq(workflowSteps.templateId, templateId),
-				eq(workflowSteps.tenantId, tenantId),
-			))
+			.where(
+				and(
+					eq(workflowSteps.id, stepId),
+					eq(workflowSteps.templateId, templateId),
+					eq(workflowSteps.tenantId, tenantId),
+				),
+			)
 			.limit(1);
 
 		if (!existing) {
@@ -277,11 +286,13 @@ const workflowTemplatesRoutes = new Hono()
 		const [existing] = await db
 			.select()
 			.from(workflowSteps)
-			.where(and(
-				eq(workflowSteps.id, stepId),
-				eq(workflowSteps.templateId, templateId),
-				eq(workflowSteps.tenantId, tenantId),
-			))
+			.where(
+				and(
+					eq(workflowSteps.id, stepId),
+					eq(workflowSteps.templateId, templateId),
+					eq(workflowSteps.tenantId, tenantId),
+				),
+			)
 			.limit(1);
 
 		if (!existing) {

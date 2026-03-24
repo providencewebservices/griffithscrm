@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -27,9 +27,7 @@ export function useTimeOffRequestsQuery(userId?: string) {
 	return useQuery({
 		queryKey: userId ? ['time-off-requests', userId] : ['time-off-requests'],
 		queryFn: async (): Promise<TimeOffRequest[]> => {
-			const url = userId
-				? `${API_URL}/api/time-off?userId=${userId}`
-				: `${API_URL}/api/time-off`;
+			const url = userId ? `${API_URL}/api/time-off?userId=${userId}` : `${API_URL}/api/time-off`;
 			const response = await fetch(url, {
 				credentials: 'include',
 			});

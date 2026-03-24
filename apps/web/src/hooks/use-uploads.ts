@@ -2,7 +2,13 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
-export type UploadCategory = 'products' | 'options' | 'sundries' | 'categories' | 'materials' | 'branding';
+export type UploadCategory =
+	| 'products'
+	| 'options'
+	| 'sundries'
+	| 'categories'
+	| 'materials'
+	| 'branding';
 
 // Cache for signed URLs to avoid re-fetching
 const signedUrlCache = new Map<string, { url: string; expiry: number }>();
@@ -24,7 +30,7 @@ async function requestPresignedUrl(
 	category: UploadCategory,
 	entityId: string,
 	filename: string,
-	contentType: string
+	contentType: string,
 ): Promise<PresignResponse> {
 	const response = await fetch(`${API_URL}/api/uploads/presign`, {
 		method: 'POST',
@@ -68,7 +74,7 @@ async function uploadImage(input: UploadInput): Promise<string> {
 		category,
 		entityId,
 		file.name,
-		file.type
+		file.type,
 	);
 
 	// Upload to S3

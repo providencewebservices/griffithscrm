@@ -1,15 +1,11 @@
+import crypto from 'node:crypto';
+import { emailIntegrations, emailMessages, emailThreads } from '@griffiths-crm/shared/db/schema';
+import { and, eq } from 'drizzle-orm';
 import { Hono } from 'hono';
-import { eq, and } from 'drizzle-orm';
-import { requireAuth, requireTenant } from '../middleware/auth';
 import { db } from '../lib/auth';
-import {
-	emailIntegrations,
-	emailThreads,
-	emailMessages,
-} from '@griffiths-crm/shared/db/schema';
-import { GmailProvider, GMAIL_SCOPES, getOAuth2Client } from '../lib/email-providers/gmail';
 import { getValidAccessToken } from '../lib/email-providers';
-import crypto from 'crypto';
+import { GMAIL_SCOPES, GmailProvider, getOAuth2Client } from '../lib/email-providers/gmail';
+import { requireAuth, requireTenant } from '../middleware/auth';
 
 // HMAC-based state signing using BETTER_AUTH_SECRET
 function signState(payload: Record<string, unknown>): string {
@@ -171,7 +167,10 @@ const emailIntegrationsRoutes = new Hono()
 
 			// Get email address from userinfo
 			oauth2Client.setCredentials(tokens);
-			const oauth2 = (await import('googleapis')).google.oauth2({ version: 'v2', auth: oauth2Client });
+			const oauth2 = (await import('googleapis')).google.oauth2({
+				version: 'v2',
+				auth: oauth2Client,
+			});
 			const userInfo = await oauth2.userinfo.get();
 			const emailAddress = userInfo.data.email;
 
@@ -187,8 +186,8 @@ const emailIntegrationsRoutes = new Hono()
 					and(
 						eq(emailIntegrations.userId, userId),
 						eq(emailIntegrations.tenantId, tenantId),
-						eq(emailIntegrations.emailAddress, emailAddress)
-					)
+						eq(emailIntegrations.emailAddress, emailAddress),
+					),
 				)
 				.limit(1);
 
@@ -239,10 +238,13 @@ const emailIntegrationsRoutes = new Hono()
 						accessToken: tokens.access_token!,
 						topicName: process.env.GOOGLE_PUBSUB_TOPIC,
 					});
-					await db.update(emailIntegrations).set({
-						watchExpiration: new Date(parseInt(watchResult.expiration)),
-						watchHistoryId: watchResult.historyId,
-					}).where(eq(emailIntegrations.id, integrationId));
+					await db
+						.update(emailIntegrations)
+						.set({
+							watchExpiration: new Date(parseInt(watchResult.expiration, 10)),
+							watchHistoryId: watchResult.historyId,
+						})
+						.where(eq(emailIntegrations.id, integrationId));
 				} catch (err) {
 					console.error('Failed to set up Gmail watch:', err);
 					// Non-fatal: polling continues
@@ -275,12 +277,7 @@ const emailIntegrationsRoutes = new Hono()
 				createdAt: emailIntegrations.createdAt,
 			})
 			.from(emailIntegrations)
-			.where(
-				and(
-					eq(emailIntegrations.userId, user.id),
-					eq(emailIntegrations.tenantId, tenantId)
-				)
-			);
+			.where(and(eq(emailIntegrations.userId, user.id), eq(emailIntegrations.tenantId, tenantId)));
 
 		return c.json({ integrations });
 	})
@@ -298,8 +295,8 @@ const emailIntegrationsRoutes = new Hono()
 				and(
 					eq(emailIntegrations.id, id),
 					eq(emailIntegrations.userId, user.id),
-					eq(emailIntegrations.tenantId, tenantId)
-				)
+					eq(emailIntegrations.tenantId, tenantId),
+				),
 			)
 			.limit(1);
 
@@ -327,9 +324,7 @@ const emailIntegrationsRoutes = new Hono()
 		}
 
 		// Cascading delete removes threads, messages, and entity links
-		await db
-			.delete(emailIntegrations)
-			.where(eq(emailIntegrations.id, id));
+		await db.delete(emailIntegrations).where(eq(emailIntegrations.id, id));
 
 		return c.json({ success: true });
 	})
@@ -347,8 +342,8 @@ const emailIntegrationsRoutes = new Hono()
 				and(
 					eq(emailIntegrations.id, id),
 					eq(emailIntegrations.userId, user.id),
-					eq(emailIntegrations.tenantId, tenantId)
-				)
+					eq(emailIntegrations.tenantId, tenantId),
+				),
 			)
 			.limit(1);
 

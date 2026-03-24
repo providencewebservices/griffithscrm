@@ -1,6 +1,9 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { ImageUpload } from '@/components/ui/image-upload';
 import { Input } from '@/components/ui/input';
 import {
 	Select,
@@ -10,22 +13,10 @@ import {
 	SelectValue,
 } from '@/components/ui/select';
 import {
-	Field,
-	FieldGroup,
-	FieldLabel,
-} from '@/components/ui/field';
-import {
-	Card,
-	CardHeader,
-	CardTitle,
-	CardContent,
-} from '@/components/ui/card';
-import {
+	type AddressInput,
 	useTenantSettingsQuery,
 	useUpdateTenantSettingsMutation,
-	type AddressInput,
 } from '@/hooks/use-tenant-settings';
-import { ImageUpload } from '@/components/ui/image-upload';
 
 const COUNTRIES = [
 	{ value: 'US', label: 'United States', flag: '🇺🇸' },
@@ -115,7 +106,11 @@ export function BusinessTab() {
 			if ((address.streetNumber || '') !== (settings.address.streetNumber || '')) return true;
 			if ((address.route || '') !== (settings.address.route || '')) return true;
 			if ((address.locality || '') !== (settings.address.locality || '')) return true;
-			if ((address.administrativeAreaLevel1 || '') !== (settings.address.administrativeAreaLevel1 || '')) return true;
+			if (
+				(address.administrativeAreaLevel1 || '') !==
+				(settings.address.administrativeAreaLevel1 || '')
+			)
+				return true;
 			if ((address.postalCode || '') !== (settings.address.postalCode || '')) return true;
 			if ((address.country || 'US') !== (settings.address.country || 'US')) return true;
 		}
@@ -146,7 +141,14 @@ export function BusinessTab() {
 
 	const handleSave = async () => {
 		try {
-			const payload: { name?: string; logoUrl?: string | null; phone?: string | null; email?: string | null; website?: string | null; address?: AddressInput | null } = {};
+			const payload: {
+				name?: string;
+				logoUrl?: string | null;
+				phone?: string | null;
+				email?: string | null;
+				website?: string | null;
+				address?: AddressInput | null;
+			} = {};
 
 			if (name !== settings?.name) {
 				payload.name = name;
@@ -189,11 +191,7 @@ export function BusinessTab() {
 	}
 
 	if (error) {
-		return (
-			<div className="text-destructive">
-				Error loading settings: {error.message}
-			</div>
-		);
+		return <div className="text-destructive">Error loading settings: {error.message}</div>;
 	}
 
 	return (
@@ -383,13 +381,8 @@ export function BusinessTab() {
 
 			{/* Save Button */}
 			<div className="flex items-center justify-end gap-3">
-				{isDirty && (
-					<span className="text-sm text-muted-foreground">Unsaved changes</span>
-				)}
-				<Button
-					onClick={handleSave}
-					disabled={updateMutation.isPending || !isDirty}
-				>
+				{isDirty && <span className="text-sm text-muted-foreground">Unsaved changes</span>}
+				<Button onClick={handleSave} disabled={updateMutation.isPending || !isDirty}>
 					{updateMutation.isPending ? 'Saving...' : 'Save Settings'}
 				</Button>
 			</div>

@@ -1,12 +1,12 @@
 import {
 	File,
-	FileText,
-	FileSpreadsheet,
-	FileImage,
-	FileVideo,
-	FileAudio,
 	FileArchive,
+	FileAudio,
 	FileCode,
+	FileImage,
+	FileSpreadsheet,
+	FileText,
+	FileVideo,
 	type LucideIcon,
 } from 'lucide-react';
 
@@ -127,7 +127,7 @@ export function formatFileSize(bytes: number | null | undefined): string {
 	const units = ['B', 'KB', 'MB', 'GB', 'TB'];
 	const k = 1024;
 	const i = Math.floor(Math.log(bytes) / Math.log(k));
-	const size = bytes / Math.pow(k, i);
+	const size = bytes / k ** i;
 
 	return `${size.toFixed(i > 0 ? 1 : 0)} ${units[i]}`;
 }

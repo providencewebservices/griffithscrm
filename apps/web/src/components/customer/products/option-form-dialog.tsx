@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
 	Dialog,
 	DialogContent,
@@ -7,9 +9,8 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
 	Select,
 	SelectContent,
@@ -17,13 +18,16 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select';
-import { Field, FieldGroup, FieldLabel, FieldDescription } from '@/components/ui/field';
 import type { ProductOption, ProductOptionType } from '@/hooks/use-product-options';
 
 const OPTION_TYPES: { value: ProductOptionType; label: string; description: string }[] = [
 	{ value: 'dimension', label: 'Dimension', description: 'Size variations (e.g., 24x12, 36x18)' },
 	{ value: 'stone_color', label: 'Stone Color', description: 'Material/color options' },
-	{ value: 'flower_holes', label: 'Flower Holes', description: 'Pre-defined flower receptacle positions (choices auto-populated)' },
+	{
+		value: 'flower_holes',
+		label: 'Flower Holes',
+		description: 'Pre-defined flower receptacle positions (choices auto-populated)',
+	},
 	{ value: 'custom', label: 'Custom', description: 'Any other configurable option' },
 ];
 
@@ -83,9 +87,7 @@ export function OptionFormDialog({
 				</DialogHeader>
 
 				{error && (
-					<div className="bg-destructive/10 text-destructive px-4 py-2 rounded">
-						{error}
-					</div>
+					<div className="bg-destructive/10 text-destructive px-4 py-2 rounded">{error}</div>
 				)}
 
 				<FieldGroup>
@@ -113,9 +115,7 @@ export function OptionFormDialog({
 								))}
 							</SelectContent>
 						</Select>
-						{selectedType && (
-							<FieldDescription>{selectedType.description}</FieldDescription>
-						)}
+						{selectedType && <FieldDescription>{selectedType.description}</FieldDescription>}
 					</Field>
 
 					<Field className="flex items-center gap-2">

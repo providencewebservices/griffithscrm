@@ -1,29 +1,29 @@
-import { Hono } from 'hono';
-import { zValidator } from '@hono/zod-validator';
-import { z } from 'zod';
-import { eq, and, like, desc, asc, sql, or, count, exists } from 'drizzle-orm';
-import { requireAuth, requireTenant } from '../middleware/auth';
-import { db } from '../lib/auth';
-import { generatePresignedUploadUrl, isS3Configured } from '../lib/s3';
 import {
-	jobs,
-	quotes,
+	ACCOUNT_STATUSES,
 	customers,
+	JOB_ATTACHMENT_CATEGORIES,
+	JOB_STATUSES,
+	jobAttachments,
+	jobPaymentScheduleItems,
+	jobs,
+	memorialSites,
+	memorialWorksheets,
 	products,
 	quoteComponents,
 	quoteLettering,
-	quoteSundries,
 	quoteLineItems,
-	jobPaymentScheduleItems,
-	jobAttachments,
-	memorialWorksheets,
-	memorialSites,
 	quotePackages,
-	JOB_STATUSES,
-	JOB_ATTACHMENT_CATEGORIES,
-	ACCOUNT_STATUSES,
+	quoteSundries,
+	quotes,
 	REVIEW_OUTCOMES,
 } from '@griffiths-crm/shared/db/schema';
+import { zValidator } from '@hono/zod-validator';
+import { and, asc, count, desc, eq, exists, like, or, sql } from 'drizzle-orm';
+import { Hono } from 'hono';
+import { z } from 'zod';
+import { db } from '../lib/auth';
+import { generatePresignedUploadUrl, isS3Configured } from '../lib/s3';
+import { requireAuth, requireTenant } from '../middleware/auth';
 
 // Validation schemas
 const searchQuerySchema = z.object({
@@ -44,16 +44,27 @@ const updateNotesSchema = z.object({
 // Payment schedule validation schemas
 const createPaymentScheduleItemSchema = z.object({
 	description: z.string().min(1),
-	amount: z.string().or(z.number()).transform((val) => String(val)),
+	amount: z
+		.string()
+		.or(z.number())
+		.transform((val) => String(val)),
 	dueDate: z.string().datetime().nullable().optional(),
 	notes: z.string().optional(),
 });
 
 const updatePaymentScheduleItemSchema = z.object({
 	description: z.string().min(1).optional(),
-	amount: z.string().or(z.number()).transform((val) => String(val)).optional(),
+	amount: z
+		.string()
+		.or(z.number())
+		.transform((val) => String(val))
+		.optional(),
 	dueDate: z.string().datetime().nullable().optional(),
-	paidAmount: z.string().or(z.number()).transform((val) => String(val)).optional(),
+	paidAmount: z
+		.string()
+		.or(z.number())
+		.transform((val) => String(val))
+		.optional(),
 	paidAt: z.string().datetime().nullable().optional(),
 	paymentMethod: z.string().nullable().optional(),
 	notes: z.string().nullable().optional(),
@@ -89,7 +100,7 @@ const confirmAttachmentSchema = z.object({
 
 // Compute deposit status from payment schedule items
 export function computeDepositStatus(
-	paymentItems: { description: string; amount: string; paidAmount: string; sortOrder: number }[]
+	paymentItems: { description: string; amount: string; paidAmount: string; sortOrder: number }[],
 ): string {
 	if (paymentItems.length === 0) return 'no_deposit_required';
 
@@ -110,19 +121,33 @@ export function computeDepositStatus(
 
 // Type-aware status sequences
 const STATUS_SEQUENCES: Record<string, string[]> = {
-	new_memorial: ['pending', 'materials_ordered', 'in_production', 'ready_for_install', 'installed', 'completed'],
-	additional_inscription: ['pending', 'in_production', 'ready_for_install', 'installed', 'completed'],
+	new_memorial: [
+		'pending',
+		'materials_ordered',
+		'in_production',
+		'ready_for_install',
+		'installed',
+		'completed',
+	],
+	additional_inscription: [
+		'pending',
+		'in_production',
+		'ready_for_install',
+		'installed',
+		'completed',
+	],
 	refurbishment: ['pending', 'in_production', 'ready_for_install', 'installed', 'completed'],
 	ashes: ['pending', 'ready_for_install', 'installed', 'completed'],
 	sundry_only: ['pending', 'ready_for_install', 'completed'],
 };
 
 // Default full sequence for backward compatibility
-const DEFAULT_SEQUENCE = STATUS_SEQUENCES['new_memorial'];
+const DEFAULT_SEQUENCE = STATUS_SEQUENCES.new_memorial;
 
 // Get allowed next statuses for a given current status and quote type
 function getAllowedTransitions(currentStatus: string, quoteType?: string): string[] {
-	const sequence = quoteType && STATUS_SEQUENCES[quoteType] ? STATUS_SEQUENCES[quoteType] : DEFAULT_SEQUENCE;
+	const sequence =
+		quoteType && STATUS_SEQUENCES[quoteType] ? STATUS_SEQUENCES[quoteType] : DEFAULT_SEQUENCE;
 	const currentIndex = sequence.indexOf(currentStatus);
 	if (currentIndex === -1 || currentIndex >= sequence.length - 1) return [];
 	return [sequence[currentIndex + 1]];
@@ -140,44 +165,51 @@ async function getJobWithQuoteSummary(jobId: string, tenantId: string) {
 	if (!job) return null;
 
 	// Get quote with customer, product, and service info
-	const [quote] = await db
-		.select()
-		.from(quotes)
-		.where(eq(quotes.id, job.quoteId))
-		.limit(1);
+	const [quote] = await db.select().from(quotes).where(eq(quotes.id, job.quoteId)).limit(1);
 
 	if (!quote) return null;
 
 	// Get all quote details in parallel
-	const [customer, product, components, lettering, sundries, lineItems] =
-		await Promise.all([
-			// Customer
-			quote.customerId
-				? db
-						.select()
-						.from(customers)
-						.where(eq(customers.id, quote.customerId))
-						.limit(1)
-						.then((r) => r[0] || null)
-				: Promise.resolve(null),
-			// Product
-			quote.productId
-				? db
-						.select()
-						.from(products)
-						.where(eq(products.id, quote.productId))
-						.limit(1)
-						.then((r) => r[0] || null)
-				: Promise.resolve(null),
-			// Components
-			db.select().from(quoteComponents).where(eq(quoteComponents.quoteId, quote.id)),
-			// Lettering
-			db.select().from(quoteLettering).where(eq(quoteLettering.quoteId, quote.id)),
-			// Sundries
-			db.select().from(quoteSundries).where(eq(quoteSundries.quoteId, quote.id)),
-			// Line Items
-			db.select().from(quoteLineItems).where(eq(quoteLineItems.quoteId, quote.id)),
-		]);
+	const [customer, product, components, lettering, sundries, lineItems] = await Promise.all([
+		// Customer
+		quote.customerId
+			? db
+					.select()
+					.from(customers)
+					.where(eq(customers.id, quote.customerId))
+					.limit(1)
+					.then((r) => r[0] || null)
+			: Promise.resolve(null),
+		// Product
+		quote.productId
+			? db
+					.select()
+					.from(products)
+					.where(eq(products.id, quote.productId))
+					.limit(1)
+					.then((r) => r[0] || null)
+			: Promise.resolve(null),
+		// Components
+		db
+			.select()
+			.from(quoteComponents)
+			.where(eq(quoteComponents.quoteId, quote.id)),
+		// Lettering
+		db
+			.select()
+			.from(quoteLettering)
+			.where(eq(quoteLettering.quoteId, quote.id)),
+		// Sundries
+		db
+			.select()
+			.from(quoteSundries)
+			.where(eq(quoteSundries.quoteId, quote.id)),
+		// Line Items
+		db
+			.select()
+			.from(quoteLineItems)
+			.where(eq(quoteLineItems.quoteId, quote.id)),
+	]);
 
 	return {
 		...job,
@@ -284,12 +316,15 @@ export const jobsRouter = new Hono()
 									or(
 										like(customers.firstName, searchPattern),
 										like(customers.lastName, searchPattern),
-										like(sql`${customers.firstName} || ' ' || ${customers.lastName}`, searchPattern)
-									)
-								)
-							)
-					)
-				)!
+										like(
+											sql`${customers.firstName} || ' ' || ${customers.lastName}`,
+											searchPattern,
+										),
+									),
+								),
+							),
+					),
+				)!,
 			);
 		}
 
@@ -313,11 +348,7 @@ export const jobsRouter = new Hono()
 		// Get quote summaries and payment status for each job
 		const jobsWithSummaries = await Promise.all(
 			jobsList.map(async (job) => {
-				const [quote] = await db
-					.select()
-					.from(quotes)
-					.where(eq(quotes.id, job.quoteId))
-					.limit(1);
+				const [quote] = await db.select().from(quotes).where(eq(quotes.id, job.quoteId)).limit(1);
 
 				if (!quote) {
 					return {
@@ -353,12 +384,15 @@ export const jobsRouter = new Hono()
 				let paymentSummary = null;
 				if (paymentItems.length > 0) {
 					const totalAmount = paymentItems.reduce((sum, item) => sum + parseFloat(item.amount), 0);
-					const paidAmount = paymentItems.reduce((sum, item) => sum + parseFloat(item.paidAmount), 0);
+					const paidAmount = paymentItems.reduce(
+						(sum, item) => sum + parseFloat(item.paidAmount),
+						0,
+					);
 					const hasOverdue = paymentItems.some(
 						(item) =>
 							item.dueDate &&
 							new Date(item.dueDate) < new Date() &&
-							parseFloat(item.paidAmount) < parseFloat(item.amount)
+							parseFloat(item.paidAmount) < parseFloat(item.amount),
 					);
 					paymentSummary = {
 						totalAmount: totalAmount.toFixed(2),
@@ -378,7 +412,7 @@ export const jobsRouter = new Hono()
 					paymentSummary,
 					depositStatus,
 				};
-			})
+			}),
 		);
 
 		return c.json({
@@ -449,12 +483,12 @@ export const jobsRouter = new Hono()
 				{
 					error: `Cannot transition from '${job.status}' to '${newStatus}'. Allowed: ${allowedTransitions.join(', ') || 'none'}`,
 				},
-				400
+				400,
 			);
 		}
 
 		// Update job status
-		const [updatedJob] = await db
+		const [_updatedJob] = await db
 			.update(jobs)
 			.set({
 				status: newStatus,
@@ -509,7 +543,7 @@ export const jobsRouter = new Hono()
 				jobStartDate: z.string().datetime().nullable().optional(),
 				ashesDate: z.string().datetime().nullable().optional(),
 				installationDate: z.string().datetime().nullable().optional(),
-			})
+			}),
 		),
 		async (c) => {
 			const currentUser = c.get('user');
@@ -549,7 +583,7 @@ export const jobsRouter = new Hono()
 
 			const jobWithSummary = await getJobWithQuoteSummary(id, tenantId);
 			return c.json({ job: jobWithSummary });
-		}
+		},
 	)
 
 	// ============================================
@@ -563,7 +597,7 @@ export const jobsRouter = new Hono()
 			'json',
 			z.object({
 				invoiceNumber: z.string().optional(),
-			})
+			}),
 		),
 		async (c) => {
 			const currentUser = c.get('user');
@@ -593,7 +627,7 @@ export const jobsRouter = new Hono()
 
 			const jobWithSummary = await getJobWithQuoteSummary(id, tenantId);
 			return c.json({ job: jobWithSummary });
-		}
+		},
 	)
 
 	// Manual override of account status
@@ -603,7 +637,7 @@ export const jobsRouter = new Hono()
 			'json',
 			z.object({
 				accountStatus: z.enum(ACCOUNT_STATUSES),
-			})
+			}),
 		),
 		async (c) => {
 			const currentUser = c.get('user');
@@ -631,7 +665,7 @@ export const jobsRouter = new Hono()
 
 			const jobWithSummary = await getJobWithQuoteSummary(id, tenantId);
 			return c.json({ job: jobWithSummary });
-		}
+		},
 	)
 
 	// Recalculate account status from payment schedule
@@ -671,7 +705,7 @@ export const jobsRouter = new Hono()
 					(item) =>
 						item.dueDate &&
 						new Date(item.dueDate) < new Date() &&
-						parseFloat(item.paidAmount) < parseFloat(item.amount)
+						parseFloat(item.paidAmount) < parseFloat(item.amount),
 				)
 			) {
 				accountStatus = 'overdue';
@@ -706,7 +740,7 @@ export const jobsRouter = new Hono()
 			z.object({
 				reviewOutcome: z.enum(REVIEW_OUTCOMES),
 				reviewNotes: z.string().optional(),
-			})
+			}),
 		),
 		async (c) => {
 			const currentUser = c.get('user');
@@ -737,7 +771,7 @@ export const jobsRouter = new Hono()
 
 			const jobWithSummary = await getJobWithQuoteSummary(id, tenantId);
 			return c.json({ job: jobWithSummary });
-		}
+		},
 	)
 
 	// Delete job (only if pending)
@@ -801,7 +835,7 @@ export const jobsRouter = new Hono()
 			(item) =>
 				item.dueDate &&
 				new Date(item.dueDate) < new Date() &&
-				parseFloat(item.paidAmount) < parseFloat(item.amount)
+				parseFloat(item.paidAmount) < parseFloat(item.amount),
 		);
 
 		return c.json({
@@ -883,10 +917,7 @@ export const jobsRouter = new Hono()
 				.select()
 				.from(jobPaymentScheduleItems)
 				.where(
-					and(
-						eq(jobPaymentScheduleItems.id, itemId),
-						eq(jobPaymentScheduleItems.jobId, jobId)
-					)
+					and(eq(jobPaymentScheduleItems.id, itemId), eq(jobPaymentScheduleItems.jobId, jobId)),
 				)
 				.limit(1);
 
@@ -902,8 +933,7 @@ export const jobsRouter = new Hono()
 			if (data.dueDate !== undefined)
 				updateData.dueDate = data.dueDate ? new Date(data.dueDate) : null;
 			if (data.paidAmount !== undefined) updateData.paidAmount = data.paidAmount;
-			if (data.paidAt !== undefined)
-				updateData.paidAt = data.paidAt ? new Date(data.paidAt) : null;
+			if (data.paidAt !== undefined) updateData.paidAt = data.paidAt ? new Date(data.paidAt) : null;
 			if (data.paymentMethod !== undefined) updateData.paymentMethod = data.paymentMethod;
 			if (data.notes !== undefined) updateData.notes = data.notes;
 
@@ -914,7 +944,7 @@ export const jobsRouter = new Hono()
 				.returning();
 
 			return c.json({ paymentScheduleItem: updated });
-		}
+		},
 	)
 
 	// Delete payment schedule item
@@ -939,9 +969,7 @@ export const jobsRouter = new Hono()
 		const [existingItem] = await db
 			.select()
 			.from(jobPaymentScheduleItems)
-			.where(
-				and(eq(jobPaymentScheduleItems.id, itemId), eq(jobPaymentScheduleItems.jobId, jobId))
-			)
+			.where(and(eq(jobPaymentScheduleItems.id, itemId), eq(jobPaymentScheduleItems.jobId, jobId)))
 			.limit(1);
 
 		if (!existingItem) {
@@ -1016,11 +1044,7 @@ export const jobsRouter = new Hono()
 		}
 
 		// Get quote for auto-population
-		const [quote] = await db
-			.select()
-			.from(quotes)
-			.where(eq(quotes.id, job.quoteId))
-			.limit(1);
+		const [quote] = await db.select().from(quotes).where(eq(quotes.id, job.quoteId)).limit(1);
 
 		let deceasedName = '';
 		let cemeteryChurchyard = '';
@@ -1108,7 +1132,7 @@ export const jobsRouter = new Hono()
 				existingDescription: z.string().optional(),
 				requirements: z.string().optional(),
 				inscription: z.string().optional(),
-			})
+			}),
 		),
 		async (c) => {
 			const currentUser = c.get('user');
@@ -1156,7 +1180,7 @@ export const jobsRouter = new Hono()
 				.returning();
 
 			return c.json({ worksheet: { ...updated, jobNumber: job.jobNumber } });
-		}
+		},
 	)
 
 	// ============================================
@@ -1167,10 +1191,7 @@ export const jobsRouter = new Hono()
 	.post('/:id/attachments/presign', zValidator('json', presignAttachmentSchema), async (c) => {
 		// Check if S3 is configured
 		if (!isS3Configured()) {
-			return c.json(
-				{ error: 'File storage is not configured.' },
-				503
-			);
+			return c.json({ error: 'File storage is not configured.' }, 503);
 		}
 
 		const currentUser = c.get('user');
@@ -1320,12 +1341,7 @@ export const jobsRouter = new Hono()
 		const [existingAttachment] = await db
 			.select()
 			.from(jobAttachments)
-			.where(
-				and(
-					eq(jobAttachments.id, attachmentId),
-					eq(jobAttachments.jobId, jobId)
-				)
-			)
+			.where(and(eq(jobAttachments.id, attachmentId), eq(jobAttachments.jobId, jobId)))
 			.limit(1);
 
 		if (!existingAttachment) {

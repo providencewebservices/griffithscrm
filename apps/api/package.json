@@ -1,31 +1,31 @@
 {
-  "name": "@griffiths-crm/api",
-  "version": "0.0.1",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "dev": "bun run --env-file ../../.env --hot src/index.ts",
-    "build": "bun build src/index.ts --outdir dist --target bun",
-    "start": "bun run dist/index.js"
-  },
-  "dependencies": {
-    "@aws-sdk/client-s3": "^3.952.0",
-    "@aws-sdk/s3-request-presigner": "^3.952.0",
-    "@griffiths-crm/shared": "workspace:*",
-    "@hono/zod-validator": "^0.4.2",
-    "better-auth": "^1.4.0",
-    "drizzle-orm": "latest",
-    "googleapis": "^171.4.0",
-    "hono": "^4.10.7",
-    "nodemailer": "^7.0.11",
-    "papaparse": "^5.5.3",
-    "postgres": "^3.4.5",
-    "zod": "^3.24.1"
-  },
-  "devDependencies": {
-    "@faker-js/faker": "^10.2.0",
-    "@types/bun": "latest",
-    "@types/nodemailer": "^7.0.4",
-    "@types/papaparse": "^5.5.2"
-  }
+	"name": "@griffiths-crm/api",
+	"version": "0.0.1",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "bun run --env-file ../../.env --hot src/index.ts",
+		"build": "bun build src/index.ts --outdir dist --target bun",
+		"start": "bun run dist/index.js"
+	},
+	"dependencies": {
+		"@aws-sdk/client-s3": "^3.952.0",
+		"@aws-sdk/s3-request-presigner": "^3.952.0",
+		"@griffiths-crm/shared": "workspace:*",
+		"@hono/zod-validator": "^0.4.2",
+		"better-auth": "^1.4.0",
+		"drizzle-orm": "latest",
+		"googleapis": "^171.4.0",
+		"hono": "^4.10.7",
+		"nodemailer": "^7.0.11",
+		"papaparse": "^5.5.3",
+		"postgres": "^3.4.5",
+		"zod": "^3.24.1"
+	},
+	"devDependencies": {
+		"@faker-js/faker": "^10.2.0",
+		"@types/bun": "latest",
+		"@types/nodemailer": "^7.0.4",
+		"@types/papaparse": "^5.5.2"
+	}
 }

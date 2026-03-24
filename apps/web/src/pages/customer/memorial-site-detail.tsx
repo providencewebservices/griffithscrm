@@ -1,14 +1,22 @@
-import { useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from '@/components/ui/card';
+	ArrowLeft,
+	Building,
+	Building2,
+	Church,
+	Clock,
+	CreditCard,
+	FileText,
+	Flame,
+	Mail,
+	MapPin,
+	Phone,
+} from 'lucide-react';
+import { useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router';
+import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
+import { DocumentsCard } from '@/components/documents';
+import { EmailThreadsCard } from '@/components/inbox/email-threads-card';
+import { Badge } from '@/components/ui/badge';
 import {
 	Breadcrumb,
 	BreadcrumbItem,
@@ -17,6 +25,9 @@ import {
 	BreadcrumbPage,
 	BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
 import {
 	Table,
 	TableBody,
@@ -26,32 +37,15 @@ import {
 	TableRow,
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Separator } from '@/components/ui/separator';
-import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
 import {
-	useMemorialSiteQuery,
-	useArchiveMemorialSiteMutation,
-	useUnarchiveMemorialSiteMutation,
-	SITE_TYPE_LABELS,
-	PAYMENT_METHOD_LABELS,
 	type MemorialSitePaymentMethod,
+	PAYMENT_METHOD_LABELS,
+	SITE_TYPE_LABELS,
+	useArchiveMemorialSiteMutation,
+	useMemorialSiteQuery,
+	useUnarchiveMemorialSiteMutation,
 } from '@/hooks/use-memorial-sites';
-import { useQuotesQuery, formatPriceRange, formatQuoteNumberWithOptions } from '@/hooks/use-quotes';
-import {
-	Mail,
-	Phone,
-	MapPin,
-	ArrowLeft,
-	Church,
-	Flame,
-	Building2,
-	Building,
-	CreditCard,
-	Clock,
-	FileText,
-} from 'lucide-react';
-import { DocumentsCard } from '@/components/documents';
-import { EmailThreadsCard } from '@/components/inbox/email-threads-card';
+import { formatPriceRange, formatQuoteNumberWithOptions, useQuotesQuery } from '@/hooks/use-quotes';
 
 export function MemorialSiteDetailPage() {
 	const { id } = useParams<{ id: string }>();
@@ -64,7 +58,7 @@ export function MemorialSiteDetailPage() {
 	const archiveMutation = useArchiveMemorialSiteMutation();
 	const unarchiveMutation = useUnarchiveMemorialSiteMutation();
 	const { data: siteQuotes, isLoading: quotesLoading } = useQuotesQuery(
-		id ? { memorialSiteId: id } : undefined
+		id ? { memorialSiteId: id } : undefined,
 	);
 
 	const handleArchive = () => {
@@ -90,9 +84,7 @@ export function MemorialSiteDetailPage() {
 		try {
 			await unarchiveMutation.mutateAsync(id);
 		} catch (err) {
-			setMutationError(
-				err instanceof Error ? err.message : 'Failed to restore memorial site'
-			);
+			setMutationError(err instanceof Error ? err.message : 'Failed to restore memorial site');
 		}
 	};
 
@@ -114,15 +106,9 @@ export function MemorialSiteDetailPage() {
 					<h2 className="text-2xl font-bold">Memorial Site Details</h2>
 				</div>
 				<div className="text-destructive">
-					{error
-						? `Error loading memorial site: ${error.message}`
-						: 'Memorial site not found'}
+					{error ? `Error loading memorial site: ${error.message}` : 'Memorial site not found'}
 				</div>
-				<Button
-					variant="outline"
-					className="mt-4"
-					onClick={() => navigate('/app/memorial-sites')}
-				>
+				<Button variant="outline" className="mt-4" onClick={() => navigate('/app/memorial-sites')}>
 					<ArrowLeft className="h-4 w-4 mr-2" />
 					Back to Memorial Sites
 				</Button>
@@ -130,8 +116,7 @@ export function MemorialSiteDetailPage() {
 		);
 	}
 
-	const getEmailContacts = () =>
-		site.contactInfo.filter((c) => c.type === 'email');
+	const getEmailContacts = () => site.contactInfo.filter((c) => c.type === 'email');
 	const getPhoneContacts = () =>
 		site.contactInfo.filter((c) => c.type === 'phone' || c.type === 'mobile');
 
@@ -194,16 +179,11 @@ export function MemorialSiteDetailPage() {
 				<div>
 					<div className="flex items-center gap-3">
 						<h2 className="text-2xl font-bold">{site.name}</h2>
-						<Badge
-							variant={getBadgeVariant()}
-							className="gap-1"
-						>
+						<Badge variant={getBadgeVariant()} className="gap-1">
 							{getSiteTypeIcon()}
 							{SITE_TYPE_LABELS[site.siteType]}
 						</Badge>
-						{site.archivedAt ? (
-							<Badge variant="secondary">Archived</Badge>
-						) : null}
+						{site.archivedAt ? <Badge variant="secondary">Archived</Badge> : null}
 					</div>
 					<p className="text-muted-foreground mt-1">Added {formatDate(site.createdAt)}</p>
 				</div>
@@ -276,8 +256,7 @@ export function MemorialSiteDetailPage() {
 										<TableCell>{formatDate(quote.createdAt)}</TableCell>
 										<TableCell>
 											<Badge variant={getStatusVariant(quote.status)}>
-												{quote.status.charAt(0).toUpperCase() +
-													quote.status.slice(1)}
+												{quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}
 											</Badge>
 										</TableCell>
 										<TableCell className="text-right">
@@ -311,9 +290,7 @@ export function MemorialSiteDetailPage() {
 								Email Addresses
 							</h4>
 							{getEmailContacts().length === 0 ? (
-								<p className="text-sm text-muted-foreground">
-									No email addresses
-								</p>
+								<p className="text-sm text-muted-foreground">No email addresses</p>
 							) : (
 								<div className="space-y-2">
 									{getEmailContacts().map((contact) => (
@@ -322,9 +299,7 @@ export function MemorialSiteDetailPage() {
 												{contact.value}
 											</a>
 											{contact.label && (
-												<span className="text-xs text-muted-foreground">
-													({contact.label})
-												</span>
+												<span className="text-xs text-muted-foreground">({contact.label})</span>
 											)}
 											{contact.isPrimary && (
 												<Badge variant="secondary" className="text-xs">
@@ -354,9 +329,7 @@ export function MemorialSiteDetailPage() {
 												{contact.value}
 											</a>
 											{contact.label && (
-												<span className="text-xs text-muted-foreground">
-													({contact.label})
-												</span>
+												<span className="text-xs text-muted-foreground">({contact.label})</span>
 											)}
 											{contact.isPrimary && (
 												<Badge variant="secondary" className="text-xs">
@@ -388,9 +361,7 @@ export function MemorialSiteDetailPage() {
 											<p>{address.formattedAddress}</p>
 											<div className="flex items-center gap-2 mt-1">
 												{address.label && (
-													<span className="text-xs text-muted-foreground">
-														({address.label})
-													</span>
+													<span className="text-xs text-muted-foreground">({address.label})</span>
 												)}
 												{address.isPrimary && (
 													<Badge variant="secondary" className="text-xs">
@@ -419,8 +390,12 @@ export function MemorialSiteDetailPage() {
 					<CardContent className="space-y-3">
 						{site.preferredPaymentMethod && (
 							<div>
-								<h4 className="text-sm font-medium text-muted-foreground">Preferred Payment Method</h4>
-								<p>{PAYMENT_METHOD_LABELS[site.preferredPaymentMethod as MemorialSitePaymentMethod]}</p>
+								<h4 className="text-sm font-medium text-muted-foreground">
+									Preferred Payment Method
+								</h4>
+								<p>
+									{PAYMENT_METHOD_LABELS[site.preferredPaymentMethod as MemorialSitePaymentMethod]}
+								</p>
 							</div>
 						)}
 						{site.paymentDetails && (

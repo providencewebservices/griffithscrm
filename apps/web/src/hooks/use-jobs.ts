@@ -1,5 +1,5 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { JOB_STATUSES, ACCOUNT_STATUSES, REVIEW_OUTCOMES } from '@griffiths-crm/shared/db/schema';
+import { ACCOUNT_STATUSES, JOB_STATUSES, REVIEW_OUTCOMES } from '@griffiths-crm/shared/db/schema';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -298,7 +298,7 @@ async function fetchPaymentSchedule(jobId: string): Promise<PaymentScheduleRespo
 
 async function createPaymentScheduleItem(
 	jobId: string,
-	input: CreatePaymentScheduleItemInput
+	input: CreatePaymentScheduleItemInput,
 ): Promise<PaymentScheduleItem> {
 	const response = await fetch(`${API_URL}/api/jobs/${jobId}/payment-schedule`, {
 		method: 'POST',
@@ -319,7 +319,7 @@ async function createPaymentScheduleItem(
 async function updatePaymentScheduleItem(
 	jobId: string,
 	itemId: string,
-	input: UpdatePaymentScheduleItemInput
+	input: UpdatePaymentScheduleItemInput,
 ): Promise<PaymentScheduleItem> {
 	const response = await fetch(`${API_URL}/api/jobs/${jobId}/payment-schedule/${itemId}`, {
 		method: 'PUT',
@@ -705,7 +705,7 @@ async function fetchAttachments(jobId: string): Promise<JobAttachment[]> {
 
 async function presignAttachment(
 	jobId: string,
-	input: PresignAttachmentInput
+	input: PresignAttachmentInput,
 ): Promise<PresignAttachmentResponse> {
 	const response = await fetch(`${API_URL}/api/jobs/${jobId}/attachments/presign`, {
 		method: 'POST',
@@ -724,7 +724,7 @@ async function presignAttachment(
 
 async function confirmAttachment(
 	jobId: string,
-	input: ConfirmAttachmentInput
+	input: ConfirmAttachmentInput,
 ): Promise<JobAttachment> {
 	const response = await fetch(`${API_URL}/api/jobs/${jobId}/attachments`, {
 		method: 'POST',
@@ -872,7 +872,7 @@ export function formatJobStatus(status: JobStatus): string {
 
 // Helper: Get status color for badges
 export function getJobStatusVariant(
-	status: JobStatus
+	status: JobStatus,
 ): 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning' {
 	switch (status) {
 		case 'pending':
@@ -904,14 +904,27 @@ export function getJobStatusClassName(status: JobStatus): string {
 
 // Type-aware status sequences
 export const JOB_STATUS_SEQUENCES: Record<string, JobStatus[]> = {
-	new_memorial: ['pending', 'materials_ordered', 'in_production', 'ready_for_install', 'installed', 'completed'],
-	additional_inscription: ['pending', 'in_production', 'ready_for_install', 'installed', 'completed'],
+	new_memorial: [
+		'pending',
+		'materials_ordered',
+		'in_production',
+		'ready_for_install',
+		'installed',
+		'completed',
+	],
+	additional_inscription: [
+		'pending',
+		'in_production',
+		'ready_for_install',
+		'installed',
+		'completed',
+	],
 	refurbishment: ['pending', 'in_production', 'ready_for_install', 'installed', 'completed'],
 	ashes: ['pending', 'ready_for_install', 'installed', 'completed'],
 	sundry_only: ['pending', 'ready_for_install', 'completed'],
 };
 
-const DEFAULT_SEQUENCE: JobStatus[] = JOB_STATUS_SEQUENCES['new_memorial'];
+const DEFAULT_SEQUENCE: JobStatus[] = JOB_STATUS_SEQUENCES.new_memorial;
 
 // Get the status sequence for a given quote type
 export function getJobStatusSequence(quoteType?: string): JobStatus[] {
@@ -927,7 +940,14 @@ export function getNextJobStatus(currentStatus: JobStatus, quoteType?: string): 
 	const currentIndex = sequence.indexOf(currentStatus);
 	// If current status isn't in the sequence, find nearest subsequent status
 	if (currentIndex === -1) {
-		const allStatuses: JobStatus[] = ['pending', 'materials_ordered', 'in_production', 'ready_for_install', 'installed', 'completed'];
+		const allStatuses: JobStatus[] = [
+			'pending',
+			'materials_ordered',
+			'in_production',
+			'ready_for_install',
+			'installed',
+			'completed',
+		];
 		const currentGlobalIndex = allStatuses.indexOf(currentStatus);
 		for (let i = currentGlobalIndex + 1; i < allStatuses.length; i++) {
 			if (sequence.includes(allStatuses[i])) {
@@ -985,9 +1005,12 @@ const STATUS_BUTTON_LABELS: Record<string, Record<JobStatus, string | null>> = {
 };
 
 // Helper: Get button label for next status (type-aware)
-export function getNextStatusButtonLabel(currentStatus: JobStatus, quoteType?: string): string | null {
-	const labels = (quoteType && STATUS_BUTTON_LABELS[quoteType]) || STATUS_BUTTON_LABELS['default'];
-	return labels[currentStatus] ?? STATUS_BUTTON_LABELS['default'][currentStatus] ?? null;
+export function getNextStatusButtonLabel(
+	currentStatus: JobStatus,
+	quoteType?: string,
+): string | null {
+	const labels = (quoteType && STATUS_BUTTON_LABELS[quoteType]) || STATUS_BUTTON_LABELS.default;
+	return labels[currentStatus] ?? STATUS_BUTTON_LABELS.default[currentStatus] ?? null;
 }
 
 // Helper: Format account status for display
@@ -1013,7 +1036,6 @@ export function getAccountStatusColor(status: string | null): string {
 			return 'bg-green-100 text-green-800';
 		case 'overdue':
 			return 'bg-red-100 text-red-800';
-		case 'not_invoiced':
 		default:
 			return 'bg-gray-100 text-gray-800';
 	}
@@ -1039,7 +1061,6 @@ export function getDepositStatusColor(status: string | null): string {
 			return 'bg-yellow-100 text-yellow-800';
 		case 'awaiting_deposit':
 			return 'bg-orange-100 text-orange-800';
-		case 'no_deposit_required':
 		default:
 			return 'bg-gray-100 text-gray-800';
 	}

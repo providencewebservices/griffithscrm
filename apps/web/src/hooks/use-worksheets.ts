@@ -1,5 +1,5 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { WORKSHEET_STATUSES } from '@griffiths-crm/shared/db/schema';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -96,7 +96,9 @@ async function fetchWorksheets(params?: WorksheetSearchParams): Promise<Workshee
 	return data.worksheets;
 }
 
-async function fetchWorksheet(id: string): Promise<{ worksheet: WorksheetDetail; tasks: WorksheetTask[] }> {
+async function fetchWorksheet(
+	id: string,
+): Promise<{ worksheet: WorksheetDetail; tasks: WorksheetTask[] }> {
 	const response = await fetch(`${API_URL}/api/worksheets/${id}`, { credentials: 'include' });
 
 	if (!response.ok) {
@@ -124,7 +126,10 @@ async function createWorksheet(input: CreateWorksheetInput): Promise<WorksheetDe
 	return data.worksheet;
 }
 
-async function updateWorksheet({ id, ...input }: UpdateWorksheetInput & { id: string }): Promise<WorksheetDetail> {
+async function updateWorksheet({
+	id,
+	...input
+}: UpdateWorksheetInput & { id: string }): Promise<WorksheetDetail> {
 	const response = await fetch(`${API_URL}/api/worksheets/${id}`, {
 		method: 'PUT',
 		headers: { 'Content-Type': 'application/json' },
@@ -141,7 +146,13 @@ async function updateWorksheet({ id, ...input }: UpdateWorksheetInput & { id: st
 	return data.worksheet;
 }
 
-async function updateWorksheetStatus({ id, status }: { id: string; status: WorksheetStatus }): Promise<WorksheetDetail> {
+async function updateWorksheetStatus({
+	id,
+	status,
+}: {
+	id: string;
+	status: WorksheetStatus;
+}): Promise<WorksheetDetail> {
 	const response = await fetch(`${API_URL}/api/worksheets/${id}/status`, {
 		method: 'PUT',
 		headers: { 'Content-Type': 'application/json' },
@@ -170,7 +181,13 @@ async function archiveWorksheet(id: string): Promise<void> {
 	}
 }
 
-async function addTasksToWorksheet({ id, taskIds }: { id: string; taskIds: string[] }): Promise<void> {
+async function addTasksToWorksheet({
+	id,
+	taskIds,
+}: {
+	id: string;
+	taskIds: string[];
+}): Promise<void> {
 	const response = await fetch(`${API_URL}/api/worksheets/${id}/tasks`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
@@ -184,7 +201,13 @@ async function addTasksToWorksheet({ id, taskIds }: { id: string; taskIds: strin
 	}
 }
 
-async function removeTaskFromWorksheet({ id, taskId }: { id: string; taskId: string }): Promise<void> {
+async function removeTaskFromWorksheet({
+	id,
+	taskId,
+}: {
+	id: string;
+	taskId: string;
+}): Promise<void> {
 	const response = await fetch(`${API_URL}/api/worksheets/${id}/tasks/${taskId}`, {
 		method: 'DELETE',
 		credentials: 'include',
@@ -196,7 +219,13 @@ async function removeTaskFromWorksheet({ id, taskId }: { id: string; taskId: str
 	}
 }
 
-async function reorderWorksheetTasks({ id, taskIds }: { id: string; taskIds: string[] }): Promise<void> {
+async function reorderWorksheetTasks({
+	id,
+	taskIds,
+}: {
+	id: string;
+	taskIds: string[];
+}): Promise<void> {
 	const response = await fetch(`${API_URL}/api/worksheets/${id}/reorder`, {
 		method: 'PUT',
 		headers: { 'Content-Type': 'application/json' },
@@ -320,12 +349,18 @@ export function formatWorksheetStatus(status: WorksheetStatus): string {
 	return labels[status] || status;
 }
 
-export function getWorksheetStatusVariant(status: WorksheetStatus): 'default' | 'secondary' | 'outline' {
+export function getWorksheetStatusVariant(
+	status: WorksheetStatus,
+): 'default' | 'secondary' | 'outline' {
 	switch (status) {
-		case 'draft': return 'secondary';
-		case 'active': return 'default';
-		case 'completed': return 'outline';
-		default: return 'secondary';
+		case 'draft':
+			return 'secondary';
+		case 'active':
+			return 'default';
+		case 'completed':
+			return 'outline';
+		default:
+			return 'secondary';
 	}
 }
 

@@ -1,15 +1,11 @@
-import { useState, useEffect } from 'react';
+import { LayoutGrid, List, Mail, MapPin, Phone, Plus, Search, Truck, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
-import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Pagination, usePagination } from '@/components/ui/pagination';
 import {
 	Select,
 	SelectContent,
@@ -18,17 +14,15 @@ import {
 	SelectValue,
 } from '@/components/ui/select';
 import {
-	Card,
-	CardContent,
-	CardHeader,
-	CardTitle,
-	CardDescription,
-} from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Pagination, usePagination } from '@/components/ui/pagination';
-import { useSuppliersQuery, type SupplierListItem } from '@/hooks/use-suppliers';
-import { getInitials, getAvatarColor } from '@/lib/avatar-utils';
-import { Search, List, LayoutGrid, Phone, MapPin, Mail, X, Plus, Truck } from 'lucide-react';
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from '@/components/ui/table';
+import { type SupplierListItem, useSuppliersQuery } from '@/hooks/use-suppliers';
+import { getAvatarColor, getInitials } from '@/lib/avatar-utils';
 
 type ViewMode = 'active' | 'archived';
 type DisplayMode = 'table' | 'cards';
@@ -51,7 +45,11 @@ export function SuppliersPage() {
 		return () => clearTimeout(timer);
 	}, [searchQuery]);
 
-	const { data: suppliers, isLoading, error } = useSuppliersQuery({
+	const {
+		data: suppliers,
+		isLoading,
+		error,
+	} = useSuppliersQuery({
 		q: debouncedSearch || undefined,
 		archivedOnly: viewMode === 'archived',
 	});
@@ -69,9 +67,7 @@ export function SuppliersPage() {
 			<div>
 				<div className="mb-6">
 					<h2 className="text-2xl font-bold">Suppliers</h2>
-					<p className="text-muted-foreground mt-1">
-						Manage your material and product suppliers
-					</p>
+					<p className="text-muted-foreground mt-1">Manage your material and product suppliers</p>
 				</div>
 				<div className="text-muted-foreground">Loading suppliers...</div>
 			</div>
@@ -83,13 +79,9 @@ export function SuppliersPage() {
 			<div>
 				<div className="mb-6">
 					<h2 className="text-2xl font-bold">Suppliers</h2>
-					<p className="text-muted-foreground mt-1">
-						Manage your material and product suppliers
-					</p>
+					<p className="text-muted-foreground mt-1">Manage your material and product suppliers</p>
 				</div>
-				<div className="text-destructive">
-					Error loading suppliers: {error.message}
-				</div>
+				<div className="text-destructive">Error loading suppliers: {error.message}</div>
 			</div>
 		);
 	}
@@ -98,9 +90,7 @@ export function SuppliersPage() {
 		<div>
 			<div className="mb-6">
 				<h2 className="text-2xl font-bold">Suppliers</h2>
-				<p className="text-muted-foreground mt-1">
-					Manage your material and product suppliers
-				</p>
+				<p className="text-muted-foreground mt-1">Manage your material and product suppliers</p>
 			</div>
 
 			<div className="flex flex-col gap-3 mb-4">
@@ -245,21 +235,15 @@ export function SuppliersPage() {
 											)}
 										</TableCell>
 										<TableCell>
-											{supplier.accountNumber || (
-												<span className="text-muted-foreground">-</span>
-											)}
+											{supplier.accountNumber || <span className="text-muted-foreground">-</span>}
 										</TableCell>
 										<TableCell>
 											{supplier.primaryPhone?.value || (
 												<span className="text-muted-foreground">-</span>
 											)}
 										</TableCell>
-										<TableCell className="text-center">
-											{supplier.materialsCount}
-										</TableCell>
-										<TableCell className="text-center">
-											{supplier.sundriesCount}
-										</TableCell>
+										<TableCell className="text-center">{supplier.materialsCount}</TableCell>
+										<TableCell className="text-center">{supplier.sundriesCount}</TableCell>
 										<TableCell>
 											<Link to={`/app/suppliers/${supplier.id}`}>
 												<Button variant="ghost" size="sm">

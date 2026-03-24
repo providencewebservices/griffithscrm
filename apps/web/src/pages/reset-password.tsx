@@ -1,21 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
-import { authClient } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from '@/components/ui/card';
-import {
-	Field,
-	FieldGroup,
-	FieldLabel,
-	FieldError,
-} from '@/components/ui/field';
+import { authClient } from '@/lib/auth';
 
 export function ResetPasswordPage() {
 	const navigate = useNavigate();
@@ -67,7 +56,7 @@ export function ResetPasswordPage() {
 			} else {
 				navigate('/login', {
 					replace: true,
-					state: { message: 'Password set successfully. You can now sign in.' }
+					state: { message: 'Password set successfully. You can now sign in.' },
 				});
 			}
 		} catch (err) {
@@ -89,9 +78,7 @@ export function ResetPasswordPage() {
 					<CardContent>
 						<form onSubmit={handleSubmit}>
 							<FieldGroup>
-								{error && (
-									<FieldError>{error}</FieldError>
-								)}
+								{error && <FieldError>{error}</FieldError>}
 								<Field>
 									<FieldLabel htmlFor="password">New Password</FieldLabel>
 									<Input
@@ -124,7 +111,8 @@ export function ResetPasswordPage() {
 						</form>
 
 						<p className="mt-6 text-center text-sm text-muted-foreground">
-							After setting your password, you can sign in with Google or Microsoft on the login page.
+							After setting your password, you can sign in with Google or Microsoft on the login
+							page.
 						</p>
 					</CardContent>
 				</Card>

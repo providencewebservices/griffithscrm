@@ -1,23 +1,23 @@
 import {
-	startOfMonth,
-	endOfMonth,
-	startOfWeek,
-	endOfWeek,
-	eachDayOfInterval,
+	addDays,
 	addMonths,
 	addWeeks,
-	addDays,
+	isToday as dateFnsIsToday,
+	differenceInMinutes,
+	eachDayOfInterval,
+	endOfMonth,
+	endOfWeek,
+	format,
 	isSameDay,
 	isSameMonth,
-	isToday as dateFnsIsToday,
-	format,
+	parseISO,
 	setHours,
 	setMinutes,
-	differenceInMinutes,
 	startOfDay,
-	parseISO,
+	startOfMonth,
+	startOfWeek,
 } from 'date-fns';
-import type { CalendarView, CalendarEvent } from './types';
+import type { CalendarEvent, CalendarView } from './types';
 
 // Get all days to display in month view (includes days from prev/next months to fill grid)
 export function getMonthDays(date: Date): Date[] {
@@ -38,11 +38,7 @@ export function getWeekDays(date: Date): Date[] {
 }
 
 // Navigate by view unit
-export function navigateDate(
-	date: Date,
-	view: CalendarView,
-	delta: number
-): Date {
+export function navigateDate(date: Date, view: CalendarView, delta: number): Date {
 	switch (view) {
 		case 'month':
 			return addMonths(date, delta);
@@ -56,10 +52,7 @@ export function navigateDate(
 }
 
 // Get date range for API query based on view
-export function getDateRange(
-	date: Date,
-	view: CalendarView
-): { start: Date; end: Date } {
+export function getDateRange(date: Date, view: CalendarView): { start: Date; end: Date } {
 	switch (view) {
 		case 'month': {
 			const monthStart = startOfMonth(date);
@@ -86,10 +79,7 @@ export function getDateRange(
 }
 
 // Get events for a specific day
-export function getEventsForDay(
-	events: CalendarEvent[],
-	date: Date
-): CalendarEvent[] {
+export function getEventsForDay(events: CalendarEvent[], date: Date): CalendarEvent[] {
 	return events.filter((event) => {
 		const eventStart = parseISO(event.start);
 		const eventEnd = event.end ? parseISO(event.end) : eventStart;
@@ -111,7 +101,7 @@ export function getEventsForDay(
 // Returns top position and height based on time
 export function calculateEventPosition(
 	event: CalendarEvent,
-	hourHeight: number = 48 // Height of one hour slot in pixels
+	hourHeight: number = 48, // Height of one hour slot in pixels
 ): { top: number; height: number } {
 	const eventStart = parseISO(event.start);
 
@@ -145,8 +135,7 @@ function getLuminance(hex: string): number {
 	const g = parseInt(hex.slice(3, 5), 16) / 255;
 	const b = parseInt(hex.slice(5, 7), 16) / 255;
 
-	const toLinear = (c: number) =>
-		c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+	const toLinear = (c: number) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
 
 	return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
 }
@@ -163,21 +152,16 @@ export function getContrastTextColor(bgColor: string): string {
 
 // Calculate column layout for overlapping timed events
 export function calculateOverlapColumns(
-	events: CalendarEvent[]
+	events: CalendarEvent[],
 ): Map<string, { column: number; totalColumns: number }> {
-	const result = new Map<
-		string,
-		{ column: number; totalColumns: number }
-	>();
+	const result = new Map<string, { column: number; totalColumns: number }>();
 	if (events.length === 0) return result;
 
 	const parsed = events
 		.map((e) => ({
 			id: e.id,
 			start: parseISO(e.start).getTime(),
-			end: e.end
-				? parseISO(e.end).getTime()
-				: parseISO(e.start).getTime() + 3600000,
+			end: e.end ? parseISO(e.end).getTime() : parseISO(e.start).getTime() + 3600000,
 		}))
 		.sort((a, b) => {
 			if (a.start !== b.start) return a.start - b.start;
@@ -216,10 +200,7 @@ export function calculateOverlapColumns(
 
 	for (let i = 0; i < parsed.length; i++) {
 		for (let j = i + 1; j < parsed.length; j++) {
-			if (
-				parsed[i].end > parsed[j].start &&
-				parsed[j].end > parsed[i].start
-			) {
+			if (parsed[i].end > parsed[j].start && parsed[j].end > parsed[i].start) {
 				const ri = find(parsed[i].id);
 				const rj = find(parsed[j].id);
 				if (ri !== rj) parent.set(ri, rj);
@@ -231,13 +212,13 @@ export function calculateOverlapColumns(
 	for (const e of parsed) {
 		const root = find(e.id);
 		if (!groups.has(root)) groups.set(root, []);
-		groups.get(root)!.push(e.id);
+		groups.get(root)?.push(e.id);
 	}
 
 	for (const group of groups.values()) {
 		let maxCol = 0;
 		for (const id of group) {
-			maxCol = Math.max(maxCol, result.get(id)!.column);
+			maxCol = Math.max(maxCol, result.get(id)?.column);
 		}
 		for (const id of group) {
 			result.get(id)!.totalColumns = maxCol + 1;
@@ -287,9 +268,9 @@ export function formatDateRange(start: Date, end: Date | null): string {
 export function getUpcomingEvents(
 	events: CalendarEvent[],
 	currentDate: Date,
-	view: CalendarView
+	view: CalendarView,
 ): CalendarEvent[] {
-	const now = new Date();
+	const _now = new Date();
 	const today = startOfDay(currentDate);
 
 	let filtered: CalendarEvent[];
@@ -306,17 +287,22 @@ export function getUpcomingEvents(
 			filtered = events.filter((event) => {
 				const eventStart = parseISO(event.start);
 				// Include events from today onward (or from now if today)
-				return eventStart <= weekEnd && (eventStart >= today || (event.end && parseISO(event.end) >= today));
+				return (
+					eventStart <= weekEnd &&
+					(eventStart >= today || (event.end && parseISO(event.end) >= today))
+				);
 			});
 			break;
 		}
-		case 'month':
 		default: {
 			// Show today's events + upcoming events in the visible range
 			const range = getDateRange(currentDate, 'month');
 			filtered = events.filter((event) => {
 				const eventStart = parseISO(event.start);
-				return eventStart <= range.end && (eventStart >= today || (event.end && parseISO(event.end) >= today));
+				return (
+					eventStart <= range.end &&
+					(eventStart >= today || (event.end && parseISO(event.end) >= today))
+				);
 			});
 			break;
 		}

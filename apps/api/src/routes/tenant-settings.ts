@@ -1,11 +1,11 @@
-import { Hono } from 'hono';
+import { addresses, tenants } from '@griffiths-crm/shared/db/schema';
 import { zValidator } from '@hono/zod-validator';
-import { z } from 'zod';
 import { eq } from 'drizzle-orm';
-import { requireAuth, requireTenant } from '../middleware/auth';
+import { Hono } from 'hono';
+import { z } from 'zod';
 import { db } from '../lib/auth';
-import { tenants, addresses } from '@griffiths-crm/shared/db/schema';
 import { getSignedImageUrl } from '../lib/s3';
+import { requireAuth, requireTenant } from '../middleware/auth';
 
 // Validation schema for updating tenant settings
 const updateSettingsSchema = z.object({
@@ -45,11 +45,7 @@ const tenantSettingsRoutes = new Hono()
 		const tenantId = currentUser.tenantId!;
 
 		// Get tenant
-		const [tenant] = await db
-			.select()
-			.from(tenants)
-			.where(eq(tenants.id, tenantId))
-			.limit(1);
+		const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId)).limit(1);
 
 		if (!tenant) {
 			return c.json({ error: 'Tenant not found' }, 404);
@@ -92,11 +88,7 @@ const tenantSettingsRoutes = new Hono()
 		const { name, logoUrl, phone, email, website, address } = c.req.valid('json');
 
 		// Get current tenant
-		const [tenant] = await db
-			.select()
-			.from(tenants)
-			.where(eq(tenants.id, tenantId))
-			.limit(1);
+		const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId)).limit(1);
 
 		if (!tenant) {
 			return c.json({ error: 'Tenant not found' }, 404);
@@ -137,7 +129,15 @@ const tenantSettingsRoutes = new Hono()
 		}
 
 		// Update tenant
-		const updateData: { name?: string; logoUrl?: string | null; phone?: string | null; email?: string | null; website?: string | null; addressId?: string | null; updatedAt: Date } = {
+		const updateData: {
+			name?: string;
+			logoUrl?: string | null;
+			phone?: string | null;
+			email?: string | null;
+			website?: string | null;
+			addressId?: string | null;
+			updatedAt: Date;
+		} = {
 			updatedAt: new Date(),
 		};
 

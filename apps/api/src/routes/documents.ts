@@ -1,29 +1,29 @@
-import { Hono } from 'hono';
-import { zValidator } from '@hono/zod-validator';
-import { z } from 'zod';
-import { eq, and, desc, count, sql, isNull, inArray } from 'drizzle-orm';
-import { requireAuth, requireTenant } from '../middleware/auth';
-import { db } from '../lib/auth';
 import {
-	generatePresignedUploadUrlForKey,
-	isS3Configured,
-	getSignedImageUrl,
-	deleteObject,
-	generateSignedDownloadUrl,
-} from '../lib/s3';
-import {
-	documents,
-	users,
-	documentFolders,
-	customers,
-	quotes,
-	jobs,
-	funeralDirectors,
-	suppliers,
 	councils,
+	customers,
+	documentFolders,
+	documents,
+	funeralDirectors,
+	jobs,
 	memorialSites,
 	products,
+	quotes,
+	suppliers,
+	users,
 } from '@griffiths-crm/shared/db/schema';
+import { zValidator } from '@hono/zod-validator';
+import { and, count, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { Hono } from 'hono';
+import { z } from 'zod';
+import { db } from '../lib/auth';
+import {
+	deleteObject,
+	generatePresignedUploadUrlForKey,
+	generateSignedDownloadUrl,
+	getSignedImageUrl,
+	isS3Configured,
+} from '../lib/s3';
+import { requireAuth, requireTenant } from '../middleware/auth';
 
 // Entity types that can have documents attached
 const entityTypeSchema = z.enum([
@@ -97,7 +97,7 @@ const searchQuerySchema = z.object({
 });
 
 // Helper function to add signed URL to document
-async function addSignedUrl(doc: typeof documents.$inferSelect) {
+async function _addSignedUrl(doc: typeof documents.$inferSelect) {
 	const publicUrl = await getSignedImageUrl(doc.s3Key);
 	return {
 		...doc,
@@ -108,7 +108,7 @@ async function addSignedUrl(doc: typeof documents.$inferSelect) {
 // Helper function to fetch entity names for documents
 async function fetchEntityNames(
 	documentList: Array<{ entityType: string | null; entityId: string | null }>,
-	tenantId: string
+	tenantId: string,
 ): Promise<Map<string, string>> {
 	const entityNameMap = new Map<string, string>();
 
@@ -141,7 +141,7 @@ async function fetchEntityNames(
 					for (const row of rows) {
 						entityNameMap.set(`customer:${row.id}`, `${row.firstName} ${row.lastName}`);
 					}
-				})
+				}),
 		);
 	}
 
@@ -155,7 +155,7 @@ async function fetchEntityNames(
 					for (const row of rows) {
 						entityNameMap.set(`quote:${row.id}`, row.quoteNumber);
 					}
-				})
+				}),
 		);
 	}
 
@@ -169,7 +169,7 @@ async function fetchEntityNames(
 					for (const row of rows) {
 						entityNameMap.set(`job:${row.id}`, row.jobNumber);
 					}
-				})
+				}),
 		);
 	}
 
@@ -178,12 +178,17 @@ async function fetchEntityNames(
 			db
 				.select({ id: funeralDirectors.id, businessName: funeralDirectors.businessName })
 				.from(funeralDirectors)
-				.where(and(eq(funeralDirectors.tenantId, tenantId), inArray(funeralDirectors.id, entityGroups.funeral_director)))
+				.where(
+					and(
+						eq(funeralDirectors.tenantId, tenantId),
+						inArray(funeralDirectors.id, entityGroups.funeral_director),
+					),
+				)
 				.then((rows) => {
 					for (const row of rows) {
 						entityNameMap.set(`funeral_director:${row.id}`, row.businessName);
 					}
-				})
+				}),
 		);
 	}
 
@@ -197,7 +202,7 @@ async function fetchEntityNames(
 					for (const row of rows) {
 						entityNameMap.set(`supplier:${row.id}`, row.businessName);
 					}
-				})
+				}),
 		);
 	}
 
@@ -211,7 +216,7 @@ async function fetchEntityNames(
 					for (const row of rows) {
 						entityNameMap.set(`council:${row.id}`, row.councilName);
 					}
-				})
+				}),
 		);
 	}
 
@@ -220,12 +225,17 @@ async function fetchEntityNames(
 			db
 				.select({ id: memorialSites.id, name: memorialSites.name })
 				.from(memorialSites)
-				.where(and(eq(memorialSites.tenantId, tenantId), inArray(memorialSites.id, entityGroups.memorial_site)))
+				.where(
+					and(
+						eq(memorialSites.tenantId, tenantId),
+						inArray(memorialSites.id, entityGroups.memorial_site),
+					),
+				)
 				.then((rows) => {
 					for (const row of rows) {
 						entityNameMap.set(`memorial_site:${row.id}`, row.name);
 					}
-				})
+				}),
 		);
 	}
 
@@ -239,7 +249,7 @@ async function fetchEntityNames(
 					for (const row of rows) {
 						entityNameMap.set(`product:${row.id}`, row.name);
 					}
-				})
+				}),
 		);
 	}
 
@@ -279,13 +289,13 @@ const documentsRoutes = new Hono()
 		// folderId === 'all' or undefined means no folder filtering
 
 		// Search by name
-		if (search && search.trim()) {
+		if (search?.trim()) {
 			const searchTerm = `%${search.trim().toLowerCase()}%`;
 			conditions.push(sql`LOWER(${documents.name}) LIKE ${searchTerm}`);
 		}
 
 		// Filter by tags (partial match)
-		if (tags && tags.trim()) {
+		if (tags?.trim()) {
 			const tagTerm = `%${tags.trim().toLowerCase()}%`;
 			conditions.push(sql`LOWER(${documents.tags}) LIKE ${tagTerm}`);
 		}
@@ -330,15 +340,16 @@ const documentsRoutes = new Hono()
 		// Add signed URLs and entity names
 		const documentsWithUrls = await Promise.all(
 			documentList.map(async (doc) => {
-				const entityName = doc.entityType && doc.entityId
-					? entityNameMap.get(`${doc.entityType}:${doc.entityId}`) || null
-					: null;
+				const entityName =
+					doc.entityType && doc.entityId
+						? entityNameMap.get(`${doc.entityType}:${doc.entityId}`) || null
+						: null;
 				return {
 					...doc,
 					entityName,
 					publicUrl: await getSignedImageUrl(doc.s3Key),
 				};
-			})
+			}),
 		);
 
 		return c.json({
@@ -399,8 +410,8 @@ const documentsRoutes = new Hono()
 				and(
 					eq(documents.tenantId, tenantId),
 					eq(documents.entityType, entityType),
-					eq(documents.entityId, entityId)
-				)
+					eq(documents.entityId, entityId),
+				),
 			)
 			.orderBy(desc(documents.createdAt));
 
@@ -409,7 +420,7 @@ const documentsRoutes = new Hono()
 			documentList.map(async (doc) => ({
 				...doc,
 				publicUrl: await getSignedImageUrl(doc.s3Key),
-			}))
+			})),
 		);
 
 		return c.json({ documents: documentsWithUrls });
@@ -478,10 +489,9 @@ const documentsRoutes = new Hono()
 		if (!isS3Configured()) {
 			return c.json(
 				{
-					error:
-						'S3 is not configured. Please set S3_BUCKET environment variable.',
+					error: 'S3 is not configured. Please set S3_BUCKET environment variable.',
 				},
-				503
+				503,
 			);
 		}
 
@@ -501,10 +511,7 @@ const documentsRoutes = new Hono()
 					: `${tenantId}/documents/unassigned/${uuid}-${sanitizedFilename}`;
 
 			// Generate presigned URL using the exact key that will be stored in database
-			const { uploadUrl, publicUrl } = await generatePresignedUploadUrlForKey(
-				key,
-				contentType
-			);
+			const { uploadUrl, publicUrl } = await generatePresignedUploadUrlForKey(key, contentType);
 
 			return c.json({
 				uploadUrl,
@@ -671,12 +678,7 @@ const documentsRoutes = new Hono()
 		const updated = await db
 			.update(documents)
 			.set({ folderId, updatedAt: new Date() })
-			.where(
-				and(
-					eq(documents.tenantId, tenantId),
-					inArray(documents.id, documentIds)
-				)
-			)
+			.where(and(eq(documents.tenantId, tenantId), inArray(documents.id, documentIds)))
 			.returning({ id: documents.id });
 
 		return c.json({

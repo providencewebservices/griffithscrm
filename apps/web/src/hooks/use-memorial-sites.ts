@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -35,7 +35,13 @@ export type Address = {
 
 export type MemorialSiteType = 'churchyard' | 'crematorium' | 'council_cemetery' | 'chapel';
 
-export type MemorialSitePaymentMethod = 'bacs' | 'cheque' | 'card' | 'cash' | 'online_portal' | 'other';
+export type MemorialSitePaymentMethod =
+	| 'bacs'
+	| 'cheque'
+	| 'card'
+	| 'cash'
+	| 'online_portal'
+	| 'other';
 
 export const PAYMENT_METHOD_LABELS: Record<MemorialSitePaymentMethod, string> = {
 	bacs: 'BACS',
@@ -114,7 +120,9 @@ export type MemorialSiteSearchParams = {
 };
 
 // Fetch functions
-async function fetchMemorialSites(params?: MemorialSiteSearchParams): Promise<MemorialSiteListItem[]> {
+async function fetchMemorialSites(
+	params?: MemorialSiteSearchParams,
+): Promise<MemorialSiteListItem[]> {
 	const searchParams = new URLSearchParams();
 	if (params?.q) searchParams.set('q', params.q);
 	if (params?.siteType) searchParams.set('siteType', params.siteType);
@@ -147,7 +155,9 @@ async function fetchMemorialSite(id: string): Promise<MemorialSiteWithRelations>
 	return data.memorialSite;
 }
 
-async function createMemorialSite(input: CreateMemorialSiteInput): Promise<MemorialSiteWithRelations> {
+async function createMemorialSite(
+	input: CreateMemorialSiteInput,
+): Promise<MemorialSiteWithRelations> {
 	const response = await fetch(`${API_URL}/api/memorial-sites`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },

@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -229,7 +229,7 @@ async function unlinkThread(params: { threadId: string; linkId: string }): Promi
 		{
 			method: 'DELETE',
 			credentials: 'include',
-		}
+		},
 	);
 
 	if (!response.ok) {
@@ -478,7 +478,7 @@ async function fetchEntityEmailThreads(
 	entityType: string,
 	entityId: string,
 	page = 1,
-	limit = 10
+	limit = 10,
 ): Promise<{ threads: EntityEmailThread[]; total: number }> {
 	const searchParams = new URLSearchParams();
 	searchParams.set('page', String(page));

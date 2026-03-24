@@ -1,9 +1,10 @@
+import { Eye, EyeOff, Loader2, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
+import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Separator } from '@/components/ui/separator';
 import {
 	Select,
 	SelectContent,
@@ -11,6 +12,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
 import {
 	Table,
 	TableBody,
@@ -19,31 +21,16 @@ import {
 	TableHeader,
 	TableRow,
 } from '@/components/ui/table';
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipProvider,
-	TooltipTrigger,
-} from '@/components/ui/tooltip';
-import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import type {
+	QuoteOption,
+	QuotePackageWithOptions,
+	useAddLineItemMutation,
+	useDeleteLineItemMutation,
+	useUpdateLineItemMutation,
+} from '@/hooks/use-quotes';
 import { EditableNumber } from './editable-number';
 import { EditableText } from './editable-text';
-import {
-	Plus,
-	Loader2,
-	Eye,
-	EyeOff,
-	Trash2,
-} from 'lucide-react';
-import type {
-	QuotePackageWithOptions,
-	QuoteOption,
-} from '@/hooks/use-quotes';
-import type {
-	useAddLineItemMutation,
-	useUpdateLineItemMutation,
-	useDeleteLineItemMutation,
-} from '@/hooks/use-quotes';
 
 export function CustomLineItemsSection({
 	pkg,
@@ -62,7 +49,14 @@ export function CustomLineItemsSection({
 	addLineItem: ReturnType<typeof useAddLineItemMutation>;
 	updateLineItem: ReturnType<typeof useUpdateLineItemMutation>;
 	deleteLineItem: ReturnType<typeof useDeleteLineItemMutation>;
-	activePresets: { id: string; name: string; defaultPrice: string; vatExempt: boolean; visibleToCustomer: boolean; priceVisibleToCustomer: boolean }[];
+	activePresets: {
+		id: string;
+		name: string;
+		defaultPrice: string;
+		vatExempt: boolean;
+		visibleToCustomer: boolean;
+		priceVisibleToCustomer: boolean;
+	}[];
 }) {
 	const [showAddForm, setShowAddForm] = useState(false);
 	const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
@@ -135,7 +129,9 @@ export function CustomLineItemsSection({
 			{/* Header */}
 			<div className="flex items-center justify-between mb-3">
 				<h4 className="font-medium">
-					Custom Line Items{lineItems.length > 0 && ` (${lineItems.length} item${lineItems.length !== 1 ? 's' : ''})`}
+					Custom Line Items
+					{lineItems.length > 0 &&
+						` (${lineItems.length} item${lineItems.length !== 1 ? 's' : ''})`}
 				</h4>
 				{canEditPricing && !showAddForm && lineItems.length > 0 && (
 					<Button variant="outline" size="sm" onClick={() => setShowAddForm(true)}>
@@ -175,7 +171,9 @@ export function CustomLineItemsSection({
 								/>
 							</div>
 						)}
-						<div className={`col-span-12 ${newPresetId === 'custom' ? 'md:col-span-3' : 'md:col-span-3'}`}>
+						<div
+							className={`col-span-12 ${newPresetId === 'custom' ? 'md:col-span-3' : 'md:col-span-3'}`}
+						>
 							<Label className="text-sm mb-1 block">Price</Label>
 							<Input
 								type="number"
@@ -221,7 +219,10 @@ export function CustomLineItemsSection({
 								onCheckedChange={(checked) => setNewPriceVisibleToCustomer(checked === true)}
 								disabled={!newVisibleToCustomer}
 							/>
-							<Label htmlFor="newLineItemPriceVisible" className={`text-sm whitespace-nowrap ${!newVisibleToCustomer ? 'text-muted-foreground' : ''}`}>
+							<Label
+								htmlFor="newLineItemPriceVisible"
+								className={`text-sm whitespace-nowrap ${!newVisibleToCustomer ? 'text-muted-foreground' : ''}`}
+							>
 								Show Price
 							</Label>
 						</div>

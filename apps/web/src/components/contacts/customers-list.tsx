@@ -1,15 +1,11 @@
-import { useState, useEffect } from 'react';
+import { LayoutGrid, List, Mail, MapPin, Phone, Plus, Search, Users, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
-import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from '@/components/ui/table';
+import { CustomerFormDialog } from '@/components/customer/customer-form-dialog';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Pagination, usePagination } from '@/components/ui/pagination';
 import {
 	Select,
 	SelectContent,
@@ -18,22 +14,21 @@ import {
 	SelectValue,
 } from '@/components/ui/select';
 import {
-	Card,
-	CardContent,
-	CardHeader,
-	CardTitle,
-} from '@/components/ui/card';
-import { Pagination, usePagination } from '@/components/ui/pagination';
-import { CustomerFormDialog } from '@/components/customer/customer-form-dialog';
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from '@/components/ui/table';
 import {
-	useCustomersQuery,
-	useCreateCustomerMutation,
 	type CreateCustomerInput,
 	type CustomerListItem,
+	useCreateCustomerMutation,
+	useCustomersQuery,
 } from '@/hooks/use-customers';
 import { useTenantSettingsQuery } from '@/hooks/use-tenant-settings';
-import { getInitials, getAvatarColor } from '@/lib/avatar-utils';
-import { Search, List, LayoutGrid, Mail, Phone, MapPin, X, Plus, Users } from 'lucide-react';
+import { getAvatarColor, getInitials } from '@/lib/avatar-utils';
 
 type ViewMode = 'active' | 'archived';
 type DisplayMode = 'table' | 'cards';
@@ -58,7 +53,11 @@ export function CustomersList() {
 		return () => clearTimeout(timer);
 	}, [searchQuery]);
 
-	const { data: customers, isLoading, error } = useCustomersQuery({
+	const {
+		data: customers,
+		isLoading,
+		error,
+	} = useCustomersQuery({
 		q: debouncedSearch || undefined,
 		archivedOnly: viewMode === 'archived',
 	});
@@ -96,11 +95,7 @@ export function CustomersList() {
 	}
 
 	if (error) {
-		return (
-			<div className="text-destructive">
-				Error loading customers: {error.message}
-			</div>
-		);
+		return <div className="text-destructive">Error loading customers: {error.message}</div>;
 	}
 
 	return (

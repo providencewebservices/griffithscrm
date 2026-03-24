@@ -1,17 +1,21 @@
-import { useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router';
-import { Button } from '@/components/ui/button';
 import {
-	Card,
-	CardContent,
-	CardHeader,
-	CardTitle,
-} from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+	AlertCircle,
+	ArrowLeft,
+	Calendar,
+	CheckCircle2,
+	Circle,
+	Loader2,
+	Plus,
+	Save,
+	Trash2,
+	User,
+	X,
+} from 'lucide-react';
+import { useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router';
+import { toast } from 'sonner';
+import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
 import { Badge } from '@/components/ui/badge';
-import { Label } from '@/components/ui/label';
-import { Progress } from '@/components/ui/progress';
 import {
 	Breadcrumb,
 	BreadcrumbItem,
@@ -20,6 +24,18 @@ import {
 	BreadcrumbPage,
 	BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+	Dialog,
+	DialogContent,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Progress } from '@/components/ui/progress';
 import {
 	Select,
 	SelectContent,
@@ -27,51 +43,30 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import {
-	Dialog,
-	DialogContent,
-	DialogHeader,
-	DialogTitle,
-	DialogFooter,
-} from '@/components/ui/dialog';
-import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
-import {
-	useWorksheetQuery,
-	useUpdateWorksheetMutation,
-	useUpdateWorksheetStatusMutation,
-	useArchiveWorksheetMutation,
-	useAddTasksToWorksheetMutation,
-	useRemoveTaskFromWorksheetMutation,
-	formatWorksheetStatus,
-	getWorksheetStatusVariant,
-	type WorksheetStatus,
-	type WorksheetTask,
-} from '@/hooks/use-worksheets';
-import {
-	useCreateTaskMutation,
-	useUpdateTaskStatusMutation,
-	useTasksQuery,
 	formatTaskPriority,
 	getTaskPriorityVariant,
 	TASK_PRIORITIES,
 	type TaskPriority,
 	type TaskStatus,
+	useCreateTaskMutation,
+	useTasksQuery,
+	useUpdateTaskStatusMutation,
 } from '@/hooks/use-tasks';
 import { useTeamQuery } from '@/hooks/use-team';
 import {
-	ArrowLeft,
-	Save,
-	Loader2,
-	Trash2,
-	Plus,
-	CheckCircle2,
-	Circle,
-	X,
-	Calendar,
-	User,
-	AlertCircle,
-} from 'lucide-react';
-import { toast } from 'sonner';
+	formatWorksheetStatus,
+	getWorksheetStatusVariant,
+	useAddTasksToWorksheetMutation,
+	useArchiveWorksheetMutation,
+	useRemoveTaskFromWorksheetMutation,
+	useUpdateWorksheetMutation,
+	useUpdateWorksheetStatusMutation,
+	useWorksheetQuery,
+	type WorksheetStatus,
+	type WorksheetTask,
+} from '@/hooks/use-worksheets';
 
 const NONE_VALUE = '_none';
 
@@ -178,7 +173,9 @@ export function WorksheetDetailPage() {
 			<div className="text-center py-12">
 				<p className="text-destructive">{error?.message || 'Worksheet not found'}</p>
 				<Link to="/app/tasks">
-					<Button variant="link" className="mt-2">Back to Tasks</Button>
+					<Button variant="link" className="mt-2">
+						Back to Tasks
+					</Button>
 				</Link>
 			</div>
 		);
@@ -242,9 +239,7 @@ export function WorksheetDetailPage() {
 				</div>
 				<div className="flex gap-2">
 					{worksheet.status === 'draft' && (
-						<Button onClick={() => handleStatusChange('active')}>
-							Mark Active
-						</Button>
+						<Button onClick={() => handleStatusChange('active')}>Mark Active</Button>
 					)}
 					{worksheet.status === 'active' && (
 						<Button onClick={() => handleStatusChange('completed')}>
@@ -265,7 +260,9 @@ export function WorksheetDetailPage() {
 				<div className="space-y-1">
 					<div className="flex justify-between text-sm">
 						<span className="text-muted-foreground">Progress</span>
-						<span className="font-medium">{doneCount} of {totalCount} tasks done</span>
+						<span className="font-medium">
+							{doneCount} of {totalCount} tasks done
+						</span>
 					</div>
 					<Progress value={progress} className="h-2" />
 				</div>
@@ -290,7 +287,8 @@ export function WorksheetDetailPage() {
 							) : (
 								<div className="space-y-1">
 									{worksheetTasks.map((task) => {
-										const isOverdue = task.dueDate && task.status !== 'done' && new Date(task.dueDate) < new Date();
+										const isOverdue =
+											task.dueDate && task.status !== 'done' && new Date(task.dueDate) < new Date();
 										return (
 											<div
 												key={task.id}
@@ -320,7 +318,9 @@ export function WorksheetDetailPage() {
 														{formatTaskPriority(task.priority as TaskPriority)}
 													</Badge>
 													{task.dueDate && (
-														<span className={`text-xs ${isOverdue ? 'text-red-600 font-medium' : 'text-muted-foreground'}`}>
+														<span
+															className={`text-xs ${isOverdue ? 'text-red-600 font-medium' : 'text-muted-foreground'}`}
+														>
 															{new Date(task.dueDate).toLocaleDateString('en-GB', {
 																day: 'numeric',
 																month: 'short',
@@ -371,21 +371,23 @@ export function WorksheetDetailPage() {
 								<>
 									<div>
 										<Label>Title</Label>
-										<Input
-											value={editTitle}
-											onChange={(e) => setEditTitle(e.target.value)}
-										/>
+										<Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
 									</div>
 									<div>
 										<Label>Assignee</Label>
-										<Select value={editAssigneeId || NONE_VALUE} onValueChange={(v) => setEditAssigneeId(v === NONE_VALUE ? '' : v)}>
+										<Select
+											value={editAssigneeId || NONE_VALUE}
+											onValueChange={(v) => setEditAssigneeId(v === NONE_VALUE ? '' : v)}
+										>
 											<SelectTrigger>
 												<SelectValue placeholder="Unassigned" />
 											</SelectTrigger>
 											<SelectContent>
 												<SelectItem value={NONE_VALUE}>Unassigned</SelectItem>
 												{teamMembers?.map((m) => (
-													<SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+													<SelectItem key={m.id} value={m.id}>
+														{m.name}
+													</SelectItem>
 												))}
 											</SelectContent>
 										</Select>
@@ -418,11 +420,11 @@ export function WorksheetDetailPage() {
 										<p className="mt-1 text-sm">
 											{worksheet.date
 												? new Date(worksheet.date).toLocaleDateString('en-GB', {
-													weekday: 'long',
-													day: 'numeric',
-													month: 'long',
-													year: 'numeric',
-												})
+														weekday: 'long',
+														day: 'numeric',
+														month: 'long',
+														year: 'numeric',
+													})
 												: 'No date set'}
 										</p>
 									</div>
@@ -474,7 +476,15 @@ export function WorksheetDetailPage() {
 // ADD TASK DIALOG
 // ============================================
 
-function AddTaskDialog({ worksheetId, open, onClose }: { worksheetId: string; open: boolean; onClose: () => void }) {
+function AddTaskDialog({
+	worksheetId,
+	open,
+	onClose,
+}: {
+	worksheetId: string;
+	open: boolean;
+	onClose: () => void;
+}) {
 	const [mode, setMode] = useState<'new' | 'existing'>('new');
 	const [title, setTitle] = useState('');
 	const [priority, setPriority] = useState<TaskPriority>('normal');
@@ -493,7 +503,7 @@ function AddTaskDialog({ worksheetId, open, onClose }: { worksheetId: string; op
 	const handleCreateAndAdd = async () => {
 		if (!title.trim()) return;
 		try {
-			const task = await createTask.mutateAsync({
+			const _task = await createTask.mutateAsync({
 				title: title.trim(),
 				priority,
 				worksheetId,
@@ -520,7 +530,7 @@ function AddTaskDialog({ worksheetId, open, onClose }: { worksheetId: string; op
 
 	const toggleTaskSelection = (taskId: string) => {
 		setSelectedTaskIds((prev) =>
-			prev.includes(taskId) ? prev.filter((id) => id !== taskId) : [...prev, taskId]
+			prev.includes(taskId) ? prev.filter((id) => id !== taskId) : [...prev, taskId],
 		);
 	};
 
@@ -567,13 +577,17 @@ function AddTaskDialog({ worksheetId, open, onClose }: { worksheetId: string; op
 								</SelectTrigger>
 								<SelectContent>
 									{TASK_PRIORITIES.map((p) => (
-										<SelectItem key={p} value={p}>{formatTaskPriority(p)}</SelectItem>
+										<SelectItem key={p} value={p}>
+											{formatTaskPriority(p)}
+										</SelectItem>
 									))}
 								</SelectContent>
 							</Select>
 						</div>
 						<DialogFooter>
-							<Button variant="outline" onClick={onClose}>Cancel</Button>
+							<Button variant="outline" onClick={onClose}>
+								Cancel
+							</Button>
 							<Button onClick={handleCreateAndAdd} disabled={!title.trim() || createTask.isPending}>
 								{createTask.isPending ? 'Creating...' : 'Create & Add'}
 							</Button>
@@ -610,7 +624,9 @@ function AddTaskDialog({ worksheetId, open, onClose }: { worksheetId: string; op
 							</div>
 						)}
 						<DialogFooter>
-							<Button variant="outline" onClick={onClose}>Cancel</Button>
+							<Button variant="outline" onClick={onClose}>
+								Cancel
+							</Button>
 							<Button
 								onClick={handleAddExisting}
 								disabled={selectedTaskIds.length === 0 || addTasks.isPending}

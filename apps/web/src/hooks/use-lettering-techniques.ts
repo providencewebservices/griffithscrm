@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { LetteringCost } from './use-lettering-costs';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -67,7 +67,7 @@ async function fetchLetteringTechnique(id: string): Promise<LetteringTechniqueWi
 }
 
 async function createLetteringTechnique(
-	input: CreateLetteringTechniqueInput
+	input: CreateLetteringTechniqueInput,
 ): Promise<LetteringTechnique> {
 	const response = await fetch(`${API_URL}/api/tenant/lettering-techniques`, {
 		method: 'POST',

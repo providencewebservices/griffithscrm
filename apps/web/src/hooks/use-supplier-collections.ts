@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -45,7 +45,7 @@ export type UpdateCollectionInput = {
 async function fetchCollections(supplierId: string): Promise<SupplierCollection[]> {
 	const response = await fetch(
 		`${API_URL}/api/tenant/supplier-collections?supplierId=${supplierId}`,
-		{ credentials: 'include' }
+		{ credentials: 'include' },
 	);
 	if (!response.ok) {
 		const error = await response.json();

@@ -1,14 +1,20 @@
-import { useState, useEffect, useMemo } from 'react';
-import { Link, useSearchParams } from 'react-router';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import {
-	Card,
-	CardContent,
-	CardHeader,
-	CardTitle,
-} from '@/components/ui/card';
+	AlertCircle,
+	Calendar,
+	ChevronLeft,
+	ChevronRight,
+	LayoutGrid,
+	List,
+	PoundSterling,
+	Search,
+	User,
+} from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import {
 	Select,
 	SelectContent,
@@ -25,19 +31,18 @@ import {
 	TableRow,
 } from '@/components/ui/table';
 import {
-	useJobsQuery,
-	formatJobStatus,
-	getJobStatusVariant,
-	getJobStatusClassName,
 	formatAccountStatus,
-	getAccountStatusColor,
 	formatDepositStatus,
+	formatJobStatus,
+	getAccountStatusColor,
 	getDepositStatusColor,
+	getJobStatusClassName,
+	getJobStatusVariant,
 	JOB_STATUSES,
-	type JobStatus,
 	type JobListItem,
+	type JobStatus,
+	useJobsQuery,
 } from '@/hooks/use-jobs';
-import { Search, AlertCircle, List, LayoutGrid, User, Calendar, PoundSterling, ChevronLeft, ChevronRight } from 'lucide-react';
 
 type DisplayMode = 'table' | 'cards';
 
@@ -83,9 +88,9 @@ export function JobsPage() {
 	const [searchParams] = useSearchParams();
 	const initialStatus = searchParams.get('status') as JobStatus | null;
 
-	const [search, setSearch] = useState('');
+	const [_search, setSearch] = useState('');
 	const [statusFilter, setStatusFilter] = useState<JobStatus | ''>(
-		initialStatus && JOB_STATUSES.includes(initialStatus) ? initialStatus : ''
+		initialStatus && JOB_STATUSES.includes(initialStatus) ? initialStatus : '',
 	);
 	const [displayMode, setDisplayMode] = useState<DisplayMode>('cards');
 	const [page, setPage] = useState(1);
@@ -104,7 +109,7 @@ export function JobsPage() {
 	// Reset page when filters change
 	useEffect(() => {
 		setPage(1);
-	}, [debouncedSearch, statusFilter]);
+	}, []);
 
 	const { data, isLoading, error } = useJobsQuery({
 		status: statusFilter || undefined,
@@ -195,14 +200,10 @@ export function JobsPage() {
 			</div>
 
 			{/* Error state */}
-			{error && (
-				<div className="text-destructive text-sm">{error.message}</div>
-			)}
+			{error && <div className="text-destructive text-sm">{error.message}</div>}
 
 			{/* Loading state */}
-			{isLoading && (
-				<div className="text-muted-foreground">Loading jobs...</div>
-			)}
+			{isLoading && <div className="text-muted-foreground">Loading jobs...</div>}
 
 			{/* Empty state */}
 			{!isLoading && jobs?.length === 0 && (
@@ -221,8 +222,10 @@ export function JobsPage() {
 			)}
 
 			{/* Jobs list */}
-			{!isLoading && jobs && jobs.length > 0 && (
-				displayMode === 'table' ? (
+			{!isLoading &&
+				jobs &&
+				jobs.length > 0 &&
+				(displayMode === 'table' ? (
 					<div className="border rounded-lg">
 						<Table>
 							<TableHeader>
@@ -241,17 +244,17 @@ export function JobsPage() {
 							<TableBody>
 								{jobs.map((job) => (
 									<TableRow key={job.id}>
-										<TableCell className="font-medium">
-											{job.jobNumber}
-										</TableCell>
-										<TableCell className={job.customerFirstName && job.customerLastName ? 'font-display' : ''}>
+										<TableCell className="font-medium">{job.jobNumber}</TableCell>
+										<TableCell
+											className={
+												job.customerFirstName && job.customerLastName ? 'font-display' : ''
+											}
+										>
 											{job.customerFirstName && job.customerLastName
 												? `${job.customerFirstName} ${job.customerLastName}`
 												: 'Walk-in'}
 										</TableCell>
-										<TableCell className="text-right">
-											{formatCurrency(job.total)}
-										</TableCell>
+										<TableCell className="text-right">{formatCurrency(job.total)}</TableCell>
 										<TableCell>
 											<PaymentStatusDisplay job={job} formatCurrency={formatCurrency} />
 										</TableCell>
@@ -297,16 +300,15 @@ export function JobsPage() {
 							/>
 						))}
 					</div>
-				)
-			)}
+				))}
 
 			{/* Pagination */}
 			{pagination && jobs && jobs.length > 0 && (
 				<div className="flex items-center justify-between mt-4">
 					<div className="text-sm text-muted-foreground">
 						Showing {(pagination.page - 1) * pagination.limit + 1} to{' '}
-						{Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
-						{pagination.total} jobs
+						{Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total}{' '}
+						jobs
 					</div>
 					<div className="flex items-center gap-2">
 						<Select
@@ -360,9 +362,10 @@ interface JobCardProps {
 }
 
 function JobCard({ job, formatCurrency, formatDate }: JobCardProps) {
-	const customerName = job.customerFirstName && job.customerLastName
-		? `${job.customerFirstName} ${job.customerLastName}`
-		: 'Walk-in';
+	const customerName =
+		job.customerFirstName && job.customerLastName
+			? `${job.customerFirstName} ${job.customerLastName}`
+			: 'Walk-in';
 
 	return (
 		<Link to={`/app/jobs/${job.id}`} className="block">
@@ -373,7 +376,9 @@ function JobCard({ job, formatCurrency, formatDate }: JobCardProps) {
 							<CardTitle className="text-base font-semibold">{job.jobNumber}</CardTitle>
 							<div className="flex items-center gap-1.5 text-base font-medium">
 								<User className="h-3.5 w-3.5 text-muted-foreground" />
-								<span className={customerName !== 'Walk-in' ? 'font-display' : 'text-muted-foreground'}>
+								<span
+									className={customerName !== 'Walk-in' ? 'font-display' : 'text-muted-foreground'}
+								>
 									{customerName}
 								</span>
 							</div>
@@ -401,10 +406,16 @@ function JobCard({ job, formatCurrency, formatDate }: JobCardProps) {
 					<div className="flex items-center justify-between">
 						<PaymentStatusDisplay job={job} formatCurrency={formatCurrency} />
 						<div className="flex items-center gap-1.5">
-							<Badge variant="outline" className={`text-xs ${getDepositStatusColor(job.depositStatus)}`}>
+							<Badge
+								variant="outline"
+								className={`text-xs ${getDepositStatusColor(job.depositStatus)}`}
+							>
 								{formatDepositStatus(job.depositStatus)}
 							</Badge>
-							<Badge variant="outline" className={`text-xs ${getAccountStatusColor(job.accountStatus)}`}>
+							<Badge
+								variant="outline"
+								className={`text-xs ${getAccountStatusColor(job.accountStatus)}`}
+							>
 								{formatAccountStatus(job.accountStatus)}
 							</Badge>
 						</div>

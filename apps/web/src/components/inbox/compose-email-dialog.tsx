@@ -1,8 +1,23 @@
-import { useState, useCallback, useEffect } from 'react';
-import { useEditor, EditorContent } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import Underline from '@tiptap/extension-underline';
+import { EditorContent, useEditor } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import {
+	AlertTriangle,
+	Bold,
+	File,
+	FolderOpen,
+	Italic,
+	Link as LinkIcon,
+	List,
+	ListOrdered,
+	Paperclip,
+	Underline as UnderlineIcon,
+	X,
+} from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
 	Dialog,
 	DialogContent,
@@ -10,24 +25,9 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import {
-	Bold,
-	Italic,
-	Underline as UnderlineIcon,
-	Link as LinkIcon,
-	List,
-	ListOrdered,
-	Paperclip,
-	X,
-	File,
-	FolderOpen,
-	AlertTriangle,
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { formatFileSize } from '@/lib/file-utils';
+import { cn } from '@/lib/utils';
 import { DocumentPickerDialog } from './document-picker-dialog';
 
 export type ComposeAttachment = {
@@ -84,7 +84,7 @@ function ToolbarButton({
 			className={cn(
 				'p-1.5 rounded hover:bg-muted transition-colors',
 				active && 'bg-muted text-primary',
-				disabled && 'opacity-50 cursor-not-allowed'
+				disabled && 'opacity-50 cursor-not-allowed',
 			)}
 		>
 			{children}
@@ -159,13 +159,13 @@ export function ComposeEmailDialog({
 			setAttachments([]);
 			editor?.commands.setContent(defaultBody);
 		}
-	}, [open, defaultTo, defaultSubject, defaultBody]);
+	}, [open, defaultTo, defaultSubject, defaultBody, editor?.commands.setContent]);
 
 	const handleOpenChange = useCallback(
 		(isOpen: boolean) => {
 			onOpenChange(isOpen);
 		},
-		[onOpenChange]
+		[onOpenChange],
 	);
 
 	const handleAddLink = useCallback(() => {
@@ -197,18 +197,21 @@ export function ComposeEmailDialog({
 		e.target.value = '';
 	}, []);
 
-	const handleDocumentsSelected = useCallback((docs: { id: string; name: string; size: number; contentType: string }[]) => {
-		const newAttachments: ComposeAttachment[] = docs.map((doc) => ({
-			id: crypto.randomUUID(),
-			source: 'app' as const,
-			name: doc.name,
-			size: doc.size,
-			contentType: doc.contentType,
-			documentId: doc.id,
-		}));
+	const handleDocumentsSelected = useCallback(
+		(docs: { id: string; name: string; size: number; contentType: string }[]) => {
+			const newAttachments: ComposeAttachment[] = docs.map((doc) => ({
+				id: crypto.randomUUID(),
+				source: 'app' as const,
+				name: doc.name,
+				size: doc.size,
+				contentType: doc.contentType,
+				documentId: doc.id,
+			}));
 
-		setAttachments((prev) => [...prev, ...newAttachments]);
-	}, []);
+			setAttachments((prev) => [...prev, ...newAttachments]);
+		},
+		[],
+	);
 
 	const handleRemoveAttachment = useCallback((id: string) => {
 		setAttachments((prev) => prev.filter((a) => a.id !== id));
@@ -242,7 +245,7 @@ export function ComposeEmailDialog({
 				setIsSending(false);
 			}
 		},
-		[to, cc, bcc, subject, editor, attachments, isOverLimit, onSend, handleOpenChange]
+		[to, cc, bcc, subject, editor, attachments, isOverLimit, onSend, handleOpenChange],
 	);
 
 	const canSend = to.trim() && subject.trim() && !isOverLimit;
@@ -252,7 +255,10 @@ export function ComposeEmailDialog({
 
 	return (
 		<Dialog open={open} onOpenChange={handleOpenChange}>
-			<DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col" onOpenAutoFocus={(e) => e.preventDefault()}>
+			<DialogContent
+				className="sm:max-w-[600px] max-h-[90vh] flex flex-col"
+				onOpenAutoFocus={(e) => e.preventDefault()}
+			>
 				<DialogHeader>
 					<DialogTitle>Compose Email</DialogTitle>
 				</DialogHeader>
@@ -261,9 +267,7 @@ export function ComposeEmailDialog({
 					<div className="space-y-3">
 						{fromAddress && (
 							<div className="flex items-center gap-2">
-								<label className="text-sm font-medium w-16">
-									From:
-								</label>
+								<label className="text-sm font-medium w-16">From:</label>
 								<span className="text-sm text-muted-foreground">{fromAddress}</span>
 							</div>
 						)}
@@ -406,7 +410,8 @@ export function ComposeEmailDialog({
 							<div className="flex items-center gap-2 text-sm text-muted-foreground">
 								<Paperclip className="h-4 w-4" />
 								<span>
-									{attachments.length} attachment{attachments.length > 1 ? 's' : ''} ({formatFileSize(totalSize)})
+									{attachments.length} attachment{attachments.length > 1 ? 's' : ''} (
+									{formatFileSize(totalSize)})
 								</span>
 								{isOverLimit && (
 									<span className="flex items-center gap-1 text-destructive text-xs font-medium">

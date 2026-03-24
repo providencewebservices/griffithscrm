@@ -1,4 +1,4 @@
-import { parseISO, format, getContrastTextColor } from './calendar-utils';
+import { format, getContrastTextColor, parseISO } from './calendar-utils';
 import { EventDetailPopover } from './event-detail-popover';
 import type { CalendarEvent } from './types';
 
@@ -16,7 +16,7 @@ export function CalendarEventPill({
 	onDeleteEvent,
 }: CalendarEventPillProps) {
 	const startTime = parseISO(event.start);
-	const timeDisplay = event.allDay ? '' : format(startTime, 'h:mm a') + ' ';
+	const timeDisplay = event.allDay ? '' : `${format(startTime, 'h:mm a')} `;
 	const textColor = getContrastTextColor(event.color);
 
 	const pillContent = (
@@ -36,11 +36,7 @@ export function CalendarEventPill({
 	);
 
 	return (
-		<EventDetailPopover
-			event={event}
-			onEdit={onEditEvent}
-			onDelete={onDeleteEvent}
-		>
+		<EventDetailPopover event={event} onEdit={onEditEvent} onDelete={onDeleteEvent}>
 			{pillContent}
 		</EventDetailPopover>
 	);

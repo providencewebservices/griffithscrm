@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { DocumentEntityType } from './use-documents';
 
 const STORAGE_KEY = 'griffiths_recent_entities';
@@ -48,28 +48,23 @@ export function useRecentEntities() {
 	 * Add a recently accessed entity to the list.
 	 * If the entity already exists, it will be moved to the front.
 	 */
-	const addRecentEntity = useCallback(
-		(type: DocumentEntityType, id: string, label: string) => {
-			setRecentEntities((prev) => {
-				// Remove existing entry for this entity if present
-				const filtered = prev.filter(
-					(e) => !(e.type === type && e.id === id)
-				);
+	const addRecentEntity = useCallback((type: DocumentEntityType, id: string, label: string) => {
+		setRecentEntities((prev) => {
+			// Remove existing entry for this entity if present
+			const filtered = prev.filter((e) => !(e.type === type && e.id === id));
 
-				// Add new entry at the front
-				const newEntity: RecentEntity = {
-					type,
-					id,
-					label,
-					timestamp: Date.now(),
-				};
+			// Add new entry at the front
+			const newEntity: RecentEntity = {
+				type,
+				id,
+				label,
+				timestamp: Date.now(),
+			};
 
-				// Keep only the most recent entries
-				return [newEntity, ...filtered].slice(0, MAX_RECENT_ENTITIES);
-			});
-		},
-		[]
-	);
+			// Keep only the most recent entries
+			return [newEntity, ...filtered].slice(0, MAX_RECENT_ENTITIES);
+		});
+	}, []);
 
 	/**
 	 * Clear all recent entities.

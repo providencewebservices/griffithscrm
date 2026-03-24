@@ -1,16 +1,8 @@
+import { Plus } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from '@/components/ui/table';
 import {
 	Dialog,
 	DialogContent,
@@ -20,12 +12,20 @@ import {
 	DialogTitle,
 } from '@/components/ui/dialog';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
-import { Badge } from '@/components/ui/badge';
-import { Plus } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import {
-	useProductCategoriesQuery,
-	useCreateProductCategoryMutation,
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from '@/components/ui/table';
+import { Textarea } from '@/components/ui/textarea';
+import {
 	type CreateProductCategoryInput,
+	useCreateProductCategoryMutation,
+	useProductCategoriesQuery,
 } from '@/hooks/use-product-categories';
 
 export function ProductCategoriesTab() {
@@ -72,11 +72,7 @@ export function ProductCategoriesTab() {
 	}
 
 	if (error) {
-		return (
-			<div className="text-destructive">
-				Error loading categories: {error.message}
-			</div>
-		);
+		return <div className="text-destructive">Error loading categories: {error.message}</div>;
 	}
 
 	return (
@@ -84,9 +80,7 @@ export function ProductCategoriesTab() {
 			<div className="flex justify-between items-center">
 				<div>
 					<h3 className="text-lg font-semibold">Product Categories</h3>
-					<p className="text-sm text-muted-foreground">
-						Organize your products into categories
-					</p>
+					<p className="text-sm text-muted-foreground">Organize your products into categories</p>
 				</div>
 				<Button onClick={handleCreate}>
 					<Plus className="h-4 w-4 mr-2" />
@@ -110,9 +104,15 @@ export function ProductCategoriesTab() {
 						</TableHeader>
 						<TableBody>
 							{categories?.map((item) => (
-								<TableRow key={item.id} className="cursor-pointer" onClick={() => navigate(`/app/categories/${item.id}`)}>
+								<TableRow
+									key={item.id}
+									className="cursor-pointer"
+									onClick={() => navigate(`/app/categories/${item.id}`)}
+								>
 									<TableCell className="font-medium">{item.name}</TableCell>
-									<TableCell><Badge variant="secondary">{item.productCount}</Badge></TableCell>
+									<TableCell>
+										<Badge variant="secondary">{item.productCount}</Badge>
+									</TableCell>
 									<TableCell>
 										<Link to={`/app/categories/${item.id}`}>
 											<Button variant="ghost" size="sm">
@@ -132,9 +132,7 @@ export function ProductCategoriesTab() {
 				<DialogContent>
 					<DialogHeader>
 						<DialogTitle>Add Category</DialogTitle>
-						<DialogDescription>
-							Add a new product category.
-						</DialogDescription>
+						<DialogDescription>Add a new product category.</DialogDescription>
 					</DialogHeader>
 
 					{mutationError && (
@@ -170,10 +168,7 @@ export function ProductCategoriesTab() {
 						<Button variant="outline" onClick={() => setDialogOpen(false)}>
 							Cancel
 						</Button>
-						<Button
-							onClick={handleFormSubmit}
-							disabled={!formName || createMutation.isPending}
-						>
+						<Button onClick={handleFormSubmit} disabled={!formName || createMutation.isPending}>
 							{createMutation.isPending ? 'Creating...' : 'Create'}
 						</Button>
 					</DialogFooter>

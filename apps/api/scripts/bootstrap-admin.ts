@@ -16,8 +16,8 @@
  *   ADMIN_NAME     - Display name (optional, defaults to "System Administrator")
  */
 
+import { resolve } from 'node:path';
 import { config } from 'dotenv';
-import { resolve } from 'path';
 
 // Load .env in development (production containers have env vars injected)
 if (process.env.NODE_ENV !== 'production') {
@@ -35,7 +35,11 @@ const { createDb } = await import('@griffiths-crm/shared/db');
 const { users } = await import('@griffiths-crm/shared/db/schema');
 const { eq } = await import('drizzle-orm');
 
-const db = createDb(process.env.DATABASE_URL!);
+const databaseUrl = process.env.DATABASE_URL;
+if (!databaseUrl) {
+	throw new Error('DATABASE_URL environment variable is required');
+}
+const db = createDb(databaseUrl);
 
 // Get admin credentials from environment or use development defaults
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@griffiths-crm.local';
@@ -46,7 +50,9 @@ const ADMIN_NAME = process.env.ADMIN_NAME || 'System Administrator';
 if (process.env.NODE_ENV === 'production') {
 	if (!process.env.ADMIN_EMAIL || !process.env.ADMIN_PASSWORD) {
 		console.error('ERROR: In production, ADMIN_EMAIL and ADMIN_PASSWORD must be set');
-		console.error('Usage: ADMIN_EMAIL=admin@example.com ADMIN_PASSWORD=secret bun run scripts/bootstrap-admin.ts');
+		console.error(
+			'Usage: ADMIN_EMAIL=admin@example.com ADMIN_PASSWORD=secret bun run scripts/bootstrap-admin.ts',
+		);
 		process.exit(1);
 	}
 	if (ADMIN_PASSWORD.length < 12) {
@@ -59,11 +65,7 @@ async function main() {
 	console.log('Connecting to database...');
 
 	// Check if admin already exists
-	const existingUser = await db
-		.select()
-		.from(users)
-		.where(eq(users.email, ADMIN_EMAIL))
-		.limit(1);
+	const existingUser = await db.select().from(users).where(eq(users.email, ADMIN_EMAIL)).limit(1);
 
 	if (existingUser.length > 0) {
 		console.log(`Admin user ${ADMIN_EMAIL} already exists. Skipping.`);
@@ -88,12 +90,9 @@ async function main() {
 	}
 
 	// Mark admin as email verified (bootstrap users don't need to verify)
-	await db
-		.update(users)
-		.set({ emailVerified: true })
-		.where(eq(users.email, ADMIN_EMAIL));
+	await db.update(users).set({ emailVerified: true }).where(eq(users.email, ADMIN_EMAIL));
 
-	console.log('\n' + '='.repeat(50));
+	console.log(`\n${'='.repeat(50)}`);
 	console.log('Bootstrap admin created!');
 	console.log('='.repeat(50));
 	console.log(`\n  Email: ${ADMIN_EMAIL}`);

@@ -1,13 +1,9 @@
-import { eq, and } from 'drizzle-orm';
+import crypto from 'node:crypto';
+import { emailIntegrations, emailMessages, emailThreads } from '@griffiths-crm/shared/db/schema';
+import { and, eq } from 'drizzle-orm';
 import { db } from './auth';
-import {
-	emailIntegrations,
-	emailThreads,
-	emailMessages,
-} from '@griffiths-crm/shared/db/schema';
-import { getEmailProvider, getValidAccessToken } from './email-providers';
 import { autoLinkThreadByEmail, collectEmailAddresses } from './email-auto-link';
-import crypto from 'crypto';
+import { getEmailProvider, getValidAccessToken } from './email-providers';
 
 export const SYNC_INTERVAL_MS = 60 * 1000; // 60 seconds
 
@@ -62,55 +58,48 @@ export async function doSync(integrationId: string, tenantId: string) {
 
 			for (const thread of listResult.threads) {
 				const threadId = crypto.randomUUID();
-				const [upsertedThread] = await db.insert(emailThreads).values({
-					id: threadId,
-					integrationId,
-					tenantId,
-					providerThreadId: thread.providerThreadId,
-					subject: thread.subject,
-					snippet: thread.snippet,
-					lastMessageAt: thread.lastMessageAt,
-					messageCount: thread.messageCount,
-					isUnread: thread.isUnread,
-					isArchived: false,
-					isTrashed: thread.labelIds.includes('TRASH'),
-					labelIds: JSON.stringify(thread.labelIds),
-				}).onConflictDoUpdate({
-					target: [emailThreads.integrationId, emailThreads.providerThreadId],
-					set: {
+				const [upsertedThread] = await db
+					.insert(emailThreads)
+					.values({
+						id: threadId,
+						integrationId,
+						tenantId,
+						providerThreadId: thread.providerThreadId,
 						subject: thread.subject,
 						snippet: thread.snippet,
 						lastMessageAt: thread.lastMessageAt,
 						messageCount: thread.messageCount,
 						isUnread: thread.isUnread,
+						isArchived: false,
 						isTrashed: thread.labelIds.includes('TRASH'),
 						labelIds: JSON.stringify(thread.labelIds),
-						updatedAt: new Date(),
-					},
-				}).returning({ id: emailThreads.id });
+					})
+					.onConflictDoUpdate({
+						target: [emailThreads.integrationId, emailThreads.providerThreadId],
+						set: {
+							subject: thread.subject,
+							snippet: thread.snippet,
+							lastMessageAt: thread.lastMessageAt,
+							messageCount: thread.messageCount,
+							isUnread: thread.isUnread,
+							isTrashed: thread.labelIds.includes('TRASH'),
+							labelIds: JSON.stringify(thread.labelIds),
+							updatedAt: new Date(),
+						},
+					})
+					.returning({ id: emailThreads.id });
 
 				const resolvedThreadId = upsertedThread.id;
 
 				for (const msg of thread.messages) {
-					await db.insert(emailMessages).values({
-						id: crypto.randomUUID(),
-						threadId: resolvedThreadId,
-						integrationId,
-						tenantId,
-						providerMessageId: msg.providerMessageId,
-						fromAddress: msg.fromAddress,
-						fromName: msg.fromName,
-						toAddresses: JSON.stringify(msg.toAddresses),
-						ccAddresses: JSON.stringify(msg.ccAddresses),
-						subject: msg.subject,
-						snippet: msg.snippet,
-						isUnread: msg.isUnread,
-						hasAttachments: msg.hasAttachments,
-						labelIds: JSON.stringify(msg.labelIds),
-						internalDate: msg.internalDate,
-					}).onConflictDoUpdate({
-						target: [emailMessages.integrationId, emailMessages.providerMessageId],
-						set: {
+					await db
+						.insert(emailMessages)
+						.values({
+							id: crypto.randomUUID(),
+							threadId: resolvedThreadId,
+							integrationId,
+							tenantId,
+							providerMessageId: msg.providerMessageId,
 							fromAddress: msg.fromAddress,
 							fromName: msg.fromName,
 							toAddresses: JSON.stringify(msg.toAddresses),
@@ -121,9 +110,23 @@ export async function doSync(integrationId: string, tenantId: string) {
 							hasAttachments: msg.hasAttachments,
 							labelIds: JSON.stringify(msg.labelIds),
 							internalDate: msg.internalDate,
-							updatedAt: new Date(),
-						},
-					});
+						})
+						.onConflictDoUpdate({
+							target: [emailMessages.integrationId, emailMessages.providerMessageId],
+							set: {
+								fromAddress: msg.fromAddress,
+								fromName: msg.fromName,
+								toAddresses: JSON.stringify(msg.toAddresses),
+								ccAddresses: JSON.stringify(msg.ccAddresses),
+								subject: msg.subject,
+								snippet: msg.snippet,
+								isUnread: msg.isUnread,
+								hasAttachments: msg.hasAttachments,
+								labelIds: JSON.stringify(msg.labelIds),
+								internalDate: msg.internalDate,
+								updatedAt: new Date(),
+							},
+						});
 				}
 
 				// Auto-link thread to contacts by email address
@@ -133,7 +136,7 @@ export async function doSync(integrationId: string, tenantId: string) {
 							fromAddress: m.fromAddress,
 							toAddresses: JSON.stringify(m.toAddresses),
 							ccAddresses: JSON.stringify(m.ccAddresses),
-						}))
+						})),
 					);
 					await autoLinkThreadByEmail(resolvedThreadId, tenantId, addresses);
 				} catch (err) {
@@ -161,8 +164,8 @@ export async function doSync(integrationId: string, tenantId: string) {
 				.where(
 					and(
 						eq(emailThreads.integrationId, integrationId),
-						eq(emailThreads.providerThreadId, msg.providerThreadId)
-					)
+						eq(emailThreads.providerThreadId, msg.providerThreadId),
+					),
 				)
 				.limit(1);
 
@@ -198,25 +201,14 @@ export async function doSync(integrationId: string, tenantId: string) {
 			}
 
 			// Upsert message
-			await db.insert(emailMessages).values({
-				id: crypto.randomUUID(),
-				threadId: thread.id,
-				integrationId,
-				tenantId,
-				providerMessageId: msg.providerMessageId,
-				fromAddress: msg.fromAddress,
-				fromName: msg.fromName,
-				toAddresses: JSON.stringify(msg.toAddresses),
-				ccAddresses: JSON.stringify(msg.ccAddresses),
-				subject: msg.subject,
-				snippet: msg.snippet,
-				isUnread: msg.isUnread,
-				hasAttachments: msg.hasAttachments,
-				labelIds: JSON.stringify(msg.labelIds),
-				internalDate: msg.internalDate,
-			}).onConflictDoUpdate({
-				target: [emailMessages.integrationId, emailMessages.providerMessageId],
-				set: {
+			await db
+				.insert(emailMessages)
+				.values({
+					id: crypto.randomUUID(),
+					threadId: thread.id,
+					integrationId,
+					tenantId,
+					providerMessageId: msg.providerMessageId,
 					fromAddress: msg.fromAddress,
 					fromName: msg.fromName,
 					toAddresses: JSON.stringify(msg.toAddresses),
@@ -227,17 +219,33 @@ export async function doSync(integrationId: string, tenantId: string) {
 					hasAttachments: msg.hasAttachments,
 					labelIds: JSON.stringify(msg.labelIds),
 					internalDate: msg.internalDate,
-					updatedAt: new Date(),
-				},
-			});
+				})
+				.onConflictDoUpdate({
+					target: [emailMessages.integrationId, emailMessages.providerMessageId],
+					set: {
+						fromAddress: msg.fromAddress,
+						fromName: msg.fromName,
+						toAddresses: JSON.stringify(msg.toAddresses),
+						ccAddresses: JSON.stringify(msg.ccAddresses),
+						subject: msg.subject,
+						snippet: msg.snippet,
+						isUnread: msg.isUnread,
+						hasAttachments: msg.hasAttachments,
+						labelIds: JSON.stringify(msg.labelIds),
+						internalDate: msg.internalDate,
+						updatedAt: new Date(),
+					},
+				});
 
 			// Auto-link thread to contacts by email address
 			try {
-				const addresses = collectEmailAddresses([{
-					fromAddress: msg.fromAddress,
-					toAddresses: JSON.stringify(msg.toAddresses),
-					ccAddresses: JSON.stringify(msg.ccAddresses),
-				}]);
+				const addresses = collectEmailAddresses([
+					{
+						fromAddress: msg.fromAddress,
+						toAddresses: JSON.stringify(msg.toAddresses),
+						ccAddresses: JSON.stringify(msg.ccAddresses),
+					},
+				]);
 				await autoLinkThreadByEmail(thread.id, tenantId, addresses);
 			} catch (err) {
 				console.error('Auto-link failed for thread:', thread.id, err);
@@ -252,8 +260,8 @@ export async function doSync(integrationId: string, tenantId: string) {
 					.where(
 						and(
 							eq(emailMessages.integrationId, integrationId),
-							eq(emailMessages.providerMessageId, msgId)
-						)
+							eq(emailMessages.providerMessageId, msgId),
+						),
 					);
 			}
 		}
@@ -279,8 +287,8 @@ export async function doSync(integrationId: string, tenantId: string) {
 					.where(
 						and(
 							eq(emailMessages.integrationId, integrationId),
-							eq(emailMessages.providerMessageId, mod.providerMessageId)
-						)
+							eq(emailMessages.providerMessageId, mod.providerMessageId),
+						),
 					);
 			}
 
@@ -292,8 +300,8 @@ export async function doSync(integrationId: string, tenantId: string) {
 					.where(
 						and(
 							eq(emailMessages.integrationId, integrationId),
-							eq(emailMessages.providerMessageId, mod.providerMessageId)
-						)
+							eq(emailMessages.providerMessageId, mod.providerMessageId),
+						),
 					)
 					.limit(1);
 
@@ -317,12 +325,7 @@ export async function doSync(integrationId: string, tenantId: string) {
 			const [unreadMsg] = await db
 				.select({ id: emailMessages.id })
 				.from(emailMessages)
-				.where(
-					and(
-						eq(emailMessages.threadId, affectedThreadId),
-						eq(emailMessages.isUnread, true)
-					)
-				)
+				.where(and(eq(emailMessages.threadId, affectedThreadId), eq(emailMessages.isUnread, true)))
 				.limit(1);
 
 			await db

@@ -1,14 +1,14 @@
-import { Hono } from 'hono';
-import { zValidator } from '@hono/zod-validator';
-import { z } from 'zod';
-import { eq, and, asc, count, sql } from 'drizzle-orm';
-import { requireAuth, requireTenant } from '../middleware/auth';
-import { db } from '../lib/auth';
 import {
 	supplierCategories,
 	supplierCollections,
 	supplierProducts,
 } from '@griffiths-crm/shared/db/schema';
+import { zValidator } from '@hono/zod-validator';
+import { and, asc, count, eq, sql } from 'drizzle-orm';
+import { Hono } from 'hono';
+import { z } from 'zod';
+import { db } from '../lib/auth';
+import { requireAuth, requireTenant } from '../middleware/auth';
 
 const createSchema = z.object({
 	collectionId: z.string().min(1, 'Collection is required'),
@@ -44,8 +44,8 @@ const supplierCategoriesRoutes = new Hono()
 			.where(
 				and(
 					eq(supplierCategories.tenantId, tenantId),
-					eq(supplierCategories.collectionId, collectionId)
-				)
+					eq(supplierCategories.collectionId, collectionId),
+				),
 			)
 			.orderBy(asc(supplierCategories.sortOrder), asc(supplierCategories.name));
 
@@ -103,7 +103,10 @@ const supplierCategoriesRoutes = new Hono()
 			.select()
 			.from(supplierCollections)
 			.where(
-				and(eq(supplierCollections.id, data.collectionId), eq(supplierCollections.tenantId, tenantId))
+				and(
+					eq(supplierCollections.id, data.collectionId),
+					eq(supplierCollections.tenantId, tenantId),
+				),
 			)
 			.limit(1);
 

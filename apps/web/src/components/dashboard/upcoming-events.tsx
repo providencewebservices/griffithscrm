@@ -1,18 +1,18 @@
+import { ArrowRight, CalendarDays } from 'lucide-react';
 import { useMemo } from 'react';
 import { Link } from 'react-router';
-import { CalendarDays, ArrowRight } from 'lucide-react';
+import {
+	addDays,
+	format,
+	isSameDay,
+	parseISO,
+	startOfDay,
+} from '@/components/calendar/calendar-utils';
+import { EventDetailPopover } from '@/components/calendar/event-detail-popover';
+import type { CalendarEvent } from '@/components/calendar/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useCalendarEventsQuery } from '@/hooks/use-calendar';
-import { EventDetailPopover } from '@/components/calendar/event-detail-popover';
-import {
-	parseISO,
-	format,
-	startOfDay,
-	addDays,
-	isSameDay,
-} from '@/components/calendar/calendar-utils';
-import type { CalendarEvent } from '@/components/calendar/types';
 
 const MAX_EVENTS = 5;
 
@@ -107,9 +107,7 @@ export function UpcomingEvents() {
 			</CardHeader>
 			<CardContent>
 				{upcoming.length === 0 ? (
-					<p className="text-sm text-muted-foreground text-center py-4">
-						No upcoming events
-					</p>
+					<p className="text-sm text-muted-foreground text-center py-4">No upcoming events</p>
 				) : (
 					<div className="space-y-3">
 						{grouped.map((group) => (
@@ -131,9 +129,7 @@ export function UpcomingEvents() {
 												<span className="text-xs text-muted-foreground shrink-0">
 													{formatEventTime(event)}
 												</span>
-												<span className="text-sm truncate flex-1">
-													{event.title}
-												</span>
+												<span className="text-sm truncate flex-1">{event.title}</span>
 											</button>
 										</EventDetailPopover>
 									))}

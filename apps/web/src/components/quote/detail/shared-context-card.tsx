@@ -1,11 +1,5 @@
 import { Link } from 'react-router';
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
 	Select,
 	SelectContent,
@@ -14,14 +8,14 @@ import {
 	SelectValue,
 } from '@/components/ui/select';
 import {
+	PRODUCTION_METHOD_LABELS,
+	PRODUCTION_METHODS,
+	type ProductionMethod,
 	QUOTE_TYPE_LABELS,
 	QUOTE_TYPE_SECTION_CONFIG,
-	PRODUCTION_METHODS,
-	PRODUCTION_METHOD_LABELS,
-	useUpdateProductionMethodMutation,
-	type QuoteType,
 	type QuotePackageWithOptions,
-	type ProductionMethod,
+	type QuoteType,
+	useUpdateProductionMethodMutation,
 } from '@/hooks/use-quotes';
 
 export function SharedContextCard({
@@ -50,11 +44,17 @@ export function SharedContextCard({
 						</p>
 						<p>
 							{pkg.payerType === 'funeral_director' && pkg.funeralDirector ? (
-								<Link to={`/app/funeral-directors/${pkg.funeralDirectorId}`} className="text-primary hover:underline">
+								<Link
+									to={`/app/funeral-directors/${pkg.funeralDirectorId}`}
+									className="text-primary hover:underline"
+								>
 									{pkg.funeralDirector.tradingName || pkg.funeralDirector.businessName}
 								</Link>
 							) : pkg.customer ? (
-								<Link to={`/app/contacts/${pkg.customerId}`} className="text-primary hover:underline">
+								<Link
+									to={`/app/contacts/${pkg.customerId}`}
+									className="text-primary hover:underline"
+								>
 									{pkg.customer.firstName} {pkg.customer.lastName}
 								</Link>
 							) : (
@@ -99,7 +99,11 @@ export function SharedContextCard({
 									</SelectContent>
 								</Select>
 							) : (
-								<p>{pkg.productionMethod ? PRODUCTION_METHOD_LABELS[pkg.productionMethod] : 'Not set'}</p>
+								<p>
+									{pkg.productionMethod
+										? PRODUCTION_METHOD_LABELS[pkg.productionMethod]
+										: 'Not set'}
+								</p>
 							)}
 						</div>
 					)}
@@ -113,7 +117,10 @@ export function SharedContextCard({
 						<div>
 							<p className="text-sm font-medium text-muted-foreground">Funeral Director</p>
 							<p>
-								<Link to={`/app/funeral-directors/${pkg.funeralDirectorId}`} className="text-primary hover:underline">
+								<Link
+									to={`/app/funeral-directors/${pkg.funeralDirectorId}`}
+									className="text-primary hover:underline"
+								>
 									{pkg.funeralDirector.tradingName || pkg.funeralDirector.businessName}
 								</Link>
 							</p>
@@ -138,14 +145,20 @@ export function SharedContextCard({
 						<p className="text-sm font-medium text-muted-foreground mb-2">
 							Proposed Inscription ({pkg.proposedInscription.length} characters)
 						</p>
-						<p className="whitespace-pre-wrap bg-muted p-3 rounded font-mono text-sm">{pkg.proposedInscription}</p>
+						<p className="whitespace-pre-wrap bg-muted p-3 rounded font-mono text-sm">
+							{pkg.proposedInscription}
+						</p>
 					</div>
 				)}
 
 				{sectionConfig.showExistingMemorial && pkg.existingMemorialDescription && (
 					<div className="mt-4 pt-4 border-t">
-						<p className="text-sm font-medium text-muted-foreground mb-2">Existing Memorial Description</p>
-						<p className="whitespace-pre-wrap bg-muted p-3 rounded text-sm">{pkg.existingMemorialDescription}</p>
+						<p className="text-sm font-medium text-muted-foreground mb-2">
+							Existing Memorial Description
+						</p>
+						<p className="whitespace-pre-wrap bg-muted p-3 rounded text-sm">
+							{pkg.existingMemorialDescription}
+						</p>
 					</div>
 				)}
 

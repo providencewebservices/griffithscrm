@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -167,7 +167,7 @@ async function updateStep({
 			headers: { 'Content-Type': 'application/json' },
 			credentials: 'include',
 			body: JSON.stringify(input),
-		}
+		},
 	);
 
 	if (!response.ok) {
@@ -191,7 +191,7 @@ async function deleteStep({
 		{
 			method: 'DELETE',
 			credentials: 'include',
-		}
+		},
 	);
 
 	if (!response.ok) {
@@ -214,7 +214,7 @@ async function reorderSteps({
 			headers: { 'Content-Type': 'application/json' },
 			credentials: 'include',
 			body: JSON.stringify({ steps }),
-		}
+		},
 	);
 
 	if (!response.ok) {

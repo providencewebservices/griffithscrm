@@ -1,10 +1,10 @@
-import { Hono } from 'hono';
-import { zValidator } from '@hono/zod-validator';
-import { z } from 'zod';
-import { eq, and, asc, count, inArray, isNotNull } from 'drizzle-orm';
-import { requireAuth, requireTenant } from '../middleware/auth';
-import { db } from '../lib/auth';
 import { finishes, quoteComponents } from '@griffiths-crm/shared/db/schema';
+import { zValidator } from '@hono/zod-validator';
+import { and, asc, count, eq, inArray, isNotNull } from 'drizzle-orm';
+import { Hono } from 'hono';
+import { z } from 'zod';
+import { db } from '../lib/auth';
+import { requireAuth, requireTenant } from '../middleware/auth';
 
 // Validation schemas
 const createSchema = z.object({
@@ -45,15 +45,13 @@ const finishesRoutes = new Hono()
 						.where(
 							and(
 								isNotNull(quoteComponents.finishId),
-								inArray(quoteComponents.finishId, finishIds)
-							)
+								inArray(quoteComponents.finishId, finishIds),
+							),
 						)
 						.groupBy(quoteComponents.finishId)
 				: [];
 
-		const countMap = new Map(
-			usageCounts.map((uc) => [uc.finishId, Number(uc.count)])
-		);
+		const countMap = new Map(usageCounts.map((uc) => [uc.finishId, Number(uc.count)]));
 
 		const finishesWithCounts = allFinishes.map((f) => ({
 			...f,

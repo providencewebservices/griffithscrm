@@ -1,15 +1,21 @@
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router';
 import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from '@/components/ui/table';
+	Building,
+	Building2,
+	LayoutGrid,
+	List,
+	Mail,
+	MapPin,
+	Phone,
+	Plus,
+	Search,
+	X,
+} from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Pagination, usePagination } from '@/components/ui/pagination';
 import {
 	Select,
 	SelectContent,
@@ -18,15 +24,18 @@ import {
 	SelectValue,
 } from '@/components/ui/select';
 import {
-	Card,
-	CardContent,
-	CardHeader,
-	CardTitle,
-} from '@/components/ui/card';
-import { Pagination, usePagination } from '@/components/ui/pagination';
-import { useFuneralDirectorsQuery, type FuneralDirectorListItem } from '@/hooks/use-funeral-directors';
-import { getInitials, getAvatarColor } from '@/lib/avatar-utils';
-import { Search, List, LayoutGrid, Mail, Phone, MapPin, Building, Building2, X, Plus } from 'lucide-react';
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from '@/components/ui/table';
+import {
+	type FuneralDirectorListItem,
+	useFuneralDirectorsQuery,
+} from '@/hooks/use-funeral-directors';
+import { getAvatarColor, getInitials } from '@/lib/avatar-utils';
 
 type ViewMode = 'active' | 'archived';
 type DisplayMode = 'table' | 'cards';
@@ -49,7 +58,11 @@ export function FuneralDirectorsList() {
 		return () => clearTimeout(timer);
 	}, [searchQuery]);
 
-	const { data: funeralDirectors, isLoading, error } = useFuneralDirectorsQuery({
+	const {
+		data: funeralDirectors,
+		isLoading,
+		error,
+	} = useFuneralDirectorsQuery({
 		q: debouncedSearch || undefined,
 		archivedOnly: viewMode === 'archived',
 	});
@@ -67,11 +80,7 @@ export function FuneralDirectorsList() {
 	}
 
 	if (error) {
-		return (
-			<div className="text-destructive">
-				Error loading funeral directors: {error.message}
-			</div>
-		);
+		return <div className="text-destructive">Error loading funeral directors: {error.message}</div>;
 	}
 
 	return (
@@ -203,14 +212,10 @@ export function FuneralDirectorsList() {
 											{fd.tradingName || fd.businessName}
 										</TableCell>
 										<TableCell>
-											{fd.primaryEmail?.value || (
-												<span className="text-muted-foreground">-</span>
-											)}
+											{fd.primaryEmail?.value || <span className="text-muted-foreground">-</span>}
 										</TableCell>
 										<TableCell>
-											{fd.primaryPhone?.value || (
-												<span className="text-muted-foreground">-</span>
-											)}
+											{fd.primaryPhone?.value || <span className="text-muted-foreground">-</span>}
 										</TableCell>
 										<TableCell>
 											{fd.primaryAddress?.formattedAddress ? (
@@ -263,7 +268,11 @@ export function FuneralDirectorsList() {
 	);
 }
 
-function FuneralDirectorCard({ funeralDirector: fd }: { funeralDirector: FuneralDirectorListItem }) {
+function FuneralDirectorCard({
+	funeralDirector: fd,
+}: {
+	funeralDirector: FuneralDirectorListItem;
+}) {
 	const displayName = fd.tradingName || fd.businessName;
 	const initials = getInitials(displayName);
 	const avatarColor = getAvatarColor(displayName);

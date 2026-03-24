@@ -1,5 +1,5 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { PROOF_STATUSES } from '@griffiths-crm/shared/db/schema';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -62,7 +62,10 @@ async function fetchJobProofs(jobId: string): Promise<JobProof[]> {
 	return data.proofs;
 }
 
-async function presignProof(jobId: string, input: PresignProofInput): Promise<PresignProofResponse> {
+async function presignProof(
+	jobId: string,
+	input: PresignProofInput,
+): Promise<PresignProofResponse> {
 	const response = await fetch(`${API_URL}/api/jobs/${jobId}/proofs/presign`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
@@ -125,7 +128,11 @@ async function approveProof(jobId: string, proofId: string): Promise<JobProof> {
 	return data.proof;
 }
 
-async function requestRevision(jobId: string, proofId: string, customerFeedback: string): Promise<JobProof> {
+async function requestRevision(
+	jobId: string,
+	proofId: string,
+	customerFeedback: string,
+): Promise<JobProof> {
 	const response = await fetch(`${API_URL}/api/jobs/${jobId}/proofs/${proofId}/request-revision`, {
 		method: 'PUT',
 		headers: { 'Content-Type': 'application/json' },
@@ -142,7 +149,11 @@ async function requestRevision(jobId: string, proofId: string, customerFeedback:
 	return data.proof;
 }
 
-async function updateProofNotes(jobId: string, proofId: string, notes: string | null): Promise<JobProof> {
+async function updateProofNotes(
+	jobId: string,
+	proofId: string,
+	notes: string | null,
+): Promise<JobProof> {
 	const response = await fetch(`${API_URL}/api/jobs/${jobId}/proofs/${proofId}`, {
 		method: 'PUT',
 		headers: { 'Content-Type': 'application/json' },

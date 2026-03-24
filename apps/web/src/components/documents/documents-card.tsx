@@ -1,21 +1,15 @@
-import { useState, useMemo } from 'react';
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from '@/components/ui/card';
+import { Files, Plus } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { DocumentRow } from './document-row';
-import { DocumentUploadDialog } from './document-upload-dialog';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
+	type DocumentEntityType,
 	useEntityDocumentsQuery,
 	useUploadDocumentMutation,
-	type DocumentEntityType,
 } from '@/hooks/use-documents';
-import { Plus, Files } from 'lucide-react';
 import { parseTags } from '@/lib/file-utils';
+import { DocumentRow } from './document-row';
+import { DocumentUploadDialog } from './document-upload-dialog';
 
 interface DocumentsCardProps {
 	entityType: DocumentEntityType;
@@ -98,9 +92,7 @@ export function DocumentsCard({
 	const content = (
 		<>
 			{isLoading ? (
-				<div className="text-center py-8 text-muted-foreground">
-					Loading documents...
-				</div>
+				<div className="text-center py-8 text-muted-foreground">Loading documents...</div>
 			) : filteredDocuments.length === 0 ? (
 				<div className="text-center py-8 text-muted-foreground border rounded-lg">
 					<Files className="h-8 w-8 mx-auto mb-2 opacity-50" />
@@ -153,9 +145,7 @@ export function DocumentsCard({
 						</Button>
 					</div>
 				</CardHeader>
-				<CardContent>
-					{content}
-				</CardContent>
+				<CardContent>{content}</CardContent>
 			</Card>
 
 			<DocumentUploadDialog

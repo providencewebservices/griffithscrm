@@ -1,7 +1,18 @@
+import { Plus } from 'lucide-react';
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from '@/components/ui/dialog';
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
 	Table,
@@ -12,23 +23,12 @@ import {
 	TableRow,
 } from '@/components/ui/table';
 import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from '@/components/ui/dialog';
-import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
-import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
-import { Plus } from 'lucide-react';
-import {
-	useFinishesQuery,
-	useCreateFinishMutation,
-	useUpdateFinishMutation,
-	useDeleteFinishMutation,
-	type Finish,
 	type CreateFinishInput,
+	type Finish,
+	useCreateFinishMutation,
+	useDeleteFinishMutation,
+	useFinishesQuery,
+	useUpdateFinishMutation,
 } from '@/hooks/use-finishes';
 
 export function FinishesTab() {
@@ -151,9 +151,7 @@ export function FinishesTab() {
 	}
 
 	if (error) {
-		return (
-			<div className="text-destructive">Error loading finishes: {error.message}</div>
-		);
+		return <div className="text-destructive">Error loading finishes: {error.message}</div>;
 	}
 
 	return (
@@ -187,11 +185,7 @@ export function FinishesTab() {
 						</TableHeader>
 						<TableBody>
 							{finishes?.map((item) => (
-								<TableRow
-									key={item.id}
-									className="cursor-pointer"
-									onClick={() => handleEdit(item)}
-								>
+								<TableRow key={item.id} className="cursor-pointer" onClick={() => handleEdit(item)}>
 									<TableCell className="font-medium">
 										{item.name}
 										{!item.isActive && (
@@ -230,9 +224,7 @@ export function FinishesTab() {
 					<DialogHeader>
 						<DialogTitle>{isEditing ? 'Edit Finish' : 'Add Finish'}</DialogTitle>
 						<DialogDescription>
-							{isEditing
-								? 'Update the finish details.'
-								: 'Add a new surface finish option.'}
+							{isEditing ? 'Update the finish details.' : 'Add a new surface finish option.'}
 						</DialogDescription>
 					</DialogHeader>
 
@@ -265,11 +257,7 @@ export function FinishesTab() {
 								>
 									{selectedFinish.isActive ? 'Deactivate' : 'Activate'}
 								</Button>
-								<Button
-									variant="destructive"
-									size="sm"
-									onClick={() => setDeleteDialogOpen(true)}
-								>
+								<Button variant="destructive" size="sm" onClick={() => setDeleteDialogOpen(true)}>
 									Delete
 								</Button>
 							</div>

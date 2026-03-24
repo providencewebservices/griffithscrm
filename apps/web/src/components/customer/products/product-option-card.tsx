@@ -1,6 +1,15 @@
+import { ChevronDown, ChevronRight, ImageIcon, MoreHorizontal, Plus } from 'lucide-react';
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
 	Table,
 	TableBody,
@@ -10,34 +19,21 @@ import {
 	TableRow,
 } from '@/components/ui/table';
 import {
-	Collapsible,
-	CollapsibleContent,
-	CollapsibleTrigger,
-} from '@/components/ui/collapsible';
+	type OptionChoice,
+	useCreateOptionChoiceMutation,
+	useDeleteOptionChoiceMutation,
+	useUpdateOptionChoiceMutation,
+} from '@/hooks/use-option-choices';
 import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
-import { ChoiceFormDialog } from './choice-form-dialog';
-import { OptionFormDialog } from './option-form-dialog';
-import {
-	useUpdateProductOptionMutation,
-	useDeleteProductOptionMutation,
 	type ProductOption,
 	type ProductOptionType,
+	useDeleteProductOptionMutation,
+	useUpdateProductOptionMutation,
 } from '@/hooks/use-product-options';
-import {
-	useCreateOptionChoiceMutation,
-	useUpdateOptionChoiceMutation,
-	useDeleteOptionChoiceMutation,
-	type OptionChoice,
-} from '@/hooks/use-option-choices';
 import { useSignedUrls } from '@/hooks/use-uploads';
-import { ChevronDown, ChevronRight, MoreHorizontal, Plus, ImageIcon } from 'lucide-react';
 import { formatPriceAdjustment } from '@/lib/product-utils';
+import { ChoiceFormDialog } from './choice-form-dialog';
+import { OptionFormDialog } from './option-form-dialog';
 
 const OPTION_TYPE_LABELS: Record<ProductOptionType, string> = {
 	dimension: 'Dimension',
@@ -87,7 +83,7 @@ export function ProductOptionCard({ option, defaultOpen = false }: ProductOption
 		try {
 			await deleteOptionMutation.mutateAsync(option.id);
 			setDeleteDialogOpen(false);
-		} catch (err) {
+		} catch (_err) {
 			// Error handled by mutation
 		}
 	};
@@ -134,7 +130,7 @@ export function ProductOptionCard({ option, defaultOpen = false }: ProductOption
 			await deleteChoiceMutation.mutateAsync(selectedChoice.id);
 			setDeleteChoiceDialogOpen(false);
 			setSelectedChoice(null);
-		} catch (err) {
+		} catch (_err) {
 			// Error handled by mutation
 		}
 	};
@@ -210,10 +206,7 @@ export function ProductOptionCard({ option, defaultOpen = false }: ProductOption
 													<TableCell>
 														{choice.imageUrl ? (
 															<img
-																src={
-																	(signedChoiceImages?.get(choice.imageUrl)) ||
-																	choice.imageUrl
-																}
+																src={signedChoiceImages?.get(choice.imageUrl) || choice.imageUrl}
 																alt={choice.name}
 																className="w-8 h-8 object-cover rounded"
 															/>
@@ -223,34 +216,30 @@ export function ProductOptionCard({ option, defaultOpen = false }: ProductOption
 															</div>
 														)}
 													</TableCell>
-													<TableCell className="font-medium">
-														{choice.name}
-													</TableCell>
+													<TableCell className="font-medium">{choice.name}</TableCell>
 													<TableCell>{formatPriceAdjustment(choice.priceAdjustment)}</TableCell>
 													{option.type !== 'flower_holes' && (
-													<TableCell>
-														<DropdownMenu>
-															<DropdownMenuTrigger asChild>
-																<Button variant="ghost" size="icon-sm">
-																	<MoreHorizontal className="h-4 w-4" />
-																</Button>
-															</DropdownMenuTrigger>
-															<DropdownMenuContent align="end">
-																<DropdownMenuItem
-																	onClick={() => handleEditChoice(choice)}
-																>
-																	Edit
-																</DropdownMenuItem>
-																<DropdownMenuItem
-																	className="text-destructive"
-																	onClick={() => handleDeleteChoice(choice)}
-																>
-																	Delete
-																</DropdownMenuItem>
-															</DropdownMenuContent>
-														</DropdownMenu>
-													</TableCell>
-												)}
+														<TableCell>
+															<DropdownMenu>
+																<DropdownMenuTrigger asChild>
+																	<Button variant="ghost" size="icon-sm">
+																		<MoreHorizontal className="h-4 w-4" />
+																	</Button>
+																</DropdownMenuTrigger>
+																<DropdownMenuContent align="end">
+																	<DropdownMenuItem onClick={() => handleEditChoice(choice)}>
+																		Edit
+																	</DropdownMenuItem>
+																	<DropdownMenuItem
+																		className="text-destructive"
+																		onClick={() => handleDeleteChoice(choice)}
+																	>
+																		Delete
+																	</DropdownMenuItem>
+																</DropdownMenuContent>
+															</DropdownMenu>
+														</TableCell>
+													)}
 												</TableRow>
 											))}
 										</TableBody>

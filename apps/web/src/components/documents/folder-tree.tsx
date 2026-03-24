@@ -1,19 +1,12 @@
+import { ChevronDown, ChevronRight, File, Files, Folder, FolderOpen } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
 import {
-	ChevronRight,
-	ChevronDown,
-	Folder,
-	FolderOpen,
-	File,
-	Files,
-} from 'lucide-react';
-import {
-	useAllFoldersQuery,
 	buildFolderTree,
 	type DocumentFolder,
+	useAllFoldersQuery,
 } from '@/hooks/use-document-folders';
+import { cn } from '@/lib/utils';
 
 interface FolderTreeItemProps {
 	folder: DocumentFolder & { children?: DocumentFolder[] };
@@ -51,7 +44,7 @@ function FolderTreeItem({
 				className={cn(
 					'flex items-center gap-1 py-1 px-2 rounded-md cursor-pointer hover:bg-accent text-sm transition-colors',
 					isSelected && 'bg-accent',
-					isDragOver && 'bg-primary/20 ring-2 ring-primary ring-inset'
+					isDragOver && 'bg-primary/20 ring-2 ring-primary ring-inset',
 				)}
 				style={{ paddingLeft: `${level * 16 + 8}px` }}
 				onDragOver={(e) => onDragOver(e, folder.id)}
@@ -82,15 +75,9 @@ function FolderTreeItem({
 					onClick={() => onSelectFolder(folder.id)}
 				>
 					{isExpanded ? (
-						<FolderOpen
-							className="h-4 w-4 shrink-0"
-							style={{ color: folder.color || undefined }}
-						/>
+						<FolderOpen className="h-4 w-4 shrink-0" style={{ color: folder.color || undefined }} />
 					) : (
-						<Folder
-							className="h-4 w-4 shrink-0"
-							style={{ color: folder.color || undefined }}
-						/>
+						<Folder className="h-4 w-4 shrink-0" style={{ color: folder.color || undefined }} />
 					)}
 					<span className="truncate">{folder.name}</span>
 				</div>
@@ -202,7 +189,7 @@ export function FolderTree({
 				className={cn(
 					'flex items-center gap-2 py-1 px-2 rounded-md cursor-pointer hover:bg-accent text-sm transition-colors',
 					selectedFolderId === 'all' && 'bg-accent',
-					dragOverTarget === 'all' && 'bg-primary/20 ring-2 ring-primary ring-inset'
+					dragOverTarget === 'all' && 'bg-primary/20 ring-2 ring-primary ring-inset',
 				)}
 				onClick={() => onSelectFolder('all')}
 				onDragOver={(e) => handleDragOver(e, 'all')}
@@ -242,7 +229,7 @@ export function FolderTree({
 				className={cn(
 					'flex items-center gap-2 py-1 px-2 rounded-md cursor-pointer hover:bg-accent text-sm transition-colors mt-3',
 					selectedFolderId === null && 'bg-accent',
-					dragOverTarget === 'unfiled' && 'bg-primary/20 ring-2 ring-primary ring-inset'
+					dragOverTarget === 'unfiled' && 'bg-primary/20 ring-2 ring-primary ring-inset',
 				)}
 				onClick={() => onSelectFolder(null)}
 				onDragOver={(e) => handleDragOver(e, 'unfiled')}

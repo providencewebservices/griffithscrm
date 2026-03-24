@@ -1,16 +1,16 @@
-import { Hono } from 'hono';
-import { zValidator } from '@hono/zod-validator';
-import { z } from 'zod';
-import { eq, and, or, like, isNull, isNotNull } from 'drizzle-orm';
-import { requireAuth, requireTenant } from '../middleware/auth';
-import { db } from '../lib/auth';
 import {
-	customers,
-	contactInfo,
 	addresses,
-	customerContactInfo,
+	contactInfo,
 	customerAddresses,
+	customerContactInfo,
+	customers,
 } from '@griffiths-crm/shared/db/schema';
+import { zValidator } from '@hono/zod-validator';
+import { and, eq, isNotNull, isNull, like, or } from 'drizzle-orm';
+import { Hono } from 'hono';
+import { z } from 'zod';
+import { db } from '../lib/auth';
+import { requireAuth, requireTenant } from '../middleware/auth';
 
 // Validation schemas
 const contactInfoSchema = z.object({
@@ -114,7 +114,7 @@ const customerRoutes = new Hono()
 		const { q, archivedOnly } = c.req.valid('query');
 
 		// Build base query
-		let baseConditions = [eq(customers.tenantId, tenantId)];
+		const baseConditions = [eq(customers.tenantId, tenantId)];
 
 		// Filter by archived status
 		if (archivedOnly === 'true') {
@@ -133,7 +133,7 @@ const customerRoutes = new Hono()
 		// If search query provided, filter and include contact/address search
 		let filteredCustomerIds: string[] = allCustomers.map((c) => c.id);
 
-		if (q && q.trim()) {
+		if (q?.trim()) {
 			const searchTerm = `%${q.trim().toLowerCase()}%`;
 
 			// Search in customer names
@@ -142,7 +142,7 @@ const customerRoutes = new Hono()
 					(c) =>
 						c.firstName.toLowerCase().includes(q.toLowerCase()) ||
 						c.lastName.toLowerCase().includes(q.toLowerCase()) ||
-						`${c.firstName} ${c.lastName}`.toLowerCase().includes(q.toLowerCase())
+						`${c.firstName} ${c.lastName}`.toLowerCase().includes(q.toLowerCase()),
 				)
 				.map((c) => c.id);
 
@@ -184,8 +184,8 @@ const customerRoutes = new Hono()
 							and(
 								eq(customerContactInfo.customerId, customer.id),
 								eq(contactInfo.type, 'email'),
-								eq(contactInfo.isPrimary, true)
-							)
+								eq(contactInfo.isPrimary, true),
+							),
 						)
 						.limit(1);
 
@@ -197,12 +197,9 @@ const customerRoutes = new Hono()
 						.where(
 							and(
 								eq(customerContactInfo.customerId, customer.id),
-								or(
-									eq(contactInfo.type, 'phone'),
-									eq(contactInfo.type, 'mobile')
-								),
-								eq(contactInfo.isPrimary, true)
-							)
+								or(eq(contactInfo.type, 'phone'), eq(contactInfo.type, 'mobile')),
+								eq(contactInfo.isPrimary, true),
+							),
 						)
 						.limit(1);
 
@@ -212,10 +209,7 @@ const customerRoutes = new Hono()
 						.from(customerAddresses)
 						.innerJoin(addresses, eq(addresses.id, customerAddresses.addressId))
 						.where(
-							and(
-								eq(customerAddresses.customerId, customer.id),
-								eq(addresses.isPrimary, true)
-							)
+							and(eq(customerAddresses.customerId, customer.id), eq(addresses.isPrimary, true)),
 						)
 						.limit(1);
 
@@ -225,7 +219,7 @@ const customerRoutes = new Hono()
 						primaryPhone: primaryPhone[0]?.contactInfo || null,
 						primaryAddress: primaryAddress[0]?.address || null,
 					};
-				})
+				}),
 		);
 
 		return c.json({ customers: result });
@@ -353,7 +347,9 @@ const customerRoutes = new Hono()
 					...(updates.doNotCall !== undefined && { doNotCall: updates.doNotCall }),
 					...(updates.doNotEmail !== undefined && { doNotEmail: updates.doNotEmail }),
 					...(updates.doNotMail !== undefined && { doNotMail: updates.doNotMail }),
-					...(updates.communicationNotes !== undefined && { communicationNotes: updates.communicationNotes }),
+					...(updates.communicationNotes !== undefined && {
+						communicationNotes: updates.communicationNotes,
+					}),
 					updatedAt: now,
 				})
 				.where(eq(customers.id, customerId));
@@ -562,7 +558,7 @@ const customerRoutes = new Hono()
 				console.error('Error updating communication preferences:', error);
 				return c.json({ error: 'Failed to update communication preferences' }, 500);
 			}
-		}
+		},
 	);
 
 export { customerRoutes };

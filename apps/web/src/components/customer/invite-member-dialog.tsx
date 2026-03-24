@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
 import {
 	Dialog,
 	DialogContent,
@@ -7,14 +8,8 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import {
-	Field,
-	FieldGroup,
-	FieldLabel,
-	FieldError,
-} from '@/components/ui/field';
 import type { TeamMember } from '@/hooks/use-team';
 
 interface InviteMemberDialogProps {
@@ -47,7 +42,7 @@ export function InviteMemberDialog({
 			setName('');
 			setEmail('');
 		}
-	}, [member, open]);
+	}, [member]);
 
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
@@ -58,9 +53,7 @@ export function InviteMemberDialog({
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent>
 				<DialogHeader>
-					<DialogTitle>
-						{isEditing ? 'Edit Team Member' : 'Invite Team Member'}
-					</DialogTitle>
+					<DialogTitle>{isEditing ? 'Edit Team Member' : 'Invite Team Member'}</DialogTitle>
 					<DialogDescription>
 						{isEditing
 							? 'Update the team member details.'

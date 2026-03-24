@@ -1,4 +1,4 @@
-import { Outlet, NavLink, useNavigate } from 'react-router';
+import { NavLink, Outlet, useNavigate } from 'react-router';
 import { signOut, useSession } from '@/lib/auth';
 
 export function AdminLayout() {
@@ -22,9 +22,7 @@ export function AdminLayout() {
 								end
 								className={({ isActive }) =>
 									`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-										isActive
-											? 'bg-purple-100 text-purple-700'
-											: 'text-gray-600 hover:bg-gray-100'
+										isActive ? 'bg-purple-100 text-purple-700' : 'text-gray-600 hover:bg-gray-100'
 									}`
 								}
 							>
@@ -34,9 +32,7 @@ export function AdminLayout() {
 								to="/admin/tenants"
 								className={({ isActive }) =>
 									`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-										isActive
-											? 'bg-purple-100 text-purple-700'
-											: 'text-gray-600 hover:bg-gray-100'
+										isActive ? 'bg-purple-100 text-purple-700' : 'text-gray-600 hover:bg-gray-100'
 									}`
 								}
 							>
@@ -46,9 +42,7 @@ export function AdminLayout() {
 								to="/admin/users"
 								className={({ isActive }) =>
 									`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-										isActive
-											? 'bg-purple-100 text-purple-700'
-											: 'text-gray-600 hover:bg-gray-100'
+										isActive ? 'bg-purple-100 text-purple-700' : 'text-gray-600 hover:bg-gray-100'
 									}`
 								}
 							>
@@ -57,9 +51,7 @@ export function AdminLayout() {
 						</nav>
 					</div>
 					<div className="flex items-center gap-4">
-						<span className="text-sm text-muted-foreground">
-							{session?.user?.email}
-						</span>
+						<span className="text-sm text-muted-foreground">{session?.user?.email}</span>
 						<button
 							onClick={handleSignOut}
 							className="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"

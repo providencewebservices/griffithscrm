@@ -1,29 +1,41 @@
-import { useState, useEffect } from 'react';
-import { useSearchParams, NavLink } from 'react-router';
+import {
+	Archive,
+	ChevronDown,
+	Eye,
+	EyeOff,
+	File,
+	FileSpreadsheet,
+	FileText,
+	Image,
+	Inbox,
+	Link2,
+	Loader2,
+	Mail,
+	Paperclip,
+	PenSquare,
+	RefreshCw,
+	Reply,
+	Search,
+	Trash2,
+	Undo2,
+	Users,
+	X,
+} from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { NavLink, useSearchParams } from 'react-router';
 import { toast } from 'sonner';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
+import { ComposeEmailDialog } from '@/components/inbox/compose-email-dialog';
+import { NavUser } from '@/components/nav-user';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from '@/components/ui/select';
-import { Skeleton } from '@/components/ui/skeleton';
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-} from '@/components/ui/popover';
+	Breadcrumb,
+	BreadcrumbItem,
+	BreadcrumbList,
+	BreadcrumbPage,
+	BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
+import { Button } from '@/components/ui/button';
 import {
 	Command,
 	CommandEmpty,
@@ -33,71 +45,55 @@ import {
 	CommandList,
 } from '@/components/ui/command';
 import {
-	Breadcrumb,
-	BreadcrumbItem,
-	BreadcrumbList,
-	BreadcrumbPage,
-	BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb';
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
 import {
 	Sidebar,
 	SidebarContent,
 	SidebarFooter,
 	SidebarHeader,
+	SidebarInput,
 	SidebarInset,
 	SidebarMenu,
 	SidebarMenuButton,
 	SidebarMenuItem,
 	SidebarProvider,
 	SidebarTrigger,
-	SidebarInput,
 	useSidebar,
 } from '@/components/ui/sidebar';
-import {
-	Search,
-	Reply,
-	Link2,
-	FileText,
-	Archive,
-	ChevronDown,
-	Mail,
-	Paperclip,
-	File,
-	Image,
-	FileSpreadsheet,
-	PenSquare,
-	RefreshCw,
-	Loader2,
-	X,
-	Users,
-	Eye,
-	EyeOff,
-	Trash2,
-	Undo2,
-	Inbox,
-} from 'lucide-react';
-import { NavUser } from '@/components/nav-user';
-import { ComposeEmailDialog } from '@/components/inbox/compose-email-dialog';
-import { navItems } from '@/lib/nav-items';
-import { useUnreadCountQuery } from '@/hooks/use-inbox';
-import {
-	useEmailIntegrationsQuery,
-	useInboxThreadsQuery,
-	useInboxThreadQuery,
-	useMarkReadMutation,
-	useArchiveThreadMutation,
-	useTrashThreadMutation,
-	useUntrashThreadMutation,
-	useSendEmailMutation,
-	useSyncInboxMutation,
-	getConnectGmailUrl,
-	type EmailThread,
-	type ThreadsQueryParams,
-} from '@/hooks/use-inbox';
+import { Skeleton } from '@/components/ui/skeleton';
+import { CustomerViewProvider, useCustomerView } from '@/contexts/customer-view-context';
 import { useCustomersQuery } from '@/hooks/use-customers';
 import { useFuneralDirectorsQuery } from '@/hooks/use-funeral-directors';
+import {
+	type EmailThread,
+	getConnectGmailUrl,
+	type ThreadsQueryParams,
+	useArchiveThreadMutation,
+	useEmailIntegrationsQuery,
+	useInboxThreadQuery,
+	useInboxThreadsQuery,
+	useMarkReadMutation,
+	useSendEmailMutation,
+	useSyncInboxMutation,
+	useTrashThreadMutation,
+	useUnreadCountQuery,
+	useUntrashThreadMutation,
+} from '@/hooks/use-inbox';
 import { useSuppliersQuery } from '@/hooks/use-suppliers';
-import { CustomerViewProvider, useCustomerView } from '@/contexts/customer-view-context';
+import { navItems } from '@/lib/nav-items';
 
 // ─── Helpers ──────────────────────────────────────────────
 
@@ -145,8 +141,7 @@ function formatDate(dateStr: string | null): string {
 	const date = new Date(dateStr);
 	const now = new Date();
 	const isToday = date.toDateString() === now.toDateString();
-	const isYesterday =
-		new Date(now.getTime() - 86400000).toDateString() === date.toDateString();
+	const isYesterday = new Date(now.getTime() - 86400000).toDateString() === date.toDateString();
 	if (isToday) return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 	if (isYesterday) return 'Yesterday';
 	return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
@@ -224,8 +219,8 @@ function ConnectEmailCTA() {
 				</div>
 				<h2 className="text-xl font-semibold mb-2">Connect your email</h2>
 				<p className="text-muted-foreground mb-6">
-					Link your Gmail account to send and receive emails directly from the CRM.
-					Your emails will stay synced automatically.
+					Link your Gmail account to send and receive emails directly from the CRM. Your emails will
+					stay synced automatically.
 				</p>
 				<Button onClick={handleConnect} disabled={isConnecting} size="lg">
 					{isConnecting ? (
@@ -255,10 +250,7 @@ function IconRail() {
 	const { data: unreadCount } = useUnreadCountQuery();
 
 	return (
-		<Sidebar
-			collapsible="none"
-			className="w-[calc(var(--sidebar-width-icon)+1px)]! border-r"
-		>
+		<Sidebar collapsible="none" className="w-[calc(var(--sidebar-width-icon)+1px)]! border-r">
 			<SidebarHeader>
 				<SidebarMenu>
 					<SidebarMenuItem>
@@ -277,7 +269,11 @@ function IconRail() {
 					{navItems.map((item) => (
 						<SidebarMenuItem key={item.title}>
 							<SidebarMenuButton asChild tooltip={item.title}>
-								<NavLink to={item.url} end={item.url === '/app'} className="relative justify-center">
+								<NavLink
+									to={item.url}
+									end={item.url === '/app'}
+									className="relative justify-center"
+								>
 									<item.icon className="size-4" />
 									{item.title === 'Inbox' && unreadCount ? (
 										<span className="absolute top-0.5 right-1 size-2 rounded-full bg-red-500" />
@@ -355,12 +351,21 @@ function ThreadListPanel({
 	const unreadCount = threads.filter((t) => t.isUnread).length;
 
 	return (
-		<Sidebar collapsible="none" className="hidden w-0 min-w-0 flex-1 md:flex bg-background text-foreground">
+		<Sidebar
+			collapsible="none"
+			className="hidden w-0 min-w-0 flex-1 md:flex bg-background text-foreground"
+		>
 			<SidebarHeader className="border-b p-0 gap-0">
 				<div className="flex items-center justify-between p-3 pb-0">
 					<h2 className="font-semibold text-base">Inbox</h2>
 					<div className="flex items-center gap-1">
-						<Button variant="ghost" size="icon" className="size-7" onClick={onSync} disabled={syncPending}>
+						<Button
+							variant="ghost"
+							size="icon"
+							className="size-7"
+							onClick={onSync}
+							disabled={syncPending}
+						>
 							<RefreshCw className={`h-4 w-4 ${syncPending ? 'animate-spin' : ''}`} />
 						</Button>
 						<Button variant="ghost" size="icon" className="size-7" onClick={onCompose}>
@@ -398,149 +403,161 @@ function ThreadListPanel({
 					</button>
 				</div>
 				<div className="p-3 space-y-3">
-				<div className="flex items-center gap-2">
-					<div className="relative flex-1">
-						<Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-						<SidebarInput
-							placeholder="Search emails..."
-							value={searchQuery}
-							onChange={(e) => onSearchChange(e.target.value)}
-							className="pl-8"
-						/>
-					</div>
-					{folder !== 'trash' && <Popover open={contactFilterOpen} onOpenChange={onContactFilterOpenChange}>
-						<PopoverTrigger asChild>
-							<Button variant="outline" size="icon" className="size-8 shrink-0">
-								<Users className="h-4 w-4" />
-							</Button>
-						</PopoverTrigger>
-						<PopoverContent className="w-72 p-0" align="end">
-							<Command shouldFilter={false}>
-								<CommandInput
-									placeholder="Search contacts..."
-									value={contactSearch}
-									onValueChange={onContactSearchChange}
-								/>
-								<CommandList>
-									<CommandEmpty>
-										{debouncedContactSearch.length < 2
-											? 'Type to search contacts...'
-											: 'No contacts found'}
-									</CommandEmpty>
-									{customerResults && customerResults.length > 0 && (
-										<CommandGroup heading="Customers">
-											{customerResults.slice(0, 5).map((c: any) => (
-												<CommandItem
-													key={`customer-${c.id}`}
-													onSelect={() => {
-														onContactSelect({
-															entityType: 'customer',
-															entityId: c.id,
-															label: `${c.firstName} ${c.lastName}`,
-															email: c.primaryEmail?.value,
-														});
-													}}
-												>
-													<div className="flex flex-col">
-														<span className="text-sm">{c.firstName} {c.lastName}</span>
-														{c.primaryEmail && (
-															<span className="text-xs text-muted-foreground">{c.primaryEmail.value}</span>
-														)}
-													</div>
-												</CommandItem>
-											))}
-										</CommandGroup>
-									)}
-									{fdResults && fdResults.length > 0 && (
-										<CommandGroup heading="Funeral Directors">
-											{fdResults.slice(0, 5).map((fd: any) => (
-												<CommandItem
-													key={`fd-${fd.id}`}
-													onSelect={() => {
-														onContactSelect({
-															entityType: 'funeral_director',
-															entityId: fd.id,
-															label: fd.tradingName || fd.businessName,
-															email: fd.primaryEmail?.value,
-														});
-													}}
-												>
-													<div className="flex flex-col">
-														<span className="text-sm">{fd.tradingName || fd.businessName}</span>
-														{fd.primaryEmail && (
-															<span className="text-xs text-muted-foreground">{fd.primaryEmail.value}</span>
-														)}
-													</div>
-												</CommandItem>
-											))}
-										</CommandGroup>
-									)}
-									{supplierResults && supplierResults.length > 0 && (
-										<CommandGroup heading="Suppliers">
-											{supplierResults.slice(0, 5).map((s: any) => (
-												<CommandItem
-													key={`supplier-${s.id}`}
-													onSelect={() => {
-														onContactSelect({
-															entityType: 'supplier',
-															entityId: s.id,
-															label: s.tradingName || s.businessName,
-															email: s.primaryEmail?.value,
-														});
-													}}
-												>
-													<div className="flex flex-col">
-														<span className="text-sm">{s.tradingName || s.businessName}</span>
-														{s.primaryEmail && (
-															<span className="text-xs text-muted-foreground">{s.primaryEmail.value}</span>
-														)}
-													</div>
-												</CommandItem>
-											))}
-										</CommandGroup>
-									)}
-								</CommandList>
-							</Command>
-						</PopoverContent>
-					</Popover>}
-				</div>
-				{folder !== 'trash' && (
 					<div className="flex items-center gap-2">
-						<Select value={filter} onValueChange={(v) => onFilterChange(v as ThreadsQueryParams['filter'])}>
-							<SelectTrigger size="sm" className="h-7 text-xs flex-1">
-								<SelectValue />
-							</SelectTrigger>
-							<SelectContent>
-								<SelectItem value="all">All</SelectItem>
-								<SelectItem value="unread">Unread</SelectItem>
-								<SelectItem value="customers">Customers</SelectItem>
-								<SelectItem value="quotes">Quotes</SelectItem>
-								<SelectItem value="jobs">Jobs</SelectItem>
-								<SelectItem value="unlinked">Unlinked</SelectItem>
-							</SelectContent>
-						</Select>
-						{unreadCount > 0 && (
-							<Badge variant="secondary" className="text-xs">{unreadCount} unread</Badge>
+						<div className="relative flex-1">
+							<Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+							<SidebarInput
+								placeholder="Search emails..."
+								value={searchQuery}
+								onChange={(e) => onSearchChange(e.target.value)}
+								className="pl-8"
+							/>
+						</div>
+						{folder !== 'trash' && (
+							<Popover open={contactFilterOpen} onOpenChange={onContactFilterOpenChange}>
+								<PopoverTrigger asChild>
+									<Button variant="outline" size="icon" className="size-8 shrink-0">
+										<Users className="h-4 w-4" />
+									</Button>
+								</PopoverTrigger>
+								<PopoverContent className="w-72 p-0" align="end">
+									<Command shouldFilter={false}>
+										<CommandInput
+											placeholder="Search contacts..."
+											value={contactSearch}
+											onValueChange={onContactSearchChange}
+										/>
+										<CommandList>
+											<CommandEmpty>
+												{debouncedContactSearch.length < 2
+													? 'Type to search contacts...'
+													: 'No contacts found'}
+											</CommandEmpty>
+											{customerResults && customerResults.length > 0 && (
+												<CommandGroup heading="Customers">
+													{customerResults.slice(0, 5).map((c: any) => (
+														<CommandItem
+															key={`customer-${c.id}`}
+															onSelect={() => {
+																onContactSelect({
+																	entityType: 'customer',
+																	entityId: c.id,
+																	label: `${c.firstName} ${c.lastName}`,
+																	email: c.primaryEmail?.value,
+																});
+															}}
+														>
+															<div className="flex flex-col">
+																<span className="text-sm">
+																	{c.firstName} {c.lastName}
+																</span>
+																{c.primaryEmail && (
+																	<span className="text-xs text-muted-foreground">
+																		{c.primaryEmail.value}
+																	</span>
+																)}
+															</div>
+														</CommandItem>
+													))}
+												</CommandGroup>
+											)}
+											{fdResults && fdResults.length > 0 && (
+												<CommandGroup heading="Funeral Directors">
+													{fdResults.slice(0, 5).map((fd: any) => (
+														<CommandItem
+															key={`fd-${fd.id}`}
+															onSelect={() => {
+																onContactSelect({
+																	entityType: 'funeral_director',
+																	entityId: fd.id,
+																	label: fd.tradingName || fd.businessName,
+																	email: fd.primaryEmail?.value,
+																});
+															}}
+														>
+															<div className="flex flex-col">
+																<span className="text-sm">{fd.tradingName || fd.businessName}</span>
+																{fd.primaryEmail && (
+																	<span className="text-xs text-muted-foreground">
+																		{fd.primaryEmail.value}
+																	</span>
+																)}
+															</div>
+														</CommandItem>
+													))}
+												</CommandGroup>
+											)}
+											{supplierResults && supplierResults.length > 0 && (
+												<CommandGroup heading="Suppliers">
+													{supplierResults.slice(0, 5).map((s: any) => (
+														<CommandItem
+															key={`supplier-${s.id}`}
+															onSelect={() => {
+																onContactSelect({
+																	entityType: 'supplier',
+																	entityId: s.id,
+																	label: s.tradingName || s.businessName,
+																	email: s.primaryEmail?.value,
+																});
+															}}
+														>
+															<div className="flex flex-col">
+																<span className="text-sm">{s.tradingName || s.businessName}</span>
+																{s.primaryEmail && (
+																	<span className="text-xs text-muted-foreground">
+																		{s.primaryEmail.value}
+																	</span>
+																)}
+															</div>
+														</CommandItem>
+													))}
+												</CommandGroup>
+											)}
+										</CommandList>
+									</Command>
+								</PopoverContent>
+							</Popover>
 						)}
 					</div>
-				)}
-				{folder !== 'trash' && selectedContact && (
-					<div className="flex items-center gap-2">
-						<Badge variant="secondary" className="flex items-center gap-1 py-1">
-							<Users className="h-3 w-3" />
-							{selectedContact.label}
-							{selectedContact.email && (
-								<span className="text-muted-foreground ml-1">({selectedContact.email})</span>
-							)}
-							<button
-								onClick={onClearContact}
-								className="ml-1 hover:bg-muted rounded-full p-0.5"
+					{folder !== 'trash' && (
+						<div className="flex items-center gap-2">
+							<Select
+								value={filter}
+								onValueChange={(v) => onFilterChange(v as ThreadsQueryParams['filter'])}
 							>
-								<X className="h-3 w-3" />
-							</button>
-						</Badge>
-					</div>
-				)}
+								<SelectTrigger size="sm" className="h-7 text-xs flex-1">
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="all">All</SelectItem>
+									<SelectItem value="unread">Unread</SelectItem>
+									<SelectItem value="customers">Customers</SelectItem>
+									<SelectItem value="quotes">Quotes</SelectItem>
+									<SelectItem value="jobs">Jobs</SelectItem>
+									<SelectItem value="unlinked">Unlinked</SelectItem>
+								</SelectContent>
+							</Select>
+							{unreadCount > 0 && (
+								<Badge variant="secondary" className="text-xs">
+									{unreadCount} unread
+								</Badge>
+							)}
+						</div>
+					)}
+					{folder !== 'trash' && selectedContact && (
+						<div className="flex items-center gap-2">
+							<Badge variant="secondary" className="flex items-center gap-1 py-1">
+								<Users className="h-3 w-3" />
+								{selectedContact.label}
+								{selectedContact.email && (
+									<span className="text-muted-foreground ml-1">({selectedContact.email})</span>
+								)}
+								<button onClick={onClearContact} className="ml-1 hover:bg-muted rounded-full p-0.5">
+									<X className="h-3 w-3" />
+								</button>
+							</Badge>
+						</div>
+					)}
 				</div>
 			</SidebarHeader>
 			<SidebarContent>
@@ -553,26 +570,20 @@ function ThreadListPanel({
 				) : (
 					threads.map((thread) => {
 						const senderName =
-							thread.latestMessage?.fromName ||
-							thread.latestMessage?.fromAddress ||
-							'Unknown';
+							thread.latestMessage?.fromName || thread.latestMessage?.fromAddress || 'Unknown';
 						const isSelected = selectedThreadId === thread.id;
 						return (
 							<button
 								key={thread.id}
 								onClick={() => onSelectThread(thread)}
 								className={`w-full text-left px-3 py-3 border-b cursor-pointer transition-colors ${
-									isSelected
-										? 'bg-accent text-accent-foreground'
-										: 'hover:bg-muted'
+									isSelected ? 'bg-accent text-accent-foreground' : 'hover:bg-muted'
 								} ${thread.isUnread && !isSelected ? 'bg-blue-50/50 dark:bg-blue-950/20' : ''}`}
 							>
 								<div className="flex items-start gap-2.5">
 									<div className="relative shrink-0">
 										<Avatar className="h-8 w-8">
-											<AvatarFallback className="text-xs">
-												{getInitials(senderName)}
-											</AvatarFallback>
+											<AvatarFallback className="text-xs">{getInitials(senderName)}</AvatarFallback>
 										</Avatar>
 										{thread.isUnread && (
 											<div className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-blue-500 border-2 border-white" />
@@ -580,27 +591,27 @@ function ThreadListPanel({
 									</div>
 									<div className="flex-1 min-w-0">
 										<div className="flex items-center justify-between mb-0.5">
-											<span className={`text-sm truncate ${thread.isUnread ? 'font-semibold' : ''}`}>
+											<span
+												className={`text-sm truncate ${thread.isUnread ? 'font-semibold' : ''}`}
+											>
 												{senderName}
 											</span>
 											<span className="text-xs text-muted-foreground whitespace-nowrap ml-2">
 												{formatDate(thread.lastMessageAt)}
 											</span>
 										</div>
-										<p className={`text-sm truncate mb-0.5 ${thread.isUnread ? 'font-medium' : 'text-muted-foreground'}`}>
+										<p
+											className={`text-sm truncate mb-0.5 ${thread.isUnread ? 'font-medium' : 'text-muted-foreground'}`}
+										>
 											{thread.subject || '(no subject)'}
 										</p>
-										<p className="text-xs text-muted-foreground line-clamp-2">
-											{thread.snippet}
-										</p>
+										<p className="text-xs text-muted-foreground line-clamp-2">{thread.snippet}</p>
 										<div className="flex items-center gap-1.5 mt-1.5">
 											{thread.latestMessage?.hasAttachments && (
 												<Paperclip className="h-3 w-3 text-muted-foreground" />
 											)}
 											{thread.messageCount > 1 && (
-												<span className="text-xs text-muted-foreground">
-													{thread.messageCount}
-												</span>
+												<span className="text-xs text-muted-foreground">{thread.messageCount}</span>
 											)}
 											{thread.links?.map((link) => (
 												<Badge
@@ -636,10 +647,17 @@ function InboxLayoutInner() {
 	const [filter, setFilter] = useState<ThreadsQueryParams['filter']>('all');
 	const folder = (searchParams.get('folder') as 'inbox' | 'trash') || 'inbox';
 	const setFolder = (f: 'inbox' | 'trash') => {
-		setSearchParams((prev) => {
-			if (f === 'inbox') { prev.delete('folder'); } else { prev.set('folder', f); }
-			return prev;
-		}, { replace: true });
+		setSearchParams(
+			(prev) => {
+				if (f === 'inbox') {
+					prev.delete('folder');
+				} else {
+					prev.set('folder', f);
+				}
+				return prev;
+			},
+			{ replace: true },
+		);
 		setSelectedThreadId(null);
 	};
 	const [composeOpen, setComposeOpen] = useState(false);
@@ -664,7 +682,7 @@ function InboxLayoutInner() {
 		if (entityType && entityId) {
 			setSelectedContact({ entityType, entityId, label: 'Contact' });
 		}
-	}, []);
+	}, [searchParams.get]);
 
 	// Show toast on connection success/error from redirect
 	useEffect(() => {
@@ -694,13 +712,13 @@ function InboxLayoutInner() {
 	// Contact search queries
 	const contactSearchEnabled = contactFilterOpen && debouncedContactSearch.length >= 2;
 	const { data: customerResults } = useCustomersQuery(
-		contactSearchEnabled ? { q: debouncedContactSearch } : undefined
+		contactSearchEnabled ? { q: debouncedContactSearch } : undefined,
 	);
 	const { data: fdResults } = useFuneralDirectorsQuery(
-		contactSearchEnabled ? { q: debouncedContactSearch } : undefined
+		contactSearchEnabled ? { q: debouncedContactSearch } : undefined,
 	);
 	const { data: supplierResults } = useSuppliersQuery(
-		contactSearchEnabled ? { q: debouncedContactSearch } : undefined
+		contactSearchEnabled ? { q: debouncedContactSearch } : undefined,
 	);
 
 	// Queries
@@ -734,7 +752,7 @@ function InboxLayoutInner() {
 				markReadMutation.mutate(selectedThreadId);
 			}
 		}
-	}, [selectedThreadId]);
+	}, [selectedThreadId, markReadMutation.mutate, threadsData?.threads.find]);
 
 	const threads = threadsData?.threads || [];
 
@@ -1028,12 +1046,22 @@ function InboxLayoutInner() {
 											</DropdownMenuContent>
 										</DropdownMenu>
 
-										<Button variant="outline" size="sm" onClick={handleArchive} disabled={archiveMutation.isPending}>
+										<Button
+											variant="outline"
+											size="sm"
+											onClick={handleArchive}
+											disabled={archiveMutation.isPending}
+										>
 											<Archive className="h-4 w-4 mr-2" />
 											Archive
 										</Button>
 
-										<Button variant="outline" size="sm" onClick={handleTrash} disabled={trashMutation.isPending}>
+										<Button
+											variant="outline"
+											size="sm"
+											onClick={handleTrash}
+											disabled={trashMutation.isPending}
+										>
 											<Trash2 className="h-4 w-4 mr-2" />
 											Trash
 										</Button>
@@ -1041,7 +1069,12 @@ function InboxLayoutInner() {
 								)}
 
 								{folder === 'trash' && (
-									<Button variant="outline" size="sm" onClick={handleUntrash} disabled={untrashMutation.isPending}>
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={handleUntrash}
+										disabled={untrashMutation.isPending}
+									>
 										<Undo2 className="h-4 w-4 mr-2" />
 										Move to Inbox
 									</Button>
@@ -1080,7 +1113,10 @@ function InboxLayoutInner() {
 											<div className="px-6 py-2">
 												<div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
 													<Paperclip className="h-4 w-4" />
-													<span>{msg.attachments.length} attachment{msg.attachments.length > 1 ? 's' : ''}</span>
+													<span>
+														{msg.attachments.length} attachment
+														{msg.attachments.length > 1 ? 's' : ''}
+													</span>
 												</div>
 												<div className="flex flex-wrap gap-2">
 													{msg.attachments.map((att) => (
@@ -1090,8 +1126,12 @@ function InboxLayoutInner() {
 														>
 															{getDocumentIcon(att.mimeType)}
 															<div className="text-left">
-																<p className="text-sm font-medium truncate max-w-[180px]">{att.filename}</p>
-																<p className="text-xs text-muted-foreground">{formatFileSize(att.size)}</p>
+																<p className="text-sm font-medium truncate max-w-[180px]">
+																	{att.filename}
+																</p>
+																<p className="text-xs text-muted-foreground">
+																	{formatFileSize(att.size)}
+																</p>
 															</div>
 														</div>
 													))}
@@ -1114,7 +1154,7 @@ function InboxLayoutInner() {
 														doc.body.style.overflow = 'hidden';
 														doc.body.style.margin = '0';
 														const resize = () => {
-															iframe.style.height = doc.body.scrollHeight + 'px';
+															iframe.style.height = `${doc.body.scrollHeight}px`;
 														};
 														resize();
 														const observer = new ResizeObserver(resize);
@@ -1156,7 +1196,10 @@ function InboxLayoutInner() {
 				fromAddress={activeIntegration?.emailAddress}
 				entityContext={
 					selectedThread?.links?.[0]
-						? { entityType: selectedThread.links[0].entityType, entityId: selectedThread.links[0].entityId }
+						? {
+								entityType: selectedThread.links[0].entityType,
+								entityId: selectedThread.links[0].entityId,
+							}
 						: undefined
 				}
 			/>
@@ -1169,9 +1212,7 @@ function InboxLayoutInner() {
 export function InboxLayout() {
 	return (
 		<CustomerViewProvider>
-			<SidebarProvider
-				style={{ '--sidebar-width': '350px' } as React.CSSProperties}
-			>
+			<SidebarProvider style={{ '--sidebar-width': '350px' } as React.CSSProperties}>
 				<InboxLayoutInner />
 			</SidebarProvider>
 		</CustomerViewProvider>

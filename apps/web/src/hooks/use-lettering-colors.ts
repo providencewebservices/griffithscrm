@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -43,9 +43,7 @@ async function fetchLetteringColors(): Promise<LetteringColor[]> {
 	return data.letteringColors;
 }
 
-async function createLetteringColor(
-	input: CreateLetteringColorInput
-): Promise<LetteringColor> {
+async function createLetteringColor(input: CreateLetteringColorInput): Promise<LetteringColor> {
 	const response = await fetch(`${API_URL}/api/tenant/lettering-colors`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },

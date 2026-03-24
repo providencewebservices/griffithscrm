@@ -1,4 +1,6 @@
+import { Loader2, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
+import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,28 +19,22 @@ import {
 	TableHeader,
 	TableRow,
 } from '@/components/ui/table';
-import { EditableNumber } from './editable-number';
-import { Plus, Loader2, Trash2 } from 'lucide-react';
-import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
+import { useFinishesQuery } from '@/hooks/use-finishes';
 import { useMaterialSectionsQuery } from '@/hooks/use-material-sections';
 import { useMaterialsQuery } from '@/hooks/use-materials';
-import { useFinishesQuery } from '@/hooks/use-finishes';
-import {
-	COMPONENT_TYPES,
-	COMPONENT_TYPE_LABELS,
-	getDimensionLabels,
-} from '@/lib/product-utils';
-import {
-	formatComponentType,
-	type QuotePackageWithOptions,
-	type QuoteOption,
-} from '@/hooks/use-quotes';
 import type {
-	useUpdateComponentPricingMutation,
-	useUpdateProductPricingMutation,
 	useAddComponentMutation,
 	useDeleteComponentMutation,
+	useUpdateComponentPricingMutation,
+	useUpdateProductPricingMutation,
 } from '@/hooks/use-quotes';
+import {
+	formatComponentType,
+	type QuoteOption,
+	type QuotePackageWithOptions,
+} from '@/hooks/use-quotes';
+import { COMPONENT_TYPE_LABELS, COMPONENT_TYPES, getDimensionLabels } from '@/lib/product-utils';
+import { EditableNumber } from './editable-number';
 
 export function ComponentsSection({
 	pkg,
@@ -77,9 +73,8 @@ export function ComponentsSection({
 	const { data: allMaterials } = useMaterialsQuery();
 	const { data: finishes } = useFinishesQuery();
 
-	const activeMaterials = allMaterials?.filter(
-		(m) => m.isActive && (!sectionId || m.sectionId === sectionId)
-	) || [];
+	const activeMaterials =
+		allMaterials?.filter((m) => m.isActive && (!sectionId || m.sectionId === sectionId)) || [];
 	const activeFinishes = finishes?.filter((f) => f.isActive) || [];
 
 	const dimensionLabels = getDimensionLabels(componentType || 'default');
@@ -108,7 +103,7 @@ export function ComponentsSection({
 			height: height ? parseFloat(height) : null,
 			width: width ? parseFloat(width) : null,
 			depth: depth ? parseFloat(depth) : null,
-			quantity: parseInt(quantity) || 1,
+			quantity: parseInt(quantity, 10) || 1,
 		});
 
 		resetForm();
@@ -372,11 +367,15 @@ export function ComponentsSection({
 									<TableBody>
 										{option.components.map((comp) => (
 											<TableRow key={comp.id} className="[&_td]:py-3">
-												<TableCell className="font-medium">{formatComponentType(comp.componentType)}</TableCell>
+												<TableCell className="font-medium">
+													{formatComponentType(comp.componentType)}
+												</TableCell>
 												<TableCell>
 													{comp.materialName || '-'}
 													{comp.finishName && (
-														<span className="text-muted-foreground text-xs block">{comp.finishName}</span>
+														<span className="text-muted-foreground text-xs block">
+															{comp.finishName}
+														</span>
 													)}
 												</TableCell>
 												<TableCell className="text-sm">
@@ -416,8 +415,12 @@ export function ComponentsSection({
 														formatValue={(val) => `${val.toFixed(0)}%`}
 													/>
 												</TableCell>
-												<TableCell className="text-right">{formatCurrency(comp.unitPrice)}</TableCell>
-												<TableCell className="text-right font-medium">{formatCurrency(comp.lineTotal)}</TableCell>
+												<TableCell className="text-right">
+													{formatCurrency(comp.unitPrice)}
+												</TableCell>
+												<TableCell className="text-right font-medium">
+													{formatCurrency(comp.lineTotal)}
+												</TableCell>
 												{canEditPricing && (
 													<TableCell>
 														<Button

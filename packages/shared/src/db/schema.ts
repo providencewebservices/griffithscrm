@@ -1,5 +1,16 @@
 import { sql } from 'drizzle-orm';
-import { pgTable, text, timestamp, boolean, primaryKey, integer, numeric, uniqueIndex, index, jsonb } from 'drizzle-orm/pg-core';
+import {
+	boolean,
+	index,
+	integer,
+	jsonb,
+	numeric,
+	pgTable,
+	primaryKey,
+	text,
+	timestamp,
+	uniqueIndex,
+} from 'drizzle-orm/pg-core';
 
 // Tenants table (must be defined before users due to foreign key)
 export const tenants = pgTable('tenants', {
@@ -98,17 +109,21 @@ export const customers = pgTable('customers', {
 });
 
 // Contact info table (reusable via join tables)
-export const contactInfo = pgTable('contact_info', {
-	id: text('id').primaryKey(),
-	type: text('type').notNull(), // 'email' | 'phone' | 'mobile' | 'fax' | 'other'
-	value: text('value').notNull(),
-	label: text('label'), // 'Work', 'Home', etc.
-	isPrimary: boolean('is_primary').notNull().default(false),
-	createdAt: timestamp('created_at').notNull().defaultNow(),
-	updatedAt: timestamp('updated_at').notNull().defaultNow(),
-}, (table) => ({
-	typeValueIdx: index('contact_info_type_value_idx').on(table.type, table.value),
-}));
+export const contactInfo = pgTable(
+	'contact_info',
+	{
+		id: text('id').primaryKey(),
+		type: text('type').notNull(), // 'email' | 'phone' | 'mobile' | 'fax' | 'other'
+		value: text('value').notNull(),
+		label: text('label'), // 'Work', 'Home', etc.
+		isPrimary: boolean('is_primary').notNull().default(false),
+		createdAt: timestamp('created_at').notNull().defaultNow(),
+		updatedAt: timestamp('updated_at').notNull().defaultNow(),
+	},
+	(table) => ({
+		typeValueIdx: index('contact_info_type_value_idx').on(table.type, table.value),
+	}),
+);
 
 // Addresses table (Google Places compatible, reusable via join tables)
 export const addresses = pgTable('addresses', {
@@ -147,7 +162,7 @@ export const customerContactInfo = pgTable(
 	},
 	(table) => ({
 		pk: primaryKey({ columns: [table.customerId, table.contactInfoId] }),
-	})
+	}),
 );
 
 // Customer <-> Addresses join table
@@ -164,7 +179,7 @@ export const customerAddresses = pgTable(
 	},
 	(table) => ({
 		pk: primaryKey({ columns: [table.customerId, table.addressId] }),
-	})
+	}),
 );
 
 // ============================================
@@ -172,10 +187,22 @@ export const customerAddresses = pgTable(
 // ============================================
 
 // Memorial site types
-export const MEMORIAL_SITE_TYPES = ['churchyard', 'crematorium', 'council_cemetery', 'chapel'] as const;
+export const MEMORIAL_SITE_TYPES = [
+	'churchyard',
+	'crematorium',
+	'council_cemetery',
+	'chapel',
+] as const;
 
 // Memorial site payment methods
-export const MEMORIAL_SITE_PAYMENT_METHODS = ['bacs', 'cheque', 'card', 'cash', 'online_portal', 'other'] as const;
+export const MEMORIAL_SITE_PAYMENT_METHODS = [
+	'bacs',
+	'cheque',
+	'card',
+	'cash',
+	'online_portal',
+	'other',
+] as const;
 
 // Payment terms for suppliers
 export const PAYMENT_TERMS = ['cod', 'net_7', 'net_14', 'net_30', 'net_60', 'net_90'] as const;
@@ -210,7 +237,7 @@ export const funeralDirectorContactInfo = pgTable(
 	},
 	(table) => ({
 		pk: primaryKey({ columns: [table.funeralDirectorId, table.contactInfoId] }),
-	})
+	}),
 );
 
 // Funeral Director <-> Addresses join table
@@ -227,7 +254,7 @@ export const funeralDirectorAddresses = pgTable(
 	},
 	(table) => ({
 		pk: primaryKey({ columns: [table.funeralDirectorId, table.addressId] }),
-	})
+	}),
 );
 
 // Councils / Cemeteries (local authorities managing public cemeteries)
@@ -267,7 +294,7 @@ export const councilContactInfo = pgTable(
 	},
 	(table) => ({
 		pk: primaryKey({ columns: [table.councilId, table.contactInfoId] }),
-	})
+	}),
 );
 
 // Council <-> Addresses join table
@@ -284,7 +311,7 @@ export const councilAddresses = pgTable(
 	},
 	(table) => ({
 		pk: primaryKey({ columns: [table.councilId, table.addressId] }),
-	})
+	}),
 );
 
 // Memorial Sites (churchyards, crematoria, council cemeteries - unified entity for burial/memorial locations)
@@ -320,7 +347,7 @@ export const memorialSiteContactInfo = pgTable(
 	},
 	(table) => ({
 		pk: primaryKey({ columns: [table.memorialSiteId, table.contactInfoId] }),
-	})
+	}),
 );
 
 // Memorial Site <-> Addresses join table
@@ -337,7 +364,7 @@ export const memorialSiteAddresses = pgTable(
 	},
 	(table) => ({
 		pk: primaryKey({ columns: [table.memorialSiteId, table.addressId] }),
-	})
+	}),
 );
 
 // Suppliers (companies that supply materials and products)
@@ -374,7 +401,7 @@ export const supplierContactInfo = pgTable(
 	},
 	(table) => ({
 		pk: primaryKey({ columns: [table.supplierId, table.contactInfoId] }),
-	})
+	}),
 );
 
 // Supplier <-> Addresses join table
@@ -391,7 +418,7 @@ export const supplierAddresses = pgTable(
 	},
 	(table) => ({
 		pk: primaryKey({ columns: [table.supplierId, table.addressId] }),
-	})
+	}),
 );
 
 // ============================================
@@ -510,12 +537,7 @@ export const products = pgTable('products', {
 });
 
 // Product option types
-export const PRODUCT_OPTION_TYPES = [
-	'dimension',
-	'stone_color',
-	'flower_holes',
-	'custom',
-] as const;
+export const PRODUCT_OPTION_TYPES = ['dimension', 'stone_color', 'flower_holes', 'custom'] as const;
 
 // Fixed choices for flower holes option type
 export const FLOWER_HOLE_CHOICES = [
@@ -551,9 +573,7 @@ export const optionChoices = pgTable('option_choices', {
 		.notNull()
 		.references(() => productOptions.id, { onDelete: 'cascade' }),
 	name: text('name').notNull(),
-	priceAdjustment: numeric('price_adjustment', { precision: 10, scale: 2 })
-		.notNull()
-		.default('0'),
+	priceAdjustment: numeric('price_adjustment', { precision: 10, scale: 2 }).notNull().default('0'),
 	imageUrl: text('image_url'),
 	sortOrder: integer('sort_order').notNull().default(0),
 	createdAt: timestamp('created_at').notNull().defaultNow(),
@@ -585,9 +605,7 @@ export const dimensionCombos = pgTable('dimension_combos', {
 		.notNull()
 		.references(() => products.id, { onDelete: 'cascade' }),
 	name: text('name'), // Optional display name like "Small", "Large"
-	priceAdjustment: numeric('price_adjustment', { precision: 10, scale: 2 })
-		.notNull()
-		.default('0'),
+	priceAdjustment: numeric('price_adjustment', { precision: 10, scale: 2 }).notNull().default('0'),
 	isActive: boolean('is_active').notNull().default(true),
 	sortOrder: integer('sort_order').notNull().default(0),
 	createdAt: timestamp('created_at').notNull().defaultNow(),
@@ -671,9 +689,7 @@ export const letteringCosts = pgTable('lettering_costs', {
 	colorId: text('color_id').references(() => letteringColors.id, { onDelete: 'cascade' }), // Nullable - null means default/base price
 	appliesTo: text('applies_to').notNull(), // 'new_memorial' | 'refurbishment' | 'both'
 	freeLetters: integer('free_letters').notNull().default(0),
-	pricePerLetter: numeric('price_per_letter', { precision: 10, scale: 2 })
-		.notNull()
-		.default('0'),
+	pricePerLetter: numeric('price_per_letter', { precision: 10, scale: 2 }).notNull().default('0'),
 	createdAt: timestamp('created_at').notNull().defaultNow(),
 	updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
@@ -904,7 +920,9 @@ export const quotePackages = pgTable('quote_packages', {
 		onDelete: 'set null',
 	}),
 	councilId: text('council_id').references(() => councils.id, { onDelete: 'set null' }),
-	memorialSiteId: text('memorial_site_id').references(() => memorialSites.id, { onDelete: 'set null' }),
+	memorialSiteId: text('memorial_site_id').references(() => memorialSites.id, {
+		onDelete: 'set null',
+	}),
 	memorialLocation: text('memorial_location'), // Freeform description of location at memorial site
 
 	// Quote type context - shared
@@ -962,7 +980,9 @@ export const quotes = pgTable('quotes', {
 		onDelete: 'set null',
 	}),
 	councilId: text('council_id').references(() => councils.id, { onDelete: 'set null' }),
-	memorialSiteId: text('memorial_site_id').references(() => memorialSites.id, { onDelete: 'set null' }),
+	memorialSiteId: text('memorial_site_id').references(() => memorialSites.id, {
+		onDelete: 'set null',
+	}),
 	quoteNumber: text('quote_number').notNull(), // Tenant-unique: "Q-00001"
 	quoteType: text('quote_type').notNull().default('new_memorial'), // From QUOTE_TYPES
 	productionMethod: text('production_method'), // From PRODUCTION_METHODS (nullable — copied from package)
@@ -1102,10 +1122,21 @@ export const quoteLineItems = pgTable('quote_line_items', {
 // ============================================
 
 // Account status options (invoicing lifecycle)
-export const ACCOUNT_STATUSES = ['not_invoiced', 'invoiced', 'partially_paid', 'paid', 'overdue'] as const;
+export const ACCOUNT_STATUSES = [
+	'not_invoiced',
+	'invoiced',
+	'partially_paid',
+	'paid',
+	'overdue',
+] as const;
 
 // Review outcome options (post-sales review)
-export const REVIEW_OUTCOMES = ['satisfied', 'issue_reported', 'follow_up_needed', 'no_response'] as const;
+export const REVIEW_OUTCOMES = [
+	'satisfied',
+	'issue_reported',
+	'follow_up_needed',
+	'no_response',
+] as const;
 
 // Job status options (memorial workflow)
 export const JOB_STATUSES = [
@@ -1220,25 +1251,35 @@ export const jobAttachments = pgTable('job_attachments', {
 // ============================================
 
 // Workflow step categories
-export const WORKFLOW_STEP_CATEGORIES = ['admin', 'production', 'installation', 'invoicing', 'review'] as const;
+export const WORKFLOW_STEP_CATEGORIES = [
+	'admin',
+	'production',
+	'installation',
+	'invoicing',
+	'review',
+] as const;
 
 // Workflow templates (define step sequences for each job type)
-export const workflowTemplates = pgTable('workflow_templates', {
-	id: text('id').primaryKey(),
-	tenantId: text('tenant_id')
-		.notNull()
-		.references(() => tenants.id, { onDelete: 'cascade' }),
-	name: text('name').notNull(),
-	quoteType: text('quote_type').notNull(),
-	productionMethod: text('production_method'),
-	isActive: boolean('is_active').notNull().default(true),
-	createdAt: timestamp('created_at').defaultNow().notNull(),
-	updatedAt: timestamp('updated_at').defaultNow().notNull(),
-}, (table) => ({
-	tenantTypeMethodActiveIdx: uniqueIndex('wt_tenant_type_method_active_idx')
-		.on(table.tenantId, table.quoteType, table.productionMethod)
-		.where(sql`${table.isActive} = true`),
-}));
+export const workflowTemplates = pgTable(
+	'workflow_templates',
+	{
+		id: text('id').primaryKey(),
+		tenantId: text('tenant_id')
+			.notNull()
+			.references(() => tenants.id, { onDelete: 'cascade' }),
+		name: text('name').notNull(),
+		quoteType: text('quote_type').notNull(),
+		productionMethod: text('production_method'),
+		isActive: boolean('is_active').notNull().default(true),
+		createdAt: timestamp('created_at').defaultNow().notNull(),
+		updatedAt: timestamp('updated_at').defaultNow().notNull(),
+	},
+	(table) => ({
+		tenantTypeMethodActiveIdx: uniqueIndex('wt_tenant_type_method_active_idx')
+			.on(table.tenantId, table.quoteType, table.productionMethod)
+			.where(sql`${table.isActive} = true`),
+	}),
+);
 
 // Workflow steps (ordered steps within a template)
 export const workflowSteps = pgTable('workflow_steps', {
@@ -1264,88 +1305,112 @@ export const workflowSteps = pgTable('workflow_steps', {
 export const WORKFLOW_TASK_STATUSES = ['pending', 'in_progress', 'completed', 'skipped'] as const;
 
 // Job workflow tasks (instantiated steps for a specific job)
-export const jobWorkflowTasks = pgTable('job_workflow_tasks', {
-	id: text('id').primaryKey(),
-	tenantId: text('tenant_id')
-		.notNull()
-		.references(() => tenants.id, { onDelete: 'cascade' }),
-	jobId: text('job_id')
-		.notNull()
-		.references(() => jobs.id, { onDelete: 'cascade' }),
-	workflowStepId: text('workflow_step_id').references(() => workflowSteps.id),
-	name: text('name').notNull(),
-	description: text('description'),
-	sortOrder: integer('sort_order').notNull(),
-	status: text('status').notNull().default('pending'),
-	assigneeId: text('assignee_id').references(() => users.id),
-	category: text('category').notNull(),
-	dueDate: timestamp('due_date'),
-	completedAt: timestamp('completed_at'),
-	completedBy: text('completed_by').references(() => users.id),
-	taskDate: timestamp('task_date'),
-	notes: text('notes'),
-	createdAt: timestamp('created_at').defaultNow().notNull(),
-	updatedAt: timestamp('updated_at').defaultNow().notNull(),
-}, (table) => ({
-	tenantJobIdx: index('jwt_tenant_job_idx').on(table.tenantId, table.jobId),
-}));
+export const jobWorkflowTasks = pgTable(
+	'job_workflow_tasks',
+	{
+		id: text('id').primaryKey(),
+		tenantId: text('tenant_id')
+			.notNull()
+			.references(() => tenants.id, { onDelete: 'cascade' }),
+		jobId: text('job_id')
+			.notNull()
+			.references(() => jobs.id, { onDelete: 'cascade' }),
+		workflowStepId: text('workflow_step_id').references(() => workflowSteps.id),
+		name: text('name').notNull(),
+		description: text('description'),
+		sortOrder: integer('sort_order').notNull(),
+		status: text('status').notNull().default('pending'),
+		assigneeId: text('assignee_id').references(() => users.id),
+		category: text('category').notNull(),
+		dueDate: timestamp('due_date'),
+		completedAt: timestamp('completed_at'),
+		completedBy: text('completed_by').references(() => users.id),
+		taskDate: timestamp('task_date'),
+		notes: text('notes'),
+		createdAt: timestamp('created_at').defaultNow().notNull(),
+		updatedAt: timestamp('updated_at').defaultNow().notNull(),
+	},
+	(table) => ({
+		tenantJobIdx: index('jwt_tenant_job_idx').on(table.tenantId, table.jobId),
+	}),
+);
 
 // Form statuses (for job forms/fees tracking)
-export const FORM_STATUSES = ['not_started', 'submitted', 'approved', 'received', 'not_required'] as const;
+export const FORM_STATUSES = [
+	'not_started',
+	'submitted',
+	'approved',
+	'received',
+	'not_required',
+] as const;
 
 // Job forms (forms & fees checklist for a job)
-export const jobForms = pgTable('job_forms', {
-	id: text('id').primaryKey(),
-	tenantId: text('tenant_id')
-		.notNull()
-		.references(() => tenants.id, { onDelete: 'cascade' }),
-	jobId: text('job_id')
-		.notNull()
-		.references(() => jobs.id, { onDelete: 'cascade' }),
-	name: text('name').notNull(),
-	status: text('status').notNull().default('not_started'),
-	fee: numeric('fee', { precision: 10, scale: 2 }),
-	submittedAt: timestamp('submitted_at'),
-	approvedAt: timestamp('approved_at'),
-	referenceNumber: text('reference_number'),
-	notes: text('notes'),
-	sortOrder: integer('sort_order').notNull(),
-	createdAt: timestamp('created_at').defaultNow().notNull(),
-	updatedAt: timestamp('updated_at').defaultNow().notNull(),
-}, (table) => ({
-	tenantJobIdx: index('jf_tenant_job_idx').on(table.tenantId, table.jobId),
-}));
+export const jobForms = pgTable(
+	'job_forms',
+	{
+		id: text('id').primaryKey(),
+		tenantId: text('tenant_id')
+			.notNull()
+			.references(() => tenants.id, { onDelete: 'cascade' }),
+		jobId: text('job_id')
+			.notNull()
+			.references(() => jobs.id, { onDelete: 'cascade' }),
+		name: text('name').notNull(),
+		status: text('status').notNull().default('not_started'),
+		fee: numeric('fee', { precision: 10, scale: 2 }),
+		submittedAt: timestamp('submitted_at'),
+		approvedAt: timestamp('approved_at'),
+		referenceNumber: text('reference_number'),
+		notes: text('notes'),
+		sortOrder: integer('sort_order').notNull(),
+		createdAt: timestamp('created_at').defaultNow().notNull(),
+		updatedAt: timestamp('updated_at').defaultNow().notNull(),
+	},
+	(table) => ({
+		tenantJobIdx: index('jf_tenant_job_idx').on(table.tenantId, table.jobId),
+	}),
+);
 
 // Proof statuses (for job proof approval workflow)
-export const PROOF_STATUSES = ['draft', 'sent_to_customer', 'approved', 'revision_requested', 'superseded'] as const;
+export const PROOF_STATUSES = [
+	'draft',
+	'sent_to_customer',
+	'approved',
+	'revision_requested',
+	'superseded',
+] as const;
 
 // Job proofs (memorial proof versions for customer approval)
-export const jobProofs = pgTable('job_proofs', {
-	id: text('id').primaryKey(),
-	tenantId: text('tenant_id')
-		.notNull()
-		.references(() => tenants.id, { onDelete: 'cascade' }),
-	jobId: text('job_id')
-		.notNull()
-		.references(() => jobs.id, { onDelete: 'cascade' }),
-	version: integer('version').notNull(),
-	status: text('status').notNull().default('draft'),
-	s3Key: text('s3_key').notNull(),
-	filename: text('filename').notNull(),
-	contentType: text('content_type').notNull(),
-	size: integer('size'),
-	sentAt: timestamp('sent_at'),
-	approvedAt: timestamp('approved_at'),
-	customerFeedback: text('customer_feedback'),
-	notes: text('notes'),
-	createdBy: text('created_by')
-		.notNull()
-		.references(() => users.id),
-	createdAt: timestamp('created_at').defaultNow().notNull(),
-	updatedAt: timestamp('updated_at').defaultNow().notNull(),
-}, (table) => ({
-	tenantJobIdx: index('jp_tenant_job_idx').on(table.tenantId, table.jobId),
-}));
+export const jobProofs = pgTable(
+	'job_proofs',
+	{
+		id: text('id').primaryKey(),
+		tenantId: text('tenant_id')
+			.notNull()
+			.references(() => tenants.id, { onDelete: 'cascade' }),
+		jobId: text('job_id')
+			.notNull()
+			.references(() => jobs.id, { onDelete: 'cascade' }),
+		version: integer('version').notNull(),
+		status: text('status').notNull().default('draft'),
+		s3Key: text('s3_key').notNull(),
+		filename: text('filename').notNull(),
+		contentType: text('content_type').notNull(),
+		size: integer('size'),
+		sentAt: timestamp('sent_at'),
+		approvedAt: timestamp('approved_at'),
+		customerFeedback: text('customer_feedback'),
+		notes: text('notes'),
+		createdBy: text('created_by')
+			.notNull()
+			.references(() => users.id),
+		createdAt: timestamp('created_at').defaultNow().notNull(),
+		updatedAt: timestamp('updated_at').defaultNow().notNull(),
+	},
+	(table) => ({
+		tenantJobIdx: index('jp_tenant_job_idx').on(table.tenantId, table.jobId),
+	}),
+);
 
 // ============================================
 // UNIFIED DOCUMENT MANAGEMENT
@@ -1434,7 +1499,9 @@ export const calendarEvents = pgTable('calendar_events', {
 	// Optional links to other entities
 	linkedQuoteId: text('linked_quote_id').references(() => quotes.id, { onDelete: 'cascade' }),
 	linkedJobId: text('linked_job_id').references(() => jobs.id, { onDelete: 'cascade' }),
-	linkedCustomerId: text('linked_customer_id').references(() => customers.id, { onDelete: 'set null' }),
+	linkedCustomerId: text('linked_customer_id').references(() => customers.id, {
+		onDelete: 'set null',
+	}),
 	// Recurrence
 	recurrencePattern: text('recurrence_pattern').notNull().default('none'), // From RECURRENCE_PATTERNS
 	recurrenceEndDate: timestamp('recurrence_end_date'),
@@ -1505,60 +1572,68 @@ export const TASK_ENTITY_TYPES = ['job', 'quote', 'customer'] as const;
 export const WORKSHEET_STATUSES = ['draft', 'active', 'completed'] as const;
 
 // Worksheets table (assignment sheets for team members)
-export const worksheets = pgTable('worksheets', {
-	id: text('id').primaryKey(),
-	tenantId: text('tenant_id')
-		.notNull()
-		.references(() => tenants.id, { onDelete: 'cascade' }),
-	title: text('title').notNull(),
-	description: text('description'),
-	status: text('status').notNull().default('draft'),
-	assigneeId: text('assignee_id').references(() => users.id, { onDelete: 'set null' }),
-	createdById: text('created_by_id')
-		.notNull()
-		.references(() => users.id, { onDelete: 'cascade' }),
-	date: timestamp('date'),
-	notes: text('notes'),
-	archivedAt: timestamp('archived_at'),
-	createdAt: timestamp('created_at').notNull().defaultNow(),
-	updatedAt: timestamp('updated_at').notNull().defaultNow(),
-}, (table) => ({
-	tenantAssigneeIdx: index('worksheets_tenant_assignee_idx').on(table.tenantId, table.assigneeId),
-	tenantDateIdx: index('worksheets_tenant_date_idx').on(table.tenantId, table.date),
-	tenantStatusIdx: index('worksheets_tenant_status_idx').on(table.tenantId, table.status),
-}));
+export const worksheets = pgTable(
+	'worksheets',
+	{
+		id: text('id').primaryKey(),
+		tenantId: text('tenant_id')
+			.notNull()
+			.references(() => tenants.id, { onDelete: 'cascade' }),
+		title: text('title').notNull(),
+		description: text('description'),
+		status: text('status').notNull().default('draft'),
+		assigneeId: text('assignee_id').references(() => users.id, { onDelete: 'set null' }),
+		createdById: text('created_by_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		date: timestamp('date'),
+		notes: text('notes'),
+		archivedAt: timestamp('archived_at'),
+		createdAt: timestamp('created_at').notNull().defaultNow(),
+		updatedAt: timestamp('updated_at').notNull().defaultNow(),
+	},
+	(table) => ({
+		tenantAssigneeIdx: index('worksheets_tenant_assignee_idx').on(table.tenantId, table.assigneeId),
+		tenantDateIdx: index('worksheets_tenant_date_idx').on(table.tenantId, table.date),
+		tenantStatusIdx: index('worksheets_tenant_status_idx').on(table.tenantId, table.status),
+	}),
+);
 
 // Tasks table (individual work items)
-export const tasks = pgTable('tasks', {
-	id: text('id').primaryKey(),
-	tenantId: text('tenant_id')
-		.notNull()
-		.references(() => tenants.id, { onDelete: 'cascade' }),
-	title: text('title').notNull(),
-	description: text('description'),
-	status: text('status').notNull().default('todo'),
-	priority: text('priority').notNull().default('normal'),
-	assigneeId: text('assignee_id').references(() => users.id, { onDelete: 'set null' }),
-	createdById: text('created_by_id')
-		.notNull()
-		.references(() => users.id, { onDelete: 'cascade' }),
-	dueDate: timestamp('due_date'),
-	entityType: text('entity_type'),
-	entityId: text('entity_id'),
-	worksheetId: text('worksheet_id').references(() => worksheets.id, { onDelete: 'set null' }),
-	sortOrder: integer('sort_order').notNull().default(0),
-	completedAt: timestamp('completed_at'),
-	completedById: text('completed_by_id').references(() => users.id, { onDelete: 'set null' }),
-	archivedAt: timestamp('archived_at'),
-	createdAt: timestamp('created_at').notNull().defaultNow(),
-	updatedAt: timestamp('updated_at').notNull().defaultNow(),
-}, (table) => ({
-	tenantStatusIdx: index('tasks_tenant_status_idx').on(table.tenantId, table.status),
-	tenantAssigneeIdx: index('tasks_tenant_assignee_idx').on(table.tenantId, table.assigneeId),
-	tenantDueDateIdx: index('tasks_tenant_due_date_idx').on(table.tenantId, table.dueDate),
-	entityIdx: index('tasks_entity_idx').on(table.entityType, table.entityId),
-	worksheetIdx: index('tasks_worksheet_idx').on(table.worksheetId),
-}));
+export const tasks = pgTable(
+	'tasks',
+	{
+		id: text('id').primaryKey(),
+		tenantId: text('tenant_id')
+			.notNull()
+			.references(() => tenants.id, { onDelete: 'cascade' }),
+		title: text('title').notNull(),
+		description: text('description'),
+		status: text('status').notNull().default('todo'),
+		priority: text('priority').notNull().default('normal'),
+		assigneeId: text('assignee_id').references(() => users.id, { onDelete: 'set null' }),
+		createdById: text('created_by_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		dueDate: timestamp('due_date'),
+		entityType: text('entity_type'),
+		entityId: text('entity_id'),
+		worksheetId: text('worksheet_id').references(() => worksheets.id, { onDelete: 'set null' }),
+		sortOrder: integer('sort_order').notNull().default(0),
+		completedAt: timestamp('completed_at'),
+		completedById: text('completed_by_id').references(() => users.id, { onDelete: 'set null' }),
+		archivedAt: timestamp('archived_at'),
+		createdAt: timestamp('created_at').notNull().defaultNow(),
+		updatedAt: timestamp('updated_at').notNull().defaultNow(),
+	},
+	(table) => ({
+		tenantStatusIdx: index('tasks_tenant_status_idx').on(table.tenantId, table.status),
+		tenantAssigneeIdx: index('tasks_tenant_assignee_idx').on(table.tenantId, table.assigneeId),
+		tenantDueDateIdx: index('tasks_tenant_due_date_idx').on(table.tenantId, table.dueDate),
+		entityIdx: index('tasks_entity_idx').on(table.entityType, table.entityId),
+		worksheetIdx: index('tasks_worksheet_idx').on(table.worksheetId),
+	}),
+);
 
 // ============================================
 // EMAIL INTEGRATION TABLES
@@ -1598,81 +1673,106 @@ export const emailIntegrations = pgTable('email_integrations', {
 });
 
 // Email threads (cached thread metadata)
-export const emailThreads = pgTable('email_threads', {
-	id: text('id').primaryKey(),
-	integrationId: text('integration_id')
-		.notNull()
-		.references(() => emailIntegrations.id, { onDelete: 'cascade' }),
-	tenantId: text('tenant_id')
-		.notNull()
-		.references(() => tenants.id, { onDelete: 'cascade' }),
-	providerThreadId: text('provider_thread_id').notNull(),
-	subject: text('subject'),
-	snippet: text('snippet'),
-	lastMessageAt: timestamp('last_message_at'),
-	messageCount: integer('message_count').notNull().default(0),
-	isUnread: boolean('is_unread').notNull().default(false),
-	isArchived: boolean('is_archived').notNull().default(false),
-	isTrashed: boolean('is_trashed').notNull().default(false),
-	labelIds: text('label_ids'), // JSON array of provider label IDs
-	createdAt: timestamp('created_at').notNull().defaultNow(),
-	updatedAt: timestamp('updated_at').notNull().defaultNow(),
-}, (table) => ({
-	integrationProviderThreadIdx: uniqueIndex('email_threads_integration_provider_idx')
-		.on(table.integrationId, table.providerThreadId),
-}));
+export const emailThreads = pgTable(
+	'email_threads',
+	{
+		id: text('id').primaryKey(),
+		integrationId: text('integration_id')
+			.notNull()
+			.references(() => emailIntegrations.id, { onDelete: 'cascade' }),
+		tenantId: text('tenant_id')
+			.notNull()
+			.references(() => tenants.id, { onDelete: 'cascade' }),
+		providerThreadId: text('provider_thread_id').notNull(),
+		subject: text('subject'),
+		snippet: text('snippet'),
+		lastMessageAt: timestamp('last_message_at'),
+		messageCount: integer('message_count').notNull().default(0),
+		isUnread: boolean('is_unread').notNull().default(false),
+		isArchived: boolean('is_archived').notNull().default(false),
+		isTrashed: boolean('is_trashed').notNull().default(false),
+		labelIds: text('label_ids'), // JSON array of provider label IDs
+		createdAt: timestamp('created_at').notNull().defaultNow(),
+		updatedAt: timestamp('updated_at').notNull().defaultNow(),
+	},
+	(table) => ({
+		integrationProviderThreadIdx: uniqueIndex('email_threads_integration_provider_idx').on(
+			table.integrationId,
+			table.providerThreadId,
+		),
+	}),
+);
 
 // Email messages (cached message metadata, NOT full body)
-export const emailMessages = pgTable('email_messages', {
-	id: text('id').primaryKey(),
-	threadId: text('thread_id')
-		.notNull()
-		.references(() => emailThreads.id, { onDelete: 'cascade' }),
-	integrationId: text('integration_id')
-		.notNull()
-		.references(() => emailIntegrations.id, { onDelete: 'cascade' }),
-	tenantId: text('tenant_id')
-		.notNull()
-		.references(() => tenants.id, { onDelete: 'cascade' }),
-	providerMessageId: text('provider_message_id').notNull(),
-	fromAddress: text('from_address'),
-	fromName: text('from_name'),
-	toAddresses: text('to_addresses'), // JSON array of {name, address}
-	ccAddresses: text('cc_addresses'), // JSON array
-	subject: text('subject'),
-	snippet: text('snippet'),
-	isUnread: boolean('is_unread').notNull().default(false),
-	hasAttachments: boolean('has_attachments').notNull().default(false),
-	labelIds: text('label_ids'), // JSON array
-	internalDate: timestamp('internal_date'), // When message was received
-	createdAt: timestamp('created_at').notNull().defaultNow(),
-	updatedAt: timestamp('updated_at').notNull().defaultNow(),
-}, (table) => ({
-	integrationProviderMessageIdx: uniqueIndex('email_messages_integration_provider_idx')
-		.on(table.integrationId, table.providerMessageId),
-}));
+export const emailMessages = pgTable(
+	'email_messages',
+	{
+		id: text('id').primaryKey(),
+		threadId: text('thread_id')
+			.notNull()
+			.references(() => emailThreads.id, { onDelete: 'cascade' }),
+		integrationId: text('integration_id')
+			.notNull()
+			.references(() => emailIntegrations.id, { onDelete: 'cascade' }),
+		tenantId: text('tenant_id')
+			.notNull()
+			.references(() => tenants.id, { onDelete: 'cascade' }),
+		providerMessageId: text('provider_message_id').notNull(),
+		fromAddress: text('from_address'),
+		fromName: text('from_name'),
+		toAddresses: text('to_addresses'), // JSON array of {name, address}
+		ccAddresses: text('cc_addresses'), // JSON array
+		subject: text('subject'),
+		snippet: text('snippet'),
+		isUnread: boolean('is_unread').notNull().default(false),
+		hasAttachments: boolean('has_attachments').notNull().default(false),
+		labelIds: text('label_ids'), // JSON array
+		internalDate: timestamp('internal_date'), // When message was received
+		createdAt: timestamp('created_at').notNull().defaultNow(),
+		updatedAt: timestamp('updated_at').notNull().defaultNow(),
+	},
+	(table) => ({
+		integrationProviderMessageIdx: uniqueIndex('email_messages_integration_provider_idx').on(
+			table.integrationId,
+			table.providerMessageId,
+		),
+	}),
+);
 
 // Email entity link types
-export const EMAIL_ENTITY_LINK_TYPES = ['customer', 'quote', 'job', 'funeral_director', 'supplier'] as const;
+export const EMAIL_ENTITY_LINK_TYPES = [
+	'customer',
+	'quote',
+	'job',
+	'funeral_director',
+	'supplier',
+] as const;
 
 // Email entity links (thread <-> CRM entity linking)
-export const emailEntityLinks = pgTable('email_entity_links', {
-	id: text('id').primaryKey(),
-	tenantId: text('tenant_id')
-		.notNull()
-		.references(() => tenants.id, { onDelete: 'cascade' }),
-	threadId: text('thread_id')
-		.notNull()
-		.references(() => emailThreads.id, { onDelete: 'cascade' }),
-	entityType: text('entity_type').notNull(), // From EMAIL_ENTITY_LINK_TYPES
-	entityId: text('entity_id').notNull(),
-	linkSource: text('link_source').notNull().default('manual'), // 'manual' | 'auto_email_match'
-	linkedById: text('linked_by_id').references(() => users.id, { onDelete: 'set null' }),
-	createdAt: timestamp('created_at').notNull().defaultNow(),
-}, (table) => ({
-	uniqueLink: uniqueIndex('email_entity_links_unique_idx')
-		.on(table.threadId, table.entityType, table.entityId),
-}));
+export const emailEntityLinks = pgTable(
+	'email_entity_links',
+	{
+		id: text('id').primaryKey(),
+		tenantId: text('tenant_id')
+			.notNull()
+			.references(() => tenants.id, { onDelete: 'cascade' }),
+		threadId: text('thread_id')
+			.notNull()
+			.references(() => emailThreads.id, { onDelete: 'cascade' }),
+		entityType: text('entity_type').notNull(), // From EMAIL_ENTITY_LINK_TYPES
+		entityId: text('entity_id').notNull(),
+		linkSource: text('link_source').notNull().default('manual'), // 'manual' | 'auto_email_match'
+		linkedById: text('linked_by_id').references(() => users.id, { onDelete: 'set null' }),
+		createdAt: timestamp('created_at').notNull().defaultNow(),
+	},
+	(table) => ({
+		uniqueLink: uniqueIndex('email_entity_links_unique_idx').on(
+			table.threadId,
+			table.entityType,
+			table.entityId,
+		),
+	}),
+);
 
 // ============================================
 // TAKEPAYMENTS INTEGRATION TABLES
@@ -1698,58 +1798,66 @@ export const takepaymentsSettings = pgTable('takepayments_settings', {
 export const PAYMENT_ATTEMPT_STATUSES = ['pending', 'success', 'failed', 'error'] as const;
 
 // Payment attempts (tracks each payment attempt through TakePayments)
-export const paymentAttempts = pgTable('payment_attempts', {
-	id: text('id').primaryKey(),
-	tenantId: text('tenant_id')
-		.notNull()
-		.references(() => tenants.id, { onDelete: 'cascade' }),
-	milestoneId: text('milestone_id')
-		.notNull()
-		.references(() => jobPaymentScheduleItems.id, { onDelete: 'cascade' }),
-	jobId: text('job_id')
-		.notNull()
-		.references(() => jobs.id, { onDelete: 'cascade' }),
-	orderId: text('order_id').notNull().unique(), // JOB-{jobNumber}-MS-{milestoneId}-{shortUUID}
-	amount: integer('amount').notNull(), // Amount in pence
-	statusCode: integer('status_code'), // TakePayments StatusCode (0=success)
-	message: text('message'), // TakePayments Message
-	crossReference: text('cross_reference'), // TakePayments CrossReference
-	cardLastFour: text('card_last_four'),
-	cardType: text('card_type'), // e.g., VISA, MASTERCARD
-	threeDSecureResult: text('three_d_secure_result'),
-	rawResponse: jsonb('raw_response'), // Full POST body from server result
-	hashVerified: boolean('hash_verified'),
-	status: text('status').notNull().default('pending'), // From PAYMENT_ATTEMPT_STATUSES
-	serverResultReceivedAt: timestamp('server_result_received_at'),
-	callbackReceivedAt: timestamp('callback_received_at'),
-	createdAt: timestamp('created_at').notNull().defaultNow(),
-}, (table) => ({
-	orderIdIdx: index('payment_attempts_order_id_idx').on(table.orderId),
-	milestoneIdIdx: index('payment_attempts_milestone_id_idx').on(table.milestoneId),
-}));
+export const paymentAttempts = pgTable(
+	'payment_attempts',
+	{
+		id: text('id').primaryKey(),
+		tenantId: text('tenant_id')
+			.notNull()
+			.references(() => tenants.id, { onDelete: 'cascade' }),
+		milestoneId: text('milestone_id')
+			.notNull()
+			.references(() => jobPaymentScheduleItems.id, { onDelete: 'cascade' }),
+		jobId: text('job_id')
+			.notNull()
+			.references(() => jobs.id, { onDelete: 'cascade' }),
+		orderId: text('order_id').notNull().unique(), // JOB-{jobNumber}-MS-{milestoneId}-{shortUUID}
+		amount: integer('amount').notNull(), // Amount in pence
+		statusCode: integer('status_code'), // TakePayments StatusCode (0=success)
+		message: text('message'), // TakePayments Message
+		crossReference: text('cross_reference'), // TakePayments CrossReference
+		cardLastFour: text('card_last_four'),
+		cardType: text('card_type'), // e.g., VISA, MASTERCARD
+		threeDSecureResult: text('three_d_secure_result'),
+		rawResponse: jsonb('raw_response'), // Full POST body from server result
+		hashVerified: boolean('hash_verified'),
+		status: text('status').notNull().default('pending'), // From PAYMENT_ATTEMPT_STATUSES
+		serverResultReceivedAt: timestamp('server_result_received_at'),
+		callbackReceivedAt: timestamp('callback_received_at'),
+		createdAt: timestamp('created_at').notNull().defaultNow(),
+	},
+	(table) => ({
+		orderIdIdx: index('payment_attempts_order_id_idx').on(table.orderId),
+		milestoneIdIdx: index('payment_attempts_milestone_id_idx').on(table.milestoneId),
+	}),
+);
 
 // Brochures table (customer-facing product brochures)
-export const brochures = pgTable('brochures', {
-	id: text('id').primaryKey(),
-	tenantId: text('tenant_id')
-		.notNull()
-		.references(() => tenants.id, { onDelete: 'cascade' }),
-	customerId: text('customer_id').references(() => customers.id, { onDelete: 'set null' }),
-	createdById: text('created_by_id').references(() => users.id, { onDelete: 'set null' }),
-	message: text('message'),
-	accessToken: text('access_token').unique(),
-	expiresAt: timestamp('expires_at').notNull(),
-	readyToDiscussAt: timestamp('ready_to_discuss_at'),
-	archivedAt: timestamp('archived_at'),
-	emailSentAt: timestamp('email_sent_at'),
-	emailSentCount: integer('email_sent_count').notNull().default(0),
-	createdAt: timestamp('created_at').notNull().defaultNow(),
-	updatedAt: timestamp('updated_at').notNull().defaultNow(),
-}, (table) => ({
-	activePerCustomer: uniqueIndex('brochures_active_per_customer')
-		.on(table.tenantId, table.customerId)
-		.where(sql`archived_at IS NULL`),
-}));
+export const brochures = pgTable(
+	'brochures',
+	{
+		id: text('id').primaryKey(),
+		tenantId: text('tenant_id')
+			.notNull()
+			.references(() => tenants.id, { onDelete: 'cascade' }),
+		customerId: text('customer_id').references(() => customers.id, { onDelete: 'set null' }),
+		createdById: text('created_by_id').references(() => users.id, { onDelete: 'set null' }),
+		message: text('message'),
+		accessToken: text('access_token').unique(),
+		expiresAt: timestamp('expires_at').notNull(),
+		readyToDiscussAt: timestamp('ready_to_discuss_at'),
+		archivedAt: timestamp('archived_at'),
+		emailSentAt: timestamp('email_sent_at'),
+		emailSentCount: integer('email_sent_count').notNull().default(0),
+		createdAt: timestamp('created_at').notNull().defaultNow(),
+		updatedAt: timestamp('updated_at').notNull().defaultNow(),
+	},
+	(table) => ({
+		activePerCustomer: uniqueIndex('brochures_active_per_customer')
+			.on(table.tenantId, table.customerId)
+			.where(sql`archived_at IS NULL`),
+	}),
+);
 
 // Brochure Products join table
 export const brochureProducts = pgTable('brochure_products', {

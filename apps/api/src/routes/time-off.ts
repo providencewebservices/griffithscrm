@@ -1,15 +1,10 @@
-import { Hono } from 'hono';
+import { timeOffRequests, users } from '@griffiths-crm/shared/db/schema';
 import { zValidator } from '@hono/zod-validator';
+import { and, desc, eq, or } from 'drizzle-orm';
+import { Hono } from 'hono';
 import { z } from 'zod';
-import { eq, and, or, desc } from 'drizzle-orm';
-import {
-	requireAuth,
-	requireTenant,
-	requireManager,
-	isManagerRole,
-} from '../middleware/auth';
 import { db } from '../lib/auth';
-import { timeOffRequests, users, TIME_OFF_STATUSES } from '@griffiths-crm/shared/db/schema';
+import { isManagerRole, requireAuth, requireManager, requireTenant } from '../middleware/auth';
 
 // Validation schemas
 const createTimeOffSchema = z.object({
@@ -61,10 +56,7 @@ const timeOffRoutes = new Hono()
 					.from(timeOffRequests)
 					.leftJoin(users, eq(timeOffRequests.userId, users.id))
 					.where(
-						and(
-							eq(timeOffRequests.tenantId, tenantId),
-							eq(timeOffRequests.userId, filterUserId)
-						)
+						and(eq(timeOffRequests.tenantId, tenantId), eq(timeOffRequests.userId, filterUserId)),
 					)
 					.orderBy(desc(timeOffRequests.createdAt));
 			} else {
@@ -81,8 +73,8 @@ const timeOffRoutes = new Hono()
 						and(
 							eq(timeOffRequests.tenantId, tenantId),
 							eq(timeOffRequests.userId, filterUserId),
-							eq(timeOffRequests.status, 'approved')
-						)
+							eq(timeOffRequests.status, 'approved'),
+						),
 					)
 					.orderBy(desc(timeOffRequests.createdAt));
 			}
@@ -111,11 +103,8 @@ const timeOffRoutes = new Hono()
 				.where(
 					and(
 						eq(timeOffRequests.tenantId, tenantId),
-						or(
-							eq(timeOffRequests.userId, currentUser.id),
-							eq(timeOffRequests.status, 'approved')
-						)
-					)
+						or(eq(timeOffRequests.userId, currentUser.id), eq(timeOffRequests.status, 'approved')),
+					),
 				)
 				.orderBy(desc(timeOffRequests.createdAt));
 		}
@@ -130,9 +119,7 @@ const timeOffRoutes = new Hono()
 				? await db
 						.select({ id: users.id, name: users.name })
 						.from(users)
-						.where(
-							or(...reviewedIds.map((id) => eq(users.id, id)))
-						)
+						.where(or(...reviewedIds.map((id) => eq(users.id, id))))
 				: [];
 
 		const reviewerMap = new Map(reviewers.map((r) => [r.id, r.name]));
@@ -140,9 +127,7 @@ const timeOffRoutes = new Hono()
 		const result = requests.map((r) => ({
 			...r.request,
 			userName: r.userName,
-			reviewerName: r.request.reviewedById
-				? reviewerMap.get(r.request.reviewedById) || null
-				: null,
+			reviewerName: r.request.reviewedById ? reviewerMap.get(r.request.reviewedById) || null : null,
 			isOwn: r.request.userId === currentUser.id,
 		}));
 
@@ -163,12 +148,7 @@ const timeOffRoutes = new Hono()
 			})
 			.from(timeOffRequests)
 			.leftJoin(users, eq(timeOffRequests.userId, users.id))
-			.where(
-				and(
-					eq(timeOffRequests.id, id),
-					eq(timeOffRequests.tenantId, tenantId)
-				)
-			)
+			.where(and(eq(timeOffRequests.id, id), eq(timeOffRequests.tenantId, tenantId)))
 			.limit(1);
 
 		if (!request) {
@@ -247,12 +227,7 @@ const timeOffRoutes = new Hono()
 		const [existing] = await db
 			.select()
 			.from(timeOffRequests)
-			.where(
-				and(
-					eq(timeOffRequests.id, id),
-					eq(timeOffRequests.tenantId, tenantId)
-				)
-			)
+			.where(and(eq(timeOffRequests.id, id), eq(timeOffRequests.tenantId, tenantId)))
 			.limit(1);
 
 		if (!existing) {
@@ -265,10 +240,7 @@ const timeOffRoutes = new Hono()
 		}
 
 		if (existing.status !== 'pending') {
-			return c.json(
-				{ error: 'Can only update pending requests' },
-				400
-			);
+			return c.json({ error: 'Can only update pending requests' }, 400);
 		}
 
 		const updateData: Record<string, unknown> = { updatedAt: new Date() };
@@ -284,9 +256,7 @@ const timeOffRoutes = new Hono()
 		}
 
 		// Validate dates if both are being updated
-		const newStart = data.startDate
-			? new Date(data.startDate)
-			: existing.startDate;
+		const newStart = data.startDate ? new Date(data.startDate) : existing.startDate;
 		const newEnd = data.endDate ? new Date(data.endDate) : existing.endDate;
 
 		if (newEnd < newStart) {
@@ -312,12 +282,7 @@ const timeOffRoutes = new Hono()
 		const [existing] = await db
 			.select()
 			.from(timeOffRequests)
-			.where(
-				and(
-					eq(timeOffRequests.id, id),
-					eq(timeOffRequests.tenantId, tenantId)
-				)
-			)
+			.where(and(eq(timeOffRequests.id, id), eq(timeOffRequests.tenantId, tenantId)))
 			.limit(1);
 
 		if (!existing) {
@@ -330,10 +295,7 @@ const timeOffRoutes = new Hono()
 		}
 
 		if (existing.status !== 'pending') {
-			return c.json(
-				{ error: 'Can only delete pending requests' },
-				400
-			);
+			return c.json({ error: 'Can only delete pending requests' }, 400);
 		}
 
 		await db.delete(timeOffRequests).where(eq(timeOffRequests.id, id));
@@ -342,103 +304,77 @@ const timeOffRoutes = new Hono()
 	})
 
 	// Approve time-off request (managers only)
-	.post(
-		'/:id/approve',
-		requireManager,
-		zValidator('json', reviewTimeOffSchema),
-		async (c) => {
-			const currentUser = c.get('user');
-			const tenantId = currentUser.tenantId!;
-			const id = c.req.param('id');
-			const data = c.req.valid('json');
+	.post('/:id/approve', requireManager, zValidator('json', reviewTimeOffSchema), async (c) => {
+		const currentUser = c.get('user');
+		const tenantId = currentUser.tenantId!;
+		const id = c.req.param('id');
+		const data = c.req.valid('json');
 
-			// Find the request
-			const [existing] = await db
-				.select()
-				.from(timeOffRequests)
-				.where(
-					and(
-						eq(timeOffRequests.id, id),
-						eq(timeOffRequests.tenantId, tenantId)
-					)
-				)
-				.limit(1);
+		// Find the request
+		const [existing] = await db
+			.select()
+			.from(timeOffRequests)
+			.where(and(eq(timeOffRequests.id, id), eq(timeOffRequests.tenantId, tenantId)))
+			.limit(1);
 
-			if (!existing) {
-				return c.json({ error: 'Time-off request not found' }, 404);
-			}
-
-			if (existing.status !== 'pending') {
-				return c.json(
-					{ error: 'Can only approve pending requests' },
-					400
-				);
-			}
-
-			const [updated] = await db
-				.update(timeOffRequests)
-				.set({
-					status: 'approved',
-					reviewedById: currentUser.id,
-					reviewedAt: new Date(),
-					reviewNotes: data.notes || null,
-					updatedAt: new Date(),
-				})
-				.where(eq(timeOffRequests.id, id))
-				.returning();
-
-			return c.json({ request: updated });
+		if (!existing) {
+			return c.json({ error: 'Time-off request not found' }, 404);
 		}
-	)
+
+		if (existing.status !== 'pending') {
+			return c.json({ error: 'Can only approve pending requests' }, 400);
+		}
+
+		const [updated] = await db
+			.update(timeOffRequests)
+			.set({
+				status: 'approved',
+				reviewedById: currentUser.id,
+				reviewedAt: new Date(),
+				reviewNotes: data.notes || null,
+				updatedAt: new Date(),
+			})
+			.where(eq(timeOffRequests.id, id))
+			.returning();
+
+		return c.json({ request: updated });
+	})
 
 	// Reject time-off request (managers only)
-	.post(
-		'/:id/reject',
-		requireManager,
-		zValidator('json', reviewTimeOffSchema),
-		async (c) => {
-			const currentUser = c.get('user');
-			const tenantId = currentUser.tenantId!;
-			const id = c.req.param('id');
-			const data = c.req.valid('json');
+	.post('/:id/reject', requireManager, zValidator('json', reviewTimeOffSchema), async (c) => {
+		const currentUser = c.get('user');
+		const tenantId = currentUser.tenantId!;
+		const id = c.req.param('id');
+		const data = c.req.valid('json');
 
-			// Find the request
-			const [existing] = await db
-				.select()
-				.from(timeOffRequests)
-				.where(
-					and(
-						eq(timeOffRequests.id, id),
-						eq(timeOffRequests.tenantId, tenantId)
-					)
-				)
-				.limit(1);
+		// Find the request
+		const [existing] = await db
+			.select()
+			.from(timeOffRequests)
+			.where(and(eq(timeOffRequests.id, id), eq(timeOffRequests.tenantId, tenantId)))
+			.limit(1);
 
-			if (!existing) {
-				return c.json({ error: 'Time-off request not found' }, 404);
-			}
-
-			if (existing.status !== 'pending') {
-				return c.json(
-					{ error: 'Can only reject pending requests' },
-					400
-				);
-			}
-
-			const [updated] = await db
-				.update(timeOffRequests)
-				.set({
-					status: 'rejected',
-					reviewedById: currentUser.id,
-					reviewedAt: new Date(),
-					reviewNotes: data.notes || null,
-					updatedAt: new Date(),
-				})
-				.where(eq(timeOffRequests.id, id))
-				.returning();
-
-			return c.json({ request: updated });
+		if (!existing) {
+			return c.json({ error: 'Time-off request not found' }, 404);
 		}
-	);
+
+		if (existing.status !== 'pending') {
+			return c.json({ error: 'Can only reject pending requests' }, 400);
+		}
+
+		const [updated] = await db
+			.update(timeOffRequests)
+			.set({
+				status: 'rejected',
+				reviewedById: currentUser.id,
+				reviewedAt: new Date(),
+				reviewNotes: data.notes || null,
+				updatedAt: new Date(),
+			})
+			.where(eq(timeOffRequests.id, id))
+			.returning();
+
+		return c.json({ request: updated });
+	});
 
 export { timeOffRoutes };

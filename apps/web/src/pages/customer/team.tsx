@@ -1,5 +1,11 @@
+import { Calendar, LayoutGrid, List, Mail, Plus, Search, Users } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router';
+import { InviteMemberDialog } from '@/components/customer/invite-member-dialog';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import {
 	Table,
 	TableBody,
@@ -8,20 +14,9 @@ import {
 	TableHeader,
 	TableRow,
 } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import {
-	Card,
-	CardContent,
-	CardHeader,
-	CardTitle,
-} from '@/components/ui/card';
-import { InviteMemberDialog } from '@/components/customer/invite-member-dialog';
+import { type TeamMember, useInviteUserMutation, useTeamQuery } from '@/hooks/use-team';
 import { useSession } from '@/lib/auth';
-import { useTeamQuery, useInviteUserMutation, type TeamMember } from '@/hooks/use-team';
-import { getInitials, getAvatarColor } from '@/lib/avatar-utils';
-import { Search, Plus, List, LayoutGrid, Users, Mail, Calendar } from 'lucide-react';
+import { getAvatarColor, getInitials } from '@/lib/avatar-utils';
 
 type DisplayMode = 'table' | 'cards';
 
@@ -40,10 +35,7 @@ export function TeamPage() {
 	const filteredMembers = members?.filter((member) => {
 		if (!searchQuery) return true;
 		const query = searchQuery.toLowerCase();
-		return (
-			member.name.toLowerCase().includes(query) ||
-			member.email.toLowerCase().includes(query)
-		);
+		return member.name.toLowerCase().includes(query) || member.email.toLowerCase().includes(query);
 	});
 
 	const handleInvite = () => {
@@ -74,16 +66,16 @@ export function TeamPage() {
 			<div className="mb-6">
 				<h2 className="text-2xl font-bold">Team</h2>
 				<p className="text-muted-foreground mt-1">
-					{members ? `${members.length} member${members.length !== 1 ? 's' : ''}` : 'Manage your team members'}
+					{members
+						? `${members.length} member${members.length !== 1 ? 's' : ''}`
+						: 'Manage your team members'}
 				</p>
 			</div>
 
 			{isLoading ? (
 				<div className="text-muted-foreground">Loading team members...</div>
 			) : error ? (
-				<div className="text-destructive">
-					Error loading team: {error.message}
-				</div>
+				<div className="text-destructive">Error loading team: {error.message}</div>
 			) : (
 				<>
 					<div className="flex justify-between items-center mb-4 gap-4">
@@ -163,7 +155,9 @@ export function TeamPage() {
 													<span>
 														{member.name}
 														{member.id === currentUserId && (
-															<Badge variant="outline" className="ml-2 text-xs">You</Badge>
+															<Badge variant="outline" className="ml-2 text-xs">
+																You
+															</Badge>
 														)}
 													</span>
 												</div>
@@ -176,9 +170,7 @@ export function TeamPage() {
 													<Badge variant="secondary">Pending</Badge>
 												)}
 											</TableCell>
-											<TableCell>
-												{formatDate(member.createdAt)}
-											</TableCell>
+											<TableCell>{formatDate(member.createdAt)}</TableCell>
 											<TableCell>
 												<Link to={`/app/team/${member.id}`}>
 													<Button variant="ghost" size="sm">
@@ -241,14 +233,20 @@ function TeamMemberCard({
 							<CardTitle className="text-base flex items-center gap-2">
 								<span className="truncate">{member.name}</span>
 								{isCurrentUser && (
-									<Badge variant="outline" className="text-xs shrink-0">You</Badge>
+									<Badge variant="outline" className="text-xs shrink-0">
+										You
+									</Badge>
 								)}
 							</CardTitle>
 						</div>
 						{member.emailVerified ? (
-							<Badge variant="default" className="shrink-0">Active</Badge>
+							<Badge variant="default" className="shrink-0">
+								Active
+							</Badge>
 						) : (
-							<Badge variant="secondary" className="shrink-0">Pending</Badge>
+							<Badge variant="secondary" className="shrink-0">
+								Pending
+							</Badge>
 						)}
 					</div>
 				</CardHeader>

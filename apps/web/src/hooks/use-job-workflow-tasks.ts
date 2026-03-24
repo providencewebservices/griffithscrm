@@ -1,5 +1,8 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import type { WORKFLOW_TASK_STATUSES, WORKFLOW_STEP_CATEGORIES } from '@griffiths-crm/shared/db/schema';
+import type {
+	WORKFLOW_STEP_CATEGORIES,
+	WORKFLOW_TASK_STATUSES,
+} from '@griffiths-crm/shared/db/schema';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -92,7 +95,7 @@ async function skipWorkflowTask(jobId: string, taskId: string): Promise<Workflow
 async function updateWorkflowTask(
 	jobId: string,
 	taskId: string,
-	input: UpdateWorkflowTaskInput
+	input: UpdateWorkflowTaskInput,
 ): Promise<WorkflowTask> {
 	const response = await fetch(`${API_URL}/api/jobs/${jobId}/workflow-tasks/${taskId}`, {
 		method: 'PUT',

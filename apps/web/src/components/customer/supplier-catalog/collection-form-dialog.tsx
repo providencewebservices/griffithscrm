@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
 import {
 	Dialog,
 	DialogContent,
@@ -7,11 +8,10 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
-import type { SupplierCollection, CreateCollectionInput } from '@/hooks/use-supplier-collections';
+import type { CreateCollectionInput, SupplierCollection } from '@/hooks/use-supplier-collections';
 
 type CollectionFormDialogProps = {
 	open: boolean;
@@ -65,14 +65,12 @@ export function CollectionFormDialog({
 					<DialogDescription>
 						{isEditing
 							? 'Update the collection details.'
-							: 'Add a new collection to this supplier\'s catalog.'}
+							: "Add a new collection to this supplier's catalog."}
 					</DialogDescription>
 				</DialogHeader>
 
 				{error && (
-					<div className="bg-destructive/10 text-destructive px-4 py-2 rounded">
-						{error}
-					</div>
+					<div className="bg-destructive/10 text-destructive px-4 py-2 rounded">{error}</div>
 				)}
 
 				<FieldGroup>

@@ -1,12 +1,12 @@
-import { Hono } from 'hono';
+import { jobProofs, jobs, users } from '@griffiths-crm/shared/db/schema';
 import { zValidator } from '@hono/zod-validator';
+import { and, desc, eq, ne, sql } from 'drizzle-orm';
+import { Hono } from 'hono';
 import { z } from 'zod';
-import { eq, and, desc, sql, ne } from 'drizzle-orm';
-import { requireAuth, requireTenant } from '../middleware/auth';
 import { db } from '../lib/auth';
 import { generatePresignedUploadUrl, isS3Configured } from '../lib/s3';
 import { autoCompleteWorkflowTask } from '../lib/workflow-utils';
-import { jobs, jobProofs, users, PROOF_STATUSES } from '@griffiths-crm/shared/db/schema';
+import { requireAuth, requireTenant } from '../middleware/auth';
 
 // Allowed content types for proof uploads
 const ALLOWED_PROOF_CONTENT_TYPES = [
@@ -165,12 +165,7 @@ const jobProofsRoutes = new Hono()
 		await db
 			.update(jobProofs)
 			.set({ status: 'superseded', updatedAt: new Date() })
-			.where(
-				and(
-					eq(jobProofs.jobId, jobId),
-					ne(jobProofs.status, 'superseded')
-				)
-			);
+			.where(and(eq(jobProofs.jobId, jobId), ne(jobProofs.status, 'superseded')));
 
 		// Create new proof record
 		const newProof = {
@@ -280,45 +275,49 @@ const jobProofsRoutes = new Hono()
 	})
 
 	// Request revision
-	.put('/:jobId/proofs/:proofId/request-revision', zValidator('json', requestRevisionSchema), async (c) => {
-		const tenantId = c.get('user').tenantId!;
-		const jobId = c.req.param('jobId');
-		const proofId = c.req.param('proofId');
-		const { customerFeedback } = c.req.valid('json');
+	.put(
+		'/:jobId/proofs/:proofId/request-revision',
+		zValidator('json', requestRevisionSchema),
+		async (c) => {
+			const tenantId = c.get('user').tenantId!;
+			const jobId = c.req.param('jobId');
+			const proofId = c.req.param('proofId');
+			const { customerFeedback } = c.req.valid('json');
 
-		// Verify job exists and belongs to tenant
-		const [job] = await db
-			.select()
-			.from(jobs)
-			.where(and(eq(jobs.id, jobId), eq(jobs.tenantId, tenantId)))
-			.limit(1);
+			// Verify job exists and belongs to tenant
+			const [job] = await db
+				.select()
+				.from(jobs)
+				.where(and(eq(jobs.id, jobId), eq(jobs.tenantId, tenantId)))
+				.limit(1);
 
-		if (!job) {
-			return c.json({ error: 'Job not found' }, 404);
-		}
+			if (!job) {
+				return c.json({ error: 'Job not found' }, 404);
+			}
 
-		const [existing] = await db
-			.select()
-			.from(jobProofs)
-			.where(and(eq(jobProofs.id, proofId), eq(jobProofs.jobId, jobId)))
-			.limit(1);
+			const [existing] = await db
+				.select()
+				.from(jobProofs)
+				.where(and(eq(jobProofs.id, proofId), eq(jobProofs.jobId, jobId)))
+				.limit(1);
 
-		if (!existing) {
-			return c.json({ error: 'Proof not found' }, 404);
-		}
+			if (!existing) {
+				return c.json({ error: 'Proof not found' }, 404);
+			}
 
-		const [updated] = await db
-			.update(jobProofs)
-			.set({
-				status: 'revision_requested',
-				customerFeedback,
-				updatedAt: new Date(),
-			})
-			.where(eq(jobProofs.id, proofId))
-			.returning();
+			const [updated] = await db
+				.update(jobProofs)
+				.set({
+					status: 'revision_requested',
+					customerFeedback,
+					updatedAt: new Date(),
+				})
+				.where(eq(jobProofs.id, proofId))
+				.returning();
 
-		return c.json({ proof: updated });
-	})
+			return c.json({ proof: updated });
+		},
+	)
 
 	// Update proof notes
 	.put('/:jobId/proofs/:proofId', zValidator('json', updateProofSchema), async (c) => {

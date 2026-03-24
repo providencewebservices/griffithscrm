@@ -1,12 +1,9 @@
 import { useState } from 'react';
-import { Separator } from '@/components/ui/separator';
-import { cn } from '@/lib/utils';
-import {
-	formatComponentType,
-	type QuotePackageWithOptions,
-} from '@/hooks/use-quotes';
-import type { TenantSettings } from '@/hooks/use-tenant-settings';
 import { InscriptionText } from '@/components/inscription-text';
+import { Separator } from '@/components/ui/separator';
+import { formatComponentType, type QuotePackageWithOptions } from '@/hooks/use-quotes';
+import type { TenantSettings } from '@/hooks/use-tenant-settings';
+import { cn } from '@/lib/utils';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -21,7 +18,9 @@ export function CustomerView({
 	formatCurrency: (value: string | number) => string;
 	formatDate: (dateString: string) => string;
 }) {
-	const [selectedOptionId, setSelectedOptionId] = useState<string | null>(pkg.options?.[0]?.id || null);
+	const [selectedOptionId, setSelectedOptionId] = useState<string | null>(
+		pkg.options?.[0]?.id || null,
+	);
 	const currentOption = pkg.options?.find((opt) => opt.id === selectedOptionId);
 
 	const hasLogo = settings?.logoUrl;
@@ -63,7 +62,7 @@ export function CustomerView({
 						)}
 						{hasAddress && (
 							<p className="text-sm text-muted-foreground mt-3">
-								{settings.address!.formattedAddress}
+								{settings.address?.formattedAddress}
 							</p>
 						)}
 					</div>
@@ -102,7 +101,7 @@ export function CustomerView({
 									'w-full flex items-center justify-between px-4 py-3 border rounded-sm text-sm transition-colors',
 									selectedOptionId === option.id
 										? 'border-primary/50 bg-primary/5 font-medium'
-										: 'border-gray-200 hover:border-gray-300'
+										: 'border-gray-200 hover:border-gray-300',
 								)}
 							>
 								<span>{option.quoteNumber}</span>
@@ -122,7 +121,9 @@ export function CustomerView({
 							{/* Product Details */}
 							{currentOption.product && (
 								<div>
-									<p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">Product</p>
+									<p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">
+										Product
+									</p>
 									<p className="text-xl font-semibold">{currentOption.product.name}</p>
 								</div>
 							)}
@@ -130,7 +131,9 @@ export function CustomerView({
 							{/* Components Summary */}
 							{currentOption.components.length > 0 && (
 								<div>
-									<p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">Components</p>
+									<p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">
+										Components
+									</p>
 									<div className="space-y-1">
 										{currentOption.components.map((comp) => (
 											<div key={comp.id} className="text-sm">
@@ -152,7 +155,9 @@ export function CustomerView({
 							{/* Flower Holes */}
 							{currentOption.flowerHoles && (
 								<div>
-									<p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">Flower Holes</p>
+									<p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">
+										Flower Holes
+									</p>
 									<p className="text-sm">{currentOption.flowerHoles.replace(/_/g, ' ')}</p>
 								</div>
 							)}
@@ -160,15 +165,21 @@ export function CustomerView({
 							{/* Proposed Inscription */}
 							{pkg.proposedInscription && (
 								<div className="text-center">
-									<p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-3">Proposed Inscription</p>
-									<p className="whitespace-pre-wrap italic text-lg py-2">{pkg.proposedInscription}</p>
+									<p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-3">
+										Proposed Inscription
+									</p>
+									<p className="whitespace-pre-wrap italic text-lg py-2">
+										{pkg.proposedInscription}
+									</p>
 								</div>
 							)}
 
 							{/* Lettering */}
 							{currentOption.lettering.length > 0 && (
 								<div>
-									<p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-3">Lettering</p>
+									<p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-3">
+										Lettering
+									</p>
 									<div className="space-y-4">
 										{currentOption.lettering.map((lett) => (
 											<div key={lett.id} className="space-y-1">
@@ -194,7 +205,9 @@ export function CustomerView({
 							{/* Sundries */}
 							{currentOption.sundries.length > 0 && (
 								<div>
-									<p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">Additional Items</p>
+									<p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">
+										Additional Items
+									</p>
 									<div className="space-y-1">
 										{currentOption.sundries.map((s) => (
 											<p key={s.id} className="text-sm text-muted-foreground">
@@ -209,7 +222,9 @@ export function CustomerView({
 							{currentOption.lineItems &&
 								currentOption.lineItems.filter((item) => item.visibleToCustomer).length > 0 && (
 									<div>
-										<p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">Other Charges</p>
+										<p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">
+											Other Charges
+										</p>
 										<div className="space-y-1">
 											{currentOption.lineItems
 												.filter((item) => item.visibleToCustomer)
@@ -241,13 +256,17 @@ export function CustomerView({
 									<span>{formatCurrency(currentOption.subtotal)}</span>
 								</div>
 								<div className="flex justify-between text-sm">
-									<span className="text-muted-foreground">VAT ({(parseFloat(currentOption.vatRate) * 100).toFixed(0)}%)</span>
+									<span className="text-muted-foreground">
+										VAT ({(parseFloat(currentOption.vatRate) * 100).toFixed(0)}%)
+									</span>
 									<span>{formatCurrency(currentOption.vatAmount)}</span>
 								</div>
 								<Separator className="my-2" />
 								<div className="flex justify-between items-baseline pt-1">
 									<span className="text-sm font-medium">Total</span>
-									<span className="text-3xl font-heading font-bold">{formatCurrency(currentOption.total)}</span>
+									<span className="text-3xl font-heading font-bold">
+										{formatCurrency(currentOption.total)}
+									</span>
 								</div>
 							</div>
 						</div>
@@ -261,7 +280,9 @@ export function CustomerView({
 							<Separator />
 						</div>
 						<div className="px-10 sm:px-14 py-6">
-							<p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">Notes</p>
+							<p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">
+								Notes
+							</p>
 							<p className="text-sm text-muted-foreground whitespace-pre-wrap">{pkg.notes}</p>
 						</div>
 					</>

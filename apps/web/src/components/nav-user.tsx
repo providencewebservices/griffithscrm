@@ -1,8 +1,6 @@
-import { useNavigate } from 'react-router'
-import { ChevronsUpDown, LogOut } from "lucide-react"
-
-import { signOut, useSession } from '@/lib/auth'
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { ChevronsUpDown, LogOut } from 'lucide-react';
+import { useNavigate } from 'react-router';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -10,35 +8,36 @@ import {
 	DropdownMenuLabel,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from '@/components/ui/dropdown-menu';
 import {
 	SidebarMenu,
 	SidebarMenuButton,
 	SidebarMenuItem,
 	useSidebar,
-} from "@/components/ui/sidebar"
+} from '@/components/ui/sidebar';
+import { signOut, useSession } from '@/lib/auth';
 
 function getInitials(name: string | undefined): string {
-	if (!name) return "?"
+	if (!name) return '?';
 	return name
-		.split(" ")
+		.split(' ')
 		.map((part) => part[0])
-		.join("")
+		.join('')
 		.toUpperCase()
-		.slice(0, 2)
+		.slice(0, 2);
 }
 
 export function NavUser() {
-	const navigate = useNavigate()
-	const { isMobile } = useSidebar()
-	const { data: session } = useSession()
+	const navigate = useNavigate();
+	const { isMobile } = useSidebar();
+	const { data: session } = useSession();
 
-	const user = session?.user
+	const user = session?.user;
 
 	const handleSignOut = async () => {
-		await signOut()
-		navigate('/login', { replace: true })
-	}
+		await signOut();
+		navigate('/login', { replace: true });
+	};
 
 	return (
 		<SidebarMenu>
@@ -66,7 +65,7 @@ export function NavUser() {
 					</DropdownMenuTrigger>
 					<DropdownMenuContent
 						className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
-						side={isMobile ? "bottom" : "right"}
+						side={isMobile ? 'bottom' : 'right'}
 						align="end"
 						sideOffset={4}
 					>
@@ -87,5 +86,5 @@ export function NavUser() {
 				</DropdownMenu>
 			</SidebarMenuItem>
 		</SidebarMenu>
-	)
+	);
 }

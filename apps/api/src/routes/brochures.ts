@@ -1,18 +1,18 @@
-import { Hono } from 'hono';
-import { zValidator } from '@hono/zod-validator';
-import { z } from 'zod';
-import { eq, and, desc, count, sql, isNull, isNotNull, or, like } from 'drizzle-orm';
-import crypto from 'crypto';
-import { requireAuth, requireTenant } from '../middleware/auth';
-import { db } from '../lib/auth';
+import crypto from 'node:crypto';
 import {
-	brochures,
 	brochureProducts,
-	customers,
-	products,
+	brochures,
 	contactInfo,
 	customerContactInfo,
+	customers,
+	products,
 } from '@griffiths-crm/shared/db/schema';
+import { zValidator } from '@hono/zod-validator';
+import { and, count, desc, eq, isNotNull, isNull, sql } from 'drizzle-orm';
+import { Hono } from 'hono';
+import { z } from 'zod';
+import { db } from '../lib/auth';
+import { requireAuth, requireTenant } from '../middleware/auth';
 
 // Validation schemas
 const createSchema = z.object({
@@ -23,7 +23,7 @@ const createSchema = z.object({
 		z.object({
 			productId: z.string().min(1),
 			sortOrder: z.number().int().min(0),
-		})
+		}),
 	),
 });
 
@@ -35,7 +35,7 @@ const updateSchema = z.object({
 			z.object({
 				productId: z.string().min(1),
 				sortOrder: z.number().int().min(0),
-			})
+			}),
 		)
 		.optional(),
 });
@@ -74,10 +74,10 @@ const brochuresRoutes = new Hono()
 		}
 
 		// Search by customer name
-		if (search && search.trim()) {
+		if (search?.trim()) {
 			const searchTerm = `%${search.trim().toLowerCase()}%`;
 			conditions.push(
-				sql`LOWER(CONCAT(COALESCE(${customers.firstName}, ''), ' ', COALESCE(${customers.lastName}, ''))) LIKE ${searchTerm}`
+				sql`LOWER(CONCAT(COALESCE(${customers.firstName}, ''), ' ', COALESCE(${customers.lastName}, ''))) LIKE ${searchTerm}`,
 			);
 		}
 
@@ -206,8 +206,8 @@ const brochuresRoutes = new Hono()
 					and(
 						eq(customerContactInfo.customerId, brochure.customerId),
 						eq(contactInfo.type, 'email'),
-						eq(contactInfo.isPrimary, true)
-					)
+						eq(contactInfo.isPrimary, true),
+					),
 				)
 				.limit(1);
 
@@ -233,7 +233,9 @@ const brochuresRoutes = new Hono()
 
 		const id = crypto.randomUUID();
 		const accessToken = crypto.randomBytes(32).toString('hex');
-		const expiresAt = data.expiresAt ? new Date(data.expiresAt) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+		const expiresAt = data.expiresAt
+			? new Date(data.expiresAt)
+			: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
 		// Archive any existing active brochure for this customer+tenant
 		await db
@@ -243,8 +245,8 @@ const brochuresRoutes = new Hono()
 				and(
 					eq(brochures.tenantId, tenantId),
 					eq(brochures.customerId, data.customerId),
-					isNull(brochures.archivedAt)
-				)
+					isNull(brochures.archivedAt),
+				),
 			);
 
 		// Insert brochure
@@ -269,7 +271,7 @@ const brochuresRoutes = new Hono()
 					brochureId: id,
 					productId: p.productId,
 					sortOrder: p.sortOrder,
-				}))
+				})),
 			);
 		}
 
@@ -311,7 +313,7 @@ const brochuresRoutes = new Hono()
 						brochureId,
 						productId: p.productId,
 						sortOrder: p.sortOrder,
-					}))
+					})),
 				);
 			}
 		}

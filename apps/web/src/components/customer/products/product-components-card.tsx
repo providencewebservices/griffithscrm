@@ -1,22 +1,9 @@
+import { Layers, MoreHorizontal, Plus } from 'lucide-react';
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from '@/components/ui/card';
-import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
 	Dialog,
 	DialogContent,
@@ -26,6 +13,14 @@ import {
 	DialogTitle,
 } from '@/components/ui/dialog';
 import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import {
 	Select,
 	SelectContent,
 	SelectItem,
@@ -33,22 +28,21 @@ import {
 	SelectValue,
 } from '@/components/ui/select';
 import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Field, FieldGroup, FieldLabel, FieldDescription } from '@/components/ui/field';
-import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from '@/components/ui/table';
 import {
-	useProductComponentsQuery,
-	useCreateProductComponentMutation,
-	useUpdateProductComponentMutation,
-	useDeleteProductComponentMutation,
 	type ProductComponent,
+	useCreateProductComponentMutation,
+	useDeleteProductComponentMutation,
+	useProductComponentsQuery,
+	useUpdateProductComponentMutation,
 } from '@/hooks/use-product-components';
-import { Plus, MoreHorizontal, Layers } from 'lucide-react';
-import { COMPONENT_TYPES, COMPONENT_TYPE_LABELS } from '@/lib/product-utils';
+import { COMPONENT_TYPE_LABELS, COMPONENT_TYPES } from '@/lib/product-utils';
 
 type ProductComponentsCardProps = {
 	productId: string;
@@ -99,7 +93,7 @@ export function ProductComponentsCard({ productId }: ProductComponentsCardProps)
 			const data = {
 				componentType,
 				name: name.trim() || null,
-				quantity: parseInt(quantity) || 1,
+				quantity: parseInt(quantity, 10) || 1,
 			};
 
 			if (selectedComponent) {
@@ -137,9 +131,7 @@ export function ProductComponentsCard({ productId }: ProductComponentsCardProps)
 					<div className="flex items-center justify-between">
 						<div>
 							<CardTitle>Components</CardTitle>
-							<CardDescription>
-								Define the stone pieces that make up this product
-							</CardDescription>
+							<CardDescription>Define the stone pieces that make up this product</CardDescription>
 						</div>
 						<Button onClick={handleAdd} disabled={availableTypes.length === 0}>
 							<Plus className="h-4 w-4 mr-2" />
@@ -153,7 +145,8 @@ export function ProductComponentsCard({ productId }: ProductComponentsCardProps)
 					) : !components || components.length === 0 ? (
 						<div className="text-center py-8 text-muted-foreground border rounded-lg">
 							<Layers className="h-8 w-8 mx-auto mb-2 opacity-50" />
-							No components defined. Add components to specify what stone pieces this product includes.
+							No components defined. Add components to specify what stone pieces this product
+							includes.
 						</div>
 					) : (
 						<div className="border rounded-lg">
@@ -216,9 +209,7 @@ export function ProductComponentsCard({ productId }: ProductComponentsCardProps)
 			<Dialog open={formOpen} onOpenChange={setFormOpen}>
 				<DialogContent>
 					<DialogHeader>
-						<DialogTitle>
-							{selectedComponent ? 'Edit Component' : 'Add Component'}
-						</DialogTitle>
+						<DialogTitle>{selectedComponent ? 'Edit Component' : 'Add Component'}</DialogTitle>
 						<DialogDescription>
 							{selectedComponent
 								? 'Update the component details.'
@@ -240,13 +231,11 @@ export function ProductComponentsCard({ productId }: ProductComponentsCardProps)
 									<SelectValue />
 								</SelectTrigger>
 								<SelectContent>
-									{(selectedComponent ? COMPONENT_TYPES : availableTypes).map(
-										(type) => (
-											<SelectItem key={type} value={type}>
-												{COMPONENT_TYPE_LABELS[type] || type}
-											</SelectItem>
-										)
-									)}
+									{(selectedComponent ? COMPONENT_TYPES : availableTypes).map((type) => (
+										<SelectItem key={type} value={type}>
+											{COMPONENT_TYPE_LABELS[type] || type}
+										</SelectItem>
+									))}
 								</SelectContent>
 							</Select>
 							<FieldDescription>
@@ -262,9 +251,7 @@ export function ProductComponentsCard({ productId }: ProductComponentsCardProps)
 								onChange={(e) => setName(e.target.value)}
 								placeholder={COMPONENT_TYPE_LABELS[componentType] || componentType}
 							/>
-							<FieldDescription>
-								Override the default label for this component
-							</FieldDescription>
+							<FieldDescription>Override the default label for this component</FieldDescription>
 						</Field>
 
 						<Field>

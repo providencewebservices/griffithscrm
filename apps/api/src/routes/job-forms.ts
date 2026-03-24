@@ -1,11 +1,11 @@
-import { Hono } from 'hono';
+import { FORM_STATUSES, jobForms, jobs } from '@griffiths-crm/shared/db/schema';
 import { zValidator } from '@hono/zod-validator';
+import { and, asc, eq, sql } from 'drizzle-orm';
+import { Hono } from 'hono';
 import { z } from 'zod';
-import { eq, and, asc, sql } from 'drizzle-orm';
-import { requireAuth, requireTenant } from '../middleware/auth';
 import { db } from '../lib/auth';
 import { autoCompleteWorkflowTask } from '../lib/workflow-utils';
-import { jobs, jobForms, FORM_STATUSES } from '@griffiths-crm/shared/db/schema';
+import { requireAuth, requireTenant } from '../middleware/auth';
 
 // Validation schemas
 const createFormSchema = z.object({
@@ -137,8 +137,10 @@ const jobFormsRoutes = new Hono()
 		const updateData: Record<string, unknown> = { updatedAt: new Date() };
 		if (data.status !== undefined) updateData.status = data.status;
 		if (data.fee !== undefined) updateData.fee = data.fee;
-		if (data.submittedAt !== undefined) updateData.submittedAt = data.submittedAt ? new Date(data.submittedAt) : null;
-		if (data.approvedAt !== undefined) updateData.approvedAt = data.approvedAt ? new Date(data.approvedAt) : null;
+		if (data.submittedAt !== undefined)
+			updateData.submittedAt = data.submittedAt ? new Date(data.submittedAt) : null;
+		if (data.approvedAt !== undefined)
+			updateData.approvedAt = data.approvedAt ? new Date(data.approvedAt) : null;
 		if (data.referenceNumber !== undefined) updateData.referenceNumber = data.referenceNumber;
 		if (data.notes !== undefined) updateData.notes = data.notes;
 
@@ -156,7 +158,8 @@ const jobFormsRoutes = new Hono()
 				.where(eq(jobForms.jobId, jobId));
 
 			const terminalStatuses = ['approved', 'received', 'not_required'];
-			const allComplete = allForms.length > 0 && allForms.every((f) => terminalStatuses.includes(f.status));
+			const allComplete =
+				allForms.length > 0 && allForms.every((f) => terminalStatuses.includes(f.status));
 
 			if (allComplete) {
 				await autoCompleteWorkflowTask(jobId, 'Forms & Fees', currentUser.id);

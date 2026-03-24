@@ -1,31 +1,20 @@
+import { Download, ExternalLink, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
-	DropdownMenuTrigger,
 	DropdownMenuSeparator,
+	DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { FileTypeIcon } from './file-type-icon';
-import { DocumentEditDialog } from './document-edit-dialog';
-import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
-import {
-	formatFileSize,
-	parseTags,
-	getFileTypeLabel,
-	isPreviewable,
-} from '@/lib/file-utils';
-import { useUpdateDocumentMutation, useDeleteDocumentMutation } from '@/hooks/use-documents';
 import type { Document, UpdateDocumentInput } from '@/hooks/use-documents';
-import {
-	MoreHorizontal,
-	Download,
-	ExternalLink,
-	Pencil,
-	Trash2,
-} from 'lucide-react';
+import { useDeleteDocumentMutation, useUpdateDocumentMutation } from '@/hooks/use-documents';
+import { formatFileSize, getFileTypeLabel, isPreviewable, parseTags } from '@/lib/file-utils';
+import { DocumentEditDialog } from './document-edit-dialog';
+import { FileTypeIcon } from './file-type-icon';
 
 interface DocumentRowProps {
 	document: Document;
@@ -83,10 +72,7 @@ export function DocumentRow({ document, showEntity, onEntityClick }: DocumentRow
 	return (
 		<>
 			<div className="flex items-center gap-4 p-3 border rounded-lg hover:bg-muted/50 transition-colors">
-				<FileTypeIcon
-					contentType={document.contentType}
-					previewUrl={document.publicUrl}
-				/>
+				<FileTypeIcon contentType={document.contentType} previewUrl={document.publicUrl} />
 
 				<div className="flex-1 min-w-0">
 					<div className="flex items-center gap-2">
@@ -121,19 +107,14 @@ export function DocumentRow({ document, showEntity, onEntityClick }: DocumentRow
 						{showEntity && document.entityType && (
 							<>
 								<span>&middot;</span>
-								<button
-									onClick={onEntityClick}
-									className="text-primary hover:underline"
-								>
+								<button onClick={onEntityClick} className="text-primary hover:underline">
 									{document.entityType.replace('_', ' ')}
 								</button>
 							</>
 						)}
 					</div>
 					{document.notes && (
-						<p className="text-xs text-muted-foreground mt-1 truncate">
-							{document.notes}
-						</p>
+						<p className="text-xs text-muted-foreground mt-1 truncate">{document.notes}</p>
 					)}
 				</div>
 

@@ -1,11 +1,11 @@
-import { Hono } from 'hono';
-import { zValidator } from '@hono/zod-validator';
-import { z } from 'zod';
-import { eq } from 'drizzle-orm';
-import { requireAuth, requireTenant } from '../middleware/auth';
-import { db } from '../lib/auth';
 import { takepaymentsSettings } from '@griffiths-crm/shared/db/schema';
-import { encrypt, decrypt } from '../lib/encryption';
+import { zValidator } from '@hono/zod-validator';
+import { eq } from 'drizzle-orm';
+import { Hono } from 'hono';
+import { z } from 'zod';
+import { db } from '../lib/auth';
+import { decrypt, encrypt } from '../lib/encryption';
+import { requireAuth, requireTenant } from '../middleware/auth';
 
 const updateSchema = z.object({
 	merchantId: z.string().min(1),
@@ -61,7 +61,10 @@ const takepaymentsSettingsRoutes = new Hono()
 		if (!existing) {
 			// Create new — password and key required
 			if (!data.gatewayPassword || !data.preSharedKey) {
-				return c.json({ error: 'Gateway password and pre-shared key are required for initial setup' }, 400);
+				return c.json(
+					{ error: 'Gateway password and pre-shared key are required for initial setup' },
+					400,
+				);
 			}
 
 			const [created] = await db
@@ -150,9 +153,15 @@ const takepaymentsSettingsRoutes = new Hono()
 				return c.json({ error: 'Failed to decrypt credentials' }, 500);
 			}
 
-			return c.json({ success: true, message: 'Configuration valid — credentials decrypted successfully' });
-		} catch (err) {
-			return c.json({ error: 'Failed to decrypt credentials. The encryption key may have changed.' }, 500);
+			return c.json({
+				success: true,
+				message: 'Configuration valid — credentials decrypted successfully',
+			});
+		} catch (_err) {
+			return c.json(
+				{ error: 'Failed to decrypt credentials. The encryption key may have changed.' },
+				500,
+			);
 		}
 	});
 

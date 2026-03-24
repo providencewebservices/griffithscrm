@@ -1,27 +1,27 @@
-import { Hono } from 'hono';
-import { zValidator } from '@hono/zod-validator';
-import { z } from 'zod';
-import { eq, and } from 'drizzle-orm';
-import { requireAuth, requireTenant } from '../middleware/auth';
-import { db } from '../lib/auth';
 import {
+	addresses,
+	contactInfo,
+	customerAddresses,
+	customerContactInfo,
+	customers,
 	jobPaymentScheduleItems,
 	jobs,
-	quotes,
-	customers,
-	customerAddresses,
-	addresses,
-	customerContactInfo,
-	contactInfo,
-	takepaymentsSettings,
 	paymentAttempts,
-	tenants,
+	quotes,
+	takepaymentsSettings,
 } from '@griffiths-crm/shared/db/schema';
+import { zValidator } from '@hono/zod-validator';
+import { and, eq } from 'drizzle-orm';
+import { Hono } from 'hono';
+import { z } from 'zod';
+import { db } from '../lib/auth';
 import { decrypt } from '../lib/encryption';
-import { computeRequestHash } from '../lib/takepayments-hash';
 import { createPaymentToken } from '../lib/payment-token';
+import { computeRequestHash } from '../lib/takepayments-hash';
+import { requireAuth, requireTenant } from '../middleware/auth';
 
-const TAKEPAYMENTS_FORM_URL = 'https://mms.tponlinepayments2.com/Pages/PublicPages/PaymentForm.aspx';
+const TAKEPAYMENTS_FORM_URL =
+	'https://mms.tponlinepayments2.com/Pages/PublicPages/PaymentForm.aspx';
 
 const initiateSchema = z.object({
 	milestoneId: z.string().min(1),
@@ -58,20 +58,12 @@ async function loadMilestoneWithDetails(milestoneId: string, tenantId: string) {
 	if (paidAmount >= amount) return null;
 
 	// Load job
-	const [job] = await db
-		.select()
-		.from(jobs)
-		.where(eq(jobs.id, milestone.jobId))
-		.limit(1);
+	const [job] = await db.select().from(jobs).where(eq(jobs.id, milestone.jobId)).limit(1);
 
 	if (!job) return null;
 
 	// Load quote for customer
-	const [quote] = await db
-		.select()
-		.from(quotes)
-		.where(eq(quotes.id, job.quoteId))
-		.limit(1);
+	const [quote] = await db.select().from(quotes).where(eq(quotes.id, job.quoteId)).limit(1);
 
 	if (!quote || !quote.customerId) return null;
 
@@ -102,7 +94,9 @@ async function loadMilestoneWithDetails(milestoneId: string, tenantId: string) {
 		.where(eq(customerContactInfo.customerId, customer.id));
 
 	const email = contactRows.find((r) => r.contact.type === 'email')?.contact.value ?? '';
-	const phone = contactRows.find((r) => r.contact.type === 'phone' || r.contact.type === 'mobile')?.contact.value ?? '';
+	const phone =
+		contactRows.find((r) => r.contact.type === 'phone' || r.contact.type === 'mobile')?.contact
+			.value ?? '';
 
 	return { milestone, job, quote, customer, primaryAddress, email, phone };
 }
@@ -186,15 +180,15 @@ const paymentsRoutes = new Hono()
 			.select()
 			.from(takepaymentsSettings)
 			.where(
-				and(
-					eq(takepaymentsSettings.tenantId, tenantId),
-					eq(takepaymentsSettings.isActive, true),
-				),
+				and(eq(takepaymentsSettings.tenantId, tenantId), eq(takepaymentsSettings.isActive, true)),
 			)
 			.limit(1);
 
 		if (!settings) {
-			return c.json({ error: 'TakePayments is not configured. Please set up payment settings first.' }, 400);
+			return c.json(
+				{ error: 'TakePayments is not configured. Please set up payment settings first.' },
+				400,
+			);
 		}
 
 		const details = await loadMilestoneWithDetails(milestoneId, tenantId);

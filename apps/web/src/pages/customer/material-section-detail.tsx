@@ -1,15 +1,8 @@
-import { useState, useMemo } from 'react';
-import { useParams, useNavigate, Link } from 'react-router';
-import { Button } from '@/components/ui/button';
+import { ArrowLeft, ImageIcon, MoreHorizontal, Plus } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router';
+import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from '@/components/ui/card';
 import {
 	Breadcrumb,
 	BreadcrumbItem,
@@ -18,14 +11,8 @@ import {
 	BreadcrumbPage,
 	BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
-import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
 	Dialog,
 	DialogContent,
@@ -41,20 +28,8 @@ import {
 	DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
-import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
 import { ImageUpload } from '@/components/ui/image-upload';
-import {
-	useMaterialSectionQuery,
-	useUpdateMaterialSectionMutation,
-	useDeleteMaterialSectionMutation,
-	type UpdateMaterialSectionInput,
-} from '@/hooks/use-material-sections';
-import {
-	useCreateMaterialMutation,
-	type CreateMaterialInput,
-} from '@/hooks/use-materials';
-import { useSuppliersQuery } from '@/hooks/use-suppliers';
-import { useSignedUrls } from '@/hooks/use-uploads';
+import { Input } from '@/components/ui/input';
 import {
 	Select,
 	SelectContent,
@@ -62,7 +37,23 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select';
-import { ArrowLeft, Plus, MoreHorizontal, ImageIcon } from 'lucide-react';
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from '@/components/ui/table';
+import {
+	type UpdateMaterialSectionInput,
+	useDeleteMaterialSectionMutation,
+	useMaterialSectionQuery,
+	useUpdateMaterialSectionMutation,
+} from '@/hooks/use-material-sections';
+import { type CreateMaterialInput, useCreateMaterialMutation } from '@/hooks/use-materials';
+import { useSuppliersQuery } from '@/hooks/use-suppliers';
+import { useSignedUrls } from '@/hooks/use-uploads';
 
 export function MaterialSectionDetailPage() {
 	const { id } = useParams<{ id: string }>();
@@ -90,7 +81,7 @@ export function MaterialSectionDetailPage() {
 
 	const materialImageUrls = useMemo(
 		() => section?.materials.map((m) => m.imageUrl).filter(Boolean) || [],
-		[section?.materials]
+		[section?.materials],
 	);
 	const { data: signedUrls } = useSignedUrls(materialImageUrls);
 
@@ -228,7 +219,10 @@ export function MaterialSectionDetailPage() {
 							</Button>
 						</DropdownMenuTrigger>
 						<DropdownMenuContent align="end">
-							<DropdownMenuItem className="text-destructive" onClick={() => setDeleteDialogOpen(true)}>
+							<DropdownMenuItem
+								className="text-destructive"
+								onClick={() => setDeleteDialogOpen(true)}
+							>
 								Delete
 							</DropdownMenuItem>
 						</DropdownMenuContent>
@@ -239,88 +233,84 @@ export function MaterialSectionDetailPage() {
 			<div className="space-y-6">
 				{/* Materials */}
 				<Card>
-						<CardHeader>
-							<div className="flex items-center justify-between">
-								<div>
-									<CardTitle>Materials</CardTitle>
-									<CardDescription>
-										Stone types in this section
-									</CardDescription>
-								</div>
-								<Button onClick={handleAddMaterial}>
-									<Plus className="h-4 w-4 mr-2" />
-									Add Material
-								</Button>
+					<CardHeader>
+						<div className="flex items-center justify-between">
+							<div>
+								<CardTitle>Materials</CardTitle>
+								<CardDescription>Stone types in this section</CardDescription>
 							</div>
-						</CardHeader>
-						<CardContent>
-							{section.materials.length === 0 ? (
-								<div className="text-center py-8 text-muted-foreground border rounded-lg">
-									No materials yet. Add a material to this section.
-								</div>
-							) : (
-								<div className="border rounded-lg">
-									<Table>
-										<TableHeader>
-											<TableRow>
-												<TableHead className="w-[50px]"></TableHead>
-												<TableHead>Name</TableHead>
-												<TableHead>Supplier</TableHead>
-												<TableHead>Status</TableHead>
-												<TableHead className="w-[80px]"></TableHead>
-											</TableRow>
-										</TableHeader>
-										<TableBody>
-											{section.materials.map((material) => (
-												<TableRow key={material.id}>
-													<TableCell>
-														{material.imageUrl ? (
-															<img
-																src={signedUrls?.get(material.imageUrl) || material.imageUrl}
-																alt={material.name}
-																className="w-10 h-10 object-cover rounded"
-															/>
-														) : (
-															<div className="w-10 h-10 bg-muted rounded flex items-center justify-center">
-																<ImageIcon className="w-4 h-4 text-muted-foreground" />
-															</div>
-														)}
-													</TableCell>
-													<TableCell className="font-medium">
-														{material.name}
-													</TableCell>
-													<TableCell>
-														{material.supplierName ? (
-															<Link
-																to={`/app/suppliers/${material.supplierId}`}
-																className="text-primary hover:underline"
-															>
-																{material.supplierName}
-															</Link>
-														) : (
-															<span className="text-muted-foreground">-</span>
-														)}
-													</TableCell>
-													<TableCell>
-														<Badge variant={material.isActive ? 'default' : 'secondary'}>
-															{material.isActive ? 'Active' : 'Inactive'}
-														</Badge>
-													</TableCell>
-													<TableCell>
-														<Link to={`/app/materials/${material.id}`}>
-															<Button variant="ghost" size="sm">
-																View
-															</Button>
+							<Button onClick={handleAddMaterial}>
+								<Plus className="h-4 w-4 mr-2" />
+								Add Material
+							</Button>
+						</div>
+					</CardHeader>
+					<CardContent>
+						{section.materials.length === 0 ? (
+							<div className="text-center py-8 text-muted-foreground border rounded-lg">
+								No materials yet. Add a material to this section.
+							</div>
+						) : (
+							<div className="border rounded-lg">
+								<Table>
+									<TableHeader>
+										<TableRow>
+											<TableHead className="w-[50px]"></TableHead>
+											<TableHead>Name</TableHead>
+											<TableHead>Supplier</TableHead>
+											<TableHead>Status</TableHead>
+											<TableHead className="w-[80px]"></TableHead>
+										</TableRow>
+									</TableHeader>
+									<TableBody>
+										{section.materials.map((material) => (
+											<TableRow key={material.id}>
+												<TableCell>
+													{material.imageUrl ? (
+														<img
+															src={signedUrls?.get(material.imageUrl) || material.imageUrl}
+															alt={material.name}
+															className="w-10 h-10 object-cover rounded"
+														/>
+													) : (
+														<div className="w-10 h-10 bg-muted rounded flex items-center justify-center">
+															<ImageIcon className="w-4 h-4 text-muted-foreground" />
+														</div>
+													)}
+												</TableCell>
+												<TableCell className="font-medium">{material.name}</TableCell>
+												<TableCell>
+													{material.supplierName ? (
+														<Link
+															to={`/app/suppliers/${material.supplierId}`}
+															className="text-primary hover:underline"
+														>
+															{material.supplierName}
 														</Link>
-													</TableCell>
-												</TableRow>
-											))}
-										</TableBody>
-									</Table>
-								</div>
-							)}
-						</CardContent>
-					</Card>
+													) : (
+														<span className="text-muted-foreground">-</span>
+													)}
+												</TableCell>
+												<TableCell>
+													<Badge variant={material.isActive ? 'default' : 'secondary'}>
+														{material.isActive ? 'Active' : 'Inactive'}
+													</Badge>
+												</TableCell>
+												<TableCell>
+													<Link to={`/app/materials/${material.id}`}>
+														<Button variant="ghost" size="sm">
+															View
+														</Button>
+													</Link>
+												</TableCell>
+											</TableRow>
+										))}
+									</TableBody>
+								</Table>
+							</div>
+						)}
+					</CardContent>
+				</Card>
 			</div>
 
 			{/* Edit Section Dialog */}
@@ -328,9 +318,7 @@ export function MaterialSectionDetailPage() {
 				<DialogContent>
 					<DialogHeader>
 						<DialogTitle>Edit Section</DialogTitle>
-						<DialogDescription>
-							Update the section details.
-						</DialogDescription>
+						<DialogDescription>Update the section details.</DialogDescription>
 					</DialogHeader>
 
 					{mutationError && (
@@ -355,10 +343,7 @@ export function MaterialSectionDetailPage() {
 						<Button variant="outline" onClick={() => setEditDialogOpen(false)}>
 							Cancel
 						</Button>
-						<Button
-							onClick={handleEditSubmit}
-							disabled={!formName || updateMutation.isPending}
-						>
+						<Button onClick={handleEditSubmit} disabled={!formName || updateMutation.isPending}>
 							{updateMutation.isPending ? 'Saving...' : 'Update'}
 						</Button>
 					</DialogFooter>
@@ -380,9 +365,7 @@ export function MaterialSectionDetailPage() {
 				<DialogContent>
 					<DialogHeader>
 						<DialogTitle>Add Material</DialogTitle>
-						<DialogDescription>
-							Add a new stone type to this section.
-						</DialogDescription>
+						<DialogDescription>Add a new stone type to this section.</DialogDescription>
 					</DialogHeader>
 
 					{mutationError && (
@@ -406,9 +389,7 @@ export function MaterialSectionDetailPage() {
 							<FieldLabel htmlFor="materialSupplier">Supplier (optional)</FieldLabel>
 							<Select
 								value={materialSupplierId || 'none'}
-								onValueChange={(value) =>
-									setMaterialSupplierId(value === 'none' ? null : value)
-								}
+								onValueChange={(value) => setMaterialSupplierId(value === 'none' ? null : value)}
 							>
 								<SelectTrigger id="materialSupplier">
 									<SelectValue placeholder="Select a supplier" />
@@ -424,7 +405,6 @@ export function MaterialSectionDetailPage() {
 							</Select>
 						</Field>
 
-	
 						<Field>
 							<FieldLabel>Image (optional)</FieldLabel>
 							<ImageUpload

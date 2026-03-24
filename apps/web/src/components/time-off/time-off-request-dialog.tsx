@@ -1,17 +1,17 @@
-import { useState, useEffect } from 'react';
+import { addDays, format } from 'date-fns';
+import { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
 import {
 	Dialog,
 	DialogContent,
+	DialogDescription,
+	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-	DialogFooter,
-	DialogDescription,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { format, addDays } from 'date-fns';
 
 type TimeOffFormData = {
 	startDate: string;
@@ -22,11 +22,7 @@ type TimeOffFormData = {
 type TimeOffRequestDialogProps = {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
-	onSubmit: (data: {
-		startDate: string;
-		endDate: string;
-		reason?: string;
-	}) => Promise<void>;
+	onSubmit: (data: { startDate: string; endDate: string; reason?: string }) => Promise<void>;
 	isLoading?: boolean;
 };
 
@@ -53,7 +49,7 @@ export function TimeOffRequestDialog({
 			setFormData(getInitialFormData());
 			setError(null);
 		}
-	}, [open]);
+	}, [open, getInitialFormData]);
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -71,8 +67,8 @@ export function TimeOffRequestDialog({
 
 		try {
 			// Convert date strings to ISO datetime format for API
-			const startDateTime = new Date(formData.startDate + 'T00:00:00').toISOString();
-			const endDateTime = new Date(formData.endDate + 'T23:59:59').toISOString();
+			const startDateTime = new Date(`${formData.startDate}T00:00:00`).toISOString();
+			const endDateTime = new Date(`${formData.endDate}T23:59:59`).toISOString();
 
 			await onSubmit({
 				startDate: startDateTime,
@@ -91,8 +87,8 @@ export function TimeOffRequestDialog({
 				<DialogHeader>
 					<DialogTitle>Request Time Off</DialogTitle>
 					<DialogDescription>
-						Submit a request for time off. Your manager will review and
-						approve or reject the request.
+						Submit a request for time off. Your manager will review and approve or reject the
+						request.
 					</DialogDescription>
 				</DialogHeader>
 
@@ -115,10 +111,7 @@ export function TimeOffRequestDialog({
 									setFormData((prev) => ({
 										...prev,
 										startDate: e.target.value,
-										endDate:
-											prev.endDate < e.target.value
-												? e.target.value
-												: prev.endDate,
+										endDate: prev.endDate < e.target.value ? e.target.value : prev.endDate,
 									}))
 								}
 							/>

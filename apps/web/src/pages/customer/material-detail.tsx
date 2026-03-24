@@ -1,14 +1,8 @@
+import { ArrowLeft, Loader2, MoreHorizontal, Upload, X } from 'lucide-react';
 import { useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router';
-import { Button } from '@/components/ui/button';
+import { Link, useNavigate, useParams } from 'react-router';
+import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import {
-	Card,
-	CardContent,
-	CardHeader,
-	CardTitle,
-} from '@/components/ui/card';
 import {
 	Breadcrumb,
 	BreadcrumbItem,
@@ -17,6 +11,8 @@ import {
 	BreadcrumbPage,
 	BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
 	Dialog,
 	DialogContent,
@@ -25,25 +21,6 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from '@/components/ui/dialog';
-import { Separator } from '@/components/ui/separator';
-import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
-import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
-import { ImageUpload } from '@/components/ui/image-upload';
-import {
-	useMaterialQuery,
-	useUpdateMaterialMutation,
-	useDeleteMaterialMutation,
-} from '@/hooks/use-materials';
-import { useMaterialSectionQuery } from '@/hooks/use-material-sections';
-import { useSuppliersQuery } from '@/hooks/use-suppliers';
-import { useUploadImageMutation, useSignedUrl } from '@/hooks/use-uploads';
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from '@/components/ui/select';
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -51,7 +28,25 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ArrowLeft, ImageIcon, MoreHorizontal, Upload, X, Loader2 } from 'lucide-react';
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { ImageUpload } from '@/components/ui/image-upload';
+import { Input } from '@/components/ui/input';
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
+import { useMaterialSectionQuery } from '@/hooks/use-material-sections';
+import {
+	useDeleteMaterialMutation,
+	useMaterialQuery,
+	useUpdateMaterialMutation,
+} from '@/hooks/use-materials';
+import { useSuppliersQuery } from '@/hooks/use-suppliers';
+import { useSignedUrl, useUploadImageMutation } from '@/hooks/use-uploads';
 
 export function MaterialDetailPage() {
 	const { id } = useParams<{ id: string }>();
@@ -272,11 +267,7 @@ export function MaterialDetailPage() {
 											<Upload className="h-4 w-4 mr-2" />
 											Replace
 										</Button>
-										<Button
-											variant="outline"
-											size="sm"
-											onClick={() => handleImageChange(null)}
-										>
+										<Button variant="outline" size="sm" onClick={() => handleImageChange(null)}>
 											<X className="h-4 w-4 mr-2" />
 											Remove
 										</Button>
@@ -383,9 +374,7 @@ export function MaterialDetailPage() {
 				<DialogContent>
 					<DialogHeader>
 						<DialogTitle>Edit Material</DialogTitle>
-						<DialogDescription>
-							Update the material details.
-						</DialogDescription>
+						<DialogDescription>Update the material details.</DialogDescription>
 					</DialogHeader>
 
 					{mutationError && (
@@ -409,9 +398,7 @@ export function MaterialDetailPage() {
 							<FieldLabel htmlFor="supplier">Supplier (optional)</FieldLabel>
 							<Select
 								value={formSupplierId || 'none'}
-								onValueChange={(value) =>
-									setFormSupplierId(value === 'none' ? null : value)
-								}
+								onValueChange={(value) => setFormSupplierId(value === 'none' ? null : value)}
 							>
 								<SelectTrigger id="supplier">
 									<SelectValue placeholder="Select a supplier" />
@@ -442,10 +429,7 @@ export function MaterialDetailPage() {
 						<Button variant="outline" onClick={() => setEditDialogOpen(false)}>
 							Cancel
 						</Button>
-						<Button
-							onClick={handleEditSubmit}
-							disabled={!formName || updateMutation.isPending}
-						>
+						<Button onClick={handleEditSubmit} disabled={!formName || updateMutation.isPending}>
 							{updateMutation.isPending ? 'Saving...' : 'Update'}
 						</Button>
 					</DialogFooter>

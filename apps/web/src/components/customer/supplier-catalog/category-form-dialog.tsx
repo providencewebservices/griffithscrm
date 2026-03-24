@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
 import {
 	Dialog,
 	DialogContent,
@@ -7,11 +8,10 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
-import type { SupplierCategory, CreateCategoryInput } from '@/hooks/use-supplier-categories';
+import type { CreateCategoryInput, SupplierCategory } from '@/hooks/use-supplier-categories';
 
 type CategoryFormDialogProps = {
 	open: boolean;
@@ -63,16 +63,12 @@ export function CategoryFormDialog({
 				<DialogHeader>
 					<DialogTitle>{isEditing ? 'Edit Category' : 'Add Category'}</DialogTitle>
 					<DialogDescription>
-						{isEditing
-							? 'Update the category details.'
-							: 'Add a new category to this collection.'}
+						{isEditing ? 'Update the category details.' : 'Add a new category to this collection.'}
 					</DialogDescription>
 				</DialogHeader>
 
 				{error && (
-					<div className="bg-destructive/10 text-destructive px-4 py-2 rounded">
-						{error}
-					</div>
+					<div className="bg-destructive/10 text-destructive px-4 py-2 rounded">{error}</div>
 				)}
 
 				<FieldGroup>

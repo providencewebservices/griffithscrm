@@ -1,7 +1,7 @@
+import { Calendar, ListChecks, Loader2 } from 'lucide-react';
 import { Link } from 'react-router';
 import { Card, CardContent } from '@/components/ui/card';
 import { useDashboardQuery } from '@/hooks/use-dashboard';
-import { Calendar, Loader2, ListChecks } from 'lucide-react';
 
 type StatCardProps = {
 	title: string;
@@ -24,11 +24,11 @@ function StatCard({ title, icon, primary, secondary, variant = 'default', href }
 	};
 
 	const card = (
-		<Card className={`${variantStyles[variant]} py-4 ${href ? 'hover:shadow-md cursor-pointer transition-shadow' : ''}`}>
+		<Card
+			className={`${variantStyles[variant]} py-4 ${href ? 'hover:shadow-md cursor-pointer transition-shadow' : ''}`}
+		>
 			<CardContent className="flex items-start gap-4">
-				<div className={`p-2 rounded-lg bg-muted/50 ${iconStyles[variant]}`}>
-					{icon}
-				</div>
+				<div className={`p-2 rounded-lg bg-muted/50 ${iconStyles[variant]}`}>{icon}</div>
 				<div className="flex-1 min-w-0">
 					<p className="text-sm font-medium text-muted-foreground">{title}</p>
 					<p className="text-2xl font-bold mt-0.5">{primary}</p>
@@ -76,9 +76,11 @@ export function StatsCards() {
 				title="This Week's Installs"
 				icon={<Calendar className="h-5 w-5" />}
 				primary={upcomingInstallations.toString()}
-				secondary={upcomingInstallations > 0
-					? `${upcomingInstallations === 1 ? 'job' : 'jobs'} scheduled`
-					: 'No installs this week'}
+				secondary={
+					upcomingInstallations > 0
+						? `${upcomingInstallations === 1 ? 'job' : 'jobs'} scheduled`
+						: 'No installs this week'
+				}
 				variant="default"
 				href="/app/jobs?status=ready_for_install"
 			/>

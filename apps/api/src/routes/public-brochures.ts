@@ -1,13 +1,13 @@
-import { Hono } from 'hono';
-import { eq, and, asc } from 'drizzle-orm';
-import { db } from '../lib/auth';
 import {
-	brochures,
 	brochureProducts,
-	products,
+	brochures,
 	productCategories,
+	products,
 	tenants,
 } from '@griffiths-crm/shared/db/schema';
+import { and, asc, eq } from 'drizzle-orm';
+import { Hono } from 'hono';
+import { db } from '../lib/auth';
 
 const publicBrochuresRoutes = new Hono()
 	// Get brochure data for public view
@@ -110,8 +110,8 @@ const publicBrochuresRoutes = new Hono()
 			.where(
 				and(
 					eq(brochureProducts.brochureId, brochure.id),
-					eq(brochureProducts.productId, productId)
-				)
+					eq(brochureProducts.productId, productId),
+				),
 			)
 			.limit(1);
 

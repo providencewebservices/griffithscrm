@@ -1,10 +1,15 @@
-import { Hono } from 'hono';
+import {
+	FLOWER_HOLE_CHOICES,
+	optionChoices,
+	productOptions,
+	products,
+} from '@griffiths-crm/shared/db/schema';
 import { zValidator } from '@hono/zod-validator';
+import { and, asc, eq } from 'drizzle-orm';
+import { Hono } from 'hono';
 import { z } from 'zod';
-import { eq, and, asc } from 'drizzle-orm';
-import { requireAuth, requireTenant } from '../middleware/auth';
 import { db } from '../lib/auth';
-import { products, productOptions, optionChoices, FLOWER_HOLE_CHOICES } from '@griffiths-crm/shared/db/schema';
+import { requireAuth, requireTenant } from '../middleware/auth';
 
 const OPTION_TYPES = ['dimension', 'stone_color', 'flower_holes', 'custom'] as const;
 
@@ -83,7 +88,7 @@ const productOptionsRoutes = new Hono()
 					.where(eq(optionChoices.optionId, option.id))
 					.orderBy(asc(optionChoices.sortOrder), asc(optionChoices.name));
 				return { ...option, choices };
-			})
+			}),
 		);
 
 		return c.json({ options: optionsWithChoices });
@@ -124,7 +129,7 @@ const productOptionsRoutes = new Hono()
 			.returning();
 
 		// Auto-populate choices for flower_holes type
-		let choices: typeof optionChoices.$inferSelect[] = [];
+		let choices: (typeof optionChoices.$inferSelect)[] = [];
 		if (data.type === 'flower_holes') {
 			const choiceValues = FLOWER_HOLE_CHOICES.map((name, index) => ({
 				id: crypto.randomUUID(),

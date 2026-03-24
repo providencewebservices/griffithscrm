@@ -1,15 +1,19 @@
+import { AlertCircle, Calendar, CheckCircle2, Circle, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router';
-import { Button } from '@/components/ui/button';
-import {
-	Card,
-	CardContent,
-	CardHeader,
-	CardTitle,
-} from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+	Dialog,
+	DialogContent,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from '@/components/ui/dialog';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
 import {
 	Select,
 	SelectContent,
@@ -18,31 +22,16 @@ import {
 	SelectValue,
 } from '@/components/ui/select';
 import {
-	Dialog,
-	DialogContent,
-	DialogHeader,
-	DialogTitle,
-	DialogFooter,
-} from '@/components/ui/dialog';
-import {
-	useTasksQuery,
-	useCreateTaskMutation,
-	useUpdateTaskStatusMutation,
 	formatTaskPriority,
 	getTaskPriorityVariant,
 	TASK_PRIORITIES,
-	type TaskPriority,
 	type TaskListItem,
+	type TaskPriority,
+	useCreateTaskMutation,
+	useTasksQuery,
+	useUpdateTaskStatusMutation,
 } from '@/hooks/use-tasks';
 import { useTeamQuery } from '@/hooks/use-team';
-import {
-	Plus,
-	CheckCircle2,
-	Circle,
-	AlertCircle,
-	Calendar,
-} from 'lucide-react';
-import { toast } from 'sonner';
 
 const NONE_VALUE = '_none';
 
@@ -63,7 +52,7 @@ export function JobTasksSection({ jobId, tasks }: { jobId: string; tasks?: TaskL
 				id: task.id,
 				status: task.status === 'done' ? 'todo' : 'done',
 			});
-		} catch (e) {
+		} catch (_e) {
 			toast.error('Failed to update task');
 		}
 	};
@@ -89,7 +78,8 @@ export function JobTasksSection({ jobId, tasks }: { jobId: string; tasks?: TaskL
 				{!isLoading && jobTasks && jobTasks.length > 0 && (
 					<div className="space-y-1">
 						{jobTasks.map((task) => {
-							const isOverdue = task.dueDate && task.status !== 'done' && new Date(task.dueDate) < new Date();
+							const isOverdue =
+								task.dueDate && task.status !== 'done' && new Date(task.dueDate) < new Date();
 							return (
 								<div
 									key={task.id}
@@ -119,7 +109,9 @@ export function JobTasksSection({ jobId, tasks }: { jobId: string; tasks?: TaskL
 											{formatTaskPriority(task.priority as TaskPriority)}
 										</Badge>
 										{task.dueDate && (
-											<span className={`text-xs ${isOverdue ? 'text-red-600 font-medium' : 'text-muted-foreground'}`}>
+											<span
+												className={`text-xs ${isOverdue ? 'text-red-600 font-medium' : 'text-muted-foreground'}`}
+											>
 												<Calendar className="h-3 w-3 inline mr-0.5" />
 												{new Date(task.dueDate).toLocaleDateString('en-GB', {
 													day: 'numeric',
@@ -211,21 +203,28 @@ function CreateJobTaskDialog({
 								</SelectTrigger>
 								<SelectContent>
 									{TASK_PRIORITIES.map((p) => (
-										<SelectItem key={p} value={p}>{formatTaskPriority(p)}</SelectItem>
+										<SelectItem key={p} value={p}>
+											{formatTaskPriority(p)}
+										</SelectItem>
 									))}
 								</SelectContent>
 							</Select>
 						</Field>
 						<Field>
 							<FieldLabel>Assignee</FieldLabel>
-							<Select value={assigneeId || NONE_VALUE} onValueChange={(v) => setAssigneeId(v === NONE_VALUE ? '' : v)}>
+							<Select
+								value={assigneeId || NONE_VALUE}
+								onValueChange={(v) => setAssigneeId(v === NONE_VALUE ? '' : v)}
+							>
 								<SelectTrigger>
 									<SelectValue placeholder="Unassigned" />
 								</SelectTrigger>
 								<SelectContent>
 									<SelectItem value={NONE_VALUE}>Unassigned</SelectItem>
 									{teamMembers?.map((m) => (
-										<SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+										<SelectItem key={m.id} value={m.id}>
+											{m.name}
+										</SelectItem>
 									))}
 								</SelectContent>
 							</Select>
@@ -233,15 +232,13 @@ function CreateJobTaskDialog({
 					</div>
 					<Field>
 						<FieldLabel>Due Date</FieldLabel>
-						<Input
-							type="date"
-							value={dueDate}
-							onChange={(e) => setDueDate(e.target.value)}
-						/>
+						<Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
 					</Field>
 				</FieldGroup>
 				<DialogFooter>
-					<Button variant="outline" onClick={onClose}>Cancel</Button>
+					<Button variant="outline" onClick={onClose}>
+						Cancel
+					</Button>
 					<Button onClick={handleSubmit} disabled={!title.trim() || createTask.isPending}>
 						{createTask.isPending ? 'Creating...' : 'Create Task'}
 					</Button>

@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -131,12 +131,11 @@ async function fetchDocuments(params?: DocumentSearchParams): Promise<DocumentsR
 
 async function fetchEntityDocuments(
 	entityType: DocumentEntityType,
-	entityId: string
+	entityId: string,
 ): Promise<Document[]> {
-	const response = await fetch(
-		`${API_URL}/api/documents/entity/${entityType}/${entityId}`,
-		{ credentials: 'include' }
-	);
+	const response = await fetch(`${API_URL}/api/documents/entity/${entityType}/${entityId}`, {
+		credentials: 'include',
+	});
 	if (!response.ok) {
 		const error = await response.json();
 		throw new Error(error.error || 'Failed to fetch documents');
@@ -192,9 +191,7 @@ async function createDocument(input: CreateDocumentInput): Promise<Document> {
 	return data.document;
 }
 
-async function updateDocument(
-	input: UpdateDocumentInput & { id: string }
-): Promise<Document> {
+async function updateDocument(input: UpdateDocumentInput & { id: string }): Promise<Document> {
 	const { id, ...data } = input;
 	const response = await fetch(`${API_URL}/api/documents/${id}`, {
 		method: 'PUT',
@@ -271,7 +268,7 @@ export function useDocumentsQuery(params?: DocumentSearchParams) {
 
 export function useEntityDocumentsQuery(
 	entityType: DocumentEntityType,
-	entityId: string | undefined
+	entityId: string | undefined,
 ) {
 	return useQuery({
 		queryKey: ['documents', 'entity', entityType, entityId],

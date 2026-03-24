@@ -1,11 +1,12 @@
+import { Loader2, Shield } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { PasswordInput } from '@/components/ui/password-input';
 import { Label } from '@/components/ui/label';
+import { PasswordInput } from '@/components/ui/password-input';
 import {
 	Select,
 	SelectContent,
@@ -13,11 +14,10 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select';
-import { Loader2, Shield } from 'lucide-react';
 import {
 	useTakepaymentsSettingsQuery,
-	useUpdateTakepaymentsSettingsMutation,
 	useTestTakepaymentsConnectionMutation,
+	useUpdateTakepaymentsSettingsMutation,
 } from '@/hooks/use-takepayments-settings';
 
 export function PaymentsTab() {
@@ -144,7 +144,9 @@ export function PaymentsTab() {
 							id="gatewayPassword"
 							value={gatewayPassword}
 							onChange={(e) => setGatewayPassword(e.target.value)}
-							placeholder={settings?.hasPassword ? '••••••••  (unchanged)' : 'Enter gateway password'}
+							placeholder={
+								settings?.hasPassword ? '••••••••  (unchanged)' : 'Enter gateway password'
+							}
 						/>
 						<p className="text-xs text-muted-foreground">
 							Gateway Account password (can be reset in MMS)
@@ -157,7 +159,9 @@ export function PaymentsTab() {
 							id="preSharedKey"
 							value={preSharedKey}
 							onChange={(e) => setPreSharedKey(e.target.value)}
-							placeholder={settings?.hasPreSharedKey ? '••••••••  (unchanged)' : 'Enter pre-shared key'}
+							placeholder={
+								settings?.hasPreSharedKey ? '••••••••  (unchanged)' : 'Enter pre-shared key'
+							}
 						/>
 						<p className="text-xs text-muted-foreground">
 							Found in MMS &rarr; Account Admin &rarr; Gateway Account Settings
@@ -181,10 +185,7 @@ export function PaymentsTab() {
 					</div>
 
 					<div className="flex items-center gap-3 pt-2">
-						<Button
-							onClick={handleSave}
-							disabled={isSaving}
-						>
+						<Button onClick={handleSave} disabled={isSaving}>
 							{isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
 							{settings?.isConfigured ? 'Save & Test Connection' : 'Save Settings'}
 						</Button>

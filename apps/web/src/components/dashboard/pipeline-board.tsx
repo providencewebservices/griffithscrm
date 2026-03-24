@@ -1,11 +1,11 @@
+import { Briefcase, FileText } from 'lucide-react';
 import { Link } from 'react-router';
-import { FileText, Briefcase } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { usePipelineQuery } from '@/hooks/use-pipeline';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { PipelineQuoteColumn, PipelineJobColumn } from './pipeline-column';
+import { usePipelineQuery } from '@/hooks/use-pipeline';
+import { PipelineJobColumn, PipelineQuoteColumn } from './pipeline-column';
 
 export function PipelineBoard() {
 	const { data, isLoading, error } = usePipelineQuery();
@@ -52,9 +52,7 @@ export function PipelineBoard() {
 		return (
 			<Card>
 				<CardContent className="p-6">
-					<p className="text-destructive">
-						Error loading pipeline: {error.message}
-					</p>
+					<p className="text-destructive">Error loading pipeline: {error.message}</p>
 				</CardContent>
 			</Card>
 		);

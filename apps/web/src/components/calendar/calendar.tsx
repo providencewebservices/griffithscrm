@@ -1,19 +1,19 @@
-import { useState, useMemo } from 'react';
-import { CalendarHeader } from './calendar-header';
-import { MonthView } from './month-view';
-import { WeekView } from './week-view';
-import { DayView } from './day-view';
-import { UpcomingEventsList } from './upcoming-events-list';
-import { EventFormDialog } from './event-form-dialog';
-import { navigateDate, getDateRange } from './calendar-utils';
+import { useMemo, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
 	useCalendarEventsQuery,
 	useCreateCalendarEventMutation,
-	useUpdateCalendarEventMutation,
 	useDeleteCalendarEventMutation,
+	useUpdateCalendarEventMutation,
 } from '@/hooks/use-calendar';
-import type { CalendarView, CalendarEvent, EventSource } from './types';
+import { CalendarHeader } from './calendar-header';
+import { getDateRange, navigateDate } from './calendar-utils';
+import { DayView } from './day-view';
+import { EventFormDialog } from './event-form-dialog';
+import { MonthView } from './month-view';
+import type { CalendarEvent, CalendarView, EventSource } from './types';
+import { UpcomingEventsList } from './upcoming-events-list';
+import { WeekView } from './week-view';
 
 const ALL_EVENT_TYPES: EventSource[] = [
 	'custom',
@@ -41,16 +41,13 @@ export function Calendar() {
 	const [enabledTypes, setEnabledTypes] = useState<EventSource[]>([...ALL_EVENT_TYPES]);
 
 	// Calculate date range for current view
-	const dateRange = useMemo(
-		() => getDateRange(currentDate, view),
-		[currentDate, view]
-	);
+	const dateRange = useMemo(() => getDateRange(currentDate, view), [currentDate, view]);
 
 	// Fetch events
 	const { data: events = [], isLoading } = useCalendarEventsQuery(
 		dateRange.start,
 		dateRange.end,
-		enabledTypes.length < ALL_EVENT_TYPES.length ? enabledTypes : undefined
+		enabledTypes.length < ALL_EVENT_TYPES.length ? enabledTypes : undefined,
 	);
 
 	// Mutations
@@ -254,7 +251,9 @@ function CalendarSkeleton({ view }: { view: CalendarView }) {
 	return (
 		<div className="flex-1 p-4">
 			{/* Day header skeleton */}
-			<div className={`grid gap-2 mb-3 ${view === 'week' ? 'grid-cols-[60px_repeat(7,1fr)]' : 'grid-cols-1'}`}>
+			<div
+				className={`grid gap-2 mb-3 ${view === 'week' ? 'grid-cols-[60px_repeat(7,1fr)]' : 'grid-cols-1'}`}
+			>
 				{view === 'week' && <div />}
 				{Array.from({ length: view === 'week' ? 7 : 1 }).map((_, i) => (
 					<div key={i} className="flex flex-col items-center gap-1">
@@ -265,7 +264,10 @@ function CalendarSkeleton({ view }: { view: CalendarView }) {
 			</div>
 			{/* Hour rows */}
 			{Array.from({ length: 10 }).map((_, i) => (
-				<div key={i} className={`grid gap-2 ${view === 'week' ? 'grid-cols-[60px_repeat(7,1fr)]' : 'grid-cols-[60px_1fr]'}`}>
+				<div
+					key={i}
+					className={`grid gap-2 ${view === 'week' ? 'grid-cols-[60px_repeat(7,1fr)]' : 'grid-cols-[60px_1fr]'}`}
+				>
 					<Skeleton className="h-10 w-10 ml-auto" />
 					{Array.from({ length: view === 'week' ? 7 : 1 }).map((_, j) => (
 						<Skeleton key={j} className="h-10 w-full" />

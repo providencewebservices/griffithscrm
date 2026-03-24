@@ -1,10 +1,10 @@
-import { Hono } from 'hono';
-import { zValidator } from '@hono/zod-validator';
-import { z } from 'zod';
-import { eq, and, asc } from 'drizzle-orm';
-import { requireAuth, requireTenant } from '../middleware/auth';
-import { db } from '../lib/auth';
 import { lineItemPresets } from '@griffiths-crm/shared/db/schema';
+import { zValidator } from '@hono/zod-validator';
+import { and, asc, eq } from 'drizzle-orm';
+import { Hono } from 'hono';
+import { z } from 'zod';
+import { db } from '../lib/auth';
+import { requireAuth, requireTenant } from '../middleware/auth';
 
 // Validation schemas
 const createSchema = z.object({
@@ -100,7 +100,8 @@ const lineItemPresetsRoutes = new Hono()
 		if (data.defaultPrice !== undefined) updateData.defaultPrice = String(data.defaultPrice);
 		if (data.vatExempt !== undefined) updateData.vatExempt = data.vatExempt;
 		if (data.visibleToCustomer !== undefined) updateData.visibleToCustomer = data.visibleToCustomer;
-		if (data.priceVisibleToCustomer !== undefined) updateData.priceVisibleToCustomer = data.priceVisibleToCustomer;
+		if (data.priceVisibleToCustomer !== undefined)
+			updateData.priceVisibleToCustomer = data.priceVisibleToCustomer;
 		if (data.isActive !== undefined) updateData.isActive = data.isActive;
 
 		const [updated] = await db

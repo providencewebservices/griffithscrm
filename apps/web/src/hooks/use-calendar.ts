@@ -1,9 +1,5 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import type {
-	CalendarEvent,
-	CalendarSettings,
-	EventSource,
-} from '@/components/calendar/types';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { CalendarEvent, CalendarSettings, EventSource } from '@/components/calendar/types';
 import { DEFAULT_CALENDAR_SETTINGS } from '@/components/calendar/types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -22,12 +18,9 @@ export function useCalendarEventsQuery(start: Date, end: Date, types?: EventSour
 				params.set('types', types.join(','));
 			}
 
-			const response = await fetch(
-				`${API_URL}/api/calendar/events?${params}`,
-				{
-					credentials: 'include',
-				}
-			);
+			const response = await fetch(`${API_URL}/api/calendar/events?${params}`, {
+				credentials: 'include',
+			});
 
 			if (!response.ok) {
 				throw new Error('Failed to fetch calendar events');
@@ -177,15 +170,12 @@ export function useRescheduleEventMutation() {
 
 	return useMutation({
 		mutationFn: async ({ id, startAt, endAt }: RescheduleEventInput) => {
-			const response = await fetch(
-				`${API_URL}/api/calendar/events/${id}/reschedule`,
-				{
-					method: 'PUT',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({ startAt, endAt }),
-					credentials: 'include',
-				}
-			);
+			const response = await fetch(`${API_URL}/api/calendar/events/${id}/reschedule`, {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ startAt, endAt }),
+				credentials: 'include',
+			});
 
 			if (!response.ok) {
 				const error = await response.json();

@@ -1,14 +1,11 @@
+import { ArrowLeft, Clock, FileText, Mail, MapPin, MessageSquare, Phone } from 'lucide-react';
 import { useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router';
-import { Button } from '@/components/ui/button';
+import { Link, useNavigate, useParams } from 'react-router';
+import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
+import { CustomerFormDialog } from '@/components/customer/customer-form-dialog';
+import { DocumentsCard } from '@/components/documents';
+import { EmailThreadsCard } from '@/components/inbox/email-threads-card';
 import { Badge } from '@/components/ui/badge';
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from '@/components/ui/card';
 import {
 	Breadcrumb,
 	BreadcrumbItem,
@@ -17,6 +14,9 @@ import {
 	BreadcrumbPage,
 	BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
 import {
 	Table,
 	TableBody,
@@ -25,30 +25,16 @@ import {
 	TableHeader,
 	TableRow,
 } from '@/components/ui/table';
-import { Separator } from '@/components/ui/separator';
-import { CustomerFormDialog } from '@/components/customer/customer-form-dialog';
-import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
 import {
-	useCustomerQuery,
-	useUpdateCustomerMutation,
-	useArchiveCustomerMutation,
-	useUnarchiveCustomerMutation,
-	type CustomerWithRelations,
 	type CreateCustomerInput,
+	type CustomerWithRelations,
+	useArchiveCustomerMutation,
+	useCustomerQuery,
+	useUnarchiveCustomerMutation,
+	useUpdateCustomerMutation,
 } from '@/hooks/use-customers';
-import { useQuotesQuery, formatPriceRange, formatQuoteNumberWithOptions } from '@/hooks/use-quotes';
+import { formatPriceRange, formatQuoteNumberWithOptions, useQuotesQuery } from '@/hooks/use-quotes';
 import { useTenantSettingsQuery } from '@/hooks/use-tenant-settings';
-import {
-	Mail,
-	Phone,
-	MapPin,
-	FileText,
-	MessageSquare,
-	Clock,
-	ArrowLeft,
-} from 'lucide-react';
-import { DocumentsCard } from '@/components/documents';
-import { EmailThreadsCard } from '@/components/inbox/email-threads-card';
 
 export function CustomerDetailPage() {
 	const { id } = useParams<{ id: string }>();
@@ -61,7 +47,7 @@ export function CustomerDetailPage() {
 	const { data: customer, isLoading, error } = useCustomerQuery(id || '');
 	const { data: tenantSettings } = useTenantSettingsQuery();
 	const { data: customerQuotes, isLoading: quotesLoading } = useQuotesQuery(
-		id ? { customerId: id } : undefined
+		id ? { customerId: id } : undefined,
 	);
 	const updateMutation = useUpdateCustomerMutation();
 	const archiveMutation = useArchiveCustomerMutation();
@@ -70,7 +56,7 @@ export function CustomerDetailPage() {
 	const defaultCountry = tenantSettings?.address?.country || 'US';
 
 	// Format currency
-	const formatCurrency = (amount: string) => {
+	const _formatCurrency = (amount: string) => {
 		return new Intl.NumberFormat('en-GB', {
 			style: 'currency',
 			currency: 'GBP',
@@ -144,9 +130,7 @@ export function CustomerDetailPage() {
 		try {
 			await unarchiveMutation.mutateAsync(id);
 		} catch (err) {
-			setMutationError(
-				err instanceof Error ? err.message : 'Failed to restore customer'
-			);
+			setMutationError(err instanceof Error ? err.message : 'Failed to restore customer');
 		}
 	};
 
@@ -168,15 +152,9 @@ export function CustomerDetailPage() {
 					<h2 className="text-2xl font-bold">Customer Details</h2>
 				</div>
 				<div className="text-destructive">
-					{error
-						? `Error loading customer: ${error.message}`
-						: 'Customer not found'}
+					{error ? `Error loading customer: ${error.message}` : 'Customer not found'}
 				</div>
-				<Button
-					variant="outline"
-					className="mt-4"
-					onClick={() => navigate('/app/customers')}
-				>
+				<Button variant="outline" className="mt-4" onClick={() => navigate('/app/customers')}>
 					<ArrowLeft className="h-4 w-4 mr-2" />
 					Back to Customers
 				</Button>
@@ -184,12 +162,9 @@ export function CustomerDetailPage() {
 		);
 	}
 
-	const getEmailContacts = () =>
-		customer.contactInfo.filter((c) => c.type === 'email');
+	const getEmailContacts = () => customer.contactInfo.filter((c) => c.type === 'email');
 	const getPhoneContacts = () =>
-		customer.contactInfo.filter(
-			(c) => c.type === 'phone' || c.type === 'mobile'
-		);
+		customer.contactInfo.filter((c) => c.type === 'phone' || c.type === 'mobile');
 
 	return (
 		<div>
@@ -215,9 +190,7 @@ export function CustomerDetailPage() {
 						<h2 className="text-2xl font-bold">
 							{customer.firstName} {customer.lastName}
 						</h2>
-						{customer.archivedAt && (
-							<Badge variant="secondary">Archived</Badge>
-						)}
+						{customer.archivedAt && <Badge variant="secondary">Archived</Badge>}
 					</div>
 					<p className="text-muted-foreground mt-1">
 						Customer since {new Date(customer.createdAt).toLocaleDateString()}
@@ -291,8 +264,7 @@ export function CustomerDetailPage() {
 										<TableCell>{formatDate(quote.createdAt)}</TableCell>
 										<TableCell>
 											<Badge variant={getStatusVariant(quote.status)}>
-												{quote.status.charAt(0).toUpperCase() +
-													quote.status.slice(1)}
+												{quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}
 											</Badge>
 										</TableCell>
 										<TableCell className="text-right">
@@ -325,22 +297,20 @@ export function CustomerDetailPage() {
 								<Mail className="h-4 w-4" />
 								Email Addresses
 								{customer.doNotEmail && (
-									<Badge variant="destructive" className="text-xs">Do Not Email</Badge>
+									<Badge variant="destructive" className="text-xs">
+										Do Not Email
+									</Badge>
 								)}
 							</h4>
 							{getEmailContacts().length === 0 ? (
-								<p className="text-sm text-muted-foreground">
-									No email addresses
-								</p>
+								<p className="text-sm text-muted-foreground">No email addresses</p>
 							) : (
 								<div className="space-y-2">
 									{getEmailContacts().map((contact) => (
 										<div key={contact.id} className="flex items-center gap-2">
 											<span>{contact.value}</span>
 											{contact.label && (
-												<span className="text-xs text-muted-foreground">
-													({contact.label})
-												</span>
+												<span className="text-xs text-muted-foreground">({contact.label})</span>
 											)}
 											{contact.isPrimary && (
 												<Badge variant="secondary" className="text-xs">
@@ -360,7 +330,9 @@ export function CustomerDetailPage() {
 								<Phone className="h-4 w-4" />
 								Phone Numbers
 								{customer.doNotCall && (
-									<Badge variant="destructive" className="text-xs">Do Not Call</Badge>
+									<Badge variant="destructive" className="text-xs">
+										Do Not Call
+									</Badge>
 								)}
 							</h4>
 							{getPhoneContacts().length === 0 ? (
@@ -371,9 +343,7 @@ export function CustomerDetailPage() {
 										<div key={contact.id} className="flex items-center gap-2">
 											<span>{contact.value}</span>
 											{contact.label && (
-												<span className="text-xs text-muted-foreground">
-													({contact.label})
-												</span>
+												<span className="text-xs text-muted-foreground">({contact.label})</span>
 											)}
 											{contact.isPrimary && (
 												<Badge variant="secondary" className="text-xs">
@@ -408,7 +378,9 @@ export function CustomerDetailPage() {
 						<CardTitle className="flex items-center gap-2">
 							Addresses
 							{customer.doNotMail && (
-								<Badge variant="destructive" className="text-xs">Do Not Mail</Badge>
+								<Badge variant="destructive" className="text-xs">
+									Do Not Mail
+								</Badge>
 							)}
 						</CardTitle>
 						<CardDescription>Physical locations</CardDescription>
@@ -425,9 +397,7 @@ export function CustomerDetailPage() {
 											<p>{address.formattedAddress}</p>
 											<div className="flex items-center gap-2 mt-1">
 												{address.label && (
-													<span className="text-xs text-muted-foreground">
-														({address.label})
-													</span>
+													<span className="text-xs text-muted-foreground">({address.label})</span>
 												)}
 												{address.isPrimary && (
 													<Badge variant="secondary" className="text-xs">

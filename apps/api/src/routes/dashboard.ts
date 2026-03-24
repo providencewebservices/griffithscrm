@@ -1,16 +1,16 @@
-import { Hono } from 'hono';
-import { eq, and, sql, desc, lt, gte, lte, isNull, inArray } from 'drizzle-orm';
-import { requireAuth, requireTenant } from '../middleware/auth';
-import { db } from '../lib/auth';
 import {
-	quotes,
-	jobs,
 	customers,
-	jobPaymentScheduleItems,
-	tasks,
-	QUOTE_STATUSES,
 	JOB_STATUSES,
+	jobPaymentScheduleItems,
+	jobs,
+	QUOTE_STATUSES,
+	quotes,
+	tasks,
 } from '@griffiths-crm/shared/db/schema';
+import { and, desc, eq, gte, inArray, isNull, lt, lte, sql } from 'drizzle-orm';
+import { Hono } from 'hono';
+import { db } from '../lib/auth';
+import { requireAuth, requireTenant } from '../middleware/auth';
 
 // Create dashboard routes
 export const dashboardRoutes = new Hono()
@@ -63,8 +63,8 @@ export const dashboardRoutes = new Hono()
 					eq(quotes.tenantId, tenantId),
 					eq(quotes.status, 'presented'),
 					lt(quotes.updatedAt, sevenDaysAgo),
-					sql`${quotes.customerDecision} IS NULL`
-				)
+					sql`${quotes.customerDecision} IS NULL`,
+				),
 			);
 		const awaitingDecision = awaitingDecisionResult?.count || 0;
 
@@ -95,8 +95,8 @@ export const dashboardRoutes = new Hono()
 				and(
 					eq(jobs.tenantId, tenantId),
 					lt(jobs.updatedAt, fourteenDaysAgo),
-					sql`${jobs.status} != 'completed'`
-				)
+					sql`${jobs.status} != 'completed'`,
+				),
 			);
 		const stalledJobs = stalledResult?.count || 0;
 
@@ -113,8 +113,8 @@ export const dashboardRoutes = new Hono()
 					eq(jobPaymentScheduleItems.tenantId, tenantId),
 					sql`${jobPaymentScheduleItems.dueDate} IS NOT NULL`,
 					lt(jobPaymentScheduleItems.dueDate, now),
-					sql`${jobPaymentScheduleItems.paidAmount}::numeric < ${jobPaymentScheduleItems.amount}::numeric`
-				)
+					sql`${jobPaymentScheduleItems.paidAmount}::numeric < ${jobPaymentScheduleItems.amount}::numeric`,
+				),
 			);
 
 		const overdueCount = overduePayments[0]?.count || 0;
@@ -130,8 +130,8 @@ export const dashboardRoutes = new Hono()
 					sql`${jobs.installationDate} IS NOT NULL`,
 					gte(jobs.installationDate, now),
 					lte(jobs.installationDate, sevenDaysFromNow),
-					sql`${jobs.status} NOT IN ('installed', 'completed')`
-				)
+					sql`${jobs.status} NOT IN ('installed', 'completed')`,
+				),
 			);
 		const upcomingInstallations = upcomingInstallationsResult?.count || 0;
 
@@ -146,8 +146,8 @@ export const dashboardRoutes = new Hono()
 					gte(quotes.validUntil, now),
 					lte(quotes.validUntil, fourteenDaysFromNow),
 					sql`${quotes.status} IN ('ready', 'presented')`,
-					sql`${quotes.customerDecision} IS NULL`
-				)
+					sql`${quotes.customerDecision} IS NULL`,
+				),
 			);
 		const expiringQuotes = expiringQuotesResult?.count || 0;
 
@@ -190,7 +190,7 @@ export const dashboardRoutes = new Hono()
 					customerName,
 					updatedAt: quote.updatedAt,
 				};
-			})
+			}),
 		);
 
 		// Get recent jobs (last 5) with payment summary
@@ -255,7 +255,7 @@ export const dashboardRoutes = new Hono()
 					totalPaymentAmount: totalAmount.toFixed(2),
 					updatedAt: job.updatedAt,
 				};
-			})
+			}),
 		);
 
 		// Task stats for current user
@@ -267,8 +267,8 @@ export const dashboardRoutes = new Hono()
 					eq(tasks.tenantId, tenantId),
 					eq(tasks.assigneeId, currentUser.id),
 					isNull(tasks.archivedAt),
-					inArray(tasks.status, ['todo', 'in_progress'])
-				)
+					inArray(tasks.status, ['todo', 'in_progress']),
+				),
 			);
 
 		const [taskOverdueResult] = await db
@@ -280,8 +280,8 @@ export const dashboardRoutes = new Hono()
 					eq(tasks.assigneeId, currentUser.id),
 					isNull(tasks.archivedAt),
 					inArray(tasks.status, ['todo', 'in_progress']),
-					lt(tasks.dueDate, now)
-				)
+					lt(tasks.dueDate, now),
+				),
 			);
 
 		return c.json({

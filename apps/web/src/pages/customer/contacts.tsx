@@ -1,12 +1,12 @@
+import { Building2, Church, Users } from 'lucide-react';
 import { useSearchParams } from 'react-router';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CustomersList } from '@/components/contacts/customers-list';
 import { FuneralDirectorsList } from '@/components/contacts/funeral-directors-list';
 import { MemorialSitesList } from '@/components/contacts/memorial-sites-list';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCustomersQuery } from '@/hooks/use-customers';
 import { useFuneralDirectorsQuery } from '@/hooks/use-funeral-directors';
 import { useMemorialSitesQuery } from '@/hooks/use-memorial-sites';
-import { Users, Building2, Church } from 'lucide-react';
 
 type ContactTab = 'customers' | 'funeral-directors' | 'memorial-sites';
 
@@ -25,7 +25,7 @@ export function ContactsPage() {
 	const { data: memorialSites } = useMemorialSitesQuery();
 
 	const counts: Record<ContactTab, number | undefined> = {
-		'customers': customers?.length,
+		customers: customers?.length,
 		'funeral-directors': funeralDirectors?.length,
 		'memorial-sites': memorialSites?.length,
 	};
@@ -55,9 +55,7 @@ export function ContactsPage() {
 							<Icon className="h-4 w-4" />
 							{label}
 							{counts[value] != null && (
-								<span className="text-muted-foreground text-xs ml-0.5">
-									({counts[value]})
-								</span>
+								<span className="text-muted-foreground text-xs ml-0.5">({counts[value]})</span>
 							)}
 						</TabsTrigger>
 					))}

@@ -1,16 +1,6 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from '@/components/ui/card';
+import { Plus, Trash2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router';
 import {
 	Breadcrumb,
 	BreadcrumbItem,
@@ -19,6 +9,11 @@ import {
 	BreadcrumbPage,
 	BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
 import {
 	Select,
 	SelectContent,
@@ -26,21 +21,16 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import {
-	Field,
-	FieldGroup,
-	FieldLabel,
-} from '@/components/ui/field';
-import { Plus, Trash2 } from 'lucide-react';
-import {
-	useSupplierQuery,
-	useCreateSupplierMutation,
-	useUpdateSupplierMutation,
-	PAYMENT_TERM_LABELS,
-	type CreateSupplierInput,
-	type ContactInfoInput,
 	type AddressInput,
+	type ContactInfoInput,
+	type CreateSupplierInput,
+	PAYMENT_TERM_LABELS,
 	type PaymentTerms,
+	useCreateSupplierMutation,
+	useSupplierQuery,
+	useUpdateSupplierMutation,
 } from '@/hooks/use-suppliers';
 
 const CONTACT_TYPES = [
@@ -112,7 +102,7 @@ export function SupplierFormPage() {
 					value: c.value,
 					label: c.label || '',
 					isPrimary: c.isPrimary,
-				}))
+				})),
 			);
 			setAddresses(
 				existingData.addresses.map((a) => ({
@@ -125,7 +115,7 @@ export function SupplierFormPage() {
 					formattedAddress: a.formattedAddress,
 					label: a.label || '',
 					isPrimary: a.isPrimary,
-				}))
+				})),
 			);
 		}
 	}, [existingData]);
@@ -140,7 +130,7 @@ export function SupplierFormPage() {
 			accountNumber: accountNumber || undefined,
 			website: website || undefined,
 			paymentTerms: paymentTerms || undefined,
-			defaultLeadTimeDays: defaultLeadTimeDays ? parseInt(defaultLeadTimeDays) : undefined,
+			defaultLeadTimeDays: defaultLeadTimeDays ? parseInt(defaultLeadTimeDays, 10) : undefined,
 			minimumOrderValue: minimumOrderValue ? parseFloat(minimumOrderValue) : undefined,
 			notes: notes || undefined,
 			contactInfo: contacts.filter((c) => c.value.trim()),
@@ -221,28 +211,20 @@ export function SupplierFormPage() {
 					</BreadcrumbItem>
 					<BreadcrumbSeparator />
 					<BreadcrumbItem>
-						<BreadcrumbPage>
-							{isEditing ? 'Edit' : 'New Supplier'}
-						</BreadcrumbPage>
+						<BreadcrumbPage>{isEditing ? 'Edit' : 'New Supplier'}</BreadcrumbPage>
 					</BreadcrumbItem>
 				</BreadcrumbList>
 			</Breadcrumb>
 
 			<div className="mb-6">
-				<h2 className="text-2xl font-bold">
-					{isEditing ? 'Edit Supplier' : 'New Supplier'}
-				</h2>
+				<h2 className="text-2xl font-bold">{isEditing ? 'Edit Supplier' : 'New Supplier'}</h2>
 				<p className="text-muted-foreground mt-1">
-					{isEditing
-						? 'Update supplier details'
-						: 'Add a new supplier to your records'}
+					{isEditing ? 'Update supplier details' : 'Add a new supplier to your records'}
 				</p>
 			</div>
 
 			{error && (
-				<div className="bg-destructive/10 text-destructive px-4 py-2 rounded mb-4">
-					{error}
-				</div>
+				<div className="bg-destructive/10 text-destructive px-4 py-2 rounded mb-4">{error}</div>
 			)}
 
 			<form onSubmit={handleSubmit}>
@@ -369,9 +351,7 @@ export function SupplierFormPage() {
 						</CardHeader>
 						<CardContent>
 							{contacts.length === 0 ? (
-								<p className="text-sm text-muted-foreground">
-									No contact information added.
-								</p>
+								<p className="text-sm text-muted-foreground">No contact information added.</p>
 							) : (
 								<div className="space-y-3">
 									{contacts.map((contact, index) => (
@@ -395,7 +375,9 @@ export function SupplierFormPage() {
 													</SelectContent>
 												</Select>
 												<Input
-													placeholder={contact.type === 'email' ? 'email@example.com' : '01onal 123456'}
+													placeholder={
+														contact.type === 'email' ? 'email@example.com' : '01onal 123456'
+													}
 													value={contact.value}
 													onChange={(e) => updateContact(index, { value: e.target.value })}
 													className="flex-1"
@@ -491,7 +473,10 @@ export function SupplierFormPage() {
 													placeholder="County"
 													value={address.administrativeAreaLevel1 || ''}
 													onChange={(e) => {
-														const updated = { ...address, administrativeAreaLevel1: e.target.value };
+														const updated = {
+															...address,
+															administrativeAreaLevel1: e.target.value,
+														};
 														updated.formattedAddress = generateFormattedAddress(updated);
 														updateAddress(index, updated);
 													}}

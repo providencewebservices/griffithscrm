@@ -1,7 +1,7 @@
-import { Hono } from 'hono';
-import { eq } from 'drizzle-orm';
-import { db } from '../lib/auth';
 import { fonts } from '@griffiths-crm/shared/db/schema';
+import { eq } from 'drizzle-orm';
+import { Hono } from 'hono';
+import { db } from '../lib/auth';
 import { getObjectBuffer } from '../lib/s3';
 
 const ALLOWED_FONT_CONTENT_TYPES = new Set([
@@ -20,11 +20,7 @@ const fontProxyRoutes = new Hono()
 	.get('/:id/file', async (c) => {
 		const id = c.req.param('id');
 
-		const [font] = await db
-			.select()
-			.from(fonts)
-			.where(eq(fonts.id, id))
-			.limit(1);
+		const [font] = await db.select().from(fonts).where(eq(fonts.id, id)).limit(1);
 
 		if (!font) {
 			return c.json({ error: 'Font not found' }, 404);

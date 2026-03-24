@@ -1,20 +1,20 @@
-import { Hono } from 'hono';
-import { zValidator } from '@hono/zod-validator';
-import { z } from 'zod';
-import { eq, and, asc, sql, isNull } from 'drizzle-orm';
-import { requireAuth, requireTenant } from '../middleware/auth';
-import { db } from '../lib/auth';
 import {
 	jobs,
-	quotes,
 	jobWorkflowTasks,
-	workflowTemplates,
-	workflowSteps,
+	quotes,
 	users,
-	WORKFLOW_TASK_STATUSES,
 	WORKFLOW_STEP_CATEGORIES,
+	WORKFLOW_TASK_STATUSES,
+	workflowSteps,
+	workflowTemplates,
 } from '@griffiths-crm/shared/db/schema';
+import { zValidator } from '@hono/zod-validator';
+import { and, asc, eq, isNull, sql } from 'drizzle-orm';
+import { Hono } from 'hono';
+import { z } from 'zod';
+import { db } from '../lib/auth';
 import { seedDefaultWorkflowTemplates } from '../lib/workflow-seed';
+import { requireAuth, requireTenant } from '../middleware/auth';
 
 // Validation schemas
 const createTaskSchema = z.object({
@@ -350,8 +350,10 @@ const jobWorkflowTasksRoutes = new Hono()
 		if (data.status !== undefined) updateData.status = data.status;
 		if (data.assigneeId !== undefined) updateData.assigneeId = data.assigneeId;
 		if (data.notes !== undefined) updateData.notes = data.notes;
-		if (data.taskDate !== undefined) updateData.taskDate = data.taskDate ? new Date(data.taskDate) : null;
-		if (data.dueDate !== undefined) updateData.dueDate = data.dueDate ? new Date(data.dueDate) : null;
+		if (data.taskDate !== undefined)
+			updateData.taskDate = data.taskDate ? new Date(data.taskDate) : null;
+		if (data.dueDate !== undefined)
+			updateData.dueDate = data.dueDate ? new Date(data.dueDate) : null;
 
 		const [updated] = await db
 			.update(jobWorkflowTasks)

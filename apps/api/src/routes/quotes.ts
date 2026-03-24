@@ -1,56 +1,55 @@
-import { Hono } from 'hono';
-import { zValidator } from '@hono/zod-validator';
-import { z } from 'zod';
-import { eq, and, desc, asc, sql, notExists, like, or, count, isNull } from 'drizzle-orm';
-import crypto from 'crypto';
-import { requireAuth, requireTenant } from '../middleware/auth';
-import { db } from '../lib/auth';
-import { sendEmail } from '../lib/email';
+import crypto from 'node:crypto';
 import {
-	quotePackages,
-	quotes,
-	quoteComponents,
-	quoteLettering,
-	quoteSundries,
-	quoteLineItems,
+	addresses,
+	COMPONENT_TYPES,
+	contactInfo,
+	councils,
+	customerAddresses,
+	customerContactInfo,
 	customers,
-	products,
-	materials,
+	dimensionCombos,
+	ENQUIRY_SOURCES,
+	FLOWER_HOLE_CHOICES,
 	finishes,
-	letteringTechniques,
+	fonts,
+	funeralDirectorContactInfo,
+	funeralDirectors,
+	jobPaymentScheduleItems,
+	jobs,
+	jobWorkflowTasks,
+	LETTERING_COST_APPLIES_TO,
 	letteringColors,
 	letteringCosts,
-	fonts,
-	sundries,
-	tenantPricingSettings,
-	dimensionCombos,
-	dimensionComboValues,
-	productComponents,
-	contactInfo,
-	addresses,
-	customerContactInfo,
-	customerAddresses,
-	tenants,
-	jobs,
-	jobPaymentScheduleItems,
-	funeralDirectors,
-	funeralDirectorContactInfo,
-	councils,
+	letteringTechniques,
+	materials,
 	memorialSites,
-	QUOTE_STATUSES,
-	QUOTE_TYPES,
-	COMPONENT_TYPES,
-	LETTERING_COST_APPLIES_TO,
-	FLOWER_HOLE_CHOICES,
-	ENQUIRY_SOURCES,
 	PAYER_TYPES,
 	PRODUCTION_METHODS,
-	workflowTemplates,
+	productComponents,
+	products,
+	QUOTE_STATUSES,
+	QUOTE_TYPES,
+	quoteComponents,
+	quoteLettering,
+	quoteLineItems,
+	quotePackages,
+	quoteSundries,
+	quotes,
+	sundries,
+	tenantPricingSettings,
+	tenants,
 	workflowSteps,
-	jobWorkflowTasks,
+	workflowTemplates,
 } from '@griffiths-crm/shared/db/schema';
-import { generateJobNumber } from './jobs';
+import { zValidator } from '@hono/zod-validator';
+import { and, asc, count, desc, eq, isNull, or, sql } from 'drizzle-orm';
+import { Hono } from 'hono';
+import { z } from 'zod';
+import { db } from '../lib/auth';
+import { sendEmail } from '../lib/email';
 import { seedDefaultWorkflowTemplates } from '../lib/workflow-seed';
+import { requireAuth, requireTenant } from '../middleware/auth';
+import { generateJobNumber } from './jobs';
 
 // Status transition rules
 const STATUS_TRANSITIONS: Record<string, string[]> = {
@@ -158,11 +157,7 @@ async function getQuoteWithLineItems(quoteId: string, tenantId: string) {
 	// Get product if exists
 	let product = null;
 	if (quote.productId) {
-		[product] = await db
-			.select()
-			.from(products)
-			.where(eq(products.id, quote.productId))
-			.limit(1);
+		[product] = await db.select().from(products).where(eq(products.id, quote.productId)).limit(1);
 	}
 
 	// Get version history (walk up the chain)
@@ -203,9 +198,10 @@ async function recalculateQuoteTotals(quoteId: string): Promise<void> {
 	if (!quote) return;
 
 	// Calculate subtotal (product-level pricing overrides component sum when set)
-	const componentTotal = quote.productRetailPrice !== null
-		? parseFloat(quote.productRetailPrice)
-		: components.reduce((sum, c) => sum + parseFloat(c.lineTotal), 0);
+	const componentTotal =
+		quote.productRetailPrice !== null
+			? parseFloat(quote.productRetailPrice)
+			: components.reduce((sum, c) => sum + parseFloat(c.lineTotal), 0);
 	const letteringTotal = letteringItems.reduce((sum, l) => sum + parseFloat(l.lineTotal), 0);
 	const sundryTotal = sundryItems.reduce((sum, s) => sum + parseFloat(s.lineTotal), 0);
 
@@ -217,14 +213,22 @@ async function recalculateQuoteTotals(quoteId: string): Promise<void> {
 		.filter((li) => li.vatExempt)
 		.reduce((sum, li) => sum + parseFloat(li.price), 0);
 
-	const subtotal = componentTotal + letteringTotal + sundryTotal + vatableLineItemTotal + vatExemptLineItemTotal;
+	const subtotal =
+		componentTotal + letteringTotal + sundryTotal + vatableLineItemTotal + vatExemptLineItemTotal;
 
 	// Calculate total cost (product-level pricing overrides component sum when set)
-	const componentCost = quote.productRetailPrice !== null
-		? parseFloat(quote.productSupplierCost ?? '0')
-		: components.reduce((sum, c) => sum + parseFloat(c.supplierCost) * c.quantity, 0);
-	const letteringCost = letteringItems.reduce((sum, l) => sum + parseFloat(l.supplierCost) * l.letterCount, 0);
-	const sundryCost = sundryItems.reduce((sum, s) => sum + parseFloat(s.supplierCost) * s.quantity, 0);
+	const componentCost =
+		quote.productRetailPrice !== null
+			? parseFloat(quote.productSupplierCost ?? '0')
+			: components.reduce((sum, c) => sum + parseFloat(c.supplierCost) * c.quantity, 0);
+	const letteringCost = letteringItems.reduce(
+		(sum, l) => sum + parseFloat(l.supplierCost) * l.letterCount,
+		0,
+	);
+	const sundryCost = sundryItems.reduce(
+		(sum, s) => sum + parseFloat(s.supplierCost) * s.quantity,
+		0,
+	);
 	const totalCost = componentCost + letteringCost + sundryCost;
 
 	// Calculate VAT only on VAT-able amounts (components, lettering, sundries, and non-exempt line items)
@@ -312,10 +316,26 @@ async function getPackageWithOptions(packageId: string, tenantId: string) {
 	const options = await Promise.all(
 		optionRows.map(async (opt) => {
 			const [components, lettering, sundryItems, lineItems] = await Promise.all([
-				db.select().from(quoteComponents).where(eq(quoteComponents.quoteId, opt.id)).orderBy(asc(quoteComponents.sortOrder)),
-				db.select().from(quoteLettering).where(eq(quoteLettering.quoteId, opt.id)).orderBy(asc(quoteLettering.sortOrder)),
-				db.select().from(quoteSundries).where(eq(quoteSundries.quoteId, opt.id)).orderBy(asc(quoteSundries.sortOrder)),
-				db.select().from(quoteLineItems).where(eq(quoteLineItems.quoteId, opt.id)).orderBy(asc(quoteLineItems.sortOrder)),
+				db
+					.select()
+					.from(quoteComponents)
+					.where(eq(quoteComponents.quoteId, opt.id))
+					.orderBy(asc(quoteComponents.sortOrder)),
+				db
+					.select()
+					.from(quoteLettering)
+					.where(eq(quoteLettering.quoteId, opt.id))
+					.orderBy(asc(quoteLettering.sortOrder)),
+				db
+					.select()
+					.from(quoteSundries)
+					.where(eq(quoteSundries.quoteId, opt.id))
+					.orderBy(asc(quoteSundries.sortOrder)),
+				db
+					.select()
+					.from(quoteLineItems)
+					.where(eq(quoteLineItems.quoteId, opt.id))
+					.orderBy(asc(quoteLineItems.sortOrder)),
 			]);
 
 			let product = null;
@@ -331,7 +351,7 @@ async function getPackageWithOptions(packageId: string, tenantId: string) {
 				sundries: sundryItems,
 				lineItems,
 			};
-		})
+		}),
 	);
 
 	// Get related entities
@@ -342,7 +362,11 @@ async function getPackageWithOptions(packageId: string, tenantId: string) {
 
 	let funeralDirector = null;
 	if (pkg.funeralDirectorId) {
-		[funeralDirector] = await db.select().from(funeralDirectors).where(eq(funeralDirectors.id, pkg.funeralDirectorId)).limit(1);
+		[funeralDirector] = await db
+			.select()
+			.from(funeralDirectors)
+			.where(eq(funeralDirectors.id, pkg.funeralDirectorId))
+			.limit(1);
 	}
 
 	let council = null;
@@ -352,7 +376,11 @@ async function getPackageWithOptions(packageId: string, tenantId: string) {
 
 	let memorialSite = null;
 	if (pkg.memorialSiteId) {
-		[memorialSite] = await db.select().from(memorialSites).where(eq(memorialSites.id, pkg.memorialSiteId)).limit(1);
+		[memorialSite] = await db
+			.select()
+			.from(memorialSites)
+			.where(eq(memorialSites.id, pkg.memorialSiteId))
+			.limit(1);
 	}
 
 	return {
@@ -561,7 +589,16 @@ const quotesRoutes = new Hono()
 	.get('/', zValidator('query', listQuerySchema), async (c) => {
 		const currentUser = c.get('user');
 		const tenantId = currentUser.tenantId!;
-		const { status, quoteType, customerId, funeralDirectorId, memorialSiteId, search, page, limit } = c.req.valid('query');
+		const {
+			status,
+			quoteType,
+			customerId,
+			funeralDirectorId,
+			memorialSiteId,
+			search,
+			page,
+			limit,
+		} = c.req.valid('query');
 
 		// Build filter conditions for packages
 		const conditions: ReturnType<typeof eq>[] = [eq(quotePackages.tenantId, tenantId)];
@@ -587,13 +624,13 @@ const quotesRoutes = new Hono()
 		}
 
 		// Search filter at SQL level - search by quote number or customer name
-		if (search && search.trim()) {
+		if (search?.trim()) {
 			const searchTerm = `%${search.trim().toLowerCase()}%`;
 			conditions.push(
 				or(
 					sql`EXISTS (SELECT 1 FROM ${quotes} WHERE ${quotes.packageId} = ${quotePackages.id} AND LOWER(${quotes.quoteNumber}) LIKE ${searchTerm})`,
-					sql`LOWER(CONCAT(COALESCE(${customers.firstName}, ''), ' ', COALESCE(${customers.lastName}, ''))) LIKE ${searchTerm}`
-				)!
+					sql`LOWER(CONCAT(COALESCE(${customers.firstName}, ''), ' ', COALESCE(${customers.lastName}, ''))) LIKE ${searchTerm}`,
+				)!,
 			);
 		}
 
@@ -665,7 +702,7 @@ const quotesRoutes = new Hono()
 					firstQuoteNumber,
 					priceRange,
 				};
-			})
+			}),
 		);
 
 		return c.json({
@@ -707,8 +744,8 @@ const quotesRoutes = new Hono()
 				and(
 					eq(funeralDirectors.tenantId, tenantId),
 					eq(funeralDirectors.isActive, true),
-					sql`${funeralDirectors.archivedAt} IS NULL`
-				)
+					sql`${funeralDirectors.archivedAt} IS NULL`,
+				),
 			)
 			.orderBy(asc(funeralDirectors.businessName));
 
@@ -922,7 +959,7 @@ const quotesRoutes = new Hono()
 					notes: comp.notes || null,
 					sortOrder: index,
 				};
-			})
+			}),
 		);
 
 		// Process lettering
@@ -932,7 +969,10 @@ const quotesRoutes = new Hono()
 					.select()
 					.from(letteringTechniques)
 					.where(
-						and(eq(letteringTechniques.id, lett.techniqueId), eq(letteringTechniques.tenantId, tenantId))
+						and(
+							eq(letteringTechniques.id, lett.techniqueId),
+							eq(letteringTechniques.tenantId, tenantId),
+						),
 					)
 					.limit(1);
 
@@ -946,7 +986,9 @@ const quotesRoutes = new Hono()
 					[color] = await db
 						.select()
 						.from(letteringColors)
-						.where(and(eq(letteringColors.id, lett.colorId), eq(letteringColors.tenantId, tenantId)))
+						.where(
+							and(eq(letteringColors.id, lett.colorId), eq(letteringColors.tenantId, tenantId)),
+						)
 						.limit(1);
 				}
 
@@ -972,8 +1014,8 @@ const quotesRoutes = new Hono()
 							and(
 								eq(letteringCosts.techniqueId, lett.techniqueId),
 								eq(letteringCosts.colorId, lett.colorId),
-								eq(letteringCosts.appliesTo, lett.appliesTo)
-							)
+								eq(letteringCosts.appliesTo, lett.appliesTo),
+							),
 						)
 						.limit(1);
 
@@ -986,8 +1028,8 @@ const quotesRoutes = new Hono()
 								and(
 									eq(letteringCosts.techniqueId, lett.techniqueId),
 									eq(letteringCosts.colorId, lett.colorId),
-									eq(letteringCosts.appliesTo, 'both')
-								)
+									eq(letteringCosts.appliesTo, 'both'),
+								),
 							)
 							.limit(1);
 					}
@@ -1001,8 +1043,8 @@ const quotesRoutes = new Hono()
 						.where(
 							and(
 								eq(letteringCosts.techniqueId, lett.techniqueId),
-								eq(letteringCosts.appliesTo, lett.appliesTo)
-							)
+								eq(letteringCosts.appliesTo, lett.appliesTo),
+							),
 						);
 					// Find the one with colorId = null (default)
 					activeCostRule = defaultRules.find((r) => r.colorId === null) || null;
@@ -1014,7 +1056,10 @@ const quotesRoutes = new Hono()
 						.select()
 						.from(letteringCosts)
 						.where(
-							and(eq(letteringCosts.techniqueId, lett.techniqueId), eq(letteringCosts.appliesTo, 'both'))
+							and(
+								eq(letteringCosts.techniqueId, lett.techniqueId),
+								eq(letteringCosts.appliesTo, 'both'),
+							),
 						);
 					// Find the one with colorId = null (default)
 					activeCostRule = bothRules.find((r) => r.colorId === null) || null;
@@ -1047,7 +1092,7 @@ const quotesRoutes = new Hono()
 					notes: lett.notes || null,
 					sortOrder: index,
 				};
-			})
+			}),
 		);
 
 		// Process sundries
@@ -1081,18 +1126,12 @@ const quotesRoutes = new Hono()
 					notes: sund.notes || null,
 					sortOrder: index,
 				};
-			})
+			}),
 		);
 
 		// Calculate totals for the first option
-		const componentTotal = processedComponents.reduce(
-			(sum, c) => sum + parseFloat(c.lineTotal),
-			0
-		);
-		const letteringTotal = processedLettering.reduce(
-			(sum, l) => sum + parseFloat(l.lineTotal),
-			0
-		);
+		const componentTotal = processedComponents.reduce((sum, c) => sum + parseFloat(c.lineTotal), 0);
+		const letteringTotal = processedLettering.reduce((sum, l) => sum + parseFloat(l.lineTotal), 0);
 		const sundryTotal = processedSundries.reduce((sum, s) => sum + parseFloat(s.lineTotal), 0);
 		const subtotal = componentTotal + letteringTotal + sundryTotal;
 
@@ -1103,15 +1142,15 @@ const quotesRoutes = new Hono()
 		// Calculate total cost (sum of all supplier costs)
 		const componentCost = processedComponents.reduce(
 			(sum, c) => sum + parseFloat(c.supplierCost) * c.quantity,
-			0
+			0,
 		);
 		const letteringCost = processedLettering.reduce(
 			(sum, l) => sum + parseFloat(l.supplierCost) * l.letterCount,
-			0
+			0,
 		);
 		const sundryCost = processedSundries.reduce(
 			(sum, s) => sum + parseFloat(s.supplierCost) * s.quantity,
-			0
+			0,
 		);
 		const totalCost = componentCost + letteringCost + sundryCost;
 
@@ -1178,7 +1217,7 @@ const quotesRoutes = new Hono()
 				processedComponents.map((c) => ({
 					...c,
 					quoteId,
-				}))
+				})),
 			);
 		}
 
@@ -1187,7 +1226,7 @@ const quotesRoutes = new Hono()
 				processedLettering.map((l) => ({
 					...l,
 					quoteId,
-				}))
+				})),
 			);
 		}
 
@@ -1196,7 +1235,7 @@ const quotesRoutes = new Hono()
 				processedSundries.map((s) => ({
 					...s,
 					quoteId,
-				}))
+				})),
 			);
 		}
 
@@ -1309,7 +1348,7 @@ const quotesRoutes = new Hono()
 					notes: comp.notes || null,
 					sortOrder: index,
 				};
-			})
+			}),
 		);
 
 		const processedLettering = await Promise.all(
@@ -1318,7 +1357,10 @@ const quotesRoutes = new Hono()
 					.select()
 					.from(letteringTechniques)
 					.where(
-						and(eq(letteringTechniques.id, lett.techniqueId), eq(letteringTechniques.tenantId, tenantId))
+						and(
+							eq(letteringTechniques.id, lett.techniqueId),
+							eq(letteringTechniques.tenantId, tenantId),
+						),
 					)
 					.limit(1);
 
@@ -1332,7 +1374,9 @@ const quotesRoutes = new Hono()
 					[color] = await db
 						.select()
 						.from(letteringColors)
-						.where(and(eq(letteringColors.id, lett.colorId), eq(letteringColors.tenantId, tenantId)))
+						.where(
+							and(eq(letteringColors.id, lett.colorId), eq(letteringColors.tenantId, tenantId)),
+						)
 						.limit(1);
 				}
 
@@ -1358,8 +1402,8 @@ const quotesRoutes = new Hono()
 							and(
 								eq(letteringCosts.techniqueId, lett.techniqueId),
 								eq(letteringCosts.colorId, lett.colorId),
-								eq(letteringCosts.appliesTo, lett.appliesTo)
-							)
+								eq(letteringCosts.appliesTo, lett.appliesTo),
+							),
 						)
 						.limit(1);
 
@@ -1372,8 +1416,8 @@ const quotesRoutes = new Hono()
 								and(
 									eq(letteringCosts.techniqueId, lett.techniqueId),
 									eq(letteringCosts.colorId, lett.colorId),
-									eq(letteringCosts.appliesTo, 'both')
-								)
+									eq(letteringCosts.appliesTo, 'both'),
+								),
 							)
 							.limit(1);
 					}
@@ -1387,8 +1431,8 @@ const quotesRoutes = new Hono()
 						.where(
 							and(
 								eq(letteringCosts.techniqueId, lett.techniqueId),
-								eq(letteringCosts.appliesTo, lett.appliesTo)
-							)
+								eq(letteringCosts.appliesTo, lett.appliesTo),
+							),
 						);
 					// Find the one with colorId = null (default)
 					activeCostRule = defaultRules.find((r) => r.colorId === null) || null;
@@ -1400,7 +1444,10 @@ const quotesRoutes = new Hono()
 						.select()
 						.from(letteringCosts)
 						.where(
-							and(eq(letteringCosts.techniqueId, lett.techniqueId), eq(letteringCosts.appliesTo, 'both'))
+							and(
+								eq(letteringCosts.techniqueId, lett.techniqueId),
+								eq(letteringCosts.appliesTo, 'both'),
+							),
 						);
 					// Find the one with colorId = null (default)
 					activeCostRule = bothRules.find((r) => r.colorId === null) || null;
@@ -1433,7 +1480,7 @@ const quotesRoutes = new Hono()
 					notes: lett.notes || null,
 					sortOrder: index,
 				};
-			})
+			}),
 		);
 
 		const processedSundries = await Promise.all(
@@ -1465,18 +1512,12 @@ const quotesRoutes = new Hono()
 					notes: sund.notes || null,
 					sortOrder: index,
 				};
-			})
+			}),
 		);
 
 		// Calculate totals
-		const componentTotal = processedComponents.reduce(
-			(sum, c) => sum + parseFloat(c.lineTotal),
-			0
-		);
-		const letteringTotal = processedLettering.reduce(
-			(sum, l) => sum + parseFloat(l.lineTotal),
-			0
-		);
+		const componentTotal = processedComponents.reduce((sum, c) => sum + parseFloat(c.lineTotal), 0);
+		const letteringTotal = processedLettering.reduce((sum, l) => sum + parseFloat(l.lineTotal), 0);
 		const sundryTotal = processedSundries.reduce((sum, s) => sum + parseFloat(s.lineTotal), 0);
 		const subtotal = componentTotal + letteringTotal + sundryTotal;
 
@@ -1487,15 +1528,15 @@ const quotesRoutes = new Hono()
 		// Calculate total cost
 		const componentCost = processedComponents.reduce(
 			(sum, c) => sum + parseFloat(c.supplierCost) * c.quantity,
-			0
+			0,
 		);
 		const letteringCost = processedLettering.reduce(
 			(sum, l) => sum + parseFloat(l.supplierCost) * l.letterCount,
-			0
+			0,
 		);
 		const sundryCost = processedSundries.reduce(
 			(sum, s) => sum + parseFloat(s.supplierCost) * s.quantity,
-			0
+			0,
 		);
 		const totalCost = componentCost + letteringCost + sundryCost;
 
@@ -1524,7 +1565,8 @@ const quotesRoutes = new Hono()
 			flowerHoles: data.flowerHoles ?? original.flowerHoles ?? null,
 			productionMethod: original.productionMethod ?? null,
 			proposedInscription: data.proposedInscription ?? original.proposedInscription ?? null,
-			existingMemorialDescription: data.existingMemorialDescription ?? original.existingMemorialDescription ?? null,
+			existingMemorialDescription:
+				data.existingMemorialDescription ?? original.existingMemorialDescription ?? null,
 			relatedJobId: data.relatedJobId ?? original.relatedJobId ?? null,
 			validUntil: mergedData.validUntil ? new Date(mergedData.validUntil) : null,
 		});
@@ -1535,7 +1577,7 @@ const quotesRoutes = new Hono()
 				processedComponents.map((c) => ({
 					...c,
 					quoteId,
-				}))
+				})),
 			);
 		}
 
@@ -1544,7 +1586,7 @@ const quotesRoutes = new Hono()
 				processedLettering.map((l) => ({
 					...l,
 					quoteId,
-				}))
+				})),
 			);
 		}
 
@@ -1553,7 +1595,7 @@ const quotesRoutes = new Hono()
 				processedSundries.map((s) => ({
 					...s,
 					quoteId,
-				}))
+				})),
 			);
 		}
 
@@ -1586,7 +1628,7 @@ const quotesRoutes = new Hono()
 				{
 					error: `Cannot transition from '${pkg.status}' to '${newStatus}'. Allowed: ${allowedTransitions.join(', ') || 'none'}`,
 				},
-				400
+				400,
 			);
 		}
 
@@ -1608,44 +1650,51 @@ const quotesRoutes = new Hono()
 	})
 
 	// Update production method on package
-	.put('/:id/production-method', zValidator('json', z.object({
-		productionMethod: z.enum(PRODUCTION_METHODS).nullable(),
-	})), async (c) => {
-		const currentUser = c.get('user');
-		const tenantId = currentUser.tenantId!;
-		const id = c.req.param('id');
-		const { productionMethod } = c.req.valid('json');
+	.put(
+		'/:id/production-method',
+		zValidator(
+			'json',
+			z.object({
+				productionMethod: z.enum(PRODUCTION_METHODS).nullable(),
+			}),
+		),
+		async (c) => {
+			const currentUser = c.get('user');
+			const tenantId = currentUser.tenantId!;
+			const id = c.req.param('id');
+			const { productionMethod } = c.req.valid('json');
 
-		// Get package
-		const [pkg] = await db
-			.select()
-			.from(quotePackages)
-			.where(and(eq(quotePackages.id, id), eq(quotePackages.tenantId, tenantId)))
-			.limit(1);
+			// Get package
+			const [pkg] = await db
+				.select()
+				.from(quotePackages)
+				.where(and(eq(quotePackages.id, id), eq(quotePackages.tenantId, tenantId)))
+				.limit(1);
 
-		if (!pkg) {
-			return c.json({ error: 'Package not found' }, 404);
-		}
+			if (!pkg) {
+				return c.json({ error: 'Package not found' }, 404);
+			}
 
-		if (pkg.status !== 'draft') {
-			return c.json({ error: 'Can only update production method on draft packages' }, 400);
-		}
+			if (pkg.status !== 'draft') {
+				return c.json({ error: 'Can only update production method on draft packages' }, 400);
+			}
 
-		// Update package
-		await db
-			.update(quotePackages)
-			.set({ productionMethod, updatedAt: new Date() })
-			.where(eq(quotePackages.id, id));
+			// Update package
+			await db
+				.update(quotePackages)
+				.set({ productionMethod, updatedAt: new Date() })
+				.where(eq(quotePackages.id, id));
 
-		// Propagate to all options
-		await db
-			.update(quotes)
-			.set({ productionMethod, updatedAt: new Date() })
-			.where(eq(quotes.packageId, id));
+			// Propagate to all options
+			await db
+				.update(quotes)
+				.set({ productionMethod, updatedAt: new Date() })
+				.where(eq(quotes.packageId, id));
 
-		const fullPackage = await getPackageWithOptions(id, tenantId);
-		return c.json({ package: fullPackage });
-	})
+			const fullPackage = await getPackageWithOptions(id, tenantId);
+			return c.json({ package: fullPackage });
+		},
+	)
 
 	// Delete package (draft only)
 	.delete('/:id', async (c) => {
@@ -1753,7 +1802,7 @@ const quotesRoutes = new Hono()
 			// Return updated package
 			const fullPackage = await getPackageWithOptions(packageId, tenantId);
 			return c.json({ package: fullPackage });
-		}
+		},
 	)
 
 	// Update lettering pricing
@@ -1817,7 +1866,7 @@ const quotesRoutes = new Hono()
 			// Return updated quote
 			const fullQuote = await getQuoteWithLineItems(quoteId, tenantId);
 			return c.json({ quote: fullQuote });
-		}
+		},
 	)
 
 	// Update sundry pricing
@@ -1895,7 +1944,7 @@ const quotesRoutes = new Hono()
 			// Return updated package
 			const fullPackage = await getPackageWithOptions(packageId, tenantId);
 			return c.json({ package: fullPackage });
-		}
+		},
 	)
 
 	// Update product-level pricing (XOR toggle)
@@ -1951,7 +2000,7 @@ const quotesRoutes = new Hono()
 			// Return updated package
 			const fullPackage = await getPackageWithOptions(packageId, tenantId);
 			return c.json({ package: fullPackage });
-		}
+		},
 	)
 
 	// Send package email to customer (with all options)
@@ -1964,7 +2013,7 @@ const quotesRoutes = new Hono()
 			z.object({
 				recipientEmail: z.string().email().optional(),
 				customMessage: z.string().optional(),
-			})
+			}),
 		),
 		async (c) => {
 			const currentUser = c.get('user');
@@ -2015,8 +2064,8 @@ const quotesRoutes = new Hono()
 						and(
 							eq(customerContactInfo.customerId, pkg.customerId),
 							eq(contactInfo.type, 'email'),
-							eq(contactInfo.isPrimary, true)
-						)
+							eq(contactInfo.isPrimary, true),
+						),
 					)
 					.limit(1);
 
@@ -2033,8 +2082,8 @@ const quotesRoutes = new Hono()
 						and(
 							eq(funeralDirectorContactInfo.funeralDirectorId, pkg.funeralDirectorId),
 							eq(contactInfo.type, 'email'),
-							eq(contactInfo.isPrimary, true)
-						)
+							eq(contactInfo.isPrimary, true),
+						),
 					)
 					.limit(1);
 
@@ -2042,7 +2091,10 @@ const quotesRoutes = new Hono()
 			}
 
 			if (!toEmail) {
-				return c.json({ error: 'No email address available for this customer or funeral director' }, 400);
+				return c.json(
+					{ error: 'No email address available for this customer or funeral director' },
+					400,
+				);
 			}
 
 			// Generate secure access token
@@ -2088,7 +2140,9 @@ const quotesRoutes = new Hono()
 
 			// Format price display (range if multiple options)
 			const formatCurrency = (val: string) =>
-				new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(parseFloat(val));
+				new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(
+					parseFloat(val),
+				);
 			const priceDisplay =
 				options.length === 1
 					? formatCurrency(priceRange.minPrice)
@@ -2206,77 +2260,73 @@ ${tenantName}
 				console.error('Failed to send quote email:', error);
 				return c.json({ error: 'Failed to send email' }, 500);
 			}
-		}
+		},
 	)
 
 	// Add custom line item
-	.post(
-		'/:id/options/:optionId/line-items',
-		zValidator('json', lineItemInputSchema),
-		async (c) => {
-			const currentUser = c.get('user');
-			const tenantId = currentUser.tenantId!;
-			const packageId = c.req.param('id');
-			const optionId = c.req.param('optionId');
-			const data = c.req.valid('json');
+	.post('/:id/options/:optionId/line-items', zValidator('json', lineItemInputSchema), async (c) => {
+		const currentUser = c.get('user');
+		const tenantId = currentUser.tenantId!;
+		const packageId = c.req.param('id');
+		const optionId = c.req.param('optionId');
+		const data = c.req.valid('json');
 
-			// Get package and validate
-			const [pkg] = await db
-				.select()
-				.from(quotePackages)
-				.where(and(eq(quotePackages.id, packageId), eq(quotePackages.tenantId, tenantId)))
-				.limit(1);
+		// Get package and validate
+		const [pkg] = await db
+			.select()
+			.from(quotePackages)
+			.where(and(eq(quotePackages.id, packageId), eq(quotePackages.tenantId, tenantId)))
+			.limit(1);
 
-			if (!pkg) {
-				return c.json({ error: 'Package not found' }, 404);
-			}
-
-			if (pkg.status !== 'draft') {
-				return c.json({ error: 'Can only add line items to draft quotes' }, 400);
-			}
-
-			// Verify option exists and belongs to this package
-			const [option] = await db
-				.select()
-				.from(quotes)
-				.where(and(eq(quotes.id, optionId), eq(quotes.packageId, packageId)))
-				.limit(1);
-
-			if (!option) {
-				return c.json({ error: 'Option not found in this package' }, 404);
-			}
-
-			// Get max sort order
-			const [maxSort] = await db
-				.select({ maxOrder: sql<number>`COALESCE(MAX(${quoteLineItems.sortOrder}), -1)` })
-				.from(quoteLineItems)
-				.where(eq(quoteLineItems.quoteId, optionId));
-
-			const sortOrder = (maxSort?.maxOrder ?? -1) + 1;
-
-			// Create line item
-			const [lineItem] = await db
-				.insert(quoteLineItems)
-				.values({
-					id: crypto.randomUUID(),
-					quoteId: optionId,
-					description: data.description,
-					price: String(data.price),
-					vatExempt: data.vatExempt ?? false,
-					visibleToCustomer: data.visibleToCustomer ?? true,
-					priceVisibleToCustomer: data.priceVisibleToCustomer ?? true,
-					sortOrder,
-				})
-				.returning();
-
-			// Recalculate quote totals
-			await recalculateQuoteTotals(optionId);
-
-			// Return updated package
-			const fullPackage = await getPackageWithOptions(packageId, tenantId);
-			return c.json({ package: fullPackage, lineItem }, 201);
+		if (!pkg) {
+			return c.json({ error: 'Package not found' }, 404);
 		}
-	)
+
+		if (pkg.status !== 'draft') {
+			return c.json({ error: 'Can only add line items to draft quotes' }, 400);
+		}
+
+		// Verify option exists and belongs to this package
+		const [option] = await db
+			.select()
+			.from(quotes)
+			.where(and(eq(quotes.id, optionId), eq(quotes.packageId, packageId)))
+			.limit(1);
+
+		if (!option) {
+			return c.json({ error: 'Option not found in this package' }, 404);
+		}
+
+		// Get max sort order
+		const [maxSort] = await db
+			.select({ maxOrder: sql<number>`COALESCE(MAX(${quoteLineItems.sortOrder}), -1)` })
+			.from(quoteLineItems)
+			.where(eq(quoteLineItems.quoteId, optionId));
+
+		const sortOrder = (maxSort?.maxOrder ?? -1) + 1;
+
+		// Create line item
+		const [lineItem] = await db
+			.insert(quoteLineItems)
+			.values({
+				id: crypto.randomUUID(),
+				quoteId: optionId,
+				description: data.description,
+				price: String(data.price),
+				vatExempt: data.vatExempt ?? false,
+				visibleToCustomer: data.visibleToCustomer ?? true,
+				priceVisibleToCustomer: data.priceVisibleToCustomer ?? true,
+				sortOrder,
+			})
+			.returning();
+
+		// Recalculate quote totals
+		await recalculateQuoteTotals(optionId);
+
+		// Return updated package
+		const fullPackage = await getPackageWithOptions(packageId, tenantId);
+		return c.json({ package: fullPackage, lineItem }, 201);
+	})
 
 	// Update custom line item
 	.put(
@@ -2332,13 +2382,12 @@ ${tenantName}
 			if (data.description !== undefined) updateData.description = data.description;
 			if (data.price !== undefined) updateData.price = String(data.price);
 			if (data.vatExempt !== undefined) updateData.vatExempt = data.vatExempt;
-			if (data.visibleToCustomer !== undefined) updateData.visibleToCustomer = data.visibleToCustomer;
-			if (data.priceVisibleToCustomer !== undefined) updateData.priceVisibleToCustomer = data.priceVisibleToCustomer;
+			if (data.visibleToCustomer !== undefined)
+				updateData.visibleToCustomer = data.visibleToCustomer;
+			if (data.priceVisibleToCustomer !== undefined)
+				updateData.priceVisibleToCustomer = data.priceVisibleToCustomer;
 
-			await db
-				.update(quoteLineItems)
-				.set(updateData)
-				.where(eq(quoteLineItems.id, itemId));
+			await db.update(quoteLineItems).set(updateData).where(eq(quoteLineItems.id, itemId));
 
 			// Recalculate quote totals
 			await recalculateQuoteTotals(optionId);
@@ -2346,7 +2395,7 @@ ${tenantName}
 			// Return updated package
 			const fullPackage = await getPackageWithOptions(packageId, tenantId);
 			return c.json({ package: fullPackage });
-		}
+		},
 	)
 
 	// Delete custom line item
@@ -2458,16 +2507,17 @@ ${tenantName}
 		const quoteNumber = await generateQuoteNumber(tenantId);
 
 		// Process components (from source or from data)
-		const componentsInput = sourceOption?.components?.map((c) => ({
-			componentType: c.componentType as (typeof COMPONENT_TYPES)[number],
-			materialId: c.materialId!,
-			finishId: c.finishId || undefined,
-			height: c.height ? parseFloat(c.height) : undefined,
-			width: c.width ? parseFloat(c.width) : undefined,
-			depth: c.depth ? parseFloat(c.depth) : undefined,
-			quantity: c.quantity,
-			notes: c.notes || undefined,
-		})) || data.components;
+		const componentsInput =
+			sourceOption?.components?.map((c) => ({
+				componentType: c.componentType as (typeof COMPONENT_TYPES)[number],
+				materialId: c.materialId!,
+				finishId: c.finishId || undefined,
+				height: c.height ? parseFloat(c.height) : undefined,
+				width: c.width ? parseFloat(c.width) : undefined,
+				depth: c.depth ? parseFloat(c.depth) : undefined,
+				quantity: c.quantity,
+				notes: c.notes || undefined,
+			})) || data.components;
 
 		const processedComponents = await Promise.all(
 			componentsInput.map(async (comp, index) => {
@@ -2513,18 +2563,19 @@ ${tenantName}
 					notes: comp.notes || null,
 					sortOrder: index,
 				};
-			})
+			}),
 		);
 
 		// Process lettering
-		const letteringInput = sourceOption?.lettering?.map((l) => ({
-			techniqueId: l.techniqueId!,
-			colorId: l.colorId || undefined,
-			fontId: l.fontId || undefined,
-			text: l.text!,
-			appliesTo: (l.appliesTo as (typeof LETTERING_COST_APPLIES_TO)[number]) || 'new_memorial',
-			notes: l.notes || undefined,
-		})) || data.lettering;
+		const letteringInput =
+			sourceOption?.lettering?.map((l) => ({
+				techniqueId: l.techniqueId!,
+				colorId: l.colorId || undefined,
+				fontId: l.fontId || undefined,
+				text: l.text!,
+				appliesTo: (l.appliesTo as (typeof LETTERING_COST_APPLIES_TO)[number]) || 'new_memorial',
+				notes: l.notes || undefined,
+			})) || data.lettering;
 
 		const processedLettering = await Promise.all(
 			letteringInput.map(async (lett, index) => {
@@ -2532,7 +2583,10 @@ ${tenantName}
 					.select()
 					.from(letteringTechniques)
 					.where(
-						and(eq(letteringTechniques.id, lett.techniqueId), eq(letteringTechniques.tenantId, tenantId))
+						and(
+							eq(letteringTechniques.id, lett.techniqueId),
+							eq(letteringTechniques.tenantId, tenantId),
+						),
 					)
 					.limit(1);
 
@@ -2545,7 +2599,9 @@ ${tenantName}
 					[color] = await db
 						.select()
 						.from(letteringColors)
-						.where(and(eq(letteringColors.id, lett.colorId), eq(letteringColors.tenantId, tenantId)))
+						.where(
+							and(eq(letteringColors.id, lett.colorId), eq(letteringColors.tenantId, tenantId)),
+						)
 						.limit(1);
 				}
 
@@ -2593,15 +2649,16 @@ ${tenantName}
 					notes: lett.notes || null,
 					sortOrder: index,
 				};
-			})
+			}),
 		);
 
 		// Process sundries
-		const sundriesInput = sourceOption?.sundries?.map((s) => ({
-			sundryId: s.sundryId!,
-			quantity: s.quantity,
-			notes: s.notes || undefined,
-		})) || data.sundries;
+		const sundriesInput =
+			sourceOption?.sundries?.map((s) => ({
+				sundryId: s.sundryId!,
+				quantity: s.quantity,
+				notes: s.notes || undefined,
+			})) || data.sundries;
 
 		const processedSundries = await Promise.all(
 			sundriesInput.map(async (sund, index) => {
@@ -2632,7 +2689,7 @@ ${tenantName}
 					notes: sund.notes || null,
 					sortOrder: index,
 				};
-			})
+			}),
 		);
 
 		// Calculate totals
@@ -2643,9 +2700,18 @@ ${tenantName}
 		const vatAmount = subtotal * pricingSettings.vatRate;
 		const total = subtotal + vatAmount;
 
-		const componentCost = processedComponents.reduce((sum, c) => sum + parseFloat(c.supplierCost) * c.quantity, 0);
-		const letteringCost = processedLettering.reduce((sum, l) => sum + parseFloat(l.supplierCost) * l.letterCount, 0);
-		const sundryCost = processedSundries.reduce((sum, s) => sum + parseFloat(s.supplierCost) * s.quantity, 0);
+		const componentCost = processedComponents.reduce(
+			(sum, c) => sum + parseFloat(c.supplierCost) * c.quantity,
+			0,
+		);
+		const letteringCost = processedLettering.reduce(
+			(sum, l) => sum + parseFloat(l.supplierCost) * l.letterCount,
+			0,
+		);
+		const sundryCost = processedSundries.reduce(
+			(sum, s) => sum + parseFloat(s.supplierCost) * s.quantity,
+			0,
+		);
 		const totalCost = componentCost + letteringCost + sundryCost;
 
 		// Create the new option
@@ -2682,21 +2748,15 @@ ${tenantName}
 
 		// Insert line items
 		if (processedComponents.length > 0) {
-			await db.insert(quoteComponents).values(
-				processedComponents.map((c) => ({ ...c, quoteId }))
-			);
+			await db.insert(quoteComponents).values(processedComponents.map((c) => ({ ...c, quoteId })));
 		}
 
 		if (processedLettering.length > 0) {
-			await db.insert(quoteLettering).values(
-				processedLettering.map((l) => ({ ...l, quoteId }))
-			);
+			await db.insert(quoteLettering).values(processedLettering.map((l) => ({ ...l, quoteId })));
 		}
 
 		if (processedSundries.length > 0) {
-			await db.insert(quoteSundries).values(
-				processedSundries.map((s) => ({ ...s, quoteId }))
-			);
+			await db.insert(quoteSundries).values(processedSundries.map((s) => ({ ...s, quoteId })));
 		}
 
 		// Return updated package
@@ -2712,7 +2772,7 @@ ${tenantName}
 		const optionId = c.req.param('optionId');
 
 		// Forward to options endpoint with copyFromOptionId
-		const newRequest = new Request(c.req.url.replace(`/${optionId}/clone`, ''), {
+		const _newRequest = new Request(c.req.url.replace(`/${optionId}/clone`, ''), {
 			method: 'POST',
 			headers: c.req.raw.headers,
 			body: JSON.stringify({ copyFromOptionId: optionId }),
@@ -2751,7 +2811,7 @@ ${tenantName}
 		const optionLabel = `Option ${String.fromCharCode(65 + nextOrder)}`;
 
 		// Get pricing settings
-		const pricingSettings = await getTenantPricingSettings(tenantId);
+		const _pricingSettings = await getTenantPricingSettings(tenantId);
 
 		// Generate new quote number
 		const quoteNumber = await generateQuoteNumber(tenantId);
@@ -2845,21 +2905,15 @@ ${tenantName}
 
 		// Insert line items
 		if (processedComponents.length > 0) {
-			await db.insert(quoteComponents).values(
-				processedComponents.map((c) => ({ ...c, quoteId }))
-			);
+			await db.insert(quoteComponents).values(processedComponents.map((c) => ({ ...c, quoteId })));
 		}
 
 		if (processedLettering.length > 0) {
-			await db.insert(quoteLettering).values(
-				processedLettering.map((l) => ({ ...l, quoteId }))
-			);
+			await db.insert(quoteLettering).values(processedLettering.map((l) => ({ ...l, quoteId })));
 		}
 
 		if (processedSundries.length > 0) {
-			await db.insert(quoteSundries).values(
-				processedSundries.map((s) => ({ ...s, quoteId }))
-			);
+			await db.insert(quoteSundries).values(processedSundries.map((s) => ({ ...s, quoteId })));
 		}
 
 		// Return updated package
@@ -2964,7 +3018,10 @@ ${tenantName}
 				.select()
 				.from(letteringTechniques)
 				.where(
-					and(eq(letteringTechniques.id, data.techniqueId), eq(letteringTechniques.tenantId, tenantId))
+					and(
+						eq(letteringTechniques.id, data.techniqueId),
+						eq(letteringTechniques.tenantId, tenantId),
+					),
 				)
 				.limit(1);
 
@@ -3004,8 +3061,8 @@ ${tenantName}
 						and(
 							eq(letteringCosts.techniqueId, data.techniqueId),
 							eq(letteringCosts.colorId, data.colorId),
-							eq(letteringCosts.appliesTo, data.appliesTo)
-						)
+							eq(letteringCosts.appliesTo, data.appliesTo),
+						),
 					)
 					.limit(1);
 
@@ -3018,8 +3075,8 @@ ${tenantName}
 							and(
 								eq(letteringCosts.techniqueId, data.techniqueId),
 								eq(letteringCosts.colorId, data.colorId),
-								eq(letteringCosts.appliesTo, 'both')
-							)
+								eq(letteringCosts.appliesTo, 'both'),
+							),
 						)
 						.limit(1);
 				}
@@ -3033,8 +3090,8 @@ ${tenantName}
 					.where(
 						and(
 							eq(letteringCosts.techniqueId, data.techniqueId),
-							eq(letteringCosts.appliesTo, data.appliesTo)
-						)
+							eq(letteringCosts.appliesTo, data.appliesTo),
+						),
 					);
 				activeCostRule = defaultRules.find((r) => r.colorId === null) || null;
 			}
@@ -3045,7 +3102,10 @@ ${tenantName}
 					.select()
 					.from(letteringCosts)
 					.where(
-						and(eq(letteringCosts.techniqueId, data.techniqueId), eq(letteringCosts.appliesTo, 'both'))
+						and(
+							eq(letteringCosts.techniqueId, data.techniqueId),
+							eq(letteringCosts.appliesTo, 'both'),
+						),
 					);
 				activeCostRule = bothRules.find((r) => r.colorId === null) || null;
 			}
@@ -3097,7 +3157,7 @@ ${tenantName}
 			// Return updated package
 			const fullPackage = await getPackageWithOptions(packageId, tenantId);
 			return c.json({ package: fullPackage }, 201);
-		}
+		},
 	)
 
 	// Update a lettering item (technique, color, text, pricing)
@@ -3157,7 +3217,8 @@ ${tenantName}
 			const notes = data.notes !== undefined ? data.notes : existing.notes;
 
 			// If technique, color, or text changed, recalculate pricing from cost rules
-			const contentChanged = data.techniqueId !== undefined || data.colorId !== undefined || data.text !== undefined;
+			const contentChanged =
+				data.techniqueId !== undefined || data.colorId !== undefined || data.text !== undefined;
 
 			let techniqueName = existing.techniqueName;
 			let colorName = existing.colorName;
@@ -3165,7 +3226,7 @@ ${tenantName}
 			let fontName = existing.fontName;
 			let fontS3Key = existing.fontS3Key;
 			let supplierCost = data.supplierCost ?? parseFloat(existing.supplierCost);
-			let markupPercent = data.markupPercent ?? parseFloat(existing.markupPercent);
+			const markupPercent = data.markupPercent ?? parseFloat(existing.markupPercent);
 			const letterCount = text?.replace(/\s/g, '').length || 0;
 
 			if (contentChanged) {
@@ -3175,7 +3236,10 @@ ${tenantName}
 						.select()
 						.from(letteringTechniques)
 						.where(
-							and(eq(letteringTechniques.id, data.techniqueId), eq(letteringTechniques.tenantId, tenantId))
+							and(
+								eq(letteringTechniques.id, data.techniqueId),
+								eq(letteringTechniques.tenantId, tenantId),
+							),
 						)
 						.limit(1);
 					if (!technique) {
@@ -3190,7 +3254,9 @@ ${tenantName}
 						const [color] = await db
 							.select()
 							.from(letteringColors)
-							.where(and(eq(letteringColors.id, data.colorId), eq(letteringColors.tenantId, tenantId)))
+							.where(
+								and(eq(letteringColors.id, data.colorId), eq(letteringColors.tenantId, tenantId)),
+							)
 							.limit(1);
 						colorName = color?.name || null;
 					} else {
@@ -3212,8 +3278,8 @@ ${tenantName}
 								and(
 									eq(letteringCosts.techniqueId, techniqueId!),
 									eq(letteringCosts.colorId, colorId),
-									eq(letteringCosts.appliesTo, appliesTo!)
-								)
+									eq(letteringCosts.appliesTo, appliesTo!),
+								),
 							)
 							.limit(1);
 
@@ -3226,8 +3292,8 @@ ${tenantName}
 									and(
 										eq(letteringCosts.techniqueId, techniqueId!),
 										eq(letteringCosts.colorId, colorId),
-										eq(letteringCosts.appliesTo, 'both')
-									)
+										eq(letteringCosts.appliesTo, 'both'),
+									),
 								)
 								.limit(1);
 						}
@@ -3241,8 +3307,8 @@ ${tenantName}
 							.where(
 								and(
 									eq(letteringCosts.techniqueId, techniqueId!),
-									eq(letteringCosts.appliesTo, appliesTo!)
-								)
+									eq(letteringCosts.appliesTo, appliesTo!),
+								),
 							);
 						activeCostRule = defaultRules.find((r) => r.colorId === null) || null;
 					}
@@ -3253,7 +3319,10 @@ ${tenantName}
 							.select()
 							.from(letteringCosts)
 							.where(
-								and(eq(letteringCosts.techniqueId, techniqueId!), eq(letteringCosts.appliesTo, 'both'))
+								and(
+									eq(letteringCosts.techniqueId, techniqueId!),
+									eq(letteringCosts.appliesTo, 'both'),
+								),
 							);
 						activeCostRule = bothRules.find((r) => r.colorId === null) || null;
 					}
@@ -3312,7 +3381,7 @@ ${tenantName}
 			// Return updated package
 			const fullPackage = await getPackageWithOptions(packageId, tenantId);
 			return c.json({ package: fullPackage });
-		}
+		},
 	)
 
 	// Delete a lettering item
@@ -3376,127 +3445,123 @@ ${tenantName}
 	// ============================================
 
 	// Add a new component to an option
-	.post(
-		'/:id/options/:optionId/components',
-		zValidator('json', addComponentSchema),
-		async (c) => {
-			const currentUser = c.get('user');
-			const tenantId = currentUser.tenantId!;
-			const packageId = c.req.param('id');
-			const optionId = c.req.param('optionId');
-			const data = c.req.valid('json');
+	.post('/:id/options/:optionId/components', zValidator('json', addComponentSchema), async (c) => {
+		const currentUser = c.get('user');
+		const tenantId = currentUser.tenantId!;
+		const packageId = c.req.param('id');
+		const optionId = c.req.param('optionId');
+		const data = c.req.valid('json');
 
-			// Get package and validate
-			const [pkg] = await db
-				.select()
-				.from(quotePackages)
-				.where(and(eq(quotePackages.id, packageId), eq(quotePackages.tenantId, tenantId)))
-				.limit(1);
+		// Get package and validate
+		const [pkg] = await db
+			.select()
+			.from(quotePackages)
+			.where(and(eq(quotePackages.id, packageId), eq(quotePackages.tenantId, tenantId)))
+			.limit(1);
 
-			if (!pkg) {
-				return c.json({ error: 'Package not found' }, 404);
-			}
-
-			if (pkg.status !== 'draft') {
-				return c.json({ error: 'Can only add components to draft quotes' }, 400);
-			}
-
-			// Verify option exists and belongs to this package
-			const [option] = await db
-				.select()
-				.from(quotes)
-				.where(and(eq(quotes.id, optionId), eq(quotes.packageId, packageId)))
-				.limit(1);
-
-			if (!option) {
-				return c.json({ error: 'Option not found in this package' }, 404);
-			}
-
-			// Look up material and finish for name snapshots
-			const [material] = data.materialId
-				? await db.select().from(materials).where(eq(materials.id, data.materialId)).limit(1)
-				: [null];
-			const [finish] = data.finishId
-				? await db.select().from(finishes).where(eq(finishes.id, data.finishId)).limit(1)
-				: [null];
-
-			// Get tenant pricing settings for default markup
-			const pricingSettings = await getTenantPricingSettings(tenantId);
-
-			// Calculate pricing (supplierCost starts at 0)
-			const supplierCost = 0;
-			const markupPercent = pricingSettings.defaultMarkupPercent;
-			const unitPrice = calculateRetailPrice(supplierCost, markupPercent);
-			const quantity = data.quantity ?? 1;
-			const lineTotal = unitPrice * quantity;
-
-			// Get current max sort order for components in this option
-			const [maxSortOrder] = await db
-				.select({ maxOrder: sql<number>`COALESCE(MAX(${quoteComponents.sortOrder}), -1)` })
-				.from(quoteComponents)
-				.where(eq(quoteComponents.quoteId, optionId));
-
-			// Insert new component
-			const componentId = crypto.randomUUID();
-			await db.insert(quoteComponents).values({
-				id: componentId,
-				quoteId: optionId,
-				componentType: data.componentType,
-				materialId: data.materialId || null,
-				finishId: data.finishId || null,
-				height: data.height != null ? String(data.height) : null,
-				width: data.width != null ? String(data.width) : null,
-				depth: data.depth != null ? String(data.depth) : null,
-				quantity,
-				supplierCost: String(supplierCost),
-				markupPercent: String(markupPercent),
-				unitPrice: String(unitPrice),
-				lineTotal: String(lineTotal),
-				materialName: material?.name || null,
-				finishName: finish?.name || null,
-				sortOrder: (maxSortOrder.maxOrder ?? -1) + 1,
-			});
-
-			// Product sync: if option has a productId, sync component type to product definition
-			if (option.productId) {
-				const [existingProductComponent] = await db
-					.select()
-					.from(productComponents)
-					.where(
-						and(
-							eq(productComponents.productId, option.productId),
-							eq(productComponents.componentType, data.componentType)
-						)
-					)
-					.limit(1);
-
-				if (!existingProductComponent) {
-					// Get next sort order for product components
-					const [maxProductSortOrder] = await db
-						.select({
-							maxOrder: sql<number>`COALESCE(MAX(${productComponents.sortOrder}), -1)`,
-						})
-						.from(productComponents)
-						.where(eq(productComponents.productId, option.productId));
-
-					await db.insert(productComponents).values({
-						id: crypto.randomUUID(),
-						productId: option.productId,
-						componentType: data.componentType,
-						quantity,
-						sortOrder: (maxProductSortOrder.maxOrder ?? -1) + 1,
-					});
-				}
-			}
-
-			// Recalculate quote totals
-			await recalculateQuoteTotals(optionId);
-
-			// Return updated package
-			const fullPackage = await getPackageWithOptions(packageId, tenantId);
-			return c.json({ package: fullPackage }, 201);
+		if (!pkg) {
+			return c.json({ error: 'Package not found' }, 404);
 		}
-	)
+
+		if (pkg.status !== 'draft') {
+			return c.json({ error: 'Can only add components to draft quotes' }, 400);
+		}
+
+		// Verify option exists and belongs to this package
+		const [option] = await db
+			.select()
+			.from(quotes)
+			.where(and(eq(quotes.id, optionId), eq(quotes.packageId, packageId)))
+			.limit(1);
+
+		if (!option) {
+			return c.json({ error: 'Option not found in this package' }, 404);
+		}
+
+		// Look up material and finish for name snapshots
+		const [material] = data.materialId
+			? await db.select().from(materials).where(eq(materials.id, data.materialId)).limit(1)
+			: [null];
+		const [finish] = data.finishId
+			? await db.select().from(finishes).where(eq(finishes.id, data.finishId)).limit(1)
+			: [null];
+
+		// Get tenant pricing settings for default markup
+		const pricingSettings = await getTenantPricingSettings(tenantId);
+
+		// Calculate pricing (supplierCost starts at 0)
+		const supplierCost = 0;
+		const markupPercent = pricingSettings.defaultMarkupPercent;
+		const unitPrice = calculateRetailPrice(supplierCost, markupPercent);
+		const quantity = data.quantity ?? 1;
+		const lineTotal = unitPrice * quantity;
+
+		// Get current max sort order for components in this option
+		const [maxSortOrder] = await db
+			.select({ maxOrder: sql<number>`COALESCE(MAX(${quoteComponents.sortOrder}), -1)` })
+			.from(quoteComponents)
+			.where(eq(quoteComponents.quoteId, optionId));
+
+		// Insert new component
+		const componentId = crypto.randomUUID();
+		await db.insert(quoteComponents).values({
+			id: componentId,
+			quoteId: optionId,
+			componentType: data.componentType,
+			materialId: data.materialId || null,
+			finishId: data.finishId || null,
+			height: data.height != null ? String(data.height) : null,
+			width: data.width != null ? String(data.width) : null,
+			depth: data.depth != null ? String(data.depth) : null,
+			quantity,
+			supplierCost: String(supplierCost),
+			markupPercent: String(markupPercent),
+			unitPrice: String(unitPrice),
+			lineTotal: String(lineTotal),
+			materialName: material?.name || null,
+			finishName: finish?.name || null,
+			sortOrder: (maxSortOrder.maxOrder ?? -1) + 1,
+		});
+
+		// Product sync: if option has a productId, sync component type to product definition
+		if (option.productId) {
+			const [existingProductComponent] = await db
+				.select()
+				.from(productComponents)
+				.where(
+					and(
+						eq(productComponents.productId, option.productId),
+						eq(productComponents.componentType, data.componentType),
+					),
+				)
+				.limit(1);
+
+			if (!existingProductComponent) {
+				// Get next sort order for product components
+				const [maxProductSortOrder] = await db
+					.select({
+						maxOrder: sql<number>`COALESCE(MAX(${productComponents.sortOrder}), -1)`,
+					})
+					.from(productComponents)
+					.where(eq(productComponents.productId, option.productId));
+
+				await db.insert(productComponents).values({
+					id: crypto.randomUUID(),
+					productId: option.productId,
+					componentType: data.componentType,
+					quantity,
+					sortOrder: (maxProductSortOrder.maxOrder ?? -1) + 1,
+				});
+			}
+		}
+
+		// Recalculate quote totals
+		await recalculateQuoteTotals(optionId);
+
+		// Return updated package
+		const fullPackage = await getPackageWithOptions(packageId, tenantId);
+		return c.json({ package: fullPackage }, 201);
+	})
 
 	// Delete a component
 	.delete('/:id/options/:optionId/components/:itemId', async (c) => {

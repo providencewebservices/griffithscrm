@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -98,7 +98,9 @@ export type FuneralDirectorSearchParams = {
 };
 
 // Fetch functions
-async function fetchFuneralDirectors(params?: FuneralDirectorSearchParams): Promise<FuneralDirectorListItem[]> {
+async function fetchFuneralDirectors(
+	params?: FuneralDirectorSearchParams,
+): Promise<FuneralDirectorListItem[]> {
 	const searchParams = new URLSearchParams();
 	if (params?.q) searchParams.set('q', params.q);
 	if (params?.archivedOnly) searchParams.set('archivedOnly', 'true');
@@ -130,7 +132,9 @@ async function fetchFuneralDirector(id: string): Promise<FuneralDirectorWithRela
 	return data.funeralDirector;
 }
 
-async function createFuneralDirector(input: CreateFuneralDirectorInput): Promise<FuneralDirectorWithRelations> {
+async function createFuneralDirector(
+	input: CreateFuneralDirectorInput,
+): Promise<FuneralDirectorWithRelations> {
 	const response = await fetch(`${API_URL}/api/funeral-directors`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },

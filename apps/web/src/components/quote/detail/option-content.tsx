@@ -1,9 +1,4 @@
-import {
-	Card,
-	CardContent,
-	CardHeader,
-	CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
 	Table,
 	TableBody,
@@ -12,30 +7,30 @@ import {
 	TableHeader,
 	TableRow,
 } from '@/components/ui/table';
-import { EditableNumber } from './editable-number';
-import { LetteringSection } from './lettering-section';
-import { ComponentsSection } from './components-section';
-import { CustomLineItemsSection } from './custom-line-items-section';
+import type {
+	useAddComponentMutation,
+	useAddLetteringMutation,
+	useAddLineItemMutation,
+	useDeleteComponentMutation,
+	useDeleteLetteringMutation,
+	useDeleteLineItemMutation,
+	useUpdateComponentPricingMutation,
+	useUpdateLetteringMutation,
+	useUpdateLetteringPricingMutation,
+	useUpdateLineItemMutation,
+	useUpdateProductPricingMutation,
+	useUpdateSundryPricingMutation,
+} from '@/hooks/use-quotes';
 import {
 	QUOTE_TYPE_SECTION_CONFIG,
-	type QuoteType,
-	type QuotePackageWithOptions,
 	type QuoteOption,
+	type QuotePackageWithOptions,
+	type QuoteType,
 } from '@/hooks/use-quotes';
-import type {
-	useUpdateComponentPricingMutation,
-	useUpdateLetteringPricingMutation,
-	useUpdateSundryPricingMutation,
-	useUpdateProductPricingMutation,
-	useAddLineItemMutation,
-	useUpdateLineItemMutation,
-	useDeleteLineItemMutation,
-	useAddLetteringMutation,
-	useUpdateLetteringMutation,
-	useDeleteLetteringMutation,
-	useAddComponentMutation,
-	useDeleteComponentMutation,
-} from '@/hooks/use-quotes';
+import { ComponentsSection } from './components-section';
+import { CustomLineItemsSection } from './custom-line-items-section';
+import { EditableNumber } from './editable-number';
+import { LetteringSection } from './lettering-section';
 
 export function OptionContent({
 	pkg,
@@ -72,7 +67,14 @@ export function OptionContent({
 	deleteLetteringMutation: ReturnType<typeof useDeleteLetteringMutation>;
 	addComponentMutation: ReturnType<typeof useAddComponentMutation>;
 	deleteComponentMutation: ReturnType<typeof useDeleteComponentMutation>;
-	activePresets: { id: string; name: string; defaultPrice: string; vatExempt: boolean; visibleToCustomer: boolean; priceVisibleToCustomer: boolean }[];
+	activePresets: {
+		id: string;
+		name: string;
+		defaultPrice: string;
+		vatExempt: boolean;
+		visibleToCustomer: boolean;
+		priceVisibleToCustomer: boolean;
+	}[];
 }) {
 	const quoteType = (pkg.quoteType as QuoteType) || 'new_memorial';
 	const sectionConfig = QUOTE_TYPE_SECTION_CONFIG[quoteType];
@@ -125,76 +127,77 @@ export function OptionContent({
 				)}
 
 				{/* Sundries */}
-				{sectionConfig.showSundries && (
-					<>
-						{option.sundries.length > 0 ? (
-							<div>
-								<h4 className="font-medium mb-3">
-									Sundries ({option.sundries.length} item{option.sundries.length !== 1 ? 's' : ''})
-								</h4>
-								<div className="border rounded-lg overflow-x-auto">
-									<Table>
-										<TableHeader>
-											<TableRow>
-												<TableHead>Item</TableHead>
-												<TableHead className="text-center">Qty</TableHead>
-												<TableHead className="text-right">Supplier</TableHead>
-												<TableHead className="text-center">Markup</TableHead>
-												<TableHead className="text-right">Retail</TableHead>
-												<TableHead className="text-right">Total</TableHead>
+				{sectionConfig.showSundries &&
+					(option.sundries.length > 0 ? (
+						<div>
+							<h4 className="font-medium mb-3">
+								Sundries ({option.sundries.length} item{option.sundries.length !== 1 ? 's' : ''})
+							</h4>
+							<div className="border rounded-lg overflow-x-auto">
+								<Table>
+									<TableHeader>
+										<TableRow>
+											<TableHead>Item</TableHead>
+											<TableHead className="text-center">Qty</TableHead>
+											<TableHead className="text-right">Supplier</TableHead>
+											<TableHead className="text-center">Markup</TableHead>
+											<TableHead className="text-right">Retail</TableHead>
+											<TableHead className="text-right">Total</TableHead>
+										</TableRow>
+									</TableHeader>
+									<TableBody>
+										{option.sundries.map((sundry) => (
+											<TableRow key={sundry.id} className="[&_td]:py-3">
+												<TableCell className="font-medium">{sundry.sundryName || '-'}</TableCell>
+												<TableCell className="text-center">{sundry.quantity}</TableCell>
+												<TableCell className="text-right">
+													<EditableNumber
+														value={parseFloat(sundry.supplierCost)}
+														onSave={async (value) => {
+															await updateSundryPricing.mutateAsync({
+																packageId: pkg.id,
+																optionId: option.id,
+																itemId: sundry.id,
+																supplierCost: value,
+															});
+														}}
+														disabled={!canEditPricing}
+														isCurrency
+													/>
+												</TableCell>
+												<TableCell className="text-center text-muted-foreground text-sm">
+													<EditableNumber
+														value={parseFloat(sundry.markupPercent)}
+														onSave={async (value) => {
+															await updateSundryPricing.mutateAsync({
+																packageId: pkg.id,
+																optionId: option.id,
+																itemId: sundry.id,
+																markupPercent: value,
+															});
+														}}
+														disabled={!canEditPricing}
+														min={0}
+														formatValue={(val) => `${val.toFixed(0)}%`}
+													/>
+												</TableCell>
+												<TableCell className="text-right">
+													{formatCurrency(sundry.unitPrice)}
+												</TableCell>
+												<TableCell className="text-right font-medium">
+													{formatCurrency(sundry.lineTotal)}
+												</TableCell>
 											</TableRow>
-										</TableHeader>
-										<TableBody>
-											{option.sundries.map((sundry) => (
-												<TableRow key={sundry.id} className="[&_td]:py-3">
-													<TableCell className="font-medium">{sundry.sundryName || '-'}</TableCell>
-													<TableCell className="text-center">{sundry.quantity}</TableCell>
-													<TableCell className="text-right">
-														<EditableNumber
-															value={parseFloat(sundry.supplierCost)}
-															onSave={async (value) => {
-																await updateSundryPricing.mutateAsync({
-																	packageId: pkg.id,
-																	optionId: option.id,
-																	itemId: sundry.id,
-																	supplierCost: value,
-																});
-															}}
-															disabled={!canEditPricing}
-															isCurrency
-														/>
-													</TableCell>
-													<TableCell className="text-center text-muted-foreground text-sm">
-														<EditableNumber
-															value={parseFloat(sundry.markupPercent)}
-															onSave={async (value) => {
-																await updateSundryPricing.mutateAsync({
-																	packageId: pkg.id,
-																	optionId: option.id,
-																	itemId: sundry.id,
-																	markupPercent: value,
-																});
-															}}
-															disabled={!canEditPricing}
-															min={0}
-															formatValue={(val) => `${val.toFixed(0)}%`}
-														/>
-													</TableCell>
-													<TableCell className="text-right">{formatCurrency(sundry.unitPrice)}</TableCell>
-													<TableCell className="text-right font-medium">{formatCurrency(sundry.lineTotal)}</TableCell>
-												</TableRow>
-											))}
-										</TableBody>
-									</Table>
-								</div>
+										))}
+									</TableBody>
+								</Table>
 							</div>
-						) : (
-							<div className="border rounded-lg p-8 text-center text-muted-foreground border-dashed">
-								No sundries added yet.
-							</div>
-						)}
-					</>
-				)}
+						</div>
+					) : (
+						<div className="border rounded-lg p-8 text-center text-muted-foreground border-dashed">
+							No sundries added yet.
+						</div>
+					))}
 
 				{/* Custom Line Items - always shown */}
 				<CustomLineItemsSection
@@ -241,7 +244,9 @@ export function OptionContent({
 								<span className="text-muted-foreground">Gross Margin</span>
 								<span className="text-green-600">
 									{formatCurrency(
-										parseFloat(option.total) - parseFloat(option.vatAmount) - parseFloat(option.totalCost)
+										parseFloat(option.total) -
+											parseFloat(option.vatAmount) -
+											parseFloat(option.totalCost),
 									)}
 								</span>
 							</div>
@@ -249,7 +254,9 @@ export function OptionContent({
 								<span className="text-muted-foreground">Margin %</span>
 								<span className="text-green-600">
 									{(
-										((parseFloat(option.total) - parseFloat(option.vatAmount) - parseFloat(option.totalCost)) /
+										((parseFloat(option.total) -
+											parseFloat(option.vatAmount) -
+											parseFloat(option.totalCost)) /
 											(parseFloat(option.total) - parseFloat(option.vatAmount) || 1)) *
 										100
 									).toFixed(1)}

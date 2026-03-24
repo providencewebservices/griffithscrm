@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -151,7 +151,7 @@ export function useDeleteProductOptionMutation() {
 
 	return useMutation({
 		mutationFn: deleteOption,
-		onSuccess: (_, id) => {
+		onSuccess: (_, _id) => {
 			// We need to invalidate all product-options queries since we don't know the productId
 			queryClient.invalidateQueries({ queryKey: ['product-options'] });
 			queryClient.invalidateQueries({ queryKey: ['product'] });

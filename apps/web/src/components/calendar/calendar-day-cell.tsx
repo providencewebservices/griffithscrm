@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils';
-import { formatDayNumber } from './calendar-utils';
 import { CalendarEventPill } from './calendar-event-pill';
+import { formatDayNumber } from './calendar-utils';
 import type { CalendarEvent } from './types';
 
 type CalendarDayCellProps = {
@@ -35,7 +35,7 @@ export function CalendarDayCell({
 				'min-h-[100px] border-r border-b border-border/50 p-2 cursor-pointer transition-colors',
 				'hover:bg-muted/30',
 				!isCurrentMonth && 'bg-muted/10 text-muted-foreground',
-				isCurrentMonth && isWeekend && 'bg-muted/5'
+				isCurrentMonth && isWeekend && 'bg-muted/5',
 			)}
 			onClick={() => onDateClick(date)}
 		>
@@ -45,7 +45,7 @@ export function CalendarDayCell({
 						'text-sm',
 						isCurrentMonth && !isToday && 'text-muted-foreground',
 						isToday &&
-							'bg-primary text-primary-foreground rounded-full w-7 h-7 flex items-center justify-center font-medium'
+							'bg-primary text-primary-foreground rounded-full w-7 h-7 flex items-center justify-center font-medium',
 					)}
 				>
 					{formatDayNumber(date)}

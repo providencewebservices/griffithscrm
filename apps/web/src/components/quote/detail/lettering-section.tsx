@@ -1,8 +1,10 @@
+import { Check, Loader2, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { useState } from 'react';
+import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
+import { InscriptionText } from '@/components/inscription-text';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import {
 	Select,
 	SelectContent,
@@ -18,31 +20,20 @@ import {
 	TableHeader,
 	TableRow,
 } from '@/components/ui/table';
-import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
-import { EditableNumber } from './editable-number';
-import {
-	Plus,
-	Pencil,
-	Trash2,
-	Loader2,
-	Check,
-	X,
-} from 'lucide-react';
-import { InscriptionText } from '@/components/inscription-text';
-import { useLetteringTechniquesQuery } from '@/hooks/use-lettering-techniques';
-import { useLetteringColorsQuery } from '@/hooks/use-lettering-colors';
+import { Textarea } from '@/components/ui/textarea';
 import { useFontsQuery } from '@/hooks/use-fonts';
+import { useLetteringColorsQuery } from '@/hooks/use-lettering-colors';
+import { useLetteringTechniquesQuery } from '@/hooks/use-lettering-techniques';
 import type {
-	QuotePackageWithOptions,
-	QuoteOption,
 	QuoteLettering,
-} from '@/hooks/use-quotes';
-import type {
-	useUpdateLetteringPricingMutation,
+	QuoteOption,
+	QuotePackageWithOptions,
 	useAddLetteringMutation,
-	useUpdateLetteringMutation,
 	useDeleteLetteringMutation,
+	useUpdateLetteringMutation,
+	useUpdateLetteringPricingMutation,
 } from '@/hooks/use-quotes';
+import { EditableNumber } from './editable-number';
 
 export function LetteringSection({
 	pkg,
@@ -184,7 +175,10 @@ export function LetteringSection({
 						</div>
 						<div>
 							<Label className="text-sm mb-1 block">Color</Label>
-							<Select value={newColorId || '_none'} onValueChange={(v) => setNewColorId(v === '_none' ? '' : v)}>
+							<Select
+								value={newColorId || '_none'}
+								onValueChange={(v) => setNewColorId(v === '_none' ? '' : v)}
+							>
 								<SelectTrigger>
 									<SelectValue placeholder="Select color" />
 								</SelectTrigger>
@@ -200,7 +194,10 @@ export function LetteringSection({
 						</div>
 						<div>
 							<Label className="text-sm mb-1 block">Font</Label>
-							<Select value={newFontId || '_none'} onValueChange={(v) => setNewFontId(v === '_none' ? '' : v)}>
+							<Select
+								value={newFontId || '_none'}
+								onValueChange={(v) => setNewFontId(v === '_none' ? '' : v)}
+							>
 								<SelectTrigger>
 									<SelectValue placeholder="Default font" />
 								</SelectTrigger>
@@ -349,14 +346,19 @@ export function LetteringSection({
 														onChange={(e) => setEditText(e.target.value)}
 														className="h-8"
 													/>
-													<Select value={editFontId || '_none'} onValueChange={(v) => setEditFontId(v === '_none' ? '' : v)}>
+													<Select
+														value={editFontId || '_none'}
+														onValueChange={(v) => setEditFontId(v === '_none' ? '' : v)}
+													>
 														<SelectTrigger className="h-7 text-xs">
 															<SelectValue placeholder="Font" />
 														</SelectTrigger>
 														<SelectContent>
 															<SelectItem value="_none">Default font</SelectItem>
 															{activeFonts.map((f) => (
-																<SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+																<SelectItem key={f.id} value={f.id}>
+																	{f.name}
+																</SelectItem>
 															))}
 														</SelectContent>
 													</Select>
@@ -380,7 +382,11 @@ export function LetteringSection({
 														variant="ghost"
 														size="sm"
 														onClick={() => handleSaveEdit(lett.id)}
-														disabled={!editTechniqueId || !editText.trim() || updateLetteringMutation.isPending}
+														disabled={
+															!editTechniqueId ||
+															!editText.trim() ||
+															updateLetteringMutation.isPending
+														}
 														className="h-7 px-2"
 													>
 														{updateLetteringMutation.isPending ? (
@@ -431,7 +437,9 @@ export function LetteringSection({
 												/>
 											</TableCell>
 											<TableCell className="text-right">{formatCurrency(lett.unitPrice)}</TableCell>
-											<TableCell className="text-right font-medium">{formatCurrency(lett.lineTotal)}</TableCell>
+											<TableCell className="text-right font-medium">
+												{formatCurrency(lett.lineTotal)}
+											</TableCell>
 											{canEditPricing && (
 												<TableCell>
 													<div className="flex gap-1 justify-end">

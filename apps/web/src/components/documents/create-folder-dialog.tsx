@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
 import {
 	Dialog,
 	DialogContent,
@@ -7,10 +8,13 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { Field, FieldGroup, FieldLabel, FieldDescription } from '@/components/ui/field';
-import { useCreateFolderMutation, useUpdateFolderMutation, type DocumentFolder } from '@/hooks/use-document-folders';
+import {
+	type DocumentFolder,
+	useCreateFolderMutation,
+	useUpdateFolderMutation,
+} from '@/hooks/use-document-folders';
 
 // Predefined color options
 const FOLDER_COLORS = [
@@ -83,7 +87,7 @@ export function CreateFolderDialog({
 			}
 			onOpenChange(false);
 			onSuccess?.();
-		} catch (error) {
+		} catch (_error) {
 			// Error is handled by mutation
 		}
 	};

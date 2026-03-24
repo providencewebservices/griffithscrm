@@ -1,15 +1,10 @@
-import { Hono } from 'hono';
-import { eq } from 'drizzle-orm';
-import { db } from '../lib/auth';
 import { tenants } from '@griffiths-crm/shared/db/schema';
+import { eq } from 'drizzle-orm';
+import { Hono } from 'hono';
+import { db } from '../lib/auth';
 import { extractKeyFromUrl, getObjectBuffer } from '../lib/s3';
 
-const ALLOWED_IMAGE_CONTENT_TYPES = new Set([
-	'image/jpeg',
-	'image/png',
-	'image/gif',
-	'image/webp',
-]);
+const ALLOWED_IMAGE_CONTENT_TYPES = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
 
 const logoProxyRoutes = new Hono()
 	// GET /api/logo/:tenantId — public, no auth

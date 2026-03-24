@@ -1,15 +1,9 @@
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { AlertCircle, CreditCard, Loader2 } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { useParams } from 'react-router';
-import { useQuery, useMutation } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from '@/components/ui/card';
-import { Loader2, CreditCard, AlertCircle } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -111,7 +105,9 @@ export function PaymentPage() {
 						<AlertCircle className="h-12 w-12 mx-auto text-destructive mb-4" />
 						<h2 className="text-xl font-semibold mb-2">Invalid Payment Link</h2>
 						<p className="text-muted-foreground">
-							{error instanceof Error ? error.message : 'This payment link is invalid or has expired.'}
+							{error instanceof Error
+								? error.message
+								: 'This payment link is invalid or has expired.'}
 						</p>
 					</CardContent>
 				</Card>

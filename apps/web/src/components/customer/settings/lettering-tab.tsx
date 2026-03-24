@@ -1,18 +1,10 @@
-import { useState, useCallback, useRef } from 'react';
+import { Plus, Upload } from 'lucide-react';
+import { useCallback, useRef, useState } from 'react';
 import { Link } from 'react-router';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
+import { InscriptionText } from '@/components/inscription-text';
 import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
 import {
 	Dialog,
 	DialogContent,
@@ -21,30 +13,38 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from '@/components/ui/dialog';
-import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
-import { InscriptionText } from '@/components/inscription-text';
-import { Plus, Upload } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
-	useLetteringTechniquesQuery,
-	useCreateLetteringTechniqueMutation,
-	type CreateLetteringTechniqueInput,
-} from '@/hooks/use-lettering-techniques';
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from '@/components/ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
-	useLetteringColorsQuery,
-	useCreateLetteringColorMutation,
-	useUpdateLetteringColorMutation,
-	useDeleteLetteringColorMutation,
-	type LetteringColor,
+	type Font,
+	useCreateFontMutation,
+	useDeleteFontMutation,
+	useFontsQuery,
+	useUpdateFontMutation,
+} from '@/hooks/use-fonts';
+import {
 	type CreateLetteringColorInput,
+	type LetteringColor,
+	useCreateLetteringColorMutation,
+	useDeleteLetteringColorMutation,
+	useLetteringColorsQuery,
+	useUpdateLetteringColorMutation,
 } from '@/hooks/use-lettering-colors';
 import {
-	useFontsQuery,
-	useCreateFontMutation,
-	useUpdateFontMutation,
-	useDeleteFontMutation,
-	type Font,
-} from '@/hooks/use-fonts';
+	type CreateLetteringTechniqueInput,
+	useCreateLetteringTechniqueMutation,
+	useLetteringTechniquesQuery,
+} from '@/hooks/use-lettering-techniques';
 
 export function LetteringTab() {
 	return (
@@ -150,11 +150,7 @@ function TechniquesSection() {
 	}
 
 	if (error) {
-		return (
-			<div className="text-destructive">
-				Error loading techniques: {error.message}
-			</div>
-		);
+		return <div className="text-destructive">Error loading techniques: {error.message}</div>;
 	}
 
 	return (
@@ -256,10 +252,7 @@ function TechniquesSection() {
 						<Button variant="outline" onClick={() => setDialogOpen(false)}>
 							Cancel
 						</Button>
-						<Button
-							onClick={handleFormSubmit}
-							disabled={!formName || createMutation.isPending}
-						>
+						<Button onClick={handleFormSubmit} disabled={!formName || createMutation.isPending}>
 							{createMutation.isPending ? 'Creating...' : 'Create'}
 						</Button>
 					</DialogFooter>
@@ -380,11 +373,7 @@ function ColorsSection() {
 	}
 
 	if (error) {
-		return (
-			<div className="text-destructive">
-				Error loading colors: {error.message}
-			</div>
-		);
+		return <div className="text-destructive">Error loading colors: {error.message}</div>;
 	}
 
 	return (
@@ -414,11 +403,7 @@ function ColorsSection() {
 						</TableHeader>
 						<TableBody>
 							{colors?.map((item) => (
-								<TableRow
-									key={item.id}
-									className="cursor-pointer"
-									onClick={() => handleEdit(item)}
-								>
+								<TableRow key={item.id} className="cursor-pointer" onClick={() => handleEdit(item)}>
 									<TableCell className="font-medium">
 										{item.name}
 										{!item.isActive && (
@@ -449,9 +434,7 @@ function ColorsSection() {
 			<Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
 				<DialogContent>
 					<DialogHeader>
-						<DialogTitle>
-							{isEditing ? 'Edit Color' : 'Add Color'}
-						</DialogTitle>
+						<DialogTitle>{isEditing ? 'Edit Color' : 'Add Color'}</DialogTitle>
 						<DialogDescription>
 							{isEditing
 								? 'Update the color name.'
@@ -488,11 +471,7 @@ function ColorsSection() {
 								>
 									{selectedItem.isActive ? 'Deactivate' : 'Activate'}
 								</Button>
-								<Button
-									variant="destructive"
-									size="sm"
-									onClick={() => setDeleteDialogOpen(true)}
-								>
+								<Button variant="destructive" size="sm" onClick={() => setDeleteDialogOpen(true)}>
 									Delete
 								</Button>
 							</div>
@@ -549,23 +528,26 @@ function FontsSection() {
 	// Edit form state
 	const [editName, setEditName] = useState('');
 
-	const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-		const file = e.target.files?.[0];
-		if (!file) return;
+	const handleFileChange = useCallback(
+		(e: React.ChangeEvent<HTMLInputElement>) => {
+			const file = e.target.files?.[0];
+			if (!file) return;
 
-		if (file.size > MAX_FONT_SIZE) {
-			setMutationError('Font file must be under 10MB');
-			return;
-		}
+			if (file.size > MAX_FONT_SIZE) {
+				setMutationError('Font file must be under 10MB');
+				return;
+			}
 
-		setUploadFile(file);
-		// Auto-populate name from filename (without extension)
-		if (!uploadName) {
-			const nameWithoutExt = file.name.replace(/\.[^.]+$/, '');
-			setUploadName(nameWithoutExt);
-		}
-		setMutationError(null);
-	}, [uploadName]);
+			setUploadFile(file);
+			// Auto-populate name from filename (without extension)
+			if (!uploadName) {
+				const nameWithoutExt = file.name.replace(/\.[^.]+$/, '');
+				setUploadName(nameWithoutExt);
+			}
+			setMutationError(null);
+		},
+		[uploadName],
+	);
 
 	const handleUpload = async () => {
 		if (!uploadFile || !uploadName.trim()) return;
@@ -670,11 +652,7 @@ function FontsSection() {
 	}
 
 	if (error) {
-		return (
-			<div className="text-destructive">
-				Error loading fonts: {error.message}
-			</div>
-		);
+		return <div className="text-destructive">Error loading fonts: {error.message}</div>;
 	}
 
 	return (
@@ -683,12 +661,15 @@ function FontsSection() {
 				<p className="text-sm text-muted-foreground">
 					Custom fonts for inscription rendering on quotes
 				</p>
-				<Button variant="outline" onClick={() => {
-					setUploadFile(null);
-					setUploadName('');
-					setMutationError(null);
-					setUploadDialogOpen(true);
-				}}>
+				<Button
+					variant="outline"
+					onClick={() => {
+						setUploadFile(null);
+						setUploadName('');
+						setMutationError(null);
+						setUploadDialogOpen(true);
+					}}
+				>
 					<Plus className="h-4 w-4 mr-2" />
 					Add Font
 				</Button>
@@ -696,7 +677,8 @@ function FontsSection() {
 
 			{fontsList && fontsList.length === 0 ? (
 				<div className="text-center py-8 text-muted-foreground border rounded-lg">
-					No fonts uploaded yet. Add a font (.ttf, .otf, .woff, .woff2) to use in inscription rendering.
+					No fonts uploaded yet. Add a font (.ttf, .otf, .woff, .woff2) to use in inscription
+					rendering.
 				</div>
 			) : (
 				<div className="border rounded-lg">
@@ -711,11 +693,7 @@ function FontsSection() {
 						</TableHeader>
 						<TableBody>
 							{fontsList?.map((font) => (
-								<TableRow
-									key={font.id}
-									className="cursor-pointer"
-									onClick={() => handleEdit(font)}
-								>
+								<TableRow key={font.id} className="cursor-pointer" onClick={() => handleEdit(font)}>
 									<TableCell className="font-medium">
 										{font.name}
 										{!font.isActive && (
@@ -732,9 +710,7 @@ function FontsSection() {
 											className="text-sm"
 										/>
 									</TableCell>
-									<TableCell className="text-muted-foreground text-sm">
-										{font.filename}
-									</TableCell>
+									<TableCell className="text-muted-foreground text-sm">{font.filename}</TableCell>
 									<TableCell>
 										<Button
 											variant="ghost"
@@ -794,9 +770,7 @@ function FontsSection() {
 								) : (
 									<div className="space-y-1">
 										<Upload className="h-8 w-8 mx-auto text-muted-foreground" />
-										<p className="text-sm text-muted-foreground">
-											Click to select a font file
-										</p>
+										<p className="text-sm text-muted-foreground">Click to select a font file</p>
 									</div>
 								)}
 							</div>
@@ -863,11 +837,7 @@ function FontsSection() {
 								>
 									{selectedFont.isActive ? 'Deactivate' : 'Activate'}
 								</Button>
-								<Button
-									variant="destructive"
-									size="sm"
-									onClick={() => setDeleteDialogOpen(true)}
-								>
+								<Button variant="destructive" size="sm" onClick={() => setDeleteDialogOpen(true)}>
 									Delete
 								</Button>
 							</div>

@@ -1,12 +1,12 @@
 import { useMemo } from 'react';
+import { CalendarDayCell } from './calendar-day-cell';
 import {
-	getMonthDays,
 	getEventsForDay,
+	getMonthDays,
 	isSameMonth,
 	isToday,
 	WEEKDAY_NAMES,
 } from './calendar-utils';
-import { CalendarDayCell } from './calendar-day-cell';
 import type { CalendarEvent } from './types';
 
 type MonthViewProps = {

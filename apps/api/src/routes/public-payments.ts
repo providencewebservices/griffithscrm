@@ -1,26 +1,31 @@
-import { Hono } from 'hono';
-import { zValidator } from '@hono/zod-validator';
-import { z } from 'zod';
-import { eq, and } from 'drizzle-orm';
-import { db } from '../lib/auth';
 import {
-	paymentAttempts,
-	takepaymentsSettings,
+	addresses,
+	contactInfo,
+	customerAddresses,
+	customerContactInfo,
+	customers,
 	jobPaymentScheduleItems,
 	jobs,
+	paymentAttempts,
 	quotes,
-	customers,
-	customerAddresses,
-	addresses,
-	customerContactInfo,
-	contactInfo,
+	takepaymentsSettings,
 	tenants,
 } from '@griffiths-crm/shared/db/schema';
+import { zValidator } from '@hono/zod-validator';
+import { and, eq } from 'drizzle-orm';
+import { Hono } from 'hono';
+import { z } from 'zod';
+import { db } from '../lib/auth';
 import { decrypt } from '../lib/encryption';
-import { verifyResponseHash, verifyCallbackHash, computeRequestHash } from '../lib/takepayments-hash';
 import { verifyPaymentToken } from '../lib/payment-token';
+import {
+	computeRequestHash,
+	verifyCallbackHash,
+	verifyResponseHash,
+} from '../lib/takepayments-hash';
 
-const TAKEPAYMENTS_FORM_URL = 'https://mms.tponlinepayments2.com/Pages/PublicPages/PaymentForm.aspx';
+const TAKEPAYMENTS_FORM_URL =
+	'https://mms.tponlinepayments2.com/Pages/PublicPages/PaymentForm.aspx';
 
 const validateTokenSchema = z.object({
 	token: z.string().min(1),
@@ -41,7 +46,7 @@ const publicPaymentsRoutes = new Hono()
 	// Server-to-server result from TakePayments
 	.post('/server-result', async (c) => {
 		try {
-			const body = await c.req.parseBody() as Record<string, string>;
+			const body = (await c.req.parseBody()) as Record<string, string>;
 			const orderId = body.OrderID;
 
 			if (!orderId) {
@@ -174,7 +179,9 @@ const publicPaymentsRoutes = new Hono()
 				}
 			}
 
-			return c.text('StatusCode=0&Message=Payment response received and processed on merchant server');
+			return c.text(
+				'StatusCode=0&Message=Payment response received and processed on merchant server',
+			);
 		} catch (err) {
 			console.error('Server result processing error:', err);
 			return c.text('StatusCode=30&Message=Internal server error');
@@ -269,21 +276,13 @@ const publicPaymentsRoutes = new Hono()
 			return c.json({ error: 'This payment has already been completed' }, 400);
 		}
 
-		const [job] = await db
-			.select()
-			.from(jobs)
-			.where(eq(jobs.id, milestone.jobId))
-			.limit(1);
+		const [job] = await db.select().from(jobs).where(eq(jobs.id, milestone.jobId)).limit(1);
 
 		if (!job) {
 			return c.json({ error: 'Job not found' }, 404);
 		}
 
-		const [quote] = await db
-			.select()
-			.from(quotes)
-			.where(eq(quotes.id, job.quoteId))
-			.limit(1);
+		const [quote] = await db.select().from(quotes).where(eq(quotes.id, job.quoteId)).limit(1);
 
 		let customerName = '';
 		if (quote?.customerId) {
@@ -332,10 +331,7 @@ const publicPaymentsRoutes = new Hono()
 			.select()
 			.from(takepaymentsSettings)
 			.where(
-				and(
-					eq(takepaymentsSettings.tenantId, tenantId),
-					eq(takepaymentsSettings.isActive, true),
-				),
+				and(eq(takepaymentsSettings.tenantId, tenantId), eq(takepaymentsSettings.isActive, true)),
 			)
 			.limit(1);
 
@@ -364,22 +360,14 @@ const publicPaymentsRoutes = new Hono()
 		}
 
 		// Load job
-		const [job] = await db
-			.select()
-			.from(jobs)
-			.where(eq(jobs.id, milestone.jobId))
-			.limit(1);
+		const [job] = await db.select().from(jobs).where(eq(jobs.id, milestone.jobId)).limit(1);
 
 		if (!job) {
 			return c.json({ error: 'Job not found' }, 404);
 		}
 
 		// Load customer details
-		const [quote] = await db
-			.select()
-			.from(quotes)
-			.where(eq(quotes.id, job.quoteId))
-			.limit(1);
+		const [quote] = await db.select().from(quotes).where(eq(quotes.id, job.quoteId)).limit(1);
 
 		let customerName = '';
 		let primaryAddress: typeof addresses.$inferSelect | null = null;
@@ -414,7 +402,9 @@ const publicPaymentsRoutes = new Hono()
 					.where(eq(customerContactInfo.customerId, customer.id));
 
 				email = contactRows.find((r) => r.contact.type === 'email')?.contact.value ?? '';
-				phone = contactRows.find((r) => r.contact.type === 'phone' || r.contact.type === 'mobile')?.contact.value ?? '';
+				phone =
+					contactRows.find((r) => r.contact.type === 'phone' || r.contact.type === 'mobile')
+						?.contact.value ?? '';
 			}
 		}
 
@@ -446,7 +436,9 @@ const publicPaymentsRoutes = new Hono()
 			CallbackURL: `${apiBaseUrl}/api/public/payments/callback`,
 			OrderDescription: `${job.jobNumber} - ${milestone.description}`,
 			CustomerName: customerName,
-			Address1: primaryAddress ? [primaryAddress.streetNumber, primaryAddress.route].filter(Boolean).join(' ') : '',
+			Address1: primaryAddress
+				? [primaryAddress.streetNumber, primaryAddress.route].filter(Boolean).join(' ')
+				: '',
 			Address2: '',
 			Address3: '',
 			Address4: '',
@@ -521,11 +513,7 @@ const publicPaymentsRoutes = new Hono()
 		}
 
 		// Load job for reference
-		const [job] = await db
-			.select()
-			.from(jobs)
-			.where(eq(jobs.id, attempt.jobId))
-			.limit(1);
+		const [job] = await db.select().from(jobs).where(eq(jobs.id, attempt.jobId)).limit(1);
 
 		return c.json({
 			status: attempt.status,

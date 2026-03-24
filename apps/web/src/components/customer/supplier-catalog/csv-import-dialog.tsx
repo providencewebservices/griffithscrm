@@ -1,4 +1,6 @@
-import { useState, useRef } from 'react';
+import { Upload } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { Button } from '@/components/ui/button';
 import {
 	Dialog,
 	DialogContent,
@@ -7,7 +9,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import {
 	Select,
 	SelectContent,
@@ -15,14 +17,17 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select';
-import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
-import { Upload } from 'lucide-react';
 import type { SupplierCategory } from '@/hooks/use-supplier-categories';
 
 type CsvImportDialogProps = {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
-	onSubmit: (data: { file: File; supplierId: string; collectionId: string; categoryId?: string }) => void;
+	onSubmit: (data: {
+		file: File;
+		supplierId: string;
+		collectionId: string;
+		categoryId?: string;
+	}) => void;
 	supplierId: string;
 	collectionId: string;
 	categories: SupplierCategory[];
@@ -80,9 +85,7 @@ export function CsvImportDialog({
 				</DialogHeader>
 
 				{error && (
-					<div className="bg-destructive/10 text-destructive px-4 py-2 rounded">
-						{error}
-					</div>
+					<div className="bg-destructive/10 text-destructive px-4 py-2 rounded">{error}</div>
 				)}
 
 				{result && (
@@ -92,9 +95,13 @@ export function CsvImportDialog({
 						</div>
 						{result.errors.length > 0 && (
 							<div className="bg-destructive/10 text-destructive px-4 py-2 rounded max-h-32 overflow-y-auto">
-								<p className="font-medium mb-1">{result.errors.length} error{result.errors.length !== 1 ? 's' : ''}:</p>
+								<p className="font-medium mb-1">
+									{result.errors.length} error{result.errors.length !== 1 ? 's' : ''}:
+								</p>
 								{result.errors.map((err, i) => (
-									<p key={i} className="text-sm">Row {err.row}: {err.message}</p>
+									<p key={i} className="text-sm">
+										Row {err.row}: {err.message}
+									</p>
 								))}
 							</div>
 						)}
@@ -112,9 +119,7 @@ export function CsvImportDialog({
 							{file ? (
 								<p className="text-sm font-medium">{file.name}</p>
 							) : (
-								<p className="text-sm text-muted-foreground">
-									Click to select a CSV file
-								</p>
+								<p className="text-sm text-muted-foreground">Click to select a CSV file</p>
 							)}
 							<input
 								ref={fileInputRef}

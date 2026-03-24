@@ -1,9 +1,5 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-	TASK_STATUSES,
-	TASK_PRIORITIES,
-	TASK_ENTITY_TYPES,
-} from '@griffiths-crm/shared/db/schema';
+import { TASK_ENTITY_TYPES, TASK_PRIORITIES, TASK_STATUSES } from '@griffiths-crm/shared/db/schema';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -166,7 +162,13 @@ async function updateTask({ id, ...input }: UpdateTaskInput & { id: string }): P
 	return data.task;
 }
 
-async function updateTaskStatus({ id, status }: { id: string; status: TaskStatus }): Promise<TaskDetail> {
+async function updateTaskStatus({
+	id,
+	status,
+}: {
+	id: string;
+	status: TaskStatus;
+}): Promise<TaskDetail> {
 	const response = await fetch(`${API_URL}/api/tasks/${id}/status`, {
 		method: 'PUT',
 		headers: { 'Content-Type': 'application/json' },
@@ -286,10 +288,14 @@ export function formatTaskStatus(status: TaskStatus): string {
 
 export function getTaskStatusVariant(status: TaskStatus): 'default' | 'secondary' | 'outline' {
 	switch (status) {
-		case 'todo': return 'secondary';
-		case 'in_progress': return 'outline';
-		case 'done': return 'default';
-		default: return 'secondary';
+		case 'todo':
+			return 'secondary';
+		case 'in_progress':
+			return 'outline';
+		case 'done':
+			return 'default';
+		default:
+			return 'secondary';
 	}
 }
 
@@ -303,13 +309,20 @@ export function formatTaskPriority(priority: TaskPriority): string {
 	return labels[priority] || priority;
 }
 
-export function getTaskPriorityVariant(priority: TaskPriority): 'default' | 'secondary' | 'destructive' | 'outline' {
+export function getTaskPriorityVariant(
+	priority: TaskPriority,
+): 'default' | 'secondary' | 'destructive' | 'outline' {
 	switch (priority) {
-		case 'low': return 'secondary';
-		case 'normal': return 'outline';
-		case 'high': return 'default';
-		case 'urgent': return 'destructive';
-		default: return 'outline';
+		case 'low':
+			return 'secondary';
+		case 'normal':
+			return 'outline';
+		case 'high':
+			return 'default';
+		case 'urgent':
+			return 'destructive';
+		default:
+			return 'outline';
 	}
 }
 

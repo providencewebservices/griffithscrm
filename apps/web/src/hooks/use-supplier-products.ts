@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -87,7 +87,9 @@ type ListResponse = {
 	pagination: Pagination;
 };
 
-async function fetchSupplierProducts(params: SupplierProductListParams = {}): Promise<ListResponse> {
+async function fetchSupplierProducts(
+	params: SupplierProductListParams = {},
+): Promise<ListResponse> {
 	const searchParams = new URLSearchParams();
 	if (params.supplierId) searchParams.set('supplierId', params.supplierId);
 	if (params.collectionId) searchParams.set('collectionId', params.collectionId);
@@ -99,7 +101,7 @@ async function fetchSupplierProducts(params: SupplierProductListParams = {}): Pr
 
 	const response = await fetch(
 		`${API_URL}/api/tenant/supplier-products?${searchParams.toString()}`,
-		{ credentials: 'include' }
+		{ credentials: 'include' },
 	);
 	if (!response.ok) {
 		const error = await response.json();
@@ -201,7 +203,7 @@ async function importToCatalog({
 			headers: { 'Content-Type': 'application/json' },
 			credentials: 'include',
 			body: JSON.stringify(input),
-		}
+		},
 	);
 	if (!response.ok) {
 		const error = await response.json();

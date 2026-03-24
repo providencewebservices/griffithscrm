@@ -1,16 +1,18 @@
-import { useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router';
-import { Button } from '@/components/ui/button';
 import {
-	Card,
-	CardContent,
-	CardHeader,
-	CardTitle,
-} from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+	AlertTriangle,
+	CheckCircle2,
+	Circle,
+	Clock,
+	ExternalLink,
+	Loader2,
+	Save,
+	Trash2,
+} from 'lucide-react';
+import { useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router';
+import { toast } from 'sonner';
+import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
 import { Badge } from '@/components/ui/badge';
-import { Label } from '@/components/ui/label';
 import {
 	Breadcrumb,
 	BreadcrumbItem,
@@ -19,6 +21,10 @@ import {
 	BreadcrumbPage,
 	BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
 	Select,
 	SelectContent,
@@ -26,34 +32,22 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select';
-import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
+import { Textarea } from '@/components/ui/textarea';
 import {
+	formatEntityType,
+	formatTaskPriority,
+	formatTaskStatus,
+	getTaskPriorityVariant,
+	getTaskStatusVariant,
+	TASK_PRIORITIES,
+	type TaskPriority,
+	type TaskStatus,
+	useArchiveTaskMutation,
 	useTaskQuery,
 	useUpdateTaskMutation,
 	useUpdateTaskStatusMutation,
-	useArchiveTaskMutation,
-	formatTaskStatus,
-	formatTaskPriority,
-	formatEntityType,
-	getTaskStatusVariant,
-	getTaskPriorityVariant,
-	TASK_STATUSES,
-	TASK_PRIORITIES,
-	type TaskStatus,
-	type TaskPriority,
 } from '@/hooks/use-tasks';
 import { useTeamQuery } from '@/hooks/use-team';
-import {
-	Save,
-	Loader2,
-	Trash2,
-	CheckCircle2,
-	Circle,
-	Clock,
-	AlertTriangle,
-	ExternalLink,
-} from 'lucide-react';
-import { toast } from 'sonner';
 
 const NONE_VALUE = '_none';
 
@@ -138,7 +132,9 @@ export function TaskDetailPage() {
 			<div className="text-center py-12">
 				<p className="text-destructive">{error?.message || 'Task not found'}</p>
 				<Link to="/app/tasks">
-					<Button variant="link" className="mt-2">Back to Tasks</Button>
+					<Button variant="link" className="mt-2">
+						Back to Tasks
+					</Button>
 				</Link>
 			</div>
 		);
@@ -147,16 +143,19 @@ export function TaskDetailPage() {
 	const isOverdue = task.dueDate && task.status !== 'done' && new Date(task.dueDate) < new Date();
 	const isDone = task.status === 'done';
 
-	const entityLink = task.entityType && task.entityId
-		? task.entityType === 'job' ? `/app/jobs/${task.entityId}`
-		: task.entityType === 'quote' ? `/app/quotes/${task.entityId}`
-		: task.entityType === 'customer' ? `/app/customers/${task.entityId}`
-		: null
-		: null;
+	const entityLink =
+		task.entityType && task.entityId
+			? task.entityType === 'job'
+				? `/app/jobs/${task.entityId}`
+				: task.entityType === 'quote'
+					? `/app/quotes/${task.entityId}`
+					: task.entityType === 'customer'
+						? `/app/customers/${task.entityId}`
+						: null
+			: null;
 
-	const entityDisplayName = task.entityType && task.entityId
-		? task.entityName || task.entityId.slice(0, 8)
-		: null;
+	const entityDisplayName =
+		task.entityType && task.entityId ? task.entityName || task.entityId.slice(0, 8) : null;
 
 	return (
 		<div className="space-y-6">
@@ -199,12 +198,12 @@ export function TaskDetailPage() {
 						Completed{' '}
 						{task.completedAt
 							? new Date(task.completedAt).toLocaleDateString('en-GB', {
-								day: 'numeric',
-								month: 'short',
-								year: 'numeric',
-								hour: '2-digit',
-								minute: '2-digit',
-							})
+									day: 'numeric',
+									month: 'short',
+									year: 'numeric',
+									hour: '2-digit',
+									minute: '2-digit',
+								})
 							: ''}
 					</span>
 				</div>
@@ -214,7 +213,11 @@ export function TaskDetailPage() {
 			<div className="flex items-start justify-between gap-4">
 				<div>
 					<div className="flex items-center gap-2 mb-1">
-						<h1 className={`text-2xl font-bold ${isDone ? 'text-muted-foreground line-through' : ''}`}>{task.title}</h1>
+						<h1
+							className={`text-2xl font-bold ${isDone ? 'text-muted-foreground line-through' : ''}`}
+						>
+							{task.title}
+						</h1>
 						<Badge variant={getTaskPriorityVariant(task.priority as TaskPriority)}>
 							{formatTaskPriority(task.priority as TaskPriority)}
 						</Badge>
@@ -222,9 +225,7 @@ export function TaskDetailPage() {
 							{formatTaskStatus(task.status as TaskStatus)}
 						</Badge>
 					</div>
-					{task.description && (
-						<p className="text-muted-foreground">{task.description}</p>
-					)}
+					{task.description && <p className="text-muted-foreground">{task.description}</p>}
 				</div>
 				<div className="flex gap-2">
 					{task.status !== 'done' && (
@@ -277,10 +278,7 @@ export function TaskDetailPage() {
 								<>
 									<div>
 										<Label>Title</Label>
-										<Input
-											value={editTitle}
-											onChange={(e) => setEditTitle(e.target.value)}
-										/>
+										<Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
 									</div>
 									<div>
 										<Label>Description</Label>
@@ -293,27 +291,37 @@ export function TaskDetailPage() {
 									<div className="grid grid-cols-2 gap-4">
 										<div>
 											<Label>Priority</Label>
-											<Select value={editPriority} onValueChange={(v) => setEditPriority(v as TaskPriority)}>
+											<Select
+												value={editPriority}
+												onValueChange={(v) => setEditPriority(v as TaskPriority)}
+											>
 												<SelectTrigger>
 													<SelectValue />
 												</SelectTrigger>
 												<SelectContent>
 													{TASK_PRIORITIES.map((p) => (
-														<SelectItem key={p} value={p}>{formatTaskPriority(p)}</SelectItem>
+														<SelectItem key={p} value={p}>
+															{formatTaskPriority(p)}
+														</SelectItem>
 													))}
 												</SelectContent>
 											</Select>
 										</div>
 										<div>
 											<Label>Assignee</Label>
-											<Select value={editAssigneeId || NONE_VALUE} onValueChange={(v) => setEditAssigneeId(v === NONE_VALUE ? '' : v)}>
+											<Select
+												value={editAssigneeId || NONE_VALUE}
+												onValueChange={(v) => setEditAssigneeId(v === NONE_VALUE ? '' : v)}
+											>
 												<SelectTrigger>
 													<SelectValue placeholder="Unassigned" />
 												</SelectTrigger>
 												<SelectContent>
 													<SelectItem value={NONE_VALUE}>Unassigned</SelectItem>
 													{teamMembers?.map((m) => (
-														<SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+														<SelectItem key={m.id} value={m.id}>
+															{m.name}
+														</SelectItem>
 													))}
 												</SelectContent>
 											</Select>
@@ -328,17 +336,13 @@ export function TaskDetailPage() {
 										/>
 									</div>
 								</>
+							) : task.description ? (
+								<div>
+									<Label className="text-muted-foreground">Description</Label>
+									<p className="mt-1 whitespace-pre-wrap">{task.description}</p>
+								</div>
 							) : (
-								<>
-									{task.description ? (
-										<div>
-											<Label className="text-muted-foreground">Description</Label>
-											<p className="mt-1 whitespace-pre-wrap">{task.description}</p>
-										</div>
-									) : (
-										<p className="text-muted-foreground text-sm">No description</p>
-									)}
-								</>
+								<p className="text-muted-foreground text-sm">No description</p>
 							)}
 						</CardContent>
 					</Card>
@@ -357,21 +361,26 @@ export function TaskDetailPage() {
 								<p className="mt-1 text-sm">
 									{task.dueDate
 										? new Date(task.dueDate).toLocaleDateString('en-GB', {
-											weekday: 'short',
-											day: 'numeric',
-											month: 'short',
-											year: 'numeric',
-										})
+												weekday: 'short',
+												day: 'numeric',
+												month: 'short',
+												year: 'numeric',
+											})
 										: 'No due date'}
 								</p>
 							</div>
 
 							{task.entityType && task.entityId && (
 								<div>
-									<Label className="text-muted-foreground text-xs">Linked {formatEntityType(task.entityType)}</Label>
+									<Label className="text-muted-foreground text-xs">
+										Linked {formatEntityType(task.entityType)}
+									</Label>
 									<div className="mt-1">
 										{entityLink ? (
-											<Link to={entityLink} className="text-sm font-medium text-primary hover:underline inline-flex items-center gap-1">
+											<Link
+												to={entityLink}
+												className="text-sm font-medium text-primary hover:underline inline-flex items-center gap-1"
+											>
 												<ExternalLink className="h-3 w-3" />
 												{entityDisplayName}
 											</Link>

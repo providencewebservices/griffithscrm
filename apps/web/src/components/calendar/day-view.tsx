@@ -1,18 +1,18 @@
-import { useEffect, useState, useRef, useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
-import {
-	getEventsForDay,
-	isToday,
-	format,
-	formatHour,
-	calculateEventPosition,
-	calculateOverlapColumns,
-	CALENDAR_HOURS,
-	BUSINESS_HOURS_START,
-	BUSINESS_HOURS_END,
-} from './calendar-utils';
 import { CalendarEventBlock } from './calendar-event-block';
 import { CalendarEventPill } from './calendar-event-pill';
+import {
+	BUSINESS_HOURS_END,
+	BUSINESS_HOURS_START,
+	CALENDAR_HOURS,
+	calculateEventPosition,
+	calculateOverlapColumns,
+	format,
+	formatHour,
+	getEventsForDay,
+	isToday,
+} from './calendar-utils';
 import type { CalendarEvent } from './types';
 
 const HOUR_HEIGHT = 64;
@@ -43,10 +43,7 @@ export function DayView({
 		};
 	}, [events, currentDate]);
 
-	const overlapColumns = useMemo(
-		() => calculateOverlapColumns(timedEvents),
-		[timedEvents]
-	);
+	const overlapColumns = useMemo(() => calculateOverlapColumns(timedEvents), [timedEvents]);
 
 	// Auto-scroll to current time on mount/date change
 	useEffect(() => {
@@ -55,7 +52,7 @@ export function DayView({
 			const scrollTarget = Math.max(0, (currentHour - 1) * HOUR_HEIGHT);
 			scrollRef.current.scrollTop = scrollTarget;
 		}
-	}, [currentDate]);
+	}, []);
 
 	return (
 		<div className="flex-1 overflow-auto" ref={scrollRef}>
@@ -69,15 +66,13 @@ export function DayView({
 								className={cn(
 									'text-2xl font-bold',
 									today &&
-										'bg-primary text-primary-foreground rounded-full w-10 h-10 flex items-center justify-center text-lg'
+										'bg-primary text-primary-foreground rounded-full w-10 h-10 flex items-center justify-center text-lg',
 								)}
 							>
 								{format(currentDate, 'd')}
 							</div>
 							<div>
-								<div className="text-base font-medium">
-									{format(currentDate, 'EEEE')}
-								</div>
+								<div className="text-base font-medium">{format(currentDate, 'EEEE')}</div>
 								<div className="text-sm text-muted-foreground">
 									{format(currentDate, 'MMMM yyyy')}
 								</div>
@@ -90,9 +85,7 @@ export function DayView({
 						<div className="border-t bg-muted/30">
 							<div className="flex">
 								<div className="w-[60px] flex-shrink-0 border-r flex items-center justify-end pr-2">
-									<span className="text-[11px] text-muted-foreground font-medium">
-										ALL DAY
-									</span>
+									<span className="text-[11px] text-muted-foreground font-medium">ALL DAY</span>
 								</div>
 								<div className="flex-1 p-2 space-y-1">
 									{allDayEvents.map((event) => (
@@ -132,21 +125,17 @@ export function DayView({
 					<div className="flex-1 relative">
 						{/* Hour grid cells (click targets + visual dividers) */}
 						{CALENDAR_HOURS.map((hour) => {
-							const isOffHours =
-								hour < BUSINESS_HOURS_START ||
-								hour >= BUSINESS_HOURS_END;
+							const isOffHours = hour < BUSINESS_HOURS_START || hour >= BUSINESS_HOURS_END;
 							return (
 								<div
 									key={hour}
 									className={cn(
 										'border-b border-border/50 transition-colors cursor-pointer hover:bg-muted/30',
 										isOffHours && 'bg-muted/40',
-										today && !isOffHours && 'bg-primary/5'
+										today && !isOffHours && 'bg-primary/5',
 									)}
 									style={{ height: HOUR_HEIGHT }}
-									onClick={() =>
-										onTimeSlotClick(currentDate, hour)
-									}
+									onClick={() => onTimeSlotClick(currentDate, hour)}
 								/>
 							);
 						})}
@@ -154,8 +143,7 @@ export function DayView({
 						{/* Events overlay */}
 						<div className="absolute inset-0 pointer-events-none">
 							{timedEvents.map((event) => {
-								const { top, height } =
-									calculateEventPosition(event, HOUR_HEIGHT);
+								const { top, height } = calculateEventPosition(event, HOUR_HEIGHT);
 								const cols = overlapColumns.get(event.id) || {
 									column: 0,
 									totalColumns: 1,
@@ -199,10 +187,7 @@ function CurrentTimeIndicator() {
 	const top = (now.getHours() + now.getMinutes() / 60) * HOUR_HEIGHT;
 
 	return (
-		<div
-			className="absolute left-0 right-0 z-20 pointer-events-none"
-			style={{ top: `${top}px` }}
-		>
+		<div className="absolute left-0 right-0 z-20 pointer-events-none" style={{ top: `${top}px` }}>
 			<div className="flex items-center">
 				<div className="w-2.5 h-2.5 rounded-full bg-red-500 -ml-1" />
 				<div className="flex-1 h-0.5 bg-red-500" />

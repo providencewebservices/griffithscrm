@@ -1,22 +1,22 @@
-import { useState, useEffect } from 'react';
+import { QUOTE_STATUSES } from '@griffiths-crm/shared/db/schema';
+import {
+	Building2,
+	Calendar,
+	ChevronLeft,
+	ChevronRight,
+	Layers,
+	LayoutGrid,
+	List,
+	Plus,
+	Search,
+	User,
+} from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
-import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import {
-	Card,
-	CardContent,
-	CardHeader,
-	CardTitle,
-} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import {
 	Select,
 	SelectContent,
@@ -25,19 +25,25 @@ import {
 	SelectValue,
 } from '@/components/ui/select';
 import {
-	useQuotesQuery,
-	formatQuoteStatus,
-	getQuoteStatusVariant,
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from '@/components/ui/table';
+import {
 	formatPriceRange,
 	formatQuoteNumberWithOptions,
+	formatQuoteStatus,
+	getQuoteStatusVariant,
 	QUOTE_TYPE_LABELS,
 	QUOTE_TYPES,
+	type QuotePackageListItem,
 	type QuoteStatus,
 	type QuoteType,
-	type QuotePackageListItem,
+	useQuotesQuery,
 } from '@/hooks/use-quotes';
-import { QUOTE_STATUSES } from '@griffiths-crm/shared/db/schema';
-import { Search, Plus, List, LayoutGrid, Calendar, User, Layers, Building2, ChevronLeft, ChevronRight } from 'lucide-react';
 
 type DisplayMode = 'table' | 'cards';
 
@@ -47,7 +53,7 @@ export function QuotesPage() {
 
 	const [searchQuery, setSearchQuery] = useState('');
 	const [statusFilter, setStatusFilter] = useState<QuoteStatus | 'all'>(
-		initialStatus && QUOTE_STATUSES.includes(initialStatus) ? initialStatus : 'all'
+		initialStatus && QUOTE_STATUSES.includes(initialStatus) ? initialStatus : 'all',
 	);
 	const [typeFilter, setTypeFilter] = useState<QuoteType | 'all'>('all');
 	const [displayMode, setDisplayMode] = useState<DisplayMode>('cards');
@@ -66,7 +72,7 @@ export function QuotesPage() {
 	// Reset page when filters change
 	useEffect(() => {
 		setPage(1);
-	}, [debouncedSearch, statusFilter, typeFilter]);
+	}, []);
 
 	const { data, isLoading, error } = useQuotesQuery({
 		search: debouncedSearch || undefined,
@@ -97,7 +103,9 @@ export function QuotesPage() {
 	};
 
 	// Get the bill-to entity name and type (customer or funeral director)
-	const getBillToInfo = (pkg: QuotePackageListItem): { name: string | null; type: 'customer' | 'funeral_director' | null } => {
+	const getBillToInfo = (
+		pkg: QuotePackageListItem,
+	): { name: string | null; type: 'customer' | 'funeral_director' | null } => {
 		// If payerType is funeral_director, show FD name
 		if (pkg.payerType === 'funeral_director' && pkg.funeralDirectorBusinessName) {
 			const name = pkg.funeralDirectorTradingName || pkg.funeralDirectorBusinessName;
@@ -125,9 +133,7 @@ export function QuotesPage() {
 				<div className="mb-6">
 					<h2 className="text-2xl font-bold">Quotes</h2>
 				</div>
-				<div className="text-destructive">
-					Error loading quotes: {error.message}
-				</div>
+				<div className="text-destructive">Error loading quotes: {error.message}</div>
 			</div>
 		);
 	}
@@ -261,9 +267,7 @@ export function QuotesPage() {
 									</TableCell>
 									<TableCell>
 										{pkg.quoteType && pkg.quoteType !== 'new_memorial' ? (
-											<Badge variant="outline">
-												{QUOTE_TYPE_LABELS[pkg.quoteType]}
-											</Badge>
+											<Badge variant="outline">{QUOTE_TYPE_LABELS[pkg.quoteType]}</Badge>
 										) : (
 											<span className="text-muted-foreground text-sm">New Memorial</span>
 										)}
@@ -308,8 +312,8 @@ export function QuotesPage() {
 				<div className="flex items-center justify-between mt-4">
 					<div className="text-sm text-muted-foreground">
 						Showing {(pagination.page - 1) * pagination.limit + 1} to{' '}
-						{Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
-						{pagination.total} quotes
+						{Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total}{' '}
+						quotes
 					</div>
 					<div className="flex items-center gap-2">
 						<Select
@@ -363,7 +367,10 @@ function QuoteCard({
 }: {
 	pkg: QuotePackageListItem;
 	formatDate: (dateString: string) => string;
-	getBillToInfo: (pkg: QuotePackageListItem) => { name: string | null; type: 'customer' | 'funeral_director' | null };
+	getBillToInfo: (pkg: QuotePackageListItem) => {
+		name: string | null;
+		type: 'customer' | 'funeral_director' | null;
+	};
 }) {
 	const billTo = getBillToInfo(pkg);
 	return (
@@ -374,9 +381,7 @@ function QuoteCard({
 						<div className="space-y-1">
 							<CardTitle className="text-base flex items-center gap-2">
 								{formatQuoteNumberWithOptions(pkg.firstQuoteNumber, pkg.optionCount)}
-								{pkg.optionCount > 1 && (
-									<Layers className="h-3.5 w-3.5 text-muted-foreground" />
-								)}
+								{pkg.optionCount > 1 && <Layers className="h-3.5 w-3.5 text-muted-foreground" />}
 							</CardTitle>
 							<div className="flex items-center gap-1.5 text-base font-medium">
 								{billTo.type === 'funeral_director' ? (
@@ -409,9 +414,7 @@ function QuoteCard({
 					</div>
 
 					{pkg.optionCount > 1 && (
-						<div className="text-sm text-muted-foreground">
-							{pkg.optionCount} pricing options
-						</div>
+						<div className="text-sm text-muted-foreground">{pkg.optionCount} pricing options</div>
 					)}
 
 					<div className="flex items-center gap-1.5 text-sm text-muted-foreground">

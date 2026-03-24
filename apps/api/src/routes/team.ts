@@ -1,10 +1,10 @@
-import { Hono } from 'hono';
-import { zValidator } from '@hono/zod-validator';
-import { z } from 'zod';
-import { eq, and } from 'drizzle-orm';
-import { requireAuth, requireTenant } from '../middleware/auth';
-import { auth, db } from '../lib/auth';
 import { users } from '@griffiths-crm/shared/db/schema';
+import { zValidator } from '@hono/zod-validator';
+import { and, eq } from 'drizzle-orm';
+import { Hono } from 'hono';
+import { z } from 'zod';
+import { auth, db } from '../lib/auth';
+import { requireAuth, requireTenant } from '../middleware/auth';
 
 // Validation schemas
 const inviteUserSchema = z.object({
@@ -80,11 +80,7 @@ const teamRoutes = new Hono()
 		const { email, name } = c.req.valid('json');
 
 		// Check if email already exists
-		const existingUser = await db
-			.select()
-			.from(users)
-			.where(eq(users.email, email))
-			.limit(1);
+		const existingUser = await db.select().from(users).where(eq(users.email, email)).limit(1);
 
 		if (existingUser.length > 0) {
 			return c.json({ error: 'User with this email already exists' }, 400);
@@ -109,10 +105,7 @@ const teamRoutes = new Hono()
 
 			// Update the user with tenantId
 			if (result.user) {
-				await db
-					.update(users)
-					.set({ tenantId })
-					.where(eq(users.id, result.user.id));
+				await db.update(users).set({ tenantId }).where(eq(users.id, result.user.id));
 			}
 
 			// Trigger password reset email so user can set their own password
@@ -133,7 +126,7 @@ const teamRoutes = new Hono()
 					},
 					message: 'Invitation sent. User will receive an email to set their password.',
 				},
-				201
+				201,
 			);
 		} catch (error) {
 			console.error('Error inviting user:', error);

@@ -1,10 +1,10 @@
-import { Hono } from 'hono';
+import { letteringCosts, letteringTechniques } from '@griffiths-crm/shared/db/schema';
 import { zValidator } from '@hono/zod-validator';
+import { and, asc, count, countDistinct, eq, inArray, max, min } from 'drizzle-orm';
+import { Hono } from 'hono';
 import { z } from 'zod';
-import { eq, and, asc, count, min, max, countDistinct, inArray } from 'drizzle-orm';
-import { requireAuth, requireTenant } from '../middleware/auth';
 import { db } from '../lib/auth';
-import { letteringTechniques, letteringCosts } from '@griffiths-crm/shared/db/schema';
+import { requireAuth, requireTenant } from '../middleware/auth';
 
 // Validation schemas
 const createSchema = z.object({
@@ -35,26 +35,32 @@ const letteringTechniquesRoutes = new Hono()
 
 		// Get cost summary per technique (count, price range, color count)
 		const techniqueIds = techniques.map((t) => t.id);
-		const costSummaries = techniqueIds.length > 0
-			? await db
-				.select({
-					techniqueId: letteringCosts.techniqueId,
-					count: count(),
-					priceMin: min(letteringCosts.pricePerLetter),
-					priceMax: max(letteringCosts.pricePerLetter),
-					colorCount: countDistinct(letteringCosts.colorId),
-				})
-				.from(letteringCosts)
-				.where(inArray(letteringCosts.techniqueId, techniqueIds))
-				.groupBy(letteringCosts.techniqueId)
-			: [];
+		const costSummaries =
+			techniqueIds.length > 0
+				? await db
+						.select({
+							techniqueId: letteringCosts.techniqueId,
+							count: count(),
+							priceMin: min(letteringCosts.pricePerLetter),
+							priceMax: max(letteringCosts.pricePerLetter),
+							colorCount: countDistinct(letteringCosts.colorId),
+						})
+						.from(letteringCosts)
+						.where(inArray(letteringCosts.techniqueId, techniqueIds))
+						.groupBy(letteringCosts.techniqueId)
+				: [];
 
-		const summaryMap = new Map(costSummaries.map((cs) => [cs.techniqueId, {
-			costCount: Number(cs.count),
-			priceMin: cs.priceMin,
-			priceMax: cs.priceMax,
-			colorCount: Number(cs.colorCount),
-		}]));
+		const summaryMap = new Map(
+			costSummaries.map((cs) => [
+				cs.techniqueId,
+				{
+					costCount: Number(cs.count),
+					priceMin: cs.priceMin,
+					priceMax: cs.priceMax,
+					colorCount: Number(cs.colorCount),
+				},
+			]),
+		);
 
 		const techniquesWithCounts = techniques.map((t) => ({
 			...t,

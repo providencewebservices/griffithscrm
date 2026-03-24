@@ -1,22 +1,23 @@
+import { createDb } from '@griffiths-crm/shared/db';
+import { users } from '@griffiths-crm/shared/db/schema';
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { admin } from 'better-auth/plugins';
 import { eq } from 'drizzle-orm';
-import { createDb } from '@griffiths-crm/shared/db';
-import { users } from '@griffiths-crm/shared/db/schema';
 import { sendEmail } from './email';
 
-const db = createDb(process.env.DATABASE_URL!);
+const databaseUrl = process.env.DATABASE_URL;
+if (!databaseUrl) {
+	throw new Error('DATABASE_URL environment variable is required');
+}
+const db = createDb(databaseUrl);
 
 export const auth = betterAuth({
 	database: drizzleAdapter(db, {
 		provider: 'pg',
 		usePlural: true,
 	}),
-	trustedOrigins: [
-		'http://localhost:5173',
-		process.env.CORS_ORIGIN,
-	].filter(Boolean) as string[],
+	trustedOrigins: ['http://localhost:5173', process.env.CORS_ORIGIN].filter(Boolean) as string[],
 	socialProviders: {
 		google: {
 			clientId: process.env.GOOGLE_CLIENT_ID || '',
@@ -56,10 +57,7 @@ export const auth = betterAuth({
 		},
 		onPasswordReset: async ({ user }) => {
 			// Mark email as verified since they clicked the reset link
-			await db
-				.update(users)
-				.set({ emailVerified: true })
-				.where(eq(users.id, user.id));
+			await db.update(users).set({ emailVerified: true }).where(eq(users.id, user.id));
 		},
 	},
 	user: {

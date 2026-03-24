@@ -1,7 +1,7 @@
-import { useSearchParams } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
+import { Loader2, XCircle } from 'lucide-react';
+import { useSearchParams } from 'react-router';
 import { Card, CardContent } from '@/components/ui/card';
-import { XCircle, Loader2 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -36,9 +36,7 @@ export function PaymentFailurePage() {
 						<XCircle className="h-8 w-8 text-red-600" />
 					</div>
 					<h2 className="text-2xl font-semibold">Payment Failed</h2>
-					<p className="text-muted-foreground">
-						Your payment could not be processed.
-					</p>
+					<p className="text-muted-foreground">Your payment could not be processed.</p>
 
 					{isLoading && (
 						<div className="flex items-center justify-center gap-2 text-muted-foreground">
@@ -54,7 +52,8 @@ export function PaymentFailurePage() {
 					)}
 
 					<p className="text-sm text-muted-foreground">
-						Please contact us if you need assistance, or try again using the payment link you were sent.
+						Please contact us if you need assistance, or try again using the payment link you were
+						sent.
 					</p>
 				</CardContent>
 			</Card>

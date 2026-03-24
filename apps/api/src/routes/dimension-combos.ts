@@ -1,15 +1,15 @@
-import { Hono } from 'hono';
-import { zValidator } from '@hono/zod-validator';
-import { z } from 'zod';
-import { eq, and, asc } from 'drizzle-orm';
-import { requireAuth, requireTenant } from '../middleware/auth';
-import { db } from '../lib/auth';
 import {
-	products,
-	productComponents,
 	dimensionCombos,
 	dimensionComboValues,
+	productComponents,
+	products,
 } from '@griffiths-crm/shared/db/schema';
+import { zValidator } from '@hono/zod-validator';
+import { and, asc, eq } from 'drizzle-orm';
+import { Hono } from 'hono';
+import { z } from 'zod';
+import { db } from '../lib/auth';
+import { requireAuth, requireTenant } from '../middleware/auth';
 
 // Validation schemas
 const dimensionValueSchema = z.object({
@@ -119,13 +119,13 @@ const dimensionCombosRoutes = new Hono()
 					.from(dimensionComboValues)
 					.innerJoin(
 						productComponents,
-						eq(productComponents.id, dimensionComboValues.productComponentId)
+						eq(productComponents.id, dimensionComboValues.productComponentId),
 					)
 					.where(eq(dimensionComboValues.comboId, combo.id))
 					.orderBy(asc(productComponents.sortOrder));
 
 				return { ...combo, values };
-			})
+			}),
 		);
 
 		return c.json({ combos: combosWithValues });
@@ -178,10 +178,7 @@ const dimensionCombosRoutes = new Hono()
 		const componentIds = new Set(components.map((c) => c.id));
 		for (const value of data.values) {
 			if (!componentIds.has(value.productComponentId)) {
-				return c.json(
-					{ error: `Invalid component ID: ${value.productComponentId}` },
-					400
-				);
+				return c.json({ error: `Invalid component ID: ${value.productComponentId}` }, 400);
 			}
 		}
 
@@ -193,7 +190,7 @@ const dimensionCombosRoutes = new Hono()
 					{
 						error: `Missing dimensions for component: ${component.name || component.componentType}`,
 					},
-					400
+					400,
 				);
 			}
 		}
@@ -210,7 +207,7 @@ const dimensionCombosRoutes = new Hono()
 
 		// Create combo
 		const comboId = crypto.randomUUID();
-		const [created] = await db
+		const [_created] = await db
 			.insert(dimensionCombos)
 			.values({
 				id: comboId,
@@ -283,10 +280,7 @@ const dimensionCombosRoutes = new Hono()
 			const componentIds = new Set(components.map((c) => c.id));
 			for (const value of data.values) {
 				if (!componentIds.has(value.productComponentId)) {
-					return c.json(
-						{ error: `Invalid component ID: ${value.productComponentId}` },
-						400
-					);
+					return c.json({ error: `Invalid component ID: ${value.productComponentId}` }, 400);
 				}
 			}
 

@@ -1,16 +1,31 @@
-import { useState, useMemo } from 'react';
-import { Link, useNavigate } from 'react-router';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
 import {
-	Card,
-	CardContent,
-	CardHeader,
-	CardTitle,
-} from '@/components/ui/card';
+	AlertCircle,
+	Calendar,
+	CheckCircle2,
+	Circle,
+	Clock,
+	LayoutGrid,
+	List,
+	Plus,
+	Search,
+	User,
+} from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router';
+import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+	Dialog,
+	DialogContent,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from '@/components/ui/dialog';
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import { Progress } from '@/components/ui/progress';
 import {
 	Select,
 	SelectContent,
@@ -18,6 +33,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
 	Table,
 	TableBody,
@@ -26,56 +42,35 @@ import {
 	TableHeader,
 	TableRow,
 } from '@/components/ui/table';
-import {
-	Dialog,
-	DialogContent,
-	DialogHeader,
-	DialogTitle,
-	DialogFooter,
-} from '@/components/ui/dialog';
-import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
-import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Progress } from '@/components/ui/progress';
+import { Textarea } from '@/components/ui/textarea';
 import {
-	useTasksQuery,
-	useTaskSummaryQuery,
-	useCreateTaskMutation,
-	useUpdateTaskStatusMutation,
-	formatTaskStatus,
 	formatTaskPriority,
-	getTaskStatusVariant,
+	formatTaskStatus,
 	getTaskPriorityVariant,
-	TASK_STATUSES,
+	getTaskStatusVariant,
 	TASK_PRIORITIES,
-	type TaskStatus,
-	type TaskPriority,
+	TASK_STATUSES,
 	type TaskListItem,
+	type TaskPriority,
+	type TaskStatus,
+	useCreateTaskMutation,
+	useTaskSummaryQuery,
+	useTasksQuery,
+	useUpdateTaskStatusMutation,
 } from '@/hooks/use-tasks';
+import { useTeamQuery } from '@/hooks/use-team';
 import {
-	useWorksheetsQuery,
-	useCreateWorksheetMutation,
 	formatWorksheetStatus,
 	getWorksheetStatusVariant,
+	useCreateWorksheetMutation,
+	useWorksheetsQuery,
 	WORKSHEET_STATUSES,
-	type WorksheetStatus,
 	type WorksheetListItem,
+	type WorksheetStatus,
 } from '@/hooks/use-worksheets';
-import { useTeamQuery } from '@/hooks/use-team';
 import { useSession } from '@/lib/auth';
-import {
-	Search,
-	Plus,
-	List,
-	LayoutGrid,
-	Calendar,
-	User,
-	CheckCircle2,
-	Circle,
-	Clock,
-	AlertCircle,
-} from 'lucide-react';
-import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 const ALL_VALUE = '_all';
 const NONE_VALUE = '_none';
@@ -177,14 +172,14 @@ function TasksTab() {
 					</SelectTrigger>
 					<SelectContent>
 						<SelectItem value={ALL_VALUE}>All assignees</SelectItem>
-						{session?.data?.user && (
-							<SelectItem value={session.data.user.id}>Me</SelectItem>
-						)}
-						{teamMembers?.filter(m => m.id !== session?.data?.user?.id).map((member) => (
-							<SelectItem key={member.id} value={member.id}>
-								{member.name}
-							</SelectItem>
-						))}
+						{session?.data?.user && <SelectItem value={session.data.user.id}>Me</SelectItem>}
+						{teamMembers
+							?.filter((m) => m.id !== session?.data?.user?.id)
+							.map((member) => (
+								<SelectItem key={member.id} value={member.id}>
+									{member.name}
+								</SelectItem>
+							))}
 					</SelectContent>
 				</Select>
 				<div className="flex items-center gap-2">
@@ -233,8 +228,8 @@ function TasksTab() {
 			)}
 
 			{/* Loading */}
-			{isLoading && (
-				displayMode === 'cards' ? (
+			{isLoading &&
+				(displayMode === 'cards' ? (
 					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 						{Array.from({ length: 6 }).map((_, i) => (
 							<Card key={i}>
@@ -273,20 +268,33 @@ function TasksTab() {
 							<TableBody>
 								{Array.from({ length: 5 }).map((_, i) => (
 									<TableRow key={i}>
-										<TableCell><Skeleton className="h-5 w-5 rounded-full" /></TableCell>
-										<TableCell><Skeleton className="h-4 w-40" /></TableCell>
-										<TableCell><Skeleton className="h-5 w-16 rounded-full" /></TableCell>
-										<TableCell><Skeleton className="h-4 w-20" /></TableCell>
-										<TableCell><Skeleton className="h-4 w-16" /></TableCell>
-										<TableCell><Skeleton className="h-5 w-20 rounded-full" /></TableCell>
-										<TableCell><Skeleton className="h-8 w-14 rounded-md" /></TableCell>
+										<TableCell>
+											<Skeleton className="h-5 w-5 rounded-full" />
+										</TableCell>
+										<TableCell>
+											<Skeleton className="h-4 w-40" />
+										</TableCell>
+										<TableCell>
+											<Skeleton className="h-5 w-16 rounded-full" />
+										</TableCell>
+										<TableCell>
+											<Skeleton className="h-4 w-20" />
+										</TableCell>
+										<TableCell>
+											<Skeleton className="h-4 w-16" />
+										</TableCell>
+										<TableCell>
+											<Skeleton className="h-5 w-20 rounded-full" />
+										</TableCell>
+										<TableCell>
+											<Skeleton className="h-8 w-14 rounded-md" />
+										</TableCell>
 									</TableRow>
 								))}
 							</TableBody>
 						</Table>
 					</div>
-				)
-			)}
+				))}
 
 			{/* Empty state */}
 			{!isLoading && tasksList?.length === 0 && (
@@ -303,8 +311,10 @@ function TasksTab() {
 			)}
 
 			{/* Tasks list */}
-			{!isLoading && tasksList && tasksList.length > 0 && (
-				displayMode === 'table' ? (
+			{!isLoading &&
+				tasksList &&
+				tasksList.length > 0 &&
+				(displayMode === 'table' ? (
 					<TasksTable tasks={tasksList} />
 				) : (
 					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -312,14 +322,10 @@ function TasksTab() {
 							<TaskCard key={task.id} task={task} />
 						))}
 					</div>
-				)
-			)}
+				))}
 
 			{showCreateDialog && (
-				<CreateTaskDialog
-					open={showCreateDialog}
-					onClose={() => setShowCreateDialog(false)}
-				/>
+				<CreateTaskDialog open={showCreateDialog} onClose={() => setShowCreateDialog(false)} />
 			)}
 		</div>
 	);
@@ -360,10 +366,12 @@ function TasksTable({ tasks }: { tasks: TaskListItem[] }) {
 						<TableRow key={task.id}>
 							<TableCell>
 								<button
-									onClick={() => updateStatus.mutate({
-										id: task.id,
-										status: task.status === 'done' ? 'todo' : 'done',
-									})}
+									onClick={() =>
+										updateStatus.mutate({
+											id: task.id,
+											status: task.status === 'done' ? 'todo' : 'done',
+										})
+									}
 									className="text-muted-foreground hover:text-foreground"
 								>
 									{task.status === 'done' ? (
@@ -373,7 +381,9 @@ function TasksTable({ tasks }: { tasks: TaskListItem[] }) {
 									)}
 								</button>
 							</TableCell>
-							<TableCell className={task.status === 'done' ? 'line-through text-muted-foreground' : ''}>
+							<TableCell
+								className={task.status === 'done' ? 'line-through text-muted-foreground' : ''}
+							>
 								<Link to={`/app/tasks/${task.id}`} className="hover:underline">
 									{task.title}
 								</Link>
@@ -395,7 +405,9 @@ function TasksTable({ tasks }: { tasks: TaskListItem[] }) {
 							</TableCell>
 							<TableCell>
 								<Link to={`/app/tasks/${task.id}`}>
-									<Button variant="ghost" size="sm">View</Button>
+									<Button variant="ghost" size="sm">
+										View
+									</Button>
 								</Link>
 							</TableCell>
 						</TableRow>
@@ -423,11 +435,13 @@ function TaskCard({ task }: { task: TaskListItem }) {
 
 	return (
 		<Link to={`/app/tasks/${task.id}`} className="block">
-			<Card className={cn(
-				'hover:shadow-md transition-shadow',
-				(isOverdue || isUrgent) && 'border-l-4 border-l-red-500',
-				isHigh && !isOverdue && !isUrgent && 'border-l-4 border-l-amber-500',
-			)}>
+			<Card
+				className={cn(
+					'hover:shadow-md transition-shadow',
+					(isOverdue || isUrgent) && 'border-l-4 border-l-red-500',
+					isHigh && !isOverdue && !isUrgent && 'border-l-4 border-l-amber-500',
+				)}
+			>
 				<CardHeader className="pb-3">
 					<div className="flex items-start justify-between gap-2">
 						<div className="flex items-start gap-2 flex-1 min-w-0">
@@ -448,11 +462,16 @@ function TaskCard({ task }: { task: TaskListItem }) {
 									<Circle className="h-5 w-5" />
 								)}
 							</button>
-							<CardTitle className={`text-base font-semibold leading-tight ${task.status === 'done' ? 'line-through text-muted-foreground' : ''}`}>
+							<CardTitle
+								className={`text-base font-semibold leading-tight ${task.status === 'done' ? 'line-through text-muted-foreground' : ''}`}
+							>
 								{task.title}
 							</CardTitle>
 						</div>
-						<Badge variant={getTaskPriorityVariant(task.priority as TaskPriority)} className="shrink-0">
+						<Badge
+							variant={getTaskPriorityVariant(task.priority as TaskPriority)}
+							className="shrink-0"
+						>
 							{formatTaskPriority(task.priority as TaskPriority)}
 						</Badge>
 					</div>
@@ -466,7 +485,9 @@ function TaskCard({ task }: { task: TaskListItem }) {
 							</div>
 						)}
 						{task.dueDate && (
-							<div className={`flex items-center gap-2 ${isOverdue ? 'text-red-600 font-medium' : ''}`}>
+							<div
+								className={`flex items-center gap-2 ${isOverdue ? 'text-red-600 font-medium' : ''}`}
+							>
 								<Calendar className="h-3.5 w-3.5" />
 								<span>{formatDate(task.dueDate)}</span>
 								{isOverdue && <span className="text-xs">Overdue</span>}
@@ -588,19 +609,15 @@ function WorksheetsTab() {
 			)}
 
 			{showCreateDialog && (
-				<CreateWorksheetDialog
-					open={showCreateDialog}
-					onClose={() => setShowCreateDialog(false)}
-				/>
+				<CreateWorksheetDialog open={showCreateDialog} onClose={() => setShowCreateDialog(false)} />
 			)}
 		</div>
 	);
 }
 
 function WorksheetCard({ worksheet }: { worksheet: WorksheetListItem }) {
-	const progress = worksheet.taskCount > 0
-		? Math.round((worksheet.taskDoneCount / worksheet.taskCount) * 100)
-		: 0;
+	const progress =
+		worksheet.taskCount > 0 ? Math.round((worksheet.taskDoneCount / worksheet.taskCount) * 100) : 0;
 
 	const formatDate = (dateString: string | null) => {
 		if (!dateString) return null;
@@ -642,7 +659,9 @@ function WorksheetCard({ worksheet }: { worksheet: WorksheetListItem }) {
 						<div className="space-y-1">
 							<div className="flex justify-between text-sm">
 								<span className="text-muted-foreground">Progress</span>
-								<span className="font-medium">{worksheet.taskDoneCount} of {worksheet.taskCount}</span>
+								<span className="font-medium">
+									{worksheet.taskDoneCount} of {worksheet.taskCount}
+								</span>
 							</div>
 							<Progress value={progress} className="h-2" />
 						</div>
@@ -719,21 +738,28 @@ function CreateTaskDialog({ open, onClose }: { open: boolean; onClose: () => voi
 								</SelectTrigger>
 								<SelectContent>
 									{TASK_PRIORITIES.map((p) => (
-										<SelectItem key={p} value={p}>{formatTaskPriority(p)}</SelectItem>
+										<SelectItem key={p} value={p}>
+											{formatTaskPriority(p)}
+										</SelectItem>
 									))}
 								</SelectContent>
 							</Select>
 						</Field>
 						<Field>
 							<FieldLabel>Assignee</FieldLabel>
-							<Select value={assigneeId || NONE_VALUE} onValueChange={(v) => setAssigneeId(v === NONE_VALUE ? '' : v)}>
+							<Select
+								value={assigneeId || NONE_VALUE}
+								onValueChange={(v) => setAssigneeId(v === NONE_VALUE ? '' : v)}
+							>
 								<SelectTrigger>
 									<SelectValue placeholder="Unassigned" />
 								</SelectTrigger>
 								<SelectContent>
 									<SelectItem value={NONE_VALUE}>Unassigned</SelectItem>
 									{teamMembers?.map((m) => (
-										<SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+										<SelectItem key={m.id} value={m.id}>
+											{m.name}
+										</SelectItem>
 									))}
 								</SelectContent>
 							</Select>
@@ -741,15 +767,13 @@ function CreateTaskDialog({ open, onClose }: { open: boolean; onClose: () => voi
 					</div>
 					<Field>
 						<FieldLabel>Due Date</FieldLabel>
-						<Input
-							type="date"
-							value={dueDate}
-							onChange={(e) => setDueDate(e.target.value)}
-						/>
+						<Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
 					</Field>
 				</FieldGroup>
 				<DialogFooter>
-					<Button variant="outline" onClick={onClose}>Cancel</Button>
+					<Button variant="outline" onClick={onClose}>
+						Cancel
+					</Button>
 					<Button onClick={handleSubmit} disabled={!title.trim() || createTask.isPending}>
 						{createTask.isPending ? 'Creating...' : 'Create Task'}
 					</Button>
@@ -815,30 +839,33 @@ function CreateWorksheetDialog({ open, onClose }: { open: boolean; onClose: () =
 					<div className="grid grid-cols-2 gap-4">
 						<Field>
 							<FieldLabel>Assignee</FieldLabel>
-							<Select value={assigneeId || NONE_VALUE} onValueChange={(v) => setAssigneeId(v === NONE_VALUE ? '' : v)}>
+							<Select
+								value={assigneeId || NONE_VALUE}
+								onValueChange={(v) => setAssigneeId(v === NONE_VALUE ? '' : v)}
+							>
 								<SelectTrigger>
 									<SelectValue placeholder="Unassigned" />
 								</SelectTrigger>
 								<SelectContent>
 									<SelectItem value={NONE_VALUE}>Unassigned</SelectItem>
 									{teamMembers?.map((m) => (
-										<SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+										<SelectItem key={m.id} value={m.id}>
+											{m.name}
+										</SelectItem>
 									))}
 								</SelectContent>
 							</Select>
 						</Field>
 						<Field>
 							<FieldLabel>Date</FieldLabel>
-							<Input
-								type="date"
-								value={date}
-								onChange={(e) => setDate(e.target.value)}
-							/>
+							<Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
 						</Field>
 					</div>
 				</FieldGroup>
 				<DialogFooter>
-					<Button variant="outline" onClick={onClose}>Cancel</Button>
+					<Button variant="outline" onClick={onClose}>
+						Cancel
+					</Button>
 					<Button onClick={handleSubmit} disabled={!title.trim() || createWorksheet.isPending}>
 						{createWorksheet.isPending ? 'Creating...' : 'Create Worksheet'}
 					</Button>

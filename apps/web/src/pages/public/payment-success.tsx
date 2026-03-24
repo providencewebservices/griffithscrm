@@ -1,7 +1,7 @@
-import { useSearchParams } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
+import { CheckCircle, CreditCard, Loader2 } from 'lucide-react';
+import { useSearchParams } from 'react-router';
 import { Card, CardContent } from '@/components/ui/card';
-import { CheckCircle, Loader2, CreditCard } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -43,9 +43,7 @@ export function PaymentSuccessPage() {
 						<CheckCircle className="h-8 w-8 text-green-600" />
 					</div>
 					<h2 className="text-2xl font-semibold">Payment Successful</h2>
-					<p className="text-muted-foreground">
-						Your payment has been processed successfully.
-					</p>
+					<p className="text-muted-foreground">Your payment has been processed successfully.</p>
 
 					{isLoading && (
 						<div className="flex items-center justify-center gap-2 text-muted-foreground">

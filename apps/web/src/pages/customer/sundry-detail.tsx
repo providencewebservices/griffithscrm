@@ -1,17 +1,8 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router';
-import { Button } from '@/components/ui/button';
+import { ArrowLeft } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router';
+import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardFooter,
-	CardHeader,
-	CardTitle,
-} from '@/components/ui/card';
 import {
 	Breadcrumb,
 	BreadcrumbItem,
@@ -20,6 +11,18 @@ import {
 	BreadcrumbPage,
 	BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
+import { Button } from '@/components/ui/button';
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardFooter,
+	CardHeader,
+	CardTitle,
+} from '@/components/ui/card';
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { ImageUpload } from '@/components/ui/image-upload';
+import { Input } from '@/components/ui/input';
 import {
 	Select,
 	SelectContent,
@@ -27,17 +30,14 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select';
-import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
-import { ImageUpload } from '@/components/ui/image-upload';
-import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
+import { Textarea } from '@/components/ui/textarea';
 import {
+	useDeleteSundryMutation,
 	useSundryQuery,
 	useUpdateSundryMutation,
-	useDeleteSundryMutation,
 } from '@/hooks/use-sundries';
 import { useSuppliersQuery } from '@/hooks/use-suppliers';
 import { useSignedUrls } from '@/hooks/use-uploads';
-import { ArrowLeft } from 'lucide-react';
 
 export function SundryDetailPage() {
 	const { id } = useParams<{ id: string }>();
@@ -98,7 +98,7 @@ export function SundryDetailPage() {
 				id,
 				isActive: !sundry.isActive,
 			});
-		} catch (err) {
+		} catch (_err) {
 			// Error handled by mutation
 		}
 	};
@@ -109,7 +109,7 @@ export function SundryDetailPage() {
 			await deleteMutation.mutateAsync(id);
 			setDeleteDialogOpen(false);
 			navigate('/app/products?tab=sundries');
-		} catch (err) {
+		} catch (_err) {
 			// Error handled by mutation
 		}
 	};
@@ -200,9 +200,7 @@ export function SundryDetailPage() {
 					<Card>
 						<CardHeader>
 							<CardTitle>Sundry Details</CardTitle>
-							<CardDescription>
-								Update the sundry information
-							</CardDescription>
+							<CardDescription>Update the sundry information</CardDescription>
 						</CardHeader>
 						<CardContent>
 							{mutationError && (
@@ -226,9 +224,7 @@ export function SundryDetailPage() {
 									<FieldLabel htmlFor="supplier">Supplier (optional)</FieldLabel>
 									<Select
 										value={formSupplierId || 'none'}
-										onValueChange={(value) =>
-											setFormSupplierId(value === 'none' ? null : value)
-										}
+										onValueChange={(value) => setFormSupplierId(value === 'none' ? null : value)}
 									>
 										<SelectTrigger id="supplier">
 											<SelectValue placeholder="Select a supplier" />
@@ -270,10 +266,7 @@ export function SundryDetailPage() {
 							</FieldGroup>
 						</CardContent>
 						<CardFooter className="flex justify-end">
-							<Button
-								onClick={handleSave}
-								disabled={!formName || updateMutation.isPending}
-							>
+							<Button onClick={handleSave} disabled={!formName || updateMutation.isPending}>
 								{updateMutation.isPending ? 'Saving...' : 'Save Changes'}
 							</Button>
 						</CardFooter>

@@ -1,5 +1,5 @@
-import { createMiddleware } from 'hono/factory';
 import type { Context } from 'hono';
+import { createMiddleware } from 'hono/factory';
 import { auth } from '../lib/auth';
 
 // Type for the user object stored in context

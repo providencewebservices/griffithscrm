@@ -1,16 +1,51 @@
 {
-  "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
-  "organizeImports": { "enabled": true },
-  "linter": {
-    "enabled": true,
-    "rules": { "recommended": true }
-  },
-  "formatter": {
-    "enabled": true,
-    "indentStyle": "tab",
-    "lineWidth": 100
-  },
-  "javascript": {
-    "formatter": { "quoteStyle": "single" }
-  }
+	"$schema": "https://biomejs.dev/schemas/2.3.8/schema.json",
+	"assist": { "actions": { "source": { "organizeImports": "on" } } },
+	"files": {
+		"includes": ["**", "!**/dist", "!.claude", "!.viktor", "!**/*.css", "!**/drizzle/**"]
+	},
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"recommended": true,
+			"style": {
+				"noNonNullAssertion": "off"
+			},
+			"suspicious": {
+				"noExplicitAny": "off",
+				"noArrayIndexKey": "off",
+				"noImplicitAnyLet": "off",
+				"noDocumentCookie": "off"
+			},
+			"security": {
+				"noDangerouslySetInnerHtml": "off"
+			},
+			"a11y": {
+				"useKeyWithClickEvents": "off",
+				"noStaticElementInteractions": "off",
+				"noLabelWithoutControl": "off",
+				"useButtonType": "off",
+				"noSvgWithoutTitle": "off",
+				"useSemanticElements": "off",
+				"useFocusableInteractive": "off"
+			},
+			"correctness": {
+				"noUnusedVariables": "warn",
+				"noUnusedFunctionParameters": "warn",
+				"useExhaustiveDependencies": "warn"
+			}
+		}
+	},
+	"formatter": {
+		"enabled": true,
+		"indentStyle": "tab",
+		"lineWidth": 100
+	},
+	"css": {
+		"linter": { "enabled": false },
+		"formatter": { "enabled": false }
+	},
+	"javascript": {
+		"formatter": { "quoteStyle": "single" }
+	}
 }

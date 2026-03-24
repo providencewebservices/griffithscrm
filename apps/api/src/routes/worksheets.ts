@@ -1,15 +1,10 @@
-import { Hono } from 'hono';
+import { tasks, users, WORKSHEET_STATUSES, worksheets } from '@griffiths-crm/shared/db/schema';
 import { zValidator } from '@hono/zod-validator';
+import { and, desc, eq, ilike, inArray, isNull, or, sql } from 'drizzle-orm';
+import { Hono } from 'hono';
 import { z } from 'zod';
-import { eq, and, sql, desc, isNull, ilike, or, inArray } from 'drizzle-orm';
-import { requireAuth, requireTenant } from '../middleware/auth';
 import { db } from '../lib/auth';
-import {
-	worksheets,
-	tasks,
-	users,
-	WORKSHEET_STATUSES,
-} from '@griffiths-crm/shared/db/schema';
+import { requireAuth, requireTenant } from '../middleware/auth';
 
 // Validation schemas
 const createWorksheetSchema = z.object({
@@ -58,10 +53,7 @@ export const worksheetsRoutes = new Hono()
 		const tenantId = currentUser.tenantId!;
 		const query = c.req.valid('query');
 
-		const conditions = [
-			eq(worksheets.tenantId, tenantId),
-			isNull(worksheets.archivedAt),
-		];
+		const conditions = [eq(worksheets.tenantId, tenantId), isNull(worksheets.archivedAt)];
 
 		if (query.status) conditions.push(eq(worksheets.status, query.status));
 		if (query.assigneeId) conditions.push(eq(worksheets.assigneeId, query.assigneeId));
@@ -69,12 +61,12 @@ export const worksheetsRoutes = new Hono()
 			conditions.push(
 				or(
 					ilike(worksheets.title, `%${query.search}%`),
-					ilike(worksheets.description, `%${query.search}%`)
-				)!
+					ilike(worksheets.description, `%${query.search}%`),
+				)!,
 			);
 		}
 
-		const page = parseInt(query.page || '1');
+		const page = parseInt(query.page || '1', 10);
 		const limit = 50;
 		const offset = (page - 1) * limit;
 
@@ -104,20 +96,15 @@ export const worksheetsRoutes = new Hono()
 		let taskCounts: { worksheetId: string; total: number; done: number }[] = [];
 
 		if (worksheetIds.length > 0) {
-			taskCounts = await db
+			taskCounts = (await db
 				.select({
 					worksheetId: tasks.worksheetId,
 					total: sql<number>`count(*)::int`,
 					done: sql<number>`count(*) FILTER (WHERE ${tasks.status} = 'done')::int`,
 				})
 				.from(tasks)
-				.where(
-					and(
-						inArray(tasks.worksheetId, worksheetIds),
-						isNull(tasks.archivedAt)
-					)
-				)
-				.groupBy(tasks.worksheetId) as { worksheetId: string; total: number; done: number }[];
+				.where(and(inArray(tasks.worksheetId, worksheetIds), isNull(tasks.archivedAt)))
+				.groupBy(tasks.worksheetId)) as { worksheetId: string; total: number; done: number }[];
 		}
 
 		const countMap = new Map(taskCounts.map((tc) => [tc.worksheetId, tc]));
@@ -202,12 +189,7 @@ export const worksheetsRoutes = new Hono()
 				createdAt: tasks.createdAt,
 			})
 			.from(tasks)
-			.where(
-				and(
-					eq(tasks.worksheetId, id),
-					isNull(tasks.archivedAt)
-				)
-			)
+			.where(and(eq(tasks.worksheetId, id), isNull(tasks.archivedAt)))
 			.orderBy(tasks.sortOrder, tasks.createdAt);
 
 		return c.json({ worksheet, tasks: worksheetTasks });
@@ -223,7 +205,13 @@ export const worksheetsRoutes = new Hono()
 		const [existing] = await db
 			.select()
 			.from(worksheets)
-			.where(and(eq(worksheets.id, id), eq(worksheets.tenantId, tenantId), isNull(worksheets.archivedAt)))
+			.where(
+				and(
+					eq(worksheets.id, id),
+					eq(worksheets.tenantId, tenantId),
+					isNull(worksheets.archivedAt),
+				),
+			)
 			.limit(1);
 
 		if (!existing) {
@@ -256,7 +244,13 @@ export const worksheetsRoutes = new Hono()
 		const [existing] = await db
 			.select()
 			.from(worksheets)
-			.where(and(eq(worksheets.id, id), eq(worksheets.tenantId, tenantId), isNull(worksheets.archivedAt)))
+			.where(
+				and(
+					eq(worksheets.id, id),
+					eq(worksheets.tenantId, tenantId),
+					isNull(worksheets.archivedAt),
+				),
+			)
 			.limit(1);
 
 		if (!existing) {
@@ -281,7 +275,13 @@ export const worksheetsRoutes = new Hono()
 		const [existing] = await db
 			.select()
 			.from(worksheets)
-			.where(and(eq(worksheets.id, id), eq(worksheets.tenantId, tenantId), isNull(worksheets.archivedAt)))
+			.where(
+				and(
+					eq(worksheets.id, id),
+					eq(worksheets.tenantId, tenantId),
+					isNull(worksheets.archivedAt),
+				),
+			)
 			.limit(1);
 
 		if (!existing) {
@@ -314,7 +314,13 @@ export const worksheetsRoutes = new Hono()
 		const [worksheet] = await db
 			.select()
 			.from(worksheets)
-			.where(and(eq(worksheets.id, id), eq(worksheets.tenantId, tenantId), isNull(worksheets.archivedAt)))
+			.where(
+				and(
+					eq(worksheets.id, id),
+					eq(worksheets.tenantId, tenantId),
+					isNull(worksheets.archivedAt),
+				),
+			)
 			.limit(1);
 
 		if (!worksheet) {
@@ -338,13 +344,7 @@ export const worksheetsRoutes = new Hono()
 					sortOrder: nextSort++,
 					updatedAt: new Date(),
 				})
-				.where(
-					and(
-						eq(tasks.id, taskId),
-						eq(tasks.tenantId, tenantId),
-						isNull(tasks.archivedAt)
-					)
-				);
+				.where(and(eq(tasks.id, taskId), eq(tasks.tenantId, tenantId), isNull(tasks.archivedAt)));
 		}
 
 		return c.json({ success: true });
@@ -360,13 +360,7 @@ export const worksheetsRoutes = new Hono()
 		await db
 			.update(tasks)
 			.set({ worksheetId: null, sortOrder: 0, updatedAt: new Date() })
-			.where(
-				and(
-					eq(tasks.id, taskId),
-					eq(tasks.worksheetId, id),
-					eq(tasks.tenantId, tenantId)
-				)
-			);
+			.where(and(eq(tasks.id, taskId), eq(tasks.worksheetId, id), eq(tasks.tenantId, tenantId)));
 
 		return c.json({ success: true });
 	})
@@ -384,11 +378,7 @@ export const worksheetsRoutes = new Hono()
 				.update(tasks)
 				.set({ sortOrder: i, updatedAt: new Date() })
 				.where(
-					and(
-						eq(tasks.id, taskIds[i]),
-						eq(tasks.worksheetId, id),
-						eq(tasks.tenantId, tenantId)
-					)
+					and(eq(tasks.id, taskIds[i]), eq(tasks.worksheetId, id), eq(tasks.tenantId, tenantId)),
 				);
 		}
 

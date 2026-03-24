@@ -1,8 +1,8 @@
+import { ArrowRight, Briefcase, FileText, Loader2 } from 'lucide-react';
 import { Link } from 'react-router';
-import { FileText, Briefcase, ArrowRight, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { usePipelineQuery, formatCurrency, type PipelineColumn } from '@/hooks/use-pipeline';
+import { formatCurrency, type PipelineColumn, usePipelineQuery } from '@/hooks/use-pipeline';
 
 function StageBlock({ column, basePath }: { column: PipelineColumn<unknown>; basePath: string }) {
 	const isEmpty = column.count === 0;
@@ -19,9 +19,7 @@ function StageBlock({ column, basePath }: { column: PipelineColumn<unknown>; bas
 			>
 				<p className="text-xs font-medium text-muted-foreground truncate">{column.label}</p>
 				<p className="text-xl font-bold mt-0.5">{column.count}</p>
-				<p className="text-xs text-muted-foreground mt-0.5">
-					{formatCurrency(column.totalValue)}
-				</p>
+				<p className="text-xs text-muted-foreground mt-0.5">{formatCurrency(column.totalValue)}</p>
 			</div>
 		</Link>
 	);

@@ -1,17 +1,13 @@
-import { ChevronLeft, ChevronRight, Plus, Filter } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ChevronLeft, ChevronRight, Filter, Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import {
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-} from '@/components/ui/popover';
-import { formatMonthYear, format } from './calendar-utils';
-import { EVENT_SOURCE_LABELS } from './types';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { format, formatMonthYear } from './calendar-utils';
 import type { CalendarView, EventSource } from './types';
+import { EVENT_SOURCE_LABELS } from './types';
 
 const ALL_EVENT_TYPES: EventSource[] = [
 	'custom',
@@ -58,9 +54,10 @@ export function CalendarHeader({
 		}
 	};
 
-	const filterCount = enabledTypes && enabledTypes.length < ALL_EVENT_TYPES.length
-		? ALL_EVENT_TYPES.length - enabledTypes.length
-		: 0;
+	const filterCount =
+		enabledTypes && enabledTypes.length < ALL_EVENT_TYPES.length
+			? ALL_EVENT_TYPES.length - enabledTypes.length
+			: 0;
 
 	const handleTypeToggle = (type: EventSource, checked: boolean) => {
 		if (!enabledTypes || !onTypesChange) return;
@@ -77,23 +74,13 @@ export function CalendarHeader({
 	return (
 		<div className="flex items-center justify-between px-4 py-3 border-b bg-card">
 			<div className="flex items-center gap-2">
-				<Button
-					variant="outline"
-					size="icon"
-					onClick={onPrevious}
-					aria-label="Previous"
-				>
+				<Button variant="outline" size="icon" onClick={onPrevious} aria-label="Previous">
 					<ChevronLeft className="h-4 w-4" />
 				</Button>
 				<Button variant="outline" size="sm" onClick={onToday}>
 					Today
 				</Button>
-				<Button
-					variant="outline"
-					size="icon"
-					onClick={onNext}
-					aria-label="Next"
-				>
+				<Button variant="outline" size="icon" onClick={onNext} aria-label="Next">
 					<ChevronRight className="h-4 w-4" />
 				</Button>
 				<h2 className="text-lg font-semibold ml-4">{getTitle()}</h2>
@@ -124,9 +111,7 @@ export function CalendarHeader({
 										<Checkbox
 											id={`filter-${type}`}
 											checked={enabledTypes.includes(type)}
-											onCheckedChange={(checked) =>
-												handleTypeToggle(type, checked === true)
-											}
+											onCheckedChange={(checked) => handleTypeToggle(type, checked === true)}
 										/>
 										<Label
 											htmlFor={`filter-${type}`}
@@ -141,10 +126,7 @@ export function CalendarHeader({
 					</Popover>
 				)}
 
-				<Tabs
-					value={view}
-					onValueChange={(v) => onViewChange(v as CalendarView)}
-				>
+				<Tabs value={view} onValueChange={(v) => onViewChange(v as CalendarView)}>
 					<TabsList>
 						<TabsTrigger value="month">Month</TabsTrigger>
 						<TabsTrigger value="week">Week</TabsTrigger>

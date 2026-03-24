@@ -2,13 +2,13 @@ import { Link } from 'react-router';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
-	useDashboardQuery,
 	formatTimeAgo,
-	type RecentQuote,
 	type RecentJob,
+	type RecentQuote,
+	useDashboardQuery,
 } from '@/hooks/use-dashboard';
-import { formatQuoteStatus, getQuoteStatusVariant } from '@/hooks/use-quotes';
 import { formatJobStatus, getJobStatusVariant } from '@/hooks/use-jobs';
+import { formatQuoteStatus, getQuoteStatusVariant } from '@/hooks/use-quotes';
 
 type ActivityItem = {
 	id: string;

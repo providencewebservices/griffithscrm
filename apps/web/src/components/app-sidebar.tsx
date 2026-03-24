@@ -1,7 +1,7 @@
-import * as React from "react"
+import type * as React from 'react';
 
-import { NavMain } from "@/components/nav-main"
-import { NavUser } from "@/components/nav-user"
+import { NavMain } from '@/components/nav-main';
+import { NavUser } from '@/components/nav-user';
 import {
 	Sidebar,
 	SidebarContent,
@@ -11,22 +11,26 @@ import {
 	SidebarMenuButton,
 	SidebarMenuItem,
 	SidebarRail,
-} from "@/components/ui/sidebar"
-import { useCustomerView } from "@/contexts/customer-view-context"
-import { navItems, customerViewItems } from "@/lib/nav-items"
+} from '@/components/ui/sidebar';
+import { useCustomerView } from '@/contexts/customer-view-context';
+import { customerViewItems, navItems } from '@/lib/nav-items';
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-	const { isCustomerView } = useCustomerView()
+	const { isCustomerView } = useCustomerView();
 	const items = isCustomerView
 		? navItems.filter((item) => customerViewItems.includes(item.title))
-		: navItems
+		: navItems;
 
 	return (
 		<Sidebar collapsible="icon" {...props}>
 			<SidebarHeader>
 				<SidebarMenu>
 					<SidebarMenuItem>
-						<SidebarMenuButton size="lg" asChild className="group-data-[collapsible=icon]:justify-center">
+						<SidebarMenuButton
+							size="lg"
+							asChild
+							className="group-data-[collapsible=icon]:justify-center"
+						>
 							<a href="/app">
 								<div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 shrink-0 items-center justify-center rounded-lg">
 									<span className="text-sm font-bold">G</span>
@@ -49,5 +53,5 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 			)}
 			<SidebarRail />
 		</Sidebar>
-	)
+	);
 }

@@ -1,5 +1,50 @@
-import { useState, useMemo, useCallback } from 'react';
+import {
+	ArrowDown,
+	ArrowRightLeft,
+	ArrowUp,
+	ArrowUpDown,
+	ChevronLeft,
+	ChevronRight,
+	Download,
+	ExternalLink,
+	Folder,
+	FolderPlus,
+	MoreHorizontal,
+	PanelLeft,
+	PanelLeftClose,
+	Pencil,
+	Search,
+	Trash2,
+	Upload,
+} from 'lucide-react';
+import { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
+import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
+import { CreateFolderDialog } from '@/components/documents/create-folder-dialog';
+import { DocumentEditDialog } from '@/components/documents/document-edit-dialog';
+import { FileTypeIcon } from '@/components/documents/file-type-icon';
+import { FolderBreadcrumb } from '@/components/documents/folder-breadcrumb';
+import { FolderTree } from '@/components/documents/folder-tree';
+import { GlobalDocumentUploadDialog } from '@/components/documents/global-document-upload-dialog';
+import { MoveItemDialog } from '@/components/documents/move-item-dialog';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from '@/components/ui/select';
 import {
 	Table,
 	TableBody,
@@ -8,77 +53,26 @@ import {
 	TableHeader,
 	TableRow,
 } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from '@/components/ui/select';
-import { Card, CardContent } from '@/components/ui/card';
-import { FileTypeIcon } from '@/components/documents/file-type-icon';
-import { DocumentEditDialog } from '@/components/documents/document-edit-dialog';
-import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
-import { FolderTree } from '@/components/documents/folder-tree';
-import { FolderBreadcrumb } from '@/components/documents/folder-breadcrumb';
-import { CreateFolderDialog } from '@/components/documents/create-folder-dialog';
-import { MoveItemDialog } from '@/components/documents/move-item-dialog';
+	type BreadcrumbItem,
+	type DocumentFolder,
+	useDeleteFolderMutation,
+	useFolderContentsQuery,
+	useMoveDocumentMutation,
+} from '@/hooks/use-document-folders';
 import {
-	useDocumentsQuery,
-	useUpdateDocumentMutation,
-	useDeleteDocumentMutation,
-	useDownloadUrl,
-	DOCUMENT_ENTITY_LABELS,
 	DOCUMENT_ENTITY_FILTER_LABELS,
+	DOCUMENT_ENTITY_LABELS,
+	type Document,
 	type DocumentEntityType,
 	type DocumentEntityTypeFilter,
-	type Document,
 	type UpdateDocumentInput,
+	useDeleteDocumentMutation,
+	useDocumentsQuery,
+	useDownloadUrl,
+	useUpdateDocumentMutation,
 } from '@/hooks/use-documents';
-import {
-	useFolderContentsQuery,
-	useDeleteFolderMutation,
-	useMoveDocumentMutation,
-	type DocumentFolder,
-	type BreadcrumbItem,
-} from '@/hooks/use-document-folders';
-import { GlobalDocumentUploadDialog } from '@/components/documents/global-document-upload-dialog';
-import {
-	formatFileSize,
-	parseTags,
-	getFileTypeLabel,
-} from '@/lib/file-utils';
-import {
-	Search,
-	Download,
-	ExternalLink,
-	MoreHorizontal,
-	Pencil,
-	Trash2,
-	ChevronLeft,
-	ChevronRight,
-	Upload,
-	FolderPlus,
-	Folder,
-	FolderOpen,
-	Menu,
-	ArrowRightLeft,
-	PanelLeft,
-	PanelLeftClose,
-	ArrowUpDown,
-	ArrowUp,
-	ArrowDown,
-} from 'lucide-react';
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuSeparator,
-	DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { formatFileSize, getFileTypeLabel, parseTags } from '@/lib/file-utils';
 import { cn } from '@/lib/utils';
 
 const ENTITY_ROUTES: Record<DocumentEntityType, string> = {
@@ -148,14 +142,15 @@ export function DocumentsPage() {
 	// Use folder contents query when viewing a specific folder
 	const folderContentsQuery = useFolderContentsQuery(
 		selectedFolderId === 'all' ? null : selectedFolderId,
-		{ limit, offset: page * limit }
+		{ limit, offset: page * limit },
 	);
 
 	// Use documents query when viewing 'all' documents or when searching
 	const documentsQuery = useDocumentsQuery({
 		search: debouncedSearch || undefined,
 		entityType: entityTypeFilter === 'all' ? undefined : entityTypeFilter,
-		folderId: selectedFolderId === 'all' ? 'all' : selectedFolderId === null ? 'root' : selectedFolderId,
+		folderId:
+			selectedFolderId === 'all' ? 'all' : selectedFolderId === null ? 'root' : selectedFolderId,
 		tags: tagsFilter || undefined,
 		limit,
 		offset: page * limit,
@@ -171,33 +166,32 @@ export function DocumentsPage() {
 	const isLoading = shouldUseFolderContents
 		? folderContentsQuery.isLoading
 		: documentsQuery.isLoading;
-	const error = shouldUseFolderContents
-		? folderContentsQuery.error
-		: documentsQuery.error;
+	const error = shouldUseFolderContents ? folderContentsQuery.error : documentsQuery.error;
 
 	// Get folders and documents to display
-	const subfolders = shouldUseFolderContents
-		? folderContentsQuery.data?.subfolders || []
-		: [];
+	const subfolders = shouldUseFolderContents ? folderContentsQuery.data?.subfolders || [] : [];
 	const documents = shouldUseFolderContents
-		? (folderContentsQuery.data?.documents || []) as Document[]
-		: (documentsQuery.data?.documents || []);
+		? ((folderContentsQuery.data?.documents || []) as Document[])
+		: documentsQuery.data?.documents || [];
 	const breadcrumb: BreadcrumbItem[] = shouldUseFolderContents
 		? folderContentsQuery.data?.breadcrumb || []
 		: [];
 	const pagination = shouldUseFolderContents
-		? folderContentsQuery.data?.pagination ?? null
-		: documentsQuery.data?.pagination ?? null;
+		? (folderContentsQuery.data?.pagination ?? null)
+		: (documentsQuery.data?.pagination ?? null);
 
 	// Sort toggle handler
-	const handleSort = useCallback((column: SortColumn) => {
-		if (sortColumn === column) {
-			setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
-		} else {
-			setSortColumn(column);
-			setSortDirection('asc');
-		}
-	}, [sortColumn]);
+	const handleSort = useCallback(
+		(column: SortColumn) => {
+			if (sortColumn === column) {
+				setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+			} else {
+				setSortColumn(column);
+				setSortDirection('asc');
+			}
+		},
+		[sortColumn],
+	);
 
 	// Sorted documents
 	const sortedDocuments = useMemo(() => {
@@ -210,11 +204,12 @@ export function DocumentsPage() {
 				case 'name':
 					comparison = a.name.localeCompare(b.name);
 					break;
-				case 'entity':
+				case 'entity': {
 					const entityA = a.entityType || '';
 					const entityB = b.entityType || '';
 					comparison = entityA.localeCompare(entityB);
 					break;
+				}
 				case 'type':
 					comparison = a.contentType.localeCompare(b.contentType);
 					break;
@@ -235,9 +230,11 @@ export function DocumentsPage() {
 		if (sortColumn !== column) {
 			return <ArrowUpDown className="h-4 w-4 ml-1 opacity-50" />;
 		}
-		return sortDirection === 'asc'
-			? <ArrowUp className="h-4 w-4 ml-1" />
-			: <ArrowDown className="h-4 w-4 ml-1" />;
+		return sortDirection === 'asc' ? (
+			<ArrowUp className="h-4 w-4 ml-1" />
+		) : (
+			<ArrowDown className="h-4 w-4 ml-1" />
+		);
 	};
 
 	const formatDate = (dateString: string) => {
@@ -377,13 +374,9 @@ export function DocumentsPage() {
 			<div className="p-6">
 				<div className="mb-6">
 					<h2 className="text-2xl font-bold">Documents</h2>
-					<p className="text-muted-foreground mt-1">
-						Search and manage all uploaded documents
-					</p>
+					<p className="text-muted-foreground mt-1">Search and manage all uploaded documents</p>
 				</div>
-				<div className="text-destructive">
-					Error loading documents: {error.message}
-				</div>
+				<div className="text-destructive">Error loading documents: {error.message}</div>
 			</div>
 		);
 	}
@@ -394,7 +387,7 @@ export function DocumentsPage() {
 			<div
 				className={cn(
 					'border-r bg-background shadow-sm transition-all duration-200 shrink-0',
-					sidebarOpen ? 'w-64' : 'w-0 overflow-hidden'
+					sidebarOpen ? 'w-64' : 'w-0 overflow-hidden',
 				)}
 			>
 				<div className="p-3 border-b flex items-center justify-between">
@@ -477,10 +470,7 @@ export function DocumentsPage() {
 							}}
 							className="w-[150px]"
 						/>
-						<Button
-							variant="outline"
-							onClick={() => setCreateFolderDialogOpen(true)}
-						>
+						<Button variant="outline" onClick={() => setCreateFolderDialogOpen(true)}>
 							<FolderPlus className="h-4 w-4 mr-2" />
 							New Folder
 						</Button>
@@ -495,7 +485,7 @@ export function DocumentsPage() {
 				<div
 					className={cn(
 						'flex-1 overflow-auto p-4 transition-colors',
-						contentDragOver && 'bg-primary/5 ring-2 ring-primary ring-inset'
+						contentDragOver && 'bg-primary/5 ring-2 ring-primary ring-inset',
 					)}
 					onDragOver={handleContentDragOver}
 					onDragLeave={handleContentDragLeave}
@@ -508,16 +498,14 @@ export function DocumentsPage() {
 							{/* Subfolders Grid (only when not searching and not viewing all) */}
 							{subfolders.length > 0 && !isSearching && (
 								<div className="mb-6">
-									<h4 className="text-sm font-medium text-muted-foreground mb-3">
-										Folders
-									</h4>
+									<h4 className="text-sm font-medium text-muted-foreground mb-3">Folders</h4>
 									<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
 										{subfolders.map((folder) => (
 											<Card
 												key={folder.id}
 												className={cn(
 													'cursor-pointer hover:bg-accent/50 transition-colors group',
-													dragOverFolderId === folder.id && 'ring-2 ring-primary bg-primary/10'
+													dragOverFolderId === folder.id && 'ring-2 ring-primary bg-primary/10',
 												)}
 												onClick={() => handleSelectFolder(folder.id)}
 												onDragOver={(e) => {
@@ -539,9 +527,7 @@ export function DocumentsPage() {
 																className="h-8 w-8 shrink-0"
 																style={{ color: folder.color || undefined }}
 															/>
-															<span className="font-medium truncate text-sm">
-																{folder.name}
-															</span>
+															<span className="font-medium truncate text-sm">{folder.name}</span>
 														</div>
 														<DropdownMenu>
 															<DropdownMenuTrigger asChild>
@@ -607,9 +593,7 @@ export function DocumentsPage() {
 							) : documents.length > 0 ? (
 								<>
 									{!isSearching && subfolders.length > 0 && (
-										<h4 className="text-sm font-medium text-muted-foreground mb-3">
-											Documents
-										</h4>
+										<h4 className="text-sm font-medium text-muted-foreground mb-3">Documents</h4>
 									)}
 									<div className="border rounded-lg">
 										<Table>
@@ -679,7 +663,7 @@ export function DocumentsPage() {
 																	JSON.stringify({
 																		documentId: doc.id,
 																		documentName: doc.name,
-																	})
+																	}),
 																);
 																e.dataTransfer.effectAllowed = 'move';
 															}}
@@ -754,9 +738,7 @@ export function DocumentsPage() {
 																		</Button>
 																	</DropdownMenuTrigger>
 																	<DropdownMenuContent align="end">
-																		<DropdownMenuItem
-																			onClick={() => handleOpen(doc)}
-																		>
+																		<DropdownMenuItem onClick={() => handleOpen(doc)}>
 																			<ExternalLink className="h-4 w-4 mr-2" />
 																			View
 																		</DropdownMenuItem>

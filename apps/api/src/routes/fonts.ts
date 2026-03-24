@@ -1,11 +1,11 @@
-import { Hono } from 'hono';
-import { zValidator } from '@hono/zod-validator';
-import { z } from 'zod';
-import { eq, and, asc } from 'drizzle-orm';
-import { requireAuth, requireTenant } from '../middleware/auth';
-import { db } from '../lib/auth';
 import { fonts } from '@griffiths-crm/shared/db/schema';
-import { generatePresignedUploadUrlForKey, deleteObject } from '../lib/s3';
+import { zValidator } from '@hono/zod-validator';
+import { and, asc, eq } from 'drizzle-orm';
+import { Hono } from 'hono';
+import { z } from 'zod';
+import { db } from '../lib/auth';
+import { deleteObject, generatePresignedUploadUrlForKey } from '../lib/s3';
+import { requireAuth, requireTenant } from '../middleware/auth';
 
 const ALLOWED_FONT_TYPES = [
 	'font/ttf',
@@ -144,11 +144,7 @@ const fontsRoutes = new Hono()
 		if (data.isActive !== undefined) updateData.isActive = data.isActive;
 		if (data.sortOrder !== undefined) updateData.sortOrder = data.sortOrder;
 
-		const [updated] = await db
-			.update(fonts)
-			.set(updateData)
-			.where(eq(fonts.id, id))
-			.returning();
+		const [updated] = await db.update(fonts).set(updateData).where(eq(fonts.id, id)).returning();
 
 		return c.json({ font: updated });
 	})

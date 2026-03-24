@@ -20,10 +20,10 @@
  *   - 15 jobs with payment schedules
  */
 
-import { config } from 'dotenv';
-import { resolve } from 'path';
+import { resolve } from 'node:path';
 import { faker } from '@faker-js/faker/locale/en_GB';
-import { eq, and } from 'drizzle-orm';
+import { config } from 'dotenv';
+import { and, eq } from 'drizzle-orm';
 
 // Load .env
 config({ path: resolve(import.meta.dir, '../../../.env') });
@@ -93,7 +93,18 @@ const id = () => faker.string.uuid();
 
 // UK-specific phone number generators
 const ukLandline = () => {
-	const areaCodes = ['01onal', '0151', '0161', '0113', '0121', '0114', '0117', '0118', '0131', '0141'];
+	const areaCodes = [
+		'01onal',
+		'0151',
+		'0161',
+		'0113',
+		'0121',
+		'0114',
+		'0117',
+		'0118',
+		'0131',
+		'0141',
+	];
 	const area = faker.helpers.arrayElement(areaCodes);
 	const rest = faker.string.numeric(7);
 	return `${area} ${rest.slice(0, 3)} ${rest.slice(3)}`;
@@ -107,13 +118,37 @@ const ukMobile = () => {
 
 // UK postcode generator
 const ukPostcode = () => {
-	const outward = faker.helpers.arrayElement(['CH1', 'CH2', 'CH3', 'CH4', 'CW1', 'CW2', 'LL11', 'LL12', 'WA1', 'WA2', 'SY1', 'SY2']);
+	const outward = faker.helpers.arrayElement([
+		'CH1',
+		'CH2',
+		'CH3',
+		'CH4',
+		'CW1',
+		'CW2',
+		'LL11',
+		'LL12',
+		'WA1',
+		'WA2',
+		'SY1',
+		'SY2',
+	]);
 	const inward = `${faker.string.numeric(1)}${faker.string.alpha({ length: 2, casing: 'upper' })}`;
 	return `${outward} ${inward}`;
 };
 
 // UK counties/cities for the Chester area
-const ukLocalities = ['Chester', 'Wrexham', 'Ellesmere Port', 'Neston', 'Mold', 'Connah\'s Quay', 'Flint', 'Buckley', 'Northwich', 'Winsford'];
+const ukLocalities = [
+	'Chester',
+	'Wrexham',
+	'Ellesmere Port',
+	'Neston',
+	'Mold',
+	"Connah's Quay",
+	'Flint',
+	'Buckley',
+	'Northwich',
+	'Winsford',
+];
 const ukCounties = ['Cheshire', 'Flintshire', 'Wrexham', 'Denbighshire'];
 
 // Generate UK address
@@ -150,7 +185,13 @@ function generatePhone(type: 'phone' | 'mobile'): typeof contactInfo.$inferInser
 }
 
 function generateEmail(name: string): typeof contactInfo.$inferInsert {
-	const domain = faker.helpers.arrayElement(['gmail.com', 'yahoo.co.uk', 'hotmail.co.uk', 'outlook.com', 'btinternet.com']);
+	const domain = faker.helpers.arrayElement([
+		'gmail.com',
+		'yahoo.co.uk',
+		'hotmail.co.uk',
+		'outlook.com',
+		'btinternet.com',
+	]);
 	return {
 		id: id(),
 		type: 'email',
@@ -225,7 +266,10 @@ async function clearTenantData(tenantId: string) {
 	await db.delete(quotePackages).where(eq(quotePackages.tenantId, tenantId));
 
 	// Customers and related
-	const customerIds = await db.select({ id: customers.id }).from(customers).where(eq(customers.tenantId, tenantId));
+	const customerIds = await db
+		.select({ id: customers.id })
+		.from(customers)
+		.where(eq(customers.tenantId, tenantId));
 	for (const c of customerIds) {
 		await db.delete(customerContactInfo).where(eq(customerContactInfo.customerId, c.id));
 		await db.delete(customerAddresses).where(eq(customerAddresses.customerId, c.id));
@@ -238,7 +282,10 @@ async function clearTenantData(tenantId: string) {
 	await db.delete(productComponents);
 	await db.delete(optionChoices);
 	await db.delete(productOptions);
-	const productIds = await db.select({ id: products.id }).from(products).where(eq(products.tenantId, tenantId));
+	const productIds = await db
+		.select({ id: products.id })
+		.from(products)
+		.where(eq(products.tenantId, tenantId));
 	for (const p of productIds) {
 		await db.delete(dimensionCombos).where(eq(dimensionCombos.productId, p.id));
 		await db.delete(productComponents).where(eq(productComponents.productId, p.id));
@@ -258,30 +305,48 @@ async function clearTenantData(tenantId: string) {
 	await db.delete(tenantPricingSettings).where(eq(tenantPricingSettings.tenantId, tenantId));
 
 	// Partners
-	const supplierIds = await db.select({ id: suppliers.id }).from(suppliers).where(eq(suppliers.tenantId, tenantId));
+	const supplierIds = await db
+		.select({ id: suppliers.id })
+		.from(suppliers)
+		.where(eq(suppliers.tenantId, tenantId));
 	for (const s of supplierIds) {
 		await db.delete(supplierContactInfo).where(eq(supplierContactInfo.supplierId, s.id));
 		await db.delete(supplierAddresses).where(eq(supplierAddresses.supplierId, s.id));
 	}
 	await db.delete(suppliers).where(eq(suppliers.tenantId, tenantId));
 
-	const fdIds = await db.select({ id: funeralDirectors.id }).from(funeralDirectors).where(eq(funeralDirectors.tenantId, tenantId));
+	const fdIds = await db
+		.select({ id: funeralDirectors.id })
+		.from(funeralDirectors)
+		.where(eq(funeralDirectors.tenantId, tenantId));
 	for (const fd of fdIds) {
-		await db.delete(funeralDirectorContactInfo).where(eq(funeralDirectorContactInfo.funeralDirectorId, fd.id));
-		await db.delete(funeralDirectorAddresses).where(eq(funeralDirectorAddresses.funeralDirectorId, fd.id));
+		await db
+			.delete(funeralDirectorContactInfo)
+			.where(eq(funeralDirectorContactInfo.funeralDirectorId, fd.id));
+		await db
+			.delete(funeralDirectorAddresses)
+			.where(eq(funeralDirectorAddresses.funeralDirectorId, fd.id));
 	}
 	await db.delete(funeralDirectors).where(eq(funeralDirectors.tenantId, tenantId));
 
-	const councilIds = await db.select({ id: councils.id }).from(councils).where(eq(councils.tenantId, tenantId));
+	const councilIds = await db
+		.select({ id: councils.id })
+		.from(councils)
+		.where(eq(councils.tenantId, tenantId));
 	for (const c of councilIds) {
 		await db.delete(councilContactInfo).where(eq(councilContactInfo.councilId, c.id));
 		await db.delete(councilAddresses).where(eq(councilAddresses.councilId, c.id));
 	}
 	await db.delete(councils).where(eq(councils.tenantId, tenantId));
 
-	const siteIds = await db.select({ id: memorialSites.id }).from(memorialSites).where(eq(memorialSites.tenantId, tenantId));
+	const siteIds = await db
+		.select({ id: memorialSites.id })
+		.from(memorialSites)
+		.where(eq(memorialSites.tenantId, tenantId));
 	for (const s of siteIds) {
-		await db.delete(memorialSiteContactInfo).where(eq(memorialSiteContactInfo.memorialSiteId, s.id));
+		await db
+			.delete(memorialSiteContactInfo)
+			.where(eq(memorialSiteContactInfo.memorialSiteId, s.id));
 		await db.delete(memorialSiteAddresses).where(eq(memorialSiteAddresses.memorialSiteId, s.id));
 	}
 	await db.delete(memorialSites).where(eq(memorialSites.tenantId, tenantId));
@@ -363,7 +428,14 @@ async function seedFoundation() {
 	}
 
 	// Product categories
-	const categoryNames = ['Headstones', 'Full Memorials', 'Cremation Memorials', 'Plaques', 'Vases', 'Restoration'];
+	const categoryNames = [
+		'Headstones',
+		'Full Memorials',
+		'Cremation Memorials',
+		'Plaques',
+		'Vases',
+		'Restoration',
+	];
 	const existingCategories = await db
 		.select()
 		.from(productCategories)
@@ -397,11 +469,7 @@ const DEMO_NAME = 'Demo User';
 
 async function seedDemoUser() {
 	// Check if demo user already exists
-	const existingUser = await db
-		.select()
-		.from(users)
-		.where(eq(users.email, DEMO_EMAIL))
-		.limit(1);
+	const existingUser = await db.select().from(users).where(eq(users.email, DEMO_EMAIL)).limit(1);
 
 	if (existingUser.length > 0) {
 		// Update tenant assignment if needed
@@ -452,7 +520,10 @@ async function seedPartners() {
 	const tenantId = createdRecords.tenantId;
 
 	// Suppliers (10)
-	const existingSuppliers = await db.select().from(suppliers).where(eq(suppliers.tenantId, tenantId));
+	const existingSuppliers = await db
+		.select()
+		.from(suppliers)
+		.where(eq(suppliers.tenantId, tenantId));
 	if (existingSuppliers.length === 0) {
 		const supplierData = [
 			{ name: 'Stone Supplies UK', trading: 'StoneUK' },
@@ -503,7 +574,10 @@ async function seedPartners() {
 	}
 
 	// Funeral Directors (12)
-	const existingFDs = await db.select().from(funeralDirectors).where(eq(funeralDirectors.tenantId, tenantId));
+	const existingFDs = await db
+		.select()
+		.from(funeralDirectors)
+		.where(eq(funeralDirectors.tenantId, tenantId));
 	if (existingFDs.length === 0) {
 		const fdData = [
 			{ name: 'J.G. Hughes & Son', arrangement: 'commission', rate: '5.00' },
@@ -531,7 +605,9 @@ async function seedPartners() {
 
 			const addr = generateUkAddress('Main');
 			await db.insert(addresses).values(addr);
-			await db.insert(funeralDirectorAddresses).values({ funeralDirectorId: fdId, addressId: addr.id! });
+			await db
+				.insert(funeralDirectorAddresses)
+				.values({ funeralDirectorId: fdId, addressId: addr.id! });
 
 			const phone = generatePhone('phone');
 			const email = generateEmail(fd.name);
@@ -554,11 +630,15 @@ async function seedPartners() {
 	if (existingCouncils.length === 0) {
 		const councilData = [
 			{ name: 'Cheshire West and Chester Council', cemetery: 'Blacon Cemetery', fee: '85.00' },
-			{ name: 'Flintshire County Council', cemetery: 'Connah\'s Quay Cemetery', fee: '75.00' },
+			{ name: 'Flintshire County Council', cemetery: "Connah's Quay Cemetery", fee: '75.00' },
 			{ name: 'Wrexham County Borough Council', cemetery: 'Wrexham Cemetery', fee: '80.00' },
 			{ name: 'Denbighshire County Council', cemetery: 'Ruthin Cemetery', fee: '70.00' },
 			{ name: 'Chester City Council', cemetery: 'Overleigh Cemetery', fee: '90.00' },
-			{ name: 'Ellesmere Port & Neston Council', cemetery: 'Ellesmere Port Cemetery', fee: '85.00' },
+			{
+				name: 'Ellesmere Port & Neston Council',
+				cemetery: 'Ellesmere Port Cemetery',
+				fee: '85.00',
+			},
 		];
 
 		for (const c of councilData) {
@@ -596,15 +676,38 @@ async function seedPartners() {
 	}
 
 	// Memorial Sites (18)
-	const existingSites = await db.select().from(memorialSites).where(eq(memorialSites.tenantId, tenantId));
+	const existingSites = await db
+		.select()
+		.from(memorialSites)
+		.where(eq(memorialSites.tenantId, tenantId));
 	if (existingSites.length === 0) {
 		const siteData = [
 			// Churchyards (8)
-			{ name: 'St Mary\'s Church', type: 'churchyard', denom: 'church_of_england', diocese: 'Chester' },
-			{ name: 'Holy Trinity Church', type: 'churchyard', denom: 'church_of_england', diocese: 'Chester' },
-			{ name: 'St John\'s Parish Church', type: 'churchyard', denom: 'church_of_england', diocese: 'Chester' },
-			{ name: 'All Saints Church', type: 'churchyard', denom: 'church_of_england', diocese: 'St Asaph' },
-			{ name: 'St Peter\'s Catholic Church', type: 'churchyard', denom: 'catholic', diocese: null },
+			{
+				name: "St Mary's Church",
+				type: 'churchyard',
+				denom: 'church_of_england',
+				diocese: 'Chester',
+			},
+			{
+				name: 'Holy Trinity Church',
+				type: 'churchyard',
+				denom: 'church_of_england',
+				diocese: 'Chester',
+			},
+			{
+				name: "St John's Parish Church",
+				type: 'churchyard',
+				denom: 'church_of_england',
+				diocese: 'Chester',
+			},
+			{
+				name: 'All Saints Church',
+				type: 'churchyard',
+				denom: 'church_of_england',
+				diocese: 'St Asaph',
+			},
+			{ name: "St Peter's Catholic Church", type: 'churchyard', denom: 'catholic', diocese: null },
 			{ name: 'Bethel Methodist Chapel', type: 'churchyard', denom: 'methodist', diocese: null },
 			{ name: 'Chester Baptist Church', type: 'churchyard', denom: 'baptist', diocese: null },
 			{ name: 'Quaker Meeting House', type: 'churchyard', denom: 'quaker', diocese: null },
@@ -616,7 +719,7 @@ async function seedPartners() {
 			// Council Cemeteries (6)
 			{ name: 'Blacon Cemetery', type: 'council_cemetery', council: 'Cheshire West and Chester' },
 			{ name: 'Overleigh Cemetery', type: 'council_cemetery', council: 'Chester City Council' },
-			{ name: 'Connah\'s Quay Cemetery', type: 'council_cemetery', council: 'Flintshire County' },
+			{ name: "Connah's Quay Cemetery", type: 'council_cemetery', council: 'Flintshire County' },
 			{ name: 'Wrexham Cemetery', type: 'council_cemetery', council: 'Wrexham Borough' },
 			{ name: 'Mold Cemetery', type: 'council_cemetery', council: 'Flintshire County' },
 			{ name: 'Buckley Cemetery', type: 'council_cemetery', council: 'Flintshire County' },
@@ -642,11 +745,15 @@ async function seedPartners() {
 
 			const addr = generateUkAddress();
 			await db.insert(addresses).values(addr);
-			await db.insert(memorialSiteAddresses).values({ memorialSiteId: siteId, addressId: addr.id! });
+			await db
+				.insert(memorialSiteAddresses)
+				.values({ memorialSiteId: siteId, addressId: addr.id! });
 
 			const phone = generatePhone('phone');
 			await db.insert(contactInfo).values(phone);
-			await db.insert(memorialSiteContactInfo).values({ memorialSiteId: siteId, contactInfoId: phone.id! });
+			await db
+				.insert(memorialSiteContactInfo)
+				.values({ memorialSiteId: siteId, contactInfoId: phone.id! });
 
 			createdRecords.memorialSites.push(siteId);
 		}
@@ -668,7 +775,14 @@ async function seedProductCatalog() {
 	// Finishes (6)
 	const existingFinishes = await db.select().from(finishes).where(eq(finishes.tenantId, tenantId));
 	if (existingFinishes.length === 0) {
-		const finishNames = ['Polished', 'Honed', 'Flamed', 'Sandblasted', 'Bush Hammered', 'Natural Split'];
+		const finishNames = [
+			'Polished',
+			'Honed',
+			'Flamed',
+			'Sandblasted',
+			'Bush Hammered',
+			'Natural Split',
+		];
 		for (let i = 0; i < finishNames.length; i++) {
 			const finishId = id();
 			await db.insert(finishes).values({
@@ -686,7 +800,10 @@ async function seedProductCatalog() {
 	}
 
 	// Materials (18 across 6 sections)
-	const existingMaterials = await db.select().from(materials).where(eq(materials.tenantId, tenantId));
+	const existingMaterials = await db
+		.select()
+		.from(materials)
+		.where(eq(materials.tenantId, tenantId));
 	if (existingMaterials.length === 0) {
 		const materialData = [
 			// White (section 0)
@@ -733,9 +850,18 @@ async function seedProductCatalog() {
 	}
 
 	// Lettering Techniques (5)
-	const existingTechniques = await db.select().from(letteringTechniques).where(eq(letteringTechniques.tenantId, tenantId));
+	const existingTechniques = await db
+		.select()
+		.from(letteringTechniques)
+		.where(eq(letteringTechniques.tenantId, tenantId));
 	if (existingTechniques.length === 0) {
-		const techniqueNames = ['Sandblasted', 'V-Cut', 'Incised', 'Re-cut Existing', 'Applied Letters'];
+		const techniqueNames = [
+			'Sandblasted',
+			'V-Cut',
+			'Incised',
+			'Re-cut Existing',
+			'Applied Letters',
+		];
 		for (let i = 0; i < techniqueNames.length; i++) {
 			const techId = id();
 			await db.insert(letteringTechniques).values({
@@ -753,9 +879,19 @@ async function seedProductCatalog() {
 	}
 
 	// Lettering Colors (6)
-	const existingColors = await db.select().from(letteringColors).where(eq(letteringColors.tenantId, tenantId));
+	const existingColors = await db
+		.select()
+		.from(letteringColors)
+		.where(eq(letteringColors.tenantId, tenantId));
 	if (existingColors.length === 0) {
-		const colorNames = ['Gold Leaf', 'Silver', 'White Paint', 'Black Paint', 'Bronze', 'None (natural)'];
+		const colorNames = [
+			'Gold Leaf',
+			'Silver',
+			'White Paint',
+			'Black Paint',
+			'Bronze',
+			'None (natural)',
+		];
 		for (let i = 0; i < colorNames.length; i++) {
 			const colorId = id();
 			await db.insert(letteringColors).values({
@@ -865,7 +1001,10 @@ async function seedProductCatalog() {
 	}
 
 	// Line Item Presets (8)
-	const existingPresets = await db.select().from(lineItemPresets).where(eq(lineItemPresets.tenantId, tenantId));
+	const existingPresets = await db
+		.select()
+		.from(lineItemPresets)
+		.where(eq(lineItemPresets.tenantId, tenantId));
 	if (existingPresets.length === 0) {
 		const presetData = [
 			{ name: 'Delivery', price: '75.00', vatExempt: false },
@@ -900,18 +1039,90 @@ async function seedProductCatalog() {
 	const existingProducts = await db.select().from(products).where(eq(products.tenantId, tenantId));
 	if (existingProducts.length === 0) {
 		const productData = [
-			{ sku: 'HS-001', name: 'Classic Lawn Memorial', category: 0, price: '895.00', desc: 'Traditional headstone with base' },
-			{ sku: 'HS-002', name: 'Ogee Top Headstone', category: 0, price: '995.00', desc: 'Elegant curved top design' },
-			{ sku: 'HS-003', name: 'Heart Shaped Memorial', category: 0, price: '1195.00', desc: 'Romantic heart design' },
-			{ sku: 'FM-001', name: 'Full Kerb Set', category: 1, price: '2495.00', desc: 'Complete memorial with kerbs' },
-			{ sku: 'FM-002', name: 'Double Memorial', category: 1, price: '2995.00', desc: 'Memorial for two' },
-			{ sku: 'FM-003', name: 'Celtic Cross Memorial', category: 1, price: '3495.00', desc: 'Traditional Celtic design' },
-			{ sku: 'CM-001', name: 'Cremation Tablet', category: 2, price: '495.00', desc: 'Small memorial tablet' },
-			{ sku: 'CM-002', name: 'Book Memorial', category: 2, price: '695.00', desc: 'Open book design' },
-			{ sku: 'CM-003', name: 'Cremation Desk', category: 2, price: '795.00', desc: 'Desk-style memorial' },
-			{ sku: 'PL-001', name: 'Bronze Wall Plaque', category: 3, price: '295.00', desc: 'Cast bronze plaque' },
-			{ sku: 'VS-001', name: 'Granite Vase', category: 4, price: '145.00', desc: 'Polished granite vase' },
-			{ sku: 'RS-001', name: 'Memorial Restoration', category: 5, price: '350.00', desc: 'Cleaning and regilding' },
+			{
+				sku: 'HS-001',
+				name: 'Classic Lawn Memorial',
+				category: 0,
+				price: '895.00',
+				desc: 'Traditional headstone with base',
+			},
+			{
+				sku: 'HS-002',
+				name: 'Ogee Top Headstone',
+				category: 0,
+				price: '995.00',
+				desc: 'Elegant curved top design',
+			},
+			{
+				sku: 'HS-003',
+				name: 'Heart Shaped Memorial',
+				category: 0,
+				price: '1195.00',
+				desc: 'Romantic heart design',
+			},
+			{
+				sku: 'FM-001',
+				name: 'Full Kerb Set',
+				category: 1,
+				price: '2495.00',
+				desc: 'Complete memorial with kerbs',
+			},
+			{
+				sku: 'FM-002',
+				name: 'Double Memorial',
+				category: 1,
+				price: '2995.00',
+				desc: 'Memorial for two',
+			},
+			{
+				sku: 'FM-003',
+				name: 'Celtic Cross Memorial',
+				category: 1,
+				price: '3495.00',
+				desc: 'Traditional Celtic design',
+			},
+			{
+				sku: 'CM-001',
+				name: 'Cremation Tablet',
+				category: 2,
+				price: '495.00',
+				desc: 'Small memorial tablet',
+			},
+			{
+				sku: 'CM-002',
+				name: 'Book Memorial',
+				category: 2,
+				price: '695.00',
+				desc: 'Open book design',
+			},
+			{
+				sku: 'CM-003',
+				name: 'Cremation Desk',
+				category: 2,
+				price: '795.00',
+				desc: 'Desk-style memorial',
+			},
+			{
+				sku: 'PL-001',
+				name: 'Bronze Wall Plaque',
+				category: 3,
+				price: '295.00',
+				desc: 'Cast bronze plaque',
+			},
+			{
+				sku: 'VS-001',
+				name: 'Granite Vase',
+				category: 4,
+				price: '145.00',
+				desc: 'Polished granite vase',
+			},
+			{
+				sku: 'RS-001',
+				name: 'Memorial Restoration',
+				category: 5,
+				price: '350.00',
+				desc: 'Cleaning and regilding',
+			},
 		];
 
 		for (const p of productData) {
@@ -951,7 +1162,14 @@ async function seedProductCatalog() {
 					await db.insert(optionChoices).values({
 						id: id(),
 						optionId: colorOptId,
-						name: faker.helpers.arrayElement(['Nero Assoluto', 'Silver Grey', 'Blue Pearl', 'Ruby Red', 'Carrara White', 'Emerald Pearl']),
+						name: faker.helpers.arrayElement([
+							'Nero Assoluto',
+							'Silver Grey',
+							'Blue Pearl',
+							'Ruby Red',
+							'Carrara White',
+							'Emerald Pearl',
+						]),
 						priceAdjustment: faker.helpers.arrayElement(['0', '50.00', '100.00', '150.00']),
 						sortOrder: i,
 					});
@@ -1090,7 +1308,10 @@ async function seedCustomers() {
 	console.log('\n--- Layer 4: Customers ---');
 
 	const tenantId = createdRecords.tenantId;
-	const existingCustomers = await db.select().from(customers).where(eq(customers.tenantId, tenantId));
+	const existingCustomers = await db
+		.select()
+		.from(customers)
+		.where(eq(customers.tenantId, tenantId));
 
 	if (existingCustomers.length === 0) {
 		for (let i = 0; i < 75; i++) {
@@ -1151,7 +1372,13 @@ async function seedQuotes() {
 			...Array(2).fill('expired'),
 		];
 
-		const quoteTypes = ['new_memorial', 'additional_inscription', 'refurbishment', 'ashes', 'sundry_only'];
+		const quoteTypes = [
+			'new_memorial',
+			'additional_inscription',
+			'refurbishment',
+			'ashes',
+			'sundry_only',
+		];
 		const sources = ['walk_in', 'phone', 'email', 'website', 'facebook', 'referral'];
 
 		let quoteNumber = 1;
@@ -1172,8 +1399,12 @@ async function seedQuotes() {
 				customerId,
 				quoteType,
 				source: faker.helpers.arrayElement(sources),
-				funeralDirectorId: faker.datatype.boolean(0.4) ? faker.helpers.arrayElement(createdRecords.funeralDirectors) : null,
-				memorialSiteId: faker.datatype.boolean(0.6) ? faker.helpers.arrayElement(createdRecords.memorialSites) : null,
+				funeralDirectorId: faker.datatype.boolean(0.4)
+					? faker.helpers.arrayElement(createdRecords.funeralDirectors)
+					: null,
+				memorialSiteId: faker.datatype.boolean(0.6)
+					? faker.helpers.arrayElement(createdRecords.memorialSites)
+					: null,
 				status,
 				validUntil: faker.date.future({ years: 0.1 }),
 			});
@@ -1188,7 +1419,9 @@ async function seedQuotes() {
 			let totalCost = 0;
 
 			// Base product price
-			const basePrice = parseFloat(faker.helpers.arrayElement(['895.00', '995.00', '1495.00', '1995.00', '2495.00']));
+			const basePrice = parseFloat(
+				faker.helpers.arrayElement(['895.00', '995.00', '1495.00', '1995.00', '2495.00']),
+			);
 			subtotal += basePrice;
 			totalCost += basePrice * 0.5; // Assume 50% cost
 
@@ -1201,8 +1434,12 @@ async function seedQuotes() {
 				version: 1,
 				customerId,
 				productId,
-				funeralDirectorId: faker.datatype.boolean(0.4) ? faker.helpers.arrayElement(createdRecords.funeralDirectors) : null,
-				memorialSiteId: faker.datatype.boolean(0.6) ? faker.helpers.arrayElement(createdRecords.memorialSites) : null,
+				funeralDirectorId: faker.datatype.boolean(0.4)
+					? faker.helpers.arrayElement(createdRecords.funeralDirectors)
+					: null,
+				memorialSiteId: faker.datatype.boolean(0.6)
+					? faker.helpers.arrayElement(createdRecords.memorialSites)
+					: null,
 				quoteNumber: `Q-${String(quoteNumber++).padStart(5, '0')}`,
 				quoteType,
 				status,
@@ -1222,7 +1459,9 @@ async function seedQuotes() {
 			for (let c = 0; c < componentTypes.length; c++) {
 				const materialId = faker.helpers.arrayElement(createdRecords.materials);
 				const finishId = faker.helpers.arrayElement(createdRecords.finishes);
-				const supplierCost = parseFloat(faker.helpers.arrayElement(['180.00', '220.00', '250.00', '280.00']));
+				const supplierCost = parseFloat(
+					faker.helpers.arrayElement(['180.00', '220.00', '250.00', '280.00']),
+				);
 				const markupPercent = 100;
 				const unitPrice = supplierCost * (1 + markupPercent / 100);
 
@@ -1283,7 +1522,11 @@ async function seedQuotes() {
 					markupPercent: '150',
 					unitPrice: sundryPrice.toFixed(2),
 					lineTotal: sundryPrice.toFixed(2),
-					sundryName: faker.helpers.arrayElement(['Ceramic Photo Plaque', 'Memorial Lantern', 'Dove Ornament']),
+					sundryName: faker.helpers.arrayElement([
+						'Ceramic Photo Plaque',
+						'Memorial Lantern',
+						'Dove Ornament',
+					]),
 					sortOrder: 0,
 				});
 			}
@@ -1369,7 +1612,10 @@ async function seedJobs() {
 				quoteId: quote.id,
 				jobNumber: `J-${String(jobNumber++).padStart(5, '0')}`,
 				status,
-				installationDate: status === 'installed' ? faker.date.recent({ days: 30 }) : faker.date.future({ years: 0.25 }),
+				installationDate:
+					status === 'installed'
+						? faker.date.recent({ days: 30 })
+						: faker.date.future({ years: 0.25 }),
 				deadline: faker.date.future({ years: 0.5 }),
 			});
 			createdRecords.jobs.push(jobId);
@@ -1401,8 +1647,10 @@ async function seedJobs() {
 				description: 'Balance',
 				amount: balanceAmount.toFixed(2),
 				dueDate: faker.date.future({ years: 0.25 }),
-				paidAmount: status === 'installed' || status === 'completed' ? balanceAmount.toFixed(2) : '0',
-				paidAt: status === 'installed' || status === 'completed' ? faker.date.recent({ days: 7 }) : null,
+				paidAmount:
+					status === 'installed' || status === 'completed' ? balanceAmount.toFixed(2) : '0',
+				paidAt:
+					status === 'installed' || status === 'completed' ? faker.date.recent({ days: 7 }) : null,
 				paymentMethod: status === 'installed' || status === 'completed' ? 'card' : null,
 				sortOrder: 1,
 			});
@@ -1431,7 +1679,7 @@ async function main() {
 		await seedQuotes();
 		await seedJobs();
 
-		console.log('\n' + '='.repeat(50));
+		console.log(`\n${'='.repeat(50)}`);
 		console.log('Seeding complete!');
 		console.log('='.repeat(50));
 		console.log('\nSummary:');

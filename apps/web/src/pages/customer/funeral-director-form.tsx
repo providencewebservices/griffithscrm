@@ -1,16 +1,6 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from '@/components/ui/card';
+import { Plus, Trash2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router';
 import {
 	Breadcrumb,
 	BreadcrumbItem,
@@ -19,6 +9,11 @@ import {
 	BreadcrumbPage,
 	BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
 import {
 	Select,
 	SelectContent,
@@ -26,19 +21,14 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import {
-	Field,
-	FieldGroup,
-	FieldLabel,
-} from '@/components/ui/field';
-import { Plus, Trash2 } from 'lucide-react';
-import {
-	useFuneralDirectorQuery,
-	useCreateFuneralDirectorMutation,
-	useUpdateFuneralDirectorMutation,
-	type CreateFuneralDirectorInput,
-	type ContactInfoInput,
 	type AddressInput,
+	type ContactInfoInput,
+	type CreateFuneralDirectorInput,
+	useCreateFuneralDirectorMutation,
+	useFuneralDirectorQuery,
+	useUpdateFuneralDirectorMutation,
 } from '@/hooks/use-funeral-directors';
 
 const CONTACT_TYPES = [
@@ -97,7 +87,7 @@ export function FuneralDirectorFormPage() {
 					value: c.value,
 					label: c.label || '',
 					isPrimary: c.isPrimary,
-				}))
+				})),
 			);
 			setAddresses(
 				existingData.addresses.map((a) => ({
@@ -110,7 +100,7 @@ export function FuneralDirectorFormPage() {
 					formattedAddress: a.formattedAddress,
 					label: a.label || '',
 					isPrimary: a.isPrimary,
-				}))
+				})),
 			);
 		}
 	}, [existingData]);
@@ -202,9 +192,7 @@ export function FuneralDirectorFormPage() {
 					</BreadcrumbItem>
 					<BreadcrumbSeparator />
 					<BreadcrumbItem>
-						<BreadcrumbPage>
-							{isEditing ? 'Edit' : 'New Funeral Director'}
-						</BreadcrumbPage>
+						<BreadcrumbPage>{isEditing ? 'Edit' : 'New Funeral Director'}</BreadcrumbPage>
 					</BreadcrumbItem>
 				</BreadcrumbList>
 			</Breadcrumb>
@@ -221,9 +209,7 @@ export function FuneralDirectorFormPage() {
 			</div>
 
 			{error && (
-				<div className="bg-destructive/10 text-destructive px-4 py-2 rounded mb-4">
-					{error}
-				</div>
+				<div className="bg-destructive/10 text-destructive px-4 py-2 rounded mb-4">{error}</div>
 			)}
 
 			<form onSubmit={handleSubmit}>
@@ -284,9 +270,7 @@ export function FuneralDirectorFormPage() {
 						</CardHeader>
 						<CardContent>
 							{contacts.length === 0 ? (
-								<p className="text-sm text-muted-foreground">
-									No contact information added.
-								</p>
+								<p className="text-sm text-muted-foreground">No contact information added.</p>
 							) : (
 								<div className="space-y-3">
 									{contacts.map((contact, index) => (
@@ -310,7 +294,9 @@ export function FuneralDirectorFormPage() {
 													</SelectContent>
 												</Select>
 												<Input
-													placeholder={contact.type === 'email' ? 'email@example.com' : '01onal 123456'}
+													placeholder={
+														contact.type === 'email' ? 'email@example.com' : '01onal 123456'
+													}
 													value={contact.value}
 													onChange={(e) => updateContact(index, { value: e.target.value })}
 													className="flex-1"
@@ -406,7 +392,10 @@ export function FuneralDirectorFormPage() {
 													placeholder="County"
 													value={address.administrativeAreaLevel1 || ''}
 													onChange={(e) => {
-														const updated = { ...address, administrativeAreaLevel1: e.target.value };
+														const updated = {
+															...address,
+															administrativeAreaLevel1: e.target.value,
+														};
 														updated.formattedAddress = generateFormattedAddress(updated);
 														updateAddress(index, updated);
 													}}

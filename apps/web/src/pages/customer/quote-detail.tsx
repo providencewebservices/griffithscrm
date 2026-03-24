@@ -1,14 +1,34 @@
-import { useState, useEffect } from 'react';
-import { useTenantSettingsQuery } from '@/hooks/use-tenant-settings';
-import { useParams, useNavigate, Link } from 'react-router';
-import { Button } from '@/components/ui/button';
+import {
+	ArrowLeft,
+	Check,
+	ChevronDown,
+	Clock,
+	Copy,
+	Loader2,
+	Mail,
+	MessageSquare,
+	MoreHorizontal,
+	Plus,
+	Trash2,
+	X,
+} from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router';
+import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
+import { DocumentsCard } from '@/components/documents';
+import { AddOptionDialog } from '@/components/quote/add-option-dialog';
+import { CustomerView, OptionContent, SharedContextCard } from '@/components/quote/detail';
 import { Badge } from '@/components/ui/badge';
 import {
-	Card,
-	CardContent,
-	CardHeader,
-	CardTitle,
-} from '@/components/ui/card';
+	Breadcrumb,
+	BreadcrumbItem,
+	BreadcrumbLink,
+	BreadcrumbList,
+	BreadcrumbPage,
+	BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
 	Dialog,
 	DialogContent,
@@ -24,70 +44,41 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { useCustomerView } from '@/contexts/customer-view-context';
+import { useLineItemPresetsQuery } from '@/hooks/use-line-item-presets';
 import {
-	Breadcrumb,
-	BreadcrumbItem,
-	BreadcrumbLink,
-	BreadcrumbList,
-	BreadcrumbPage,
-	BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb';
-import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
-import {
-	useQuoteQuery,
-	useUpdateQuoteStatusMutation,
-	useDeleteQuoteMutation,
-	useSendQuoteEmailMutation,
-	useUpdateComponentPricingMutation,
-	useUpdateLetteringPricingMutation,
-	useUpdateSundryPricingMutation,
-	useUpdateProductPricingMutation,
-	useAddLineItemMutation,
-	useUpdateLineItemMutation,
-	useDeleteLineItemMutation,
-	useCloneOptionMutation,
-	useDeleteOptionMutation,
-	useAcceptOptionMutation,
-	useAddLetteringMutation,
-	useUpdateLetteringMutation,
-	useDeleteLetteringMutation,
-	useAddComponentMutation,
-	useDeleteComponentMutation,
-	formatQuoteStatus,
 	formatPriceRange,
+	formatQuoteStatus,
 	getNextQuoteStatus,
 	getNextQuoteStatusLabel,
 	QUOTE_TYPE_LABELS,
 	type QuoteStatus,
 	type QuoteType,
+	useAcceptOptionMutation,
+	useAddComponentMutation,
+	useAddLetteringMutation,
+	useAddLineItemMutation,
+	useCloneOptionMutation,
+	useDeleteComponentMutation,
+	useDeleteLetteringMutation,
+	useDeleteLineItemMutation,
+	useDeleteOptionMutation,
+	useDeleteQuoteMutation,
+	useQuoteQuery,
+	useSendQuoteEmailMutation,
+	useUpdateComponentPricingMutation,
+	useUpdateLetteringMutation,
+	useUpdateLetteringPricingMutation,
+	useUpdateLineItemMutation,
+	useUpdateProductPricingMutation,
+	useUpdateQuoteStatusMutation,
+	useUpdateSundryPricingMutation,
 } from '@/hooks/use-quotes';
-import { useCustomerView } from '@/contexts/customer-view-context';
-import {
-	ArrowLeft,
-	Check,
-	Loader2,
-	Mail,
-	MessageSquare,
-	Plus,
-	Copy,
-	MoreHorizontal,
-	ChevronDown,
-	Trash2,
-	X,
-	Clock,
-} from 'lucide-react';
-import { DocumentsCard } from '@/components/documents';
-import { useLineItemPresetsQuery } from '@/hooks/use-line-item-presets';
-import { AddOptionDialog } from '@/components/quote/add-option-dialog';
-import {
-	SharedContextCard,
-	OptionContent,
-	CustomerView,
-} from '@/components/quote/detail';
+import { useTenantSettingsQuery } from '@/hooks/use-tenant-settings';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const _API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 // Quote status order for progress indicator
 const QUOTE_STATUS_ORDER: QuoteStatus[] = ['draft', 'review', 'ready', 'presented', 'accepted'];
@@ -284,7 +275,8 @@ export function QuoteDetailPage() {
 	}
 
 	// Determine available actions based on status
-	const canSendEmail = ['ready', 'presented'].includes(pkg.status) && !!(pkg.customerId || pkg.funeralDirectorId);
+	const canSendEmail =
+		['ready', 'presented'].includes(pkg.status) && !!(pkg.customerId || pkg.funeralDirectorId);
 	const canAddOptions = pkg.status === 'draft';
 
 	// Primary CTA and secondary actions
@@ -295,7 +287,12 @@ export function QuoteDetailPage() {
 	const isPresentedStatus = pkg.status === 'presented';
 
 	// Build secondary actions
-	const secondaryActions: { label: string; icon: React.ElementType; onClick: () => void; destructive?: boolean }[] = [];
+	const secondaryActions: {
+		label: string;
+		icon: React.ElementType;
+		onClick: () => void;
+		destructive?: boolean;
+	}[] = [];
 
 	if (canSendEmail) {
 		secondaryActions.push({
@@ -445,7 +442,8 @@ export function QuoteDetailPage() {
 							</DropdownMenuTrigger>
 							<DropdownMenuContent align="end">
 								{secondaryActions.map((action, i) => {
-									const isFirstDestructive = action.destructive && (i === 0 || !secondaryActions[i - 1].destructive);
+									const isFirstDestructive =
+										action.destructive && (i === 0 || !secondaryActions[i - 1].destructive);
 									return (
 										<span key={action.label}>
 											{isFirstDestructive && i > 0 && <DropdownMenuSeparator />}
@@ -466,11 +464,20 @@ export function QuoteDetailPage() {
 			</div>
 
 			{mutationError && (
-				<div className="bg-destructive/10 text-destructive px-4 py-2 rounded mb-4">{mutationError}</div>
+				<div className="bg-destructive/10 text-destructive px-4 py-2 rounded mb-4">
+					{mutationError}
+				</div>
 			)}
 
 			{/* Customer View */}
-			{isCustomerView && <CustomerView pkg={pkg} settings={settings} formatCurrency={formatCurrency} formatDate={formatDate} />}
+			{isCustomerView && (
+				<CustomerView
+					pkg={pkg}
+					settings={settings}
+					formatCurrency={formatCurrency}
+					formatDate={formatDate}
+				/>
+			)}
 
 			{/* Internal View */}
 			{!isCustomerView && (
@@ -619,8 +626,8 @@ export function QuoteDetailPage() {
 										)}
 										{pkg.emailSentAt && (
 											<div className="text-xs text-muted-foreground">
-												Quote emailed {pkg.emailSentCount} time{pkg.emailSentCount !== 1 ? 's' : ''} - last
-												sent {formatDate(pkg.emailSentAt)}
+												Quote emailed {pkg.emailSentCount} time{pkg.emailSentCount !== 1 ? 's' : ''}{' '}
+												- last sent {formatDate(pkg.emailSentAt)}
 											</div>
 										)}
 									</CardContent>
@@ -680,7 +687,8 @@ export function QuoteDetailPage() {
 					<div className="space-y-4 py-4">
 						{pkg.emailSentCount > 0 && (
 							<div className="text-sm text-muted-foreground bg-muted p-3 rounded">
-								This quote has been sent {pkg.emailSentCount} time{pkg.emailSentCount !== 1 ? 's' : ''} previously.
+								This quote has been sent {pkg.emailSentCount} time
+								{pkg.emailSentCount !== 1 ? 's' : ''} previously.
 								{pkg.emailSentAt && <> Last sent on {formatDate(pkg.emailSentAt)}.</>}
 							</div>
 						)}

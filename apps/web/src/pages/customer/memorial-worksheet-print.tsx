@@ -1,6 +1,6 @@
-import { useParams, Link } from 'react-router';
+import { ArrowLeft, Loader2, Printer } from 'lucide-react';
+import { Link, useParams } from 'react-router';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Printer, Loader2 } from 'lucide-react';
 import { useMemorialWorksheetQuery } from '@/hooks/use-memorial-worksheet';
 
 function formatPrintDate(dateString: string | null): string {
@@ -121,9 +121,7 @@ export function MemorialWorksheetPrintPage() {
 							>
 								REFERENCE NUMBER:
 							</td>
-							<td style={{ padding: '3mm 0', verticalAlign: 'top' }}>
-								{worksheet.jobNumber}
-							</td>
+							<td style={{ padding: '3mm 0', verticalAlign: 'top' }}>{worksheet.jobNumber}</td>
 						</tr>
 						<tr>
 							<td

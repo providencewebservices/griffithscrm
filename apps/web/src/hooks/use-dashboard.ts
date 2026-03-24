@@ -3,8 +3,21 @@ import { useQuery } from '@tanstack/react-query';
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 // Types
-export type QuoteStatus = 'draft' | 'review' | 'ready' | 'presented' | 'accepted' | 'rejected' | 'expired';
-export type JobStatus = 'pending' | 'materials_ordered' | 'in_production' | 'ready_for_install' | 'installed' | 'completed';
+export type QuoteStatus =
+	| 'draft'
+	| 'review'
+	| 'ready'
+	| 'presented'
+	| 'accepted'
+	| 'rejected'
+	| 'expired';
+export type JobStatus =
+	| 'pending'
+	| 'materials_ordered'
+	| 'in_production'
+	| 'ready_for_install'
+	| 'installed'
+	| 'completed';
 
 export type RecentQuote = {
 	id: string;

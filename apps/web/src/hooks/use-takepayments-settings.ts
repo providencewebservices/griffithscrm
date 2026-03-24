@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -34,7 +34,9 @@ async function fetchTakepaymentsSettings(): Promise<TakepaymentsSettingsResponse
 	return response.json();
 }
 
-async function updateTakepaymentsSettings(input: UpdateTakepaymentsSettingsInput): Promise<TakepaymentsSettingsResponse> {
+async function updateTakepaymentsSettings(
+	input: UpdateTakepaymentsSettingsInput,
+): Promise<TakepaymentsSettingsResponse> {
 	const response = await fetch(`${API_URL}/api/tenant/takepayments-settings`, {
 		method: 'PUT',
 		headers: { 'Content-Type': 'application/json' },
@@ -48,7 +50,11 @@ async function updateTakepaymentsSettings(input: UpdateTakepaymentsSettingsInput
 	return response.json();
 }
 
-async function testTakepaymentsConnection(): Promise<{ success: boolean; message?: string; error?: string }> {
+async function testTakepaymentsConnection(): Promise<{
+	success: boolean;
+	message?: string;
+	error?: string;
+}> {
 	const response = await fetch(`${API_URL}/api/tenant/takepayments-settings/test`, {
 		method: 'POST',
 		credentials: 'include',

@@ -1,19 +1,18 @@
-import { Hono } from 'hono';
-import { zValidator } from '@hono/zod-validator';
-import { z } from 'zod';
-import { eq, and, gte, lte, or, isNull, isNotNull, inArray } from 'drizzle-orm';
-import { requireAuth, requireTenant, isManagerRole } from '../middleware/auth';
-import { db } from '../lib/auth';
 import {
 	calendarEvents,
 	calendarSettings,
-	timeOffRequests,
-	quotes,
-	jobs,
 	customers,
+	jobs,
+	quotes,
 	RECURRENCE_PATTERNS,
-	TIME_OFF_STATUSES,
+	timeOffRequests,
 } from '@griffiths-crm/shared/db/schema';
+import { zValidator } from '@hono/zod-validator';
+import { and, eq, gte, inArray, isNotNull, isNull, lte, or } from 'drizzle-orm';
+import { Hono } from 'hono';
+import { z } from 'zod';
+import { db } from '../lib/auth';
+import { isManagerRole, requireAuth, requireTenant } from '../middleware/auth';
 
 // Event types for aggregation
 const EVENT_SOURCE_TYPES = [
@@ -63,12 +62,30 @@ const rescheduleSchema = z.object({
 });
 
 const updateSettingsSchema = z.object({
-	quoteValidUntilColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
-	jobInstallationColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
-	jobDeadlineColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
-	customEventColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
-	timeOffApprovedColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
-	timeOffPendingColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
+	quoteValidUntilColor: z
+		.string()
+		.regex(/^#[0-9A-Fa-f]{6}$/)
+		.optional(),
+	jobInstallationColor: z
+		.string()
+		.regex(/^#[0-9A-Fa-f]{6}$/)
+		.optional(),
+	jobDeadlineColor: z
+		.string()
+		.regex(/^#[0-9A-Fa-f]{6}$/)
+		.optional(),
+	customEventColor: z
+		.string()
+		.regex(/^#[0-9A-Fa-f]{6}$/)
+		.optional(),
+	timeOffApprovedColor: z
+		.string()
+		.regex(/^#[0-9A-Fa-f]{6}$/)
+		.optional(),
+	timeOffPendingColor: z
+		.string()
+		.regex(/^#[0-9A-Fa-f]{6}$/)
+		.optional(),
 });
 
 // Helper to expand recurring events
@@ -82,21 +99,17 @@ function expandRecurringEvents(
 		[key: string]: unknown;
 	},
 	rangeStart: Date,
-	rangeEnd: Date
+	rangeEnd: Date,
 ) {
 	if (event.recurrencePattern === 'none') {
 		return [event];
 	}
 
 	const instances = [];
-	let currentDate = new Date(event.startAt);
-	const endDate = event.recurrenceEndDate
-		? new Date(event.recurrenceEndDate)
-		: rangeEnd;
+	const currentDate = new Date(event.startAt);
+	const endDate = event.recurrenceEndDate ? new Date(event.recurrenceEndDate) : rangeEnd;
 
-	const duration = event.endAt
-		? event.endAt.getTime() - event.startAt.getTime()
-		: 0;
+	const duration = event.endAt ? event.endAt.getTime() - event.startAt.getTime() : 0;
 
 	while (currentDate <= endDate && currentDate <= rangeEnd) {
 		if (currentDate >= rangeStart) {
@@ -203,8 +216,8 @@ const calendarRoutes = new Hono()
 						isNotNull(quotes.validUntil),
 						gte(quotes.validUntil, startDate),
 						lte(quotes.validUntil, endDate),
-						inArray(quotes.status, ['draft', 'review', 'ready', 'presented'])
-					)
+						inArray(quotes.status, ['draft', 'review', 'ready', 'presented']),
+					),
 				);
 
 			events.push(
@@ -214,14 +227,14 @@ const calendarRoutes = new Hono()
 					sourceId: q.id,
 					title: `Quote ${q.quoteNumber} expires`,
 					description: null,
-					start: q.validUntil!.toISOString(),
+					start: q.validUntil?.toISOString(),
 					end: null,
 					allDay: true,
 					editable: true,
 					color: colors.quoteValidUntilColor,
 					linkedQuoteId: q.id,
 					linkedCustomerId: q.customerId,
-				}))
+				})),
 			);
 		}
 
@@ -241,8 +254,8 @@ const calendarRoutes = new Hono()
 						eq(jobs.tenantId, tenantId),
 						isNotNull(jobs.installationDate),
 						gte(jobs.installationDate, startDate),
-						lte(jobs.installationDate, endDate)
-					)
+						lte(jobs.installationDate, endDate),
+					),
 				);
 
 			events.push(
@@ -252,14 +265,14 @@ const calendarRoutes = new Hono()
 					sourceId: j.id,
 					title: `Installation: ${j.jobNumber}`,
 					description: null,
-					start: j.installationDate!.toISOString(),
+					start: j.installationDate?.toISOString(),
 					end: null,
 					allDay: true,
 					editable: true,
 					color: colors.jobInstallationColor,
 					linkedJobId: j.id,
 					linkedQuoteId: j.quoteId,
-				}))
+				})),
 			);
 		}
 
@@ -279,8 +292,8 @@ const calendarRoutes = new Hono()
 						eq(jobs.tenantId, tenantId),
 						isNotNull(jobs.deadline),
 						gte(jobs.deadline, startDate),
-						lte(jobs.deadline, endDate)
-					)
+						lte(jobs.deadline, endDate),
+					),
 				);
 
 			events.push(
@@ -290,14 +303,14 @@ const calendarRoutes = new Hono()
 					sourceId: j.id,
 					title: `Deadline: ${j.jobNumber}`,
 					description: null,
-					start: j.deadline!.toISOString(),
+					start: j.deadline?.toISOString(),
 					end: null,
 					allDay: true,
 					editable: true,
 					color: colors.jobDeadlineColor,
 					linkedJobId: j.id,
 					linkedQuoteId: j.quoteId,
-				}))
+				})),
 			);
 		}
 
@@ -315,23 +328,23 @@ const calendarRoutes = new Hono()
 							and(
 								eq(calendarEvents.recurrencePattern, 'none'),
 								gte(calendarEvents.startAt, startDate),
-								lte(calendarEvents.startAt, endDate)
+								lte(calendarEvents.startAt, endDate),
 							),
 							// Recurring events that might have instances in range
 							and(
 								or(
 									eq(calendarEvents.recurrencePattern, 'daily'),
 									eq(calendarEvents.recurrencePattern, 'weekly'),
-									eq(calendarEvents.recurrencePattern, 'monthly')
+									eq(calendarEvents.recurrencePattern, 'monthly'),
 								),
 								lte(calendarEvents.startAt, endDate),
 								or(
 									isNull(calendarEvents.recurrenceEndDate),
-									gte(calendarEvents.recurrenceEndDate, startDate)
-								)
-							)
-						)
-					)
+									gte(calendarEvents.recurrenceEndDate, startDate),
+								),
+							),
+						),
+					),
 				);
 
 			for (const event of customResults) {
@@ -344,7 +357,7 @@ const calendarRoutes = new Hono()
 						recurrenceEndDate: event.recurrenceEndDate,
 					},
 					startDate,
-					endDate
+					endDate,
 				);
 
 				events.push(
@@ -364,10 +377,8 @@ const calendarRoutes = new Hono()
 						linkedJobId: event.linkedJobId,
 						recurrencePattern: event.recurrencePattern,
 						recurrenceParentId:
-							typeof e.recurrenceParentId === 'string'
-								? e.recurrenceParentId
-								: undefined,
-					}))
+							typeof e.recurrenceParentId === 'string' ? e.recurrenceParentId : undefined,
+					})),
 				);
 			}
 		}
@@ -388,11 +399,8 @@ const calendarRoutes = new Hono()
 				timeOffConditions.push(
 					or(
 						eq(timeOffRequests.status, 'approved'),
-						and(
-							eq(timeOffRequests.status, 'pending'),
-							eq(timeOffRequests.userId, currentUser.id)
-						)
-					)!
+						and(eq(timeOffRequests.status, 'pending'), eq(timeOffRequests.userId, currentUser.id)),
+					)!,
 				);
 			}
 
@@ -403,7 +411,7 @@ const calendarRoutes = new Hono()
 
 			// Get user names for time-off display
 			const userIds = [...new Set(timeOffResults.map((t) => t.userId))];
-			const users =
+			const _users =
 				userIds.length > 0
 					? await db
 							.select({ id: customers.id, firstName: customers.firstName })
@@ -423,13 +431,10 @@ const calendarRoutes = new Hono()
 					end: t.endDate.toISOString(),
 					allDay: true,
 					editable: t.status === 'pending' && t.userId === currentUser.id,
-					color:
-						t.status === 'approved'
-							? colors.timeOffApprovedColor
-							: colors.timeOffPendingColor,
+					color: t.status === 'approved' ? colors.timeOffApprovedColor : colors.timeOffPendingColor,
 					userId: t.userId,
 					status: t.status,
-				}))
+				})),
 			);
 		}
 
@@ -447,9 +452,7 @@ const calendarRoutes = new Hono()
 			const [quote] = await db
 				.select()
 				.from(quotes)
-				.where(
-					and(eq(quotes.id, data.linkedQuoteId), eq(quotes.tenantId, tenantId))
-				)
+				.where(and(eq(quotes.id, data.linkedQuoteId), eq(quotes.tenantId, tenantId)))
 				.limit(1);
 			if (!quote) {
 				return c.json({ error: 'Quote not found' }, 404);
@@ -471,12 +474,7 @@ const calendarRoutes = new Hono()
 			const [customer] = await db
 				.select()
 				.from(customers)
-				.where(
-					and(
-						eq(customers.id, data.linkedCustomerId),
-						eq(customers.tenantId, tenantId)
-					)
-				)
+				.where(and(eq(customers.id, data.linkedCustomerId), eq(customers.tenantId, tenantId)))
 				.limit(1);
 			if (!customer) {
 				return c.json({ error: 'Customer not found' }, 404);
@@ -499,9 +497,7 @@ const calendarRoutes = new Hono()
 				linkedJobId: data.linkedJobId || null,
 				linkedCustomerId: data.linkedCustomerId || null,
 				recurrencePattern: data.recurrencePattern || 'none',
-				recurrenceEndDate: data.recurrenceEndDate
-					? new Date(data.recurrenceEndDate)
-					: null,
+				recurrenceEndDate: data.recurrenceEndDate ? new Date(data.recurrenceEndDate) : null,
 			})
 			.returning();
 
@@ -523,8 +519,8 @@ const calendarRoutes = new Hono()
 				and(
 					eq(calendarEvents.id, id),
 					eq(calendarEvents.tenantId, tenantId),
-					isNull(calendarEvents.archivedAt)
-				)
+					isNull(calendarEvents.archivedAt),
+				),
 			)
 			.limit(1);
 
@@ -536,16 +532,12 @@ const calendarRoutes = new Hono()
 		if (data.title !== undefined) updateData.title = data.title;
 		if (data.description !== undefined) updateData.description = data.description;
 		if (data.startAt !== undefined) updateData.startAt = new Date(data.startAt);
-		if (data.endAt !== undefined)
-			updateData.endAt = data.endAt ? new Date(data.endAt) : null;
+		if (data.endAt !== undefined) updateData.endAt = data.endAt ? new Date(data.endAt) : null;
 		if (data.isAllDay !== undefined) updateData.isAllDay = data.isAllDay;
-		if (data.linkedQuoteId !== undefined)
-			updateData.linkedQuoteId = data.linkedQuoteId;
+		if (data.linkedQuoteId !== undefined) updateData.linkedQuoteId = data.linkedQuoteId;
 		if (data.linkedJobId !== undefined) updateData.linkedJobId = data.linkedJobId;
-		if (data.linkedCustomerId !== undefined)
-			updateData.linkedCustomerId = data.linkedCustomerId;
-		if (data.recurrencePattern !== undefined)
-			updateData.recurrencePattern = data.recurrencePattern;
+		if (data.linkedCustomerId !== undefined) updateData.linkedCustomerId = data.linkedCustomerId;
+		if (data.recurrencePattern !== undefined) updateData.recurrencePattern = data.recurrencePattern;
 		if (data.recurrenceEndDate !== undefined)
 			updateData.recurrenceEndDate = data.recurrenceEndDate
 				? new Date(data.recurrenceEndDate)
@@ -561,108 +553,108 @@ const calendarRoutes = new Hono()
 	})
 
 	// Reschedule event (drag & drop) - syncs to source record
-	.put(
-		'/events/:id/reschedule',
-		zValidator('json', rescheduleSchema),
-		async (c) => {
-			const currentUser = c.get('user');
-			const tenantId = currentUser.tenantId!;
-			const id = c.req.param('id');
-			const { startAt, endAt } = c.req.valid('json');
+	.put('/events/:id/reschedule', zValidator('json', rescheduleSchema), async (c) => {
+		const currentUser = c.get('user');
+		const tenantId = currentUser.tenantId!;
+		const id = c.req.param('id');
+		const { startAt, endAt } = c.req.valid('json');
 
-			const newStart = new Date(startAt);
-			const newEnd = endAt ? new Date(endAt) : null;
+		const newStart = new Date(startAt);
+		const newEnd = endAt ? new Date(endAt) : null;
 
-			// Handle different event sources
-			if (id.startsWith('quote-validuntil-')) {
-				const quoteId = id.replace('quote-validuntil-', '');
-				const [quote] = await db
-					.select()
-					.from(quotes)
-					.where(and(eq(quotes.id, quoteId), eq(quotes.tenantId, tenantId)))
-					.limit(1);
-
-				if (!quote) {
-					return c.json({ error: 'Quote not found' }, 404);
-				}
-
-				await db
-					.update(quotes)
-					.set({ validUntil: newStart, updatedAt: new Date() })
-					.where(eq(quotes.id, quoteId));
-
-				return c.json({ success: true, sourceType: 'quote', sourceId: quoteId });
-			}
-
-			if (id.startsWith('job-install-')) {
-				const jobId = id.replace('job-install-', '');
-				const [job] = await db
-					.select()
-					.from(jobs)
-					.where(and(eq(jobs.id, jobId), eq(jobs.tenantId, tenantId)))
-					.limit(1);
-
-				if (!job) {
-					return c.json({ error: 'Job not found' }, 404);
-				}
-
-				await db
-					.update(jobs)
-					.set({ installationDate: newStart, updatedAt: new Date() })
-					.where(eq(jobs.id, jobId));
-
-				return c.json({ success: true, sourceType: 'job', sourceId: jobId });
-			}
-
-			if (id.startsWith('job-deadline-')) {
-				const jobId = id.replace('job-deadline-', '');
-				const [job] = await db
-					.select()
-					.from(jobs)
-					.where(and(eq(jobs.id, jobId), eq(jobs.tenantId, tenantId)))
-					.limit(1);
-
-				if (!job) {
-					return c.json({ error: 'Job not found' }, 404);
-				}
-
-				await db
-					.update(jobs)
-					.set({ deadline: newStart, updatedAt: new Date() })
-					.where(eq(jobs.id, jobId));
-
-				return c.json({ success: true, sourceType: 'job', sourceId: jobId });
-			}
-
-			// Custom event - might have recurrence instance suffix
-			const baseId = id.includes('-') && id.match(/^\w+-\d{4}-\d{2}-\d{2}/)
-				? id.split('-').slice(0, -3).join('-') // Remove date suffix from recurring instance
-				: id;
-
-			const [event] = await db
+		// Handle different event sources
+		if (id.startsWith('quote-validuntil-')) {
+			const quoteId = id.replace('quote-validuntil-', '');
+			const [quote] = await db
 				.select()
-				.from(calendarEvents)
-				.where(
-					and(
-						eq(calendarEvents.id, baseId),
-						eq(calendarEvents.tenantId, tenantId),
-						isNull(calendarEvents.archivedAt)
-					)
-				)
+				.from(quotes)
+				.where(and(eq(quotes.id, quoteId), eq(quotes.tenantId, tenantId)))
 				.limit(1);
 
-			if (!event) {
-				return c.json({ error: 'Event not found' }, 404);
+			if (!quote) {
+				return c.json({ error: 'Quote not found' }, 404);
 			}
 
 			await db
-				.update(calendarEvents)
-				.set({ startAt: newStart, endAt: newEnd, updatedAt: new Date() })
-				.where(eq(calendarEvents.id, baseId));
+				.update(quotes)
+				.set({ validUntil: newStart, updatedAt: new Date() })
+				.where(eq(quotes.id, quoteId));
 
-			return c.json({ success: true, sourceType: 'custom', sourceId: baseId });
+			return c.json({ success: true, sourceType: 'quote', sourceId: quoteId });
 		}
-	)
+
+		if (id.startsWith('job-install-')) {
+			const jobId = id.replace('job-install-', '');
+			const [job] = await db
+				.select()
+				.from(jobs)
+				.where(and(eq(jobs.id, jobId), eq(jobs.tenantId, tenantId)))
+				.limit(1);
+
+			if (!job) {
+				return c.json({ error: 'Job not found' }, 404);
+			}
+
+			await db
+				.update(jobs)
+				.set({ installationDate: newStart, updatedAt: new Date() })
+				.where(eq(jobs.id, jobId));
+
+			return c.json({ success: true, sourceType: 'job', sourceId: jobId });
+		}
+
+		if (id.startsWith('job-deadline-')) {
+			const jobId = id.replace('job-deadline-', '');
+			const [job] = await db
+				.select()
+				.from(jobs)
+				.where(and(eq(jobs.id, jobId), eq(jobs.tenantId, tenantId)))
+				.limit(1);
+
+			if (!job) {
+				return c.json({ error: 'Job not found' }, 404);
+			}
+
+			await db
+				.update(jobs)
+				.set({ deadline: newStart, updatedAt: new Date() })
+				.where(eq(jobs.id, jobId));
+
+			return c.json({ success: true, sourceType: 'job', sourceId: jobId });
+		}
+
+		// Custom event - might have recurrence instance suffix
+		const baseId =
+			id.includes('-') && id.match(/^\w+-\d{4}-\d{2}-\d{2}/)
+				? id
+						.split('-')
+						.slice(0, -3)
+						.join('-') // Remove date suffix from recurring instance
+				: id;
+
+		const [event] = await db
+			.select()
+			.from(calendarEvents)
+			.where(
+				and(
+					eq(calendarEvents.id, baseId),
+					eq(calendarEvents.tenantId, tenantId),
+					isNull(calendarEvents.archivedAt),
+				),
+			)
+			.limit(1);
+
+		if (!event) {
+			return c.json({ error: 'Event not found' }, 404);
+		}
+
+		await db
+			.update(calendarEvents)
+			.set({ startAt: newStart, endAt: newEnd, updatedAt: new Date() })
+			.where(eq(calendarEvents.id, baseId));
+
+		return c.json({ success: true, sourceType: 'custom', sourceId: baseId });
+	})
 
 	// Delete custom event
 	.delete('/events/:id', async (c) => {
@@ -678,8 +670,8 @@ const calendarRoutes = new Hono()
 				and(
 					eq(calendarEvents.id, id),
 					eq(calendarEvents.tenantId, tenantId),
-					isNull(calendarEvents.archivedAt)
-				)
+					isNull(calendarEvents.archivedAt),
+				),
 			)
 			.limit(1);
 
@@ -740,10 +732,8 @@ const calendarRoutes = new Hono()
 				updateData.quoteValidUntilColor = data.quoteValidUntilColor;
 			if (data.jobInstallationColor !== undefined)
 				updateData.jobInstallationColor = data.jobInstallationColor;
-			if (data.jobDeadlineColor !== undefined)
-				updateData.jobDeadlineColor = data.jobDeadlineColor;
-			if (data.customEventColor !== undefined)
-				updateData.customEventColor = data.customEventColor;
+			if (data.jobDeadlineColor !== undefined) updateData.jobDeadlineColor = data.jobDeadlineColor;
+			if (data.customEventColor !== undefined) updateData.customEventColor = data.customEventColor;
 			if (data.timeOffApprovedColor !== undefined)
 				updateData.timeOffApprovedColor = data.timeOffApprovedColor;
 			if (data.timeOffPendingColor !== undefined)

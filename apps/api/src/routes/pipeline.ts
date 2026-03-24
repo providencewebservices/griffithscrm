@@ -1,13 +1,8 @@
+import { customers, jobPaymentScheduleItems, jobs, quotes } from '@griffiths-crm/shared/db/schema';
+import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import { Hono } from 'hono';
-import { eq, and, sql, desc, inArray } from 'drizzle-orm';
-import { requireAuth, requireTenant } from '../middleware/auth';
 import { db } from '../lib/auth';
-import {
-	quotes,
-	jobs,
-	customers,
-	jobPaymentScheduleItems,
-} from '@griffiths-crm/shared/db/schema';
+import { requireAuth, requireTenant } from '../middleware/auth';
 import { computeDepositStatus } from './jobs';
 
 // Column configuration for quote pipeline
@@ -74,8 +69,8 @@ const JOB_COLUMNS = [
 
 const CARDS_PER_COLUMN = 5;
 
-type QuoteColumn = typeof QUOTE_COLUMNS[number];
-type JobColumn = typeof JOB_COLUMNS[number];
+type QuoteColumn = (typeof QUOTE_COLUMNS)[number];
+type JobColumn = (typeof JOB_COLUMNS)[number];
 
 // Create pipeline routes
 export const pipelineRoutes = new Hono()
@@ -100,8 +95,8 @@ export const pipelineRoutes = new Hono()
 					.where(
 						and(
 							eq(quotes.tenantId, tenantId),
-							inArray(quotes.status, column.statuses as unknown as string[])
-						)
+							inArray(quotes.status, column.statuses as unknown as string[]),
+						),
 					);
 
 				// Get limited items for display
@@ -118,8 +113,8 @@ export const pipelineRoutes = new Hono()
 					.where(
 						and(
 							eq(quotes.tenantId, tenantId),
-							inArray(quotes.status, column.statuses as unknown as string[])
-						)
+							inArray(quotes.status, column.statuses as unknown as string[]),
+						),
 					)
 					.orderBy(desc(quotes.updatedAt))
 					.limit(CARDS_PER_COLUMN);
@@ -150,7 +145,7 @@ export const pipelineRoutes = new Hono()
 							status: quote.status,
 							updatedAt: quote.updatedAt,
 						};
-					})
+					}),
 				);
 
 				return {
@@ -162,7 +157,7 @@ export const pipelineRoutes = new Hono()
 					totalValue: stats?.totalValue || '0',
 					items: enrichedItems,
 				};
-			})
+			}),
 		);
 
 		// Process job columns
@@ -177,8 +172,8 @@ export const pipelineRoutes = new Hono()
 					.where(
 						and(
 							eq(jobs.tenantId, tenantId),
-							inArray(jobs.status, column.statuses as unknown as string[])
-						)
+							inArray(jobs.status, column.statuses as unknown as string[]),
+						),
 					);
 
 				// Get limited items for display
@@ -195,8 +190,8 @@ export const pipelineRoutes = new Hono()
 					.where(
 						and(
 							eq(jobs.tenantId, tenantId),
-							inArray(jobs.status, column.statuses as unknown as string[])
-						)
+							inArray(jobs.status, column.statuses as unknown as string[]),
+						),
 					)
 					.orderBy(desc(jobs.updatedAt))
 					.limit(CARDS_PER_COLUMN);
@@ -242,11 +237,11 @@ export const pipelineRoutes = new Hono()
 
 						const totalAmount = paymentItems.reduce(
 							(sum, item) => sum + parseFloat(item.amount),
-							0
+							0,
 						);
 						const paidAmount = paymentItems.reduce(
 							(sum, item) => sum + parseFloat(item.paidAmount),
-							0
+							0,
 						);
 
 						let paymentStatus = 'No Payment Due';
@@ -273,14 +268,11 @@ export const pipelineRoutes = new Hono()
 							accountStatus: job.accountStatus,
 							updatedAt: job.updatedAt,
 						};
-					})
+					}),
 				);
 
 				// Calculate total value for job column (sum of quote totals)
-				const totalValue = enrichedItems.reduce(
-					(sum, item) => sum + parseFloat(item.total),
-					0
-				);
+				const _totalValue = enrichedItems.reduce((sum, item) => sum + parseFloat(item.total), 0);
 
 				// For accurate total, we need to query all jobs in this column
 				const [totalStats] = await db
@@ -292,8 +284,8 @@ export const pipelineRoutes = new Hono()
 					.where(
 						and(
 							eq(jobs.tenantId, tenantId),
-							inArray(jobs.status, column.statuses as unknown as string[])
-						)
+							inArray(jobs.status, column.statuses as unknown as string[]),
+						),
 					);
 
 				return {
@@ -305,7 +297,7 @@ export const pipelineRoutes = new Hono()
 					totalValue: totalStats?.totalValue || '0',
 					items: enrichedItems,
 				};
-			})
+			}),
 		);
 
 		return c.json({

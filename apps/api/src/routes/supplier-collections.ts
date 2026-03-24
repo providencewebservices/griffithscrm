@@ -1,14 +1,14 @@
-import { Hono } from 'hono';
-import { zValidator } from '@hono/zod-validator';
-import { z } from 'zod';
-import { eq, and, isNull, isNotNull, desc, asc, count, sql } from 'drizzle-orm';
-import { requireAuth, requireTenant } from '../middleware/auth';
-import { db } from '../lib/auth';
 import {
-	supplierCollections,
 	supplierCategories,
+	supplierCollections,
 	suppliers,
 } from '@griffiths-crm/shared/db/schema';
+import { zValidator } from '@hono/zod-validator';
+import { and, asc, count, eq, isNotNull, isNull, sql } from 'drizzle-orm';
+import { Hono } from 'hono';
+import { z } from 'zod';
+import { db } from '../lib/auth';
+import { requireAuth, requireTenant } from '../middleware/auth';
 
 const createSchema = z.object({
 	supplierId: z.string().min(1, 'Supplier is required'),
@@ -101,7 +101,9 @@ const supplierCollectionsRoutes = new Hono()
 		const [collection] = await db
 			.select()
 			.from(supplierCollections)
-			.where(and(eq(supplierCollections.id, collectionId), eq(supplierCollections.tenantId, tenantId)))
+			.where(
+				and(eq(supplierCollections.id, collectionId), eq(supplierCollections.tenantId, tenantId)),
+			)
 			.limit(1);
 
 		if (!collection) {
@@ -172,7 +174,9 @@ const supplierCollectionsRoutes = new Hono()
 		const [existing] = await db
 			.select()
 			.from(supplierCollections)
-			.where(and(eq(supplierCollections.id, collectionId), eq(supplierCollections.tenantId, tenantId)))
+			.where(
+				and(eq(supplierCollections.id, collectionId), eq(supplierCollections.tenantId, tenantId)),
+			)
 			.limit(1);
 
 		if (!existing) {
@@ -203,7 +207,9 @@ const supplierCollectionsRoutes = new Hono()
 		const [existing] = await db
 			.select()
 			.from(supplierCollections)
-			.where(and(eq(supplierCollections.id, collectionId), eq(supplierCollections.tenantId, tenantId)))
+			.where(
+				and(eq(supplierCollections.id, collectionId), eq(supplierCollections.tenantId, tenantId)),
+			)
 			.limit(1);
 
 		if (!existing) {
@@ -232,7 +238,9 @@ const supplierCollectionsRoutes = new Hono()
 		const [existing] = await db
 			.select()
 			.from(supplierCollections)
-			.where(and(eq(supplierCollections.id, collectionId), eq(supplierCollections.tenantId, tenantId)))
+			.where(
+				and(eq(supplierCollections.id, collectionId), eq(supplierCollections.tenantId, tenantId)),
+			)
 			.limit(1);
 
 		if (!existing) {
@@ -261,7 +269,9 @@ const supplierCollectionsRoutes = new Hono()
 		const [existing] = await db
 			.select()
 			.from(supplierCollections)
-			.where(and(eq(supplierCollections.id, collectionId), eq(supplierCollections.tenantId, tenantId)))
+			.where(
+				and(eq(supplierCollections.id, collectionId), eq(supplierCollections.tenantId, tenantId)),
+			)
 			.limit(1);
 
 		if (!existing) {

@@ -1,19 +1,19 @@
-import { Hono } from 'hono';
-import { zValidator } from '@hono/zod-validator';
-import { z } from 'zod';
-import { eq, and, sql, desc, isNull, ilike, or, lt, gte, lte, inArray } from 'drizzle-orm';
-import { requireAuth, requireTenant } from '../middleware/auth';
-import { db } from '../lib/auth';
 import {
-	tasks,
-	users,
+	customers,
 	jobs,
 	quotePackages,
-	customers,
-	TASK_STATUSES,
-	TASK_PRIORITIES,
 	TASK_ENTITY_TYPES,
+	TASK_PRIORITIES,
+	TASK_STATUSES,
+	tasks,
+	users,
 } from '@griffiths-crm/shared/db/schema';
+import { zValidator } from '@hono/zod-validator';
+import { and, desc, eq, gte, ilike, inArray, isNull, lt, lte, or, sql } from 'drizzle-orm';
+import { Hono } from 'hono';
+import { z } from 'zod';
+import { db } from '../lib/auth';
+import { requireAuth, requireTenant } from '../middleware/auth';
 
 // Validation schemas
 const createTaskSchema = z.object({
@@ -63,10 +63,7 @@ export const tasksRoutes = new Hono()
 		const tenantId = currentUser.tenantId!;
 		const query = c.req.valid('query');
 
-		const conditions = [
-			eq(tasks.tenantId, tenantId),
-			isNull(tasks.archivedAt),
-		];
+		const conditions = [eq(tasks.tenantId, tenantId), isNull(tasks.archivedAt)];
 
 		if (query.status) {
 			const statuses = query.status.split(',');
@@ -82,14 +79,11 @@ export const tasksRoutes = new Hono()
 		if (query.worksheetId) conditions.push(eq(tasks.worksheetId, query.worksheetId));
 		if (query.search) {
 			conditions.push(
-				or(
-					ilike(tasks.title, `%${query.search}%`),
-					ilike(tasks.description, `%${query.search}%`)
-				)!
+				or(ilike(tasks.title, `%${query.search}%`), ilike(tasks.description, `%${query.search}%`))!,
 			);
 		}
 
-		const page = parseInt(query.page || '1');
+		const page = parseInt(query.page || '1', 10);
 		const limit = 50;
 		const offset = (page - 1) * limit;
 
@@ -121,12 +115,15 @@ export const tasksRoutes = new Hono()
 			.from(tasks)
 			.leftJoin(users, eq(tasks.assigneeId, users.id))
 			.leftJoin(jobs, and(eq(tasks.entityType, 'job'), eq(tasks.entityId, jobs.id)))
-			.leftJoin(quotePackages, and(eq(tasks.entityType, 'quote'), eq(tasks.entityId, quotePackages.id)))
+			.leftJoin(
+				quotePackages,
+				and(eq(tasks.entityType, 'quote'), eq(tasks.entityId, quotePackages.id)),
+			)
 			.leftJoin(customers, and(eq(tasks.entityType, 'customer'), eq(tasks.entityId, customers.id)))
 			.where(and(...conditions))
 			.orderBy(
 				sql`CASE ${tasks.priority} WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 WHEN 'normal' THEN 2 WHEN 'low' THEN 3 END`,
-				desc(tasks.createdAt)
+				desc(tasks.createdAt),
 			)
 			.limit(limit)
 			.offset(offset);
@@ -152,8 +149,8 @@ export const tasksRoutes = new Hono()
 					eq(tasks.tenantId, tenantId),
 					eq(tasks.assigneeId, currentUser.id),
 					isNull(tasks.archivedAt),
-					inArray(tasks.status, ['todo', 'in_progress'])
-				)
+					inArray(tasks.status, ['todo', 'in_progress']),
+				),
 			);
 
 		// Overdue count
@@ -166,8 +163,8 @@ export const tasksRoutes = new Hono()
 					eq(tasks.assigneeId, currentUser.id),
 					isNull(tasks.archivedAt),
 					inArray(tasks.status, ['todo', 'in_progress']),
-					lt(tasks.dueDate, now)
-				)
+					lt(tasks.dueDate, now),
+				),
 			);
 
 		// Due today count
@@ -181,8 +178,8 @@ export const tasksRoutes = new Hono()
 					isNull(tasks.archivedAt),
 					inArray(tasks.status, ['todo', 'in_progress']),
 					gte(tasks.dueDate, todayStart),
-					lt(tasks.dueDate, todayEnd)
-				)
+					lt(tasks.dueDate, todayEnd),
+				),
 			);
 
 		// Get overdue + due today tasks for widget (max 5)
@@ -204,8 +201,8 @@ export const tasksRoutes = new Hono()
 					isNull(tasks.archivedAt),
 					inArray(tasks.status, ['todo', 'in_progress']),
 					sql`${tasks.dueDate} IS NOT NULL`,
-					lte(tasks.dueDate, todayEnd)
-				)
+					lte(tasks.dueDate, todayEnd),
+				),
 			)
 			.orderBy(tasks.dueDate)
 			.limit(5);
@@ -255,7 +252,10 @@ export const tasksRoutes = new Hono()
 			.from(tasks)
 			.leftJoin(users, eq(tasks.assigneeId, users.id))
 			.leftJoin(jobs, and(eq(tasks.entityType, 'job'), eq(tasks.entityId, jobs.id)))
-			.leftJoin(quotePackages, and(eq(tasks.entityType, 'quote'), eq(tasks.entityId, quotePackages.id)))
+			.leftJoin(
+				quotePackages,
+				and(eq(tasks.entityType, 'quote'), eq(tasks.entityId, quotePackages.id)),
+			)
 			.leftJoin(customers, and(eq(tasks.entityType, 'customer'), eq(tasks.entityId, customers.id)))
 			.where(and(eq(tasks.id, id), eq(tasks.tenantId, tenantId)))
 			.limit(1);
@@ -315,17 +315,14 @@ export const tasksRoutes = new Hono()
 		if (data.description !== undefined) updateData.description = data.description;
 		if (data.priority !== undefined) updateData.priority = data.priority;
 		if (data.assigneeId !== undefined) updateData.assigneeId = data.assigneeId;
-		if (data.dueDate !== undefined) updateData.dueDate = data.dueDate ? new Date(data.dueDate) : null;
+		if (data.dueDate !== undefined)
+			updateData.dueDate = data.dueDate ? new Date(data.dueDate) : null;
 		if (data.entityType !== undefined) updateData.entityType = data.entityType;
 		if (data.entityId !== undefined) updateData.entityId = data.entityId;
 		if (data.worksheetId !== undefined) updateData.worksheetId = data.worksheetId;
 		if (data.sortOrder !== undefined) updateData.sortOrder = data.sortOrder;
 
-		const [updated] = await db
-			.update(tasks)
-			.set(updateData)
-			.where(eq(tasks.id, id))
-			.returning();
+		const [updated] = await db.update(tasks).set(updateData).where(eq(tasks.id, id)).returning();
 
 		return c.json({ task: updated });
 	})
@@ -362,11 +359,7 @@ export const tasksRoutes = new Hono()
 			updateData.completedById = null;
 		}
 
-		const [updated] = await db
-			.update(tasks)
-			.set(updateData)
-			.where(eq(tasks.id, id))
-			.returning();
+		const [updated] = await db.update(tasks).set(updateData).where(eq(tasks.id, id)).returning();
 
 		return c.json({ task: updated });
 	})

@@ -1,2 +1,2 @@
 export { Calendar } from './calendar';
-export type { CalendarView, CalendarEvent, CalendarSettings } from './types';
+export type { CalendarEvent, CalendarSettings, CalendarView } from './types';

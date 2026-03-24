@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -33,7 +33,7 @@ export type UpdateCategoryInput = {
 async function fetchCategories(collectionId: string): Promise<SupplierCategory[]> {
 	const response = await fetch(
 		`${API_URL}/api/tenant/supplier-categories?collectionId=${collectionId}`,
-		{ credentials: 'include' }
+		{ credentials: 'include' },
 	);
 	if (!response.ok) {
 		const error = await response.json();

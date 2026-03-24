@@ -1,4 +1,15 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
+import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
+import { UserFormDialog } from '@/components/admin/user-form-dialog';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
 	Table,
 	TableBody,
@@ -7,27 +18,16 @@ import {
 	TableHeader,
 	TableRow,
 } from '@/components/ui/table';
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { UserFormDialog } from '@/components/admin/user-form-dialog';
-import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
-import { useSession } from '@/lib/auth';
 import { useTenantsQuery } from '@/hooks/use-tenants';
-import { toast } from 'sonner';
 import {
-	useUsersQuery,
+	type User,
 	useCreateUserMutation,
-	useUpdateUserMutation,
 	useDeleteUserMutation,
 	useResendInviteMutation,
-	type User,
+	useUpdateUserMutation,
+	useUsersQuery,
 } from '@/hooks/use-users';
+import { useSession } from '@/lib/auth';
 
 export function UsersTab() {
 	const { data: session } = useSession();
@@ -119,11 +119,7 @@ export function UsersTab() {
 	}
 
 	if (error) {
-		return (
-			<div className="text-destructive">
-				Error loading users: {error.message}
-			</div>
-		);
+		return <div className="text-destructive">Error loading users: {error.message}</div>;
 	}
 
 	return (
@@ -162,9 +158,7 @@ export function UsersTab() {
 									<TableCell className="font-medium">
 										{user.name}
 										{user.id === currentUserId && (
-											<span className="ml-2 text-xs text-muted-foreground">
-												(you)
-											</span>
+											<span className="ml-2 text-xs text-muted-foreground">(you)</span>
 										)}
 									</TableCell>
 									<TableCell>{user.email}</TableCell>
@@ -186,9 +180,7 @@ export function UsersTab() {
 										</Badge>
 									</TableCell>
 									<TableCell>{getTenantName(user.tenantId)}</TableCell>
-									<TableCell>
-										{new Date(user.createdAt).toLocaleDateString()}
-									</TableCell>
+									<TableCell>{new Date(user.createdAt).toLocaleDateString()}</TableCell>
 									<TableCell>
 										<DropdownMenu>
 											<DropdownMenuTrigger asChild>
@@ -197,9 +189,7 @@ export function UsersTab() {
 												</Button>
 											</DropdownMenuTrigger>
 											<DropdownMenuContent align="end">
-												<DropdownMenuItem onClick={() => handleEdit(user)}>
-													Edit
-												</DropdownMenuItem>
+												<DropdownMenuItem onClick={() => handleEdit(user)}>Edit</DropdownMenuItem>
 												<DropdownMenuItem
 													onClick={() => handleResendInvite(user)}
 													disabled={resendInviteMutation.isPending}

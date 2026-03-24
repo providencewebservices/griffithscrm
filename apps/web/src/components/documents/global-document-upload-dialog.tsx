@@ -1,17 +1,20 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
 import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+	Briefcase,
+	Check,
+	ChevronsUpDown,
+	Clock,
+	File,
+	Folder,
+	Home,
+	MapPin,
+	Package,
+	Upload,
+	Users,
+	X,
+} from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
-import { Field, FieldGroup, FieldLabel, FieldDescription } from '@/components/ui/field';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
 import {
 	Command,
 	CommandEmpty,
@@ -20,33 +23,30 @@ import {
 	CommandItem,
 	CommandList,
 } from '@/components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { formatFileSize, getFileExtension } from '@/lib/file-utils';
 import {
-	Upload,
-	X,
-	File,
-	Users,
-	Briefcase,
-	MapPin,
-	Package,
-	Check,
-	ChevronsUpDown,
-	Clock,
-	Folder,
-	Home,
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from '@/components/ui/dialog';
+import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCustomersQuery } from '@/hooks/use-customers';
+import { useAllFoldersQuery } from '@/hooks/use-document-folders';
+import { type DocumentEntityType, useUploadDocumentMutation } from '@/hooks/use-documents';
 import { useFuneralDirectorsQuery } from '@/hooks/use-funeral-directors';
-import { useSuppliersQuery } from '@/hooks/use-suppliers';
-import { useQuotesQuery } from '@/hooks/use-quotes';
 import { useJobsQuery } from '@/hooks/use-jobs';
 import { useMemorialSitesQuery } from '@/hooks/use-memorial-sites';
 import { useProductsQuery } from '@/hooks/use-products';
-import { useUploadDocumentMutation, type DocumentEntityType } from '@/hooks/use-documents';
-import { useRecentEntities, type RecentEntity } from '@/hooks/use-recent-entities';
-import { useAllFoldersQuery, type DocumentFolder } from '@/hooks/use-document-folders';
+import { useQuotesQuery } from '@/hooks/use-quotes';
+import { type RecentEntity, useRecentEntities } from '@/hooks/use-recent-entities';
+import { useSuppliersQuery } from '@/hooks/use-suppliers';
+import { formatFileSize, getFileExtension } from '@/lib/file-utils';
+import { cn } from '@/lib/utils';
 
 // Entity categories with their types
 type EntityCategory = 'contacts' | 'work' | 'sites' | 'items';
@@ -307,9 +307,7 @@ export function GlobalDocumentUploadDialog({
 		if (entitySearch.trim()) {
 			const search = entitySearch.toLowerCase();
 			return options.filter(
-				(o) =>
-					o.label.toLowerCase().includes(search) ||
-					o.sublabel?.toLowerCase().includes(search)
+				(o) => o.label.toLowerCase().includes(search) || o.sublabel?.toLowerCase().includes(search),
 			);
 		}
 
@@ -415,9 +413,7 @@ export function GlobalDocumentUploadDialog({
 			onOpenChange(false);
 			onSuccess?.();
 		} catch (error) {
-			setUploadError(
-				error instanceof Error ? error.message : 'Failed to upload files'
-			);
+			setUploadError(error instanceof Error ? error.message : 'Failed to upload files');
 		}
 	};
 
@@ -441,18 +437,11 @@ export function GlobalDocumentUploadDialog({
 					value={`${opt.type}-${opt.id}`}
 					onSelect={() => handleSelectEntity(opt)}
 				>
-					<Check
-						className={cn(
-							'mr-2 h-4 w-4',
-							isSelected ? 'opacity-100' : 'opacity-0'
-						)}
-					/>
+					<Check className={cn('mr-2 h-4 w-4', isSelected ? 'opacity-100' : 'opacity-0')} />
 					<div className="flex-1">
 						<span>{opt.label}</span>
 						{opt.sublabel && (
-							<span className="ml-2 text-muted-foreground text-xs">
-								{opt.sublabel}
-							</span>
+							<span className="ml-2 text-muted-foreground text-xs">{opt.sublabel}</span>
 						)}
 					</div>
 				</CommandItem>
@@ -523,7 +512,10 @@ export function GlobalDocumentUploadDialog({
 								</Button>
 							</div>
 						) : (
-							<Tabs value={activeCategory} onValueChange={(v) => setActiveCategory(v as EntityCategory)}>
+							<Tabs
+								value={activeCategory}
+								onValueChange={(v) => setActiveCategory(v as EntityCategory)}
+							>
 								<TabsList className="grid w-full grid-cols-4">
 									{Object.entries(CATEGORY_CONFIG).map(([key, config]) => {
 										const Icon = config.icon;
@@ -547,7 +539,8 @@ export function GlobalDocumentUploadDialog({
 													className="w-full justify-between"
 												>
 													<span className="text-muted-foreground">
-														Select {CATEGORY_CONFIG[category as EntityCategory].label.toLowerCase()}...
+														Select {CATEGORY_CONFIG[category as EntityCategory].label.toLowerCase()}
+														...
 													</span>
 													<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
 												</Button>
@@ -561,9 +554,7 @@ export function GlobalDocumentUploadDialog({
 													/>
 													<CommandList>
 														<CommandEmpty>No results found.</CommandEmpty>
-														<CommandGroup>
-															{renderEntityOptions()}
-														</CommandGroup>
+														<CommandGroup>{renderEntityOptions()}</CommandGroup>
 													</CommandList>
 												</Command>
 											</PopoverContent>
@@ -572,9 +563,7 @@ export function GlobalDocumentUploadDialog({
 								))}
 							</Tabs>
 						)}
-						<FieldDescription>
-							Documents can be uploaded without association
-						</FieldDescription>
+						<FieldDescription>Documents can be uploaded without association</FieldDescription>
 					</Field>
 
 					{/* Folder Selection */}
@@ -615,7 +604,7 @@ export function GlobalDocumentUploadDialog({
 												<Check
 													className={cn(
 														'mr-2 h-4 w-4',
-														selectedFolderId === null ? 'opacity-100' : 'opacity-0'
+														selectedFolderId === null ? 'opacity-100' : 'opacity-0',
 													)}
 												/>
 												<Home className="mr-2 h-4 w-4" />
@@ -633,7 +622,7 @@ export function GlobalDocumentUploadDialog({
 													<Check
 														className={cn(
 															'mr-2 h-4 w-4',
-															selectedFolderId === folder.id ? 'opacity-100' : 'opacity-0'
+															selectedFolderId === folder.id ? 'opacity-100' : 'opacity-0',
 														)}
 													/>
 													<Folder
@@ -650,9 +639,7 @@ export function GlobalDocumentUploadDialog({
 								</Command>
 							</PopoverContent>
 						</Popover>
-						<FieldDescription>
-							Organize documents into folders
-						</FieldDescription>
+						<FieldDescription>Organize documents into folders</FieldDescription>
 					</Field>
 
 					{/* File Drop Zone / File List */}
@@ -705,13 +692,12 @@ export function GlobalDocumentUploadDialog({
 							onClick={() => fileInputRef.current?.click()}
 							className={cn(
 								'border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors hover:border-primary/50 hover:bg-muted/30',
-								isDragging ? 'border-primary bg-primary/5' : 'border-muted-foreground/25'
+								isDragging ? 'border-primary bg-primary/5' : 'border-muted-foreground/25',
 							)}
 						>
 							<Upload className="h-6 w-6 mx-auto text-muted-foreground mb-2" />
 							<p className="text-sm text-muted-foreground">
-								<span className="font-medium text-primary">Click to upload</span> or drag
-								and drop
+								<span className="font-medium text-primary">Click to upload</span> or drag and drop
 							</p>
 							<p className="text-xs text-muted-foreground mt-1">
 								{files.length > 0 ? 'Add more files' : 'Any file type accepted'}

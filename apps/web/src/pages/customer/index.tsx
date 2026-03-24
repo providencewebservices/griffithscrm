@@ -1,12 +1,12 @@
+import { Plus, UserPlus } from 'lucide-react';
 import { Link } from 'react-router';
-import { Button } from '@/components/ui/button';
-import { StatsCards } from '@/components/dashboard/StatsCards';
-import { MyTasksWidget } from '@/components/tasks/my-tasks-widget';
 import { AttentionBanner } from '@/components/dashboard/attention-banner';
 import { PipelineSummary } from '@/components/dashboard/pipeline-summary';
 import { RecentActivity } from '@/components/dashboard/recent-activity';
+import { StatsCards } from '@/components/dashboard/StatsCards';
 import { UpcomingEvents } from '@/components/dashboard/upcoming-events';
-import { Plus, UserPlus } from 'lucide-react';
+import { MyTasksWidget } from '@/components/tasks/my-tasks-widget';
+import { Button } from '@/components/ui/button';
 
 export function CustomerDashboard() {
 	return (
@@ -34,9 +34,7 @@ function DashboardHeader() {
 		<div className="flex items-center justify-between">
 			<div>
 				<h1 className="text-2xl font-bold">Dashboard</h1>
-				<p className="text-muted-foreground">
-					Overview of quotes, jobs, and payments
-				</p>
+				<p className="text-muted-foreground">Overview of quotes, jobs, and payments</p>
 			</div>
 			<div className="flex gap-2">
 				<Link to="/app/quotes/new">

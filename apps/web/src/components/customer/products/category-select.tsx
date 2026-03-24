@@ -23,10 +23,7 @@ export function CategorySelect({
 	const { data: categories, isLoading } = useProductCategoriesQuery();
 
 	return (
-		<Select
-			value={value || ''}
-			onValueChange={(val) => onChange(val === '__none__' ? null : val)}
-		>
+		<Select value={value || ''} onValueChange={(val) => onChange(val === '__none__' ? null : val)}>
 			<SelectTrigger>
 				<SelectValue placeholder={isLoading ? 'Loading...' : placeholder} />
 			</SelectTrigger>
@@ -42,9 +39,7 @@ export function CategorySelect({
 					</SelectItem>
 				))}
 				{categories?.length === 0 && (
-					<div className="px-2 py-1.5 text-sm text-muted-foreground">
-						No categories available
-					</div>
+					<div className="px-2 py-1.5 text-sm text-muted-foreground">No categories available</div>
 				)}
 			</SelectContent>
 		</Select>

@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
 import {
 	Dialog,
 	DialogContent,
@@ -7,10 +8,9 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { ImageUpload } from '@/components/ui/image-upload';
+import { Input } from '@/components/ui/input';
 import {
 	Select,
 	SelectContent,
@@ -18,10 +18,10 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select';
-import { CategorySelect } from './category-select';
-import { ImageUpload } from '@/components/ui/image-upload';
+import { Textarea } from '@/components/ui/textarea';
+import type { CreateProductInput, Product } from '@/hooks/use-products';
 import { useSuppliersQuery } from '@/hooks/use-suppliers';
-import type { Product, CreateProductInput } from '@/hooks/use-products';
+import { CategorySelect } from './category-select';
 
 type ProductFormDialogProps = {
 	open: boolean;
@@ -94,16 +94,12 @@ export function ProductFormDialog({
 				<DialogHeader>
 					<DialogTitle>{isEditing ? 'Edit Product' : 'Add Product'}</DialogTitle>
 					<DialogDescription>
-						{isEditing
-							? 'Update the product details.'
-							: 'Add a new product to your catalog.'}
+						{isEditing ? 'Update the product details.' : 'Add a new product to your catalog.'}
 					</DialogDescription>
 				</DialogHeader>
 
 				{error && (
-					<div className="bg-destructive/10 text-destructive px-4 py-2 rounded">
-						{error}
-					</div>
+					<div className="bg-destructive/10 text-destructive px-4 py-2 rounded">{error}</div>
 				)}
 
 				<FieldGroup>

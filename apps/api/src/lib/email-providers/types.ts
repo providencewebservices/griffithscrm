@@ -125,10 +125,7 @@ export interface IEmailProvider {
 		headers: string[];
 	}): Promise<Record<string, string>>;
 
-	sendMessage(params: {
-		accessToken: string;
-		email: SendEmailParams;
-	}): Promise<SendEmailResult>;
+	sendMessage(params: { accessToken: string; email: SendEmailParams }): Promise<SendEmailResult>;
 
 	incrementalSync(params: {
 		accessToken: string;
@@ -149,9 +146,7 @@ export interface IEmailProvider {
 		labelIds?: string[];
 	}): Promise<{ historyId: string; expiration: string }>;
 
-	stopWatch(params: {
-		accessToken: string;
-	}): Promise<void>;
+	stopWatch(params: { accessToken: string }): Promise<void>;
 
 	trashThread(params: { accessToken: string; threadId: string }): Promise<void>;
 

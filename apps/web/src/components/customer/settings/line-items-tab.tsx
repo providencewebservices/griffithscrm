@@ -1,8 +1,19 @@
+import { Check, Plus } from 'lucide-react';
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from '@/components/ui/dialog';
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
 import {
 	Table,
 	TableBody,
@@ -12,23 +23,12 @@ import {
 	TableRow,
 } from '@/components/ui/table';
 import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from '@/components/ui/dialog';
-import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
-import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
-import { Plus, Check } from 'lucide-react';
-import {
-	useLineItemPresetsQuery,
-	useCreateLineItemPresetMutation,
-	useUpdateLineItemPresetMutation,
-	useDeleteLineItemPresetMutation,
-	type LineItemPreset,
 	type CreateLineItemPresetInput,
+	type LineItemPreset,
+	useCreateLineItemPresetMutation,
+	useDeleteLineItemPresetMutation,
+	useLineItemPresetsQuery,
+	useUpdateLineItemPresetMutation,
 } from '@/hooks/use-line-item-presets';
 
 export function LineItemsTab() {
@@ -131,11 +131,7 @@ export function LineItemsTab() {
 	}
 
 	if (error) {
-		return (
-			<div className="text-destructive">
-				Error loading line items: {error.message}
-			</div>
-		);
+		return <div className="text-destructive">Error loading line items: {error.message}</div>;
 	}
 
 	return (
@@ -172,11 +168,7 @@ export function LineItemsTab() {
 						</TableHeader>
 						<TableBody>
 							{presets?.map((item) => (
-								<TableRow
-									key={item.id}
-									className="cursor-pointer"
-									onClick={() => handleEdit(item)}
-								>
+								<TableRow key={item.id} className="cursor-pointer" onClick={() => handleEdit(item)}>
 									<TableCell className="font-medium">
 										{item.name}
 										{!item.isActive && (
@@ -234,13 +226,9 @@ export function LineItemsTab() {
 			<Dialog open={formDialogOpen} onOpenChange={setFormDialogOpen}>
 				<DialogContent>
 					<DialogHeader>
-						<DialogTitle>
-							{isEditing ? 'Edit Line Item' : 'Add Line Item'}
-						</DialogTitle>
+						<DialogTitle>{isEditing ? 'Edit Line Item' : 'Add Line Item'}</DialogTitle>
 						<DialogDescription>
-							{isEditing
-								? 'Update the line item details.'
-								: 'Add a reusable line item for quotes.'}
+							{isEditing ? 'Update the line item details.' : 'Add a reusable line item for quotes.'}
 						</DialogDescription>
 					</DialogHeader>
 
@@ -314,7 +302,10 @@ export function LineItemsTab() {
 									onCheckedChange={(checked) => setFormPriceVisibleToCustomer(checked === true)}
 									disabled={!formVisibleToCustomer}
 								/>
-								<FieldLabel htmlFor="priceVisibleToCustomer" className={`!mb-0 cursor-pointer ${!formVisibleToCustomer ? 'text-muted-foreground' : ''}`}>
+								<FieldLabel
+									htmlFor="priceVisibleToCustomer"
+									className={`!mb-0 cursor-pointer ${!formVisibleToCustomer ? 'text-muted-foreground' : ''}`}
+								>
 									Price Visible to Customer
 								</FieldLabel>
 							</div>
@@ -332,11 +323,7 @@ export function LineItemsTab() {
 								>
 									{selectedItem.isActive ? 'Deactivate' : 'Activate'}
 								</Button>
-								<Button
-									variant="destructive"
-									size="sm"
-									onClick={() => setDeleteDialogOpen(true)}
-								>
+								<Button variant="destructive" size="sm" onClick={() => setDeleteDialogOpen(true)}>
 									Delete
 								</Button>
 							</div>

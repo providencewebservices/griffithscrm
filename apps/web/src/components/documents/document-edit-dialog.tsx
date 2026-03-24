@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
 import {
 	Dialog,
 	DialogContent,
@@ -7,10 +8,9 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Field, FieldGroup, FieldLabel, FieldDescription } from '@/components/ui/field';
 import type { Document, UpdateDocumentInput } from '@/hooks/use-documents';
 
 interface DocumentEditDialogProps {
@@ -55,9 +55,7 @@ export function DocumentEditDialog({
 			<DialogContent className="max-w-md">
 				<DialogHeader>
 					<DialogTitle>Edit Document</DialogTitle>
-					<DialogDescription>
-						Update the document name, tags, or notes.
-					</DialogDescription>
+					<DialogDescription>Update the document name, tags, or notes.</DialogDescription>
 				</DialogHeader>
 
 				<FieldGroup>
@@ -79,9 +77,7 @@ export function DocumentEditDialog({
 							onChange={(e) => setTags(e.target.value)}
 							placeholder="e.g., invoice, receipt, proof"
 						/>
-						<FieldDescription>
-							Comma-separated tags for organization
-						</FieldDescription>
+						<FieldDescription>Comma-separated tags for organization</FieldDescription>
 					</Field>
 
 					<Field>

@@ -1,23 +1,20 @@
-import { useState, useMemo } from 'react';
-import { useSignedUrls } from '@/hooks/use-uploads';
+import {
+	ChevronLeft,
+	ChevronRight,
+	ImageIcon,
+	LayoutGrid,
+	List,
+	Package,
+	Plus,
+	Search,
+} from 'lucide-react';
+import { useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
-import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { ProductFormDialog } from '@/components/customer/products/product-form-dialog';
 import { Badge } from '@/components/ui/badge';
-import {
-	Card,
-	CardContent,
-	CardHeader,
-	CardTitle,
-} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
 	Dialog,
 	DialogContent,
@@ -26,7 +23,8 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from '@/components/ui/dialog';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
 import {
 	Select,
 	SelectContent,
@@ -34,25 +32,31 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select';
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from '@/components/ui/table';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
-import { ProductFormDialog } from '@/components/customer/products/product-form-dialog';
 import { useProductCategoriesQuery } from '@/hooks/use-product-categories';
 import {
-	useProductsQuery,
-	useCreateProductMutation,
 	type CreateProductInput,
-	type ProductListParams,
 	type Product,
+	type ProductListParams,
+	useCreateProductMutation,
+	useProductsQuery,
 } from '@/hooks/use-products';
 import {
-	useSundriesQuery,
-	useCreateSundryMutation,
-	type Sundry,
 	type CreateSundryInput,
+	type Sundry,
+	useCreateSundryMutation,
+	useSundriesQuery,
 } from '@/hooks/use-sundries';
 import { useSuppliersQuery } from '@/hooks/use-suppliers';
-import { Search, Plus, Package, ChevronLeft, ChevronRight, List, LayoutGrid, ImageIcon } from 'lucide-react';
+import { useSignedUrls } from '@/hooks/use-uploads';
 
 type StatusFilter = 'true' | 'false' | 'all';
 type DisplayMode = 'table' | 'cards';
@@ -133,14 +137,14 @@ export function ProductsPage() {
 	const products = data?.products || [];
 	const productImageUrls = useMemo(
 		() => products.map((p) => p.imageUrl).filter(Boolean),
-		[products]
+		[products],
 	);
 	const { data: signedUrls } = useSignedUrls(productImageUrls);
 
 	// Signed URLs for sundry images
 	const sundryImageUrls = useMemo(
 		() => filteredSundries.map((s) => s.imageUrl).filter(Boolean),
-		[filteredSundries]
+		[filteredSundries],
 	);
 	const { data: signedSundryUrls } = useSignedUrls(sundryImageUrls);
 
@@ -209,9 +213,7 @@ export function ProductsPage() {
 			<div>
 				<div className="mb-6">
 					<h2 className="text-2xl font-bold">Products</h2>
-					<p className="text-muted-foreground mt-1">
-						Manage your product catalog
-					</p>
+					<p className="text-muted-foreground mt-1">Manage your product catalog</p>
 				</div>
 				<div className="text-muted-foreground">
 					{isSundriesView ? 'Loading sundries...' : 'Loading products...'}
@@ -225,13 +227,9 @@ export function ProductsPage() {
 			<div>
 				<div className="mb-6">
 					<h2 className="text-2xl font-bold">Products</h2>
-					<p className="text-muted-foreground mt-1">
-						Manage your product catalog
-					</p>
+					<p className="text-muted-foreground mt-1">Manage your product catalog</p>
 				</div>
-				<div className="text-destructive">
-					Error: {error.message}
-				</div>
+				<div className="text-destructive">Error: {error.message}</div>
 			</div>
 		);
 	}
@@ -240,13 +238,11 @@ export function ProductsPage() {
 		<div>
 			<div className="mb-6">
 				<h2 className="text-2xl font-bold">Products</h2>
-				<p className="text-muted-foreground mt-1">
-					Manage your product catalog
-				</p>
+				<p className="text-muted-foreground mt-1">Manage your product catalog</p>
 			</div>
 
 			<Tabs
-				value={isSundriesView ? 'sundries' : (categoryFilter || 'all')}
+				value={isSundriesView ? 'sundries' : categoryFilter || 'all'}
 				onValueChange={handleTabChange}
 			>
 				<TabsList className="mb-4">
@@ -296,7 +292,10 @@ export function ProductsPage() {
 									setPage(1);
 								}}
 							/>
-							<label htmlFor="include-archived" className="text-sm whitespace-nowrap cursor-pointer">
+							<label
+								htmlFor="include-archived"
+								className="text-sm whitespace-nowrap cursor-pointer"
+							>
 								Archived
 							</label>
 						</div>
@@ -376,10 +375,7 @@ export function ProductsPage() {
 											)}
 										</TableCell>
 										<TableCell className="font-medium">
-											<Link
-												to={`/app/sundries/${item.id}`}
-												className="hover:underline"
-											>
+											<Link to={`/app/sundries/${item.id}`} className="hover:underline">
 												{item.name}
 											</Link>
 										</TableCell>
@@ -403,7 +399,9 @@ export function ProductsPage() {
 										</TableCell>
 										<TableCell>
 											<Link to={`/app/sundries/${item.id}`}>
-												<Button variant="ghost" size="sm">View</Button>
+												<Button variant="ghost" size="sm">
+													View
+												</Button>
 											</Link>
 										</TableCell>
 									</TableRow>
@@ -437,29 +435,17 @@ export function ProductsPage() {
 						</TableHeader>
 						<TableBody>
 							{products.map((product) => (
-								<TableRow
-									key={product.id}
-									className={product.archivedAt ? 'opacity-60' : ''}
-								>
-									<TableCell className="font-mono text-sm">
-										{product.sku}
-									</TableCell>
+								<TableRow key={product.id} className={product.archivedAt ? 'opacity-60' : ''}>
+									<TableCell className="font-mono text-sm">{product.sku}</TableCell>
 									<TableCell className="font-medium">
-										<Link
-											to={`/app/products/${product.id}`}
-											className="hover:underline"
-										>
+										<Link to={`/app/products/${product.id}`} className="hover:underline">
 											{product.name}
 										</Link>
 									</TableCell>
 									<TableCell>
-										{product.category?.name || (
-											<span className="text-muted-foreground">-</span>
-										)}
+										{product.category?.name || <span className="text-muted-foreground">-</span>}
 									</TableCell>
-									<TableCell>
-										{product.optionCount || 0}
-									</TableCell>
+									<TableCell>{product.optionCount || 0}</TableCell>
 									<TableCell>
 										{product.archivedAt ? (
 											<Badge variant="outline">Archived</Badge>
@@ -471,7 +457,9 @@ export function ProductsPage() {
 									</TableCell>
 									<TableCell>
 										<Link to={`/app/products/${product.id}`}>
-											<Button variant="ghost" size="sm">View</Button>
+											<Button variant="ghost" size="sm">
+												View
+											</Button>
 										</Link>
 									</TableCell>
 								</TableRow>
@@ -495,8 +483,8 @@ export function ProductsPage() {
 				<div className="flex items-center justify-between mt-4">
 					<div className="text-sm text-muted-foreground">
 						Showing {(pagination.page - 1) * pagination.limit + 1} to{' '}
-						{Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
-						{pagination.total} products
+						{Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total}{' '}
+						products
 					</div>
 					<div className="flex items-center gap-2">
 						<Select
@@ -554,9 +542,7 @@ export function ProductsPage() {
 				<DialogContent className="max-w-lg">
 					<DialogHeader>
 						<DialogTitle>Add Sundry</DialogTitle>
-						<DialogDescription>
-							Add a new sundry item with pricing.
-						</DialogDescription>
+						<DialogDescription>Add a new sundry item with pricing.</DialogDescription>
 					</DialogHeader>
 
 					{sundryMutationError && (
@@ -580,9 +566,7 @@ export function ProductsPage() {
 							<FieldLabel htmlFor="sundry-supplier">Supplier (optional)</FieldLabel>
 							<Select
 								value={sundryFormSupplierId || 'none'}
-								onValueChange={(value) =>
-									setSundryFormSupplierId(value === 'none' ? null : value)
-								}
+								onValueChange={(value) => setSundryFormSupplierId(value === 'none' ? null : value)}
 							>
 								<SelectTrigger id="sundry-supplier">
 									<SelectValue placeholder="Select a supplier" />
@@ -629,13 +613,7 @@ export function ProductsPage() {
 	);
 }
 
-function ProductCard({
-	product,
-	signedImageUrl,
-}: {
-	product: Product;
-	signedImageUrl?: string;
-}) {
+function ProductCard({ product, signedImageUrl }: { product: Product; signedImageUrl?: string }) {
 	return (
 		<Link to={`/app/products/${product.id}`} className="block">
 			<Card
@@ -688,13 +666,7 @@ function ProductCard({
 	);
 }
 
-function SundryCard({
-	sundry,
-	signedImageUrl,
-}: {
-	sundry: Sundry;
-	signedImageUrl?: string;
-}) {
+function SundryCard({ sundry, signedImageUrl }: { sundry: Sundry; signedImageUrl?: string }) {
 	return (
 		<Link to={`/app/sundries/${sundry.id}`} className="block">
 			<Card className="hover:shadow-md transition-shadow py-0 gap-3 cursor-pointer">
