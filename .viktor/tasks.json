@@ -14,7 +14,7 @@
   {
     "id": "TASK-003",
     "title": "Migrate component/sundry pricing PUT endpoints to package-based route pattern",
-    "done": false,
+    "done": true,
     "task_file": ".viktor/tasks/TASK-003.md"
   },
   {

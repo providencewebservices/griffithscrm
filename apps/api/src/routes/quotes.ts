@@ -1664,35 +1664,47 @@ const quotesRoutes = new Hono()
 
 	// Update component pricing
 	.put(
-		'/:quoteId/components/:itemId',
+		'/:id/options/:optionId/components/:itemId',
 		zValidator('json', updateLineItemPricingSchema),
 		async (c) => {
 			const currentUser = c.get('user');
 			const tenantId = currentUser.tenantId!;
-			const quoteId = c.req.param('quoteId');
+			const packageId = c.req.param('id');
+			const optionId = c.req.param('optionId');
 			const itemId = c.req.param('itemId');
 			const data = c.req.valid('json');
 
-			// Get quote and validate
-			const [quote] = await db
+			// Get package and validate
+			const [pkg] = await db
 				.select()
-				.from(quotes)
-				.where(and(eq(quotes.id, quoteId), eq(quotes.tenantId, tenantId)))
+				.from(quotePackages)
+				.where(and(eq(quotePackages.id, packageId), eq(quotePackages.tenantId, tenantId)))
 				.limit(1);
 
-			if (!quote) {
-				return c.json({ error: 'Quote not found' }, 404);
+			if (!pkg) {
+				return c.json({ error: 'Package not found' }, 404);
 			}
 
-			if (quote.status !== 'draft') {
-				return c.json({ error: 'Can only edit draft quotes' }, 400);
+			if (pkg.status !== 'draft') {
+				return c.json({ error: 'Can only edit components on draft quotes' }, 400);
+			}
+
+			// Verify option exists and belongs to this package
+			const [option] = await db
+				.select()
+				.from(quotes)
+				.where(and(eq(quotes.id, optionId), eq(quotes.packageId, packageId)))
+				.limit(1);
+
+			if (!option) {
+				return c.json({ error: 'Option not found in this package' }, 404);
 			}
 
 			// Get component
 			const [component] = await db
 				.select()
 				.from(quoteComponents)
-				.where(and(eq(quoteComponents.id, itemId), eq(quoteComponents.quoteId, quoteId)))
+				.where(and(eq(quoteComponents.id, itemId), eq(quoteComponents.quoteId, optionId)))
 				.limit(1);
 
 			if (!component) {
@@ -1720,11 +1732,11 @@ const quotesRoutes = new Hono()
 				.where(eq(quoteComponents.id, itemId));
 
 			// Recalculate quote totals
-			await recalculateQuoteTotals(quoteId);
+			await recalculateQuoteTotals(optionId);
 
-			// Return updated quote
-			const fullQuote = await getQuoteWithLineItems(quoteId, tenantId);
-			return c.json({ quote: fullQuote });
+			// Return updated package
+			const fullPackage = await getPackageWithOptions(packageId, tenantId);
+			return c.json({ package: fullPackage });
 		}
 	)
 
@@ -1794,35 +1806,47 @@ const quotesRoutes = new Hono()
 
 	// Update sundry pricing
 	.put(
-		'/:quoteId/sundries/:itemId',
+		'/:id/options/:optionId/sundries/:itemId',
 		zValidator('json', updateLineItemPricingSchema),
 		async (c) => {
 			const currentUser = c.get('user');
 			const tenantId = currentUser.tenantId!;
-			const quoteId = c.req.param('quoteId');
+			const packageId = c.req.param('id');
+			const optionId = c.req.param('optionId');
 			const itemId = c.req.param('itemId');
 			const data = c.req.valid('json');
 
-			// Get quote and validate
-			const [quote] = await db
+			// Get package and validate
+			const [pkg] = await db
 				.select()
-				.from(quotes)
-				.where(and(eq(quotes.id, quoteId), eq(quotes.tenantId, tenantId)))
+				.from(quotePackages)
+				.where(and(eq(quotePackages.id, packageId), eq(quotePackages.tenantId, tenantId)))
 				.limit(1);
 
-			if (!quote) {
-				return c.json({ error: 'Quote not found' }, 404);
+			if (!pkg) {
+				return c.json({ error: 'Package not found' }, 404);
 			}
 
-			if (quote.status !== 'draft') {
-				return c.json({ error: 'Can only edit draft quotes' }, 400);
+			if (pkg.status !== 'draft') {
+				return c.json({ error: 'Can only edit sundries on draft quotes' }, 400);
+			}
+
+			// Verify option exists and belongs to this package
+			const [option] = await db
+				.select()
+				.from(quotes)
+				.where(and(eq(quotes.id, optionId), eq(quotes.packageId, packageId)))
+				.limit(1);
+
+			if (!option) {
+				return c.json({ error: 'Option not found in this package' }, 404);
 			}
 
 			// Get sundry item
 			const [sundry] = await db
 				.select()
 				.from(quoteSundries)
-				.where(and(eq(quoteSundries.id, itemId), eq(quoteSundries.quoteId, quoteId)))
+				.where(and(eq(quoteSundries.id, itemId), eq(quoteSundries.quoteId, optionId)))
 				.limit(1);
 
 			if (!sundry) {
@@ -1850,11 +1874,11 @@ const quotesRoutes = new Hono()
 				.where(eq(quoteSundries.id, itemId));
 
 			// Recalculate quote totals
-			await recalculateQuoteTotals(quoteId);
+			await recalculateQuoteTotals(optionId);
 
-			// Return updated quote
-			const fullQuote = await getQuoteWithLineItems(quoteId, tenantId);
-			return c.json({ quote: fullQuote });
+			// Return updated package
+			const fullPackage = await getPackageWithOptions(packageId, tenantId);
+			return c.json({ package: fullPackage });
 		}
 	)
 
