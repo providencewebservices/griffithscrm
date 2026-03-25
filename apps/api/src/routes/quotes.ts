@@ -47,14 +47,14 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { db } from '../lib/auth';
 import { sendEmail } from '../lib/email';
+import { createJobFromAcceptedQuote } from '../lib/quote-acceptance';
 import { seedDefaultWorkflowTemplates } from '../lib/workflow-seed';
 import { requireAuth, requireTenant } from '../middleware/auth';
 import { generateJobNumber } from './jobs';
 
 // Status transition rules
 const STATUS_TRANSITIONS: Record<string, string[]> = {
-	draft: ['review', 'ready', 'presented'], // Can skip review/ready if needed
-	review: ['draft', 'ready'], // Back to draft or forward to ready
+	draft: ['ready', 'presented'], // Can skip ready if needed
 	ready: ['draft', 'presented'], // Back to draft or present to customer
 	presented: ['draft', 'accepted', 'rejected', 'expired'], // Customer decision or back to draft
 	accepted: [], // Terminal state
@@ -1947,6 +1947,147 @@ const quotesRoutes = new Hono()
 		},
 	)
 
+	// Add sundry to option
+	.post('/:id/options/:optionId/sundries', zValidator('json', sundryInputSchema), async (c) => {
+		const currentUser = c.get('user');
+		const tenantId = currentUser.tenantId!;
+		const packageId = c.req.param('id');
+		const optionId = c.req.param('optionId');
+		const data = c.req.valid('json');
+
+		// Get package and validate
+		const [pkg] = await db
+			.select()
+			.from(quotePackages)
+			.where(and(eq(quotePackages.id, packageId), eq(quotePackages.tenantId, tenantId)))
+			.limit(1);
+
+		if (!pkg) {
+			return c.json({ error: 'Package not found' }, 404);
+		}
+
+		if (pkg.status !== 'draft') {
+			return c.json({ error: 'Can only add sundries to draft quotes' }, 400);
+		}
+
+		// Verify option exists and belongs to this package
+		const [option] = await db
+			.select()
+			.from(quotes)
+			.where(and(eq(quotes.id, optionId), eq(quotes.packageId, packageId)))
+			.limit(1);
+
+		if (!option) {
+			return c.json({ error: 'Option not found in this package' }, 404);
+		}
+
+		// Look up master sundry
+		const [sundry] = await db
+			.select()
+			.from(sundries)
+			.where(and(eq(sundries.id, data.sundryId), eq(sundries.tenantId, tenantId)))
+			.limit(1);
+
+		if (!sundry) {
+			return c.json({ error: 'Sundry not found' }, 404);
+		}
+
+		// Get pricing settings for default markup
+		const pricingSettings = await getTenantPricingSettings(tenantId);
+
+		// Calculate pricing
+		const supplierCost = parseFloat(sundry.price);
+		const markupPercent = pricingSettings.defaultMarkupPercent;
+		const unitPrice = calculateRetailPrice(supplierCost, markupPercent);
+		const lineTotal = unitPrice * data.quantity;
+
+		// Get max sort order
+		const [maxSort] = await db
+			.select({ maxOrder: sql<number>`COALESCE(MAX(${quoteSundries.sortOrder}), -1)` })
+			.from(quoteSundries)
+			.where(eq(quoteSundries.quoteId, optionId));
+
+		const sortOrder = (maxSort?.maxOrder ?? -1) + 1;
+
+		// Insert sundry
+		await db.insert(quoteSundries).values({
+			id: crypto.randomUUID(),
+			quoteId: optionId,
+			sundryId: data.sundryId,
+			quantity: data.quantity,
+			supplierCost: String(supplierCost),
+			markupPercent: String(markupPercent),
+			unitPrice: String(unitPrice),
+			lineTotal: String(lineTotal),
+			sundryName: sundry.name,
+			notes: data.notes || null,
+			sortOrder,
+		});
+
+		// Recalculate quote totals
+		await recalculateQuoteTotals(optionId);
+
+		// Return updated package
+		const fullPackage = await getPackageWithOptions(packageId, tenantId);
+		return c.json({ package: fullPackage }, 201);
+	})
+
+	// Delete sundry from option
+	.delete('/:id/options/:optionId/sundries/:itemId', async (c) => {
+		const currentUser = c.get('user');
+		const tenantId = currentUser.tenantId!;
+		const packageId = c.req.param('id');
+		const optionId = c.req.param('optionId');
+		const itemId = c.req.param('itemId');
+
+		// Get package and validate
+		const [pkg] = await db
+			.select()
+			.from(quotePackages)
+			.where(and(eq(quotePackages.id, packageId), eq(quotePackages.tenantId, tenantId)))
+			.limit(1);
+
+		if (!pkg) {
+			return c.json({ error: 'Package not found' }, 404);
+		}
+
+		if (pkg.status !== 'draft') {
+			return c.json({ error: 'Can only delete sundries from draft quotes' }, 400);
+		}
+
+		// Verify option exists and belongs to this package
+		const [option] = await db
+			.select()
+			.from(quotes)
+			.where(and(eq(quotes.id, optionId), eq(quotes.packageId, packageId)))
+			.limit(1);
+
+		if (!option) {
+			return c.json({ error: 'Option not found in this package' }, 404);
+		}
+
+		// Get sundry item
+		const [sundryItem] = await db
+			.select()
+			.from(quoteSundries)
+			.where(and(eq(quoteSundries.id, itemId), eq(quoteSundries.quoteId, optionId)))
+			.limit(1);
+
+		if (!sundryItem) {
+			return c.json({ error: 'Sundry item not found' }, 404);
+		}
+
+		// Delete sundry
+		await db.delete(quoteSundries).where(eq(quoteSundries.id, itemId));
+
+		// Recalculate quote totals
+		await recalculateQuoteTotals(optionId);
+
+		// Return updated package
+		const fullPackage = await getPackageWithOptions(packageId, tenantId);
+		return c.json({ package: fullPackage });
+	})
+
 	// Update product-level pricing (XOR toggle)
 	.put(
 		'/:id/options/:optionId/product-pricing',
@@ -3642,136 +3783,21 @@ ${tenantName}
 			return c.json({ error: 'Package must be in Presented status to accept' }, 400);
 		}
 
-		// Get the option being accepted
-		const [option] = await db
-			.select()
-			.from(quotes)
-			.where(and(eq(quotes.id, optionId), eq(quotes.packageId, packageId)))
-			.limit(1);
+		try {
+			const { jobId, jobNumber } = await createJobFromAcceptedQuote({
+				tenantId,
+				packageId,
+				optionId,
+				quoteType: pkg.quoteType,
+			});
 
-		if (!option) {
-			return c.json({ error: 'Option not found in this package' }, 404);
+			// Return updated package
+			const fullPackage = await getPackageWithOptions(packageId, tenantId);
+			return c.json({ package: fullPackage, jobId, jobNumber });
+		} catch (err) {
+			const message = err instanceof Error ? err.message : 'Failed to accept option';
+			return c.json({ error: message }, 400);
 		}
-
-		// Update package status and record accepted option
-		const now = new Date();
-		await db
-			.update(quotePackages)
-			.set({
-				status: 'accepted',
-				acceptedOptionId: optionId,
-				customerDecisionAt: now,
-				updatedAt: now,
-			})
-			.where(eq(quotePackages.id, packageId));
-
-		// Update all options status to accepted
-		await db
-			.update(quotes)
-			.set({ status: 'accepted', updatedAt: now })
-			.where(eq(quotes.packageId, packageId));
-
-		// Create job from the accepted option
-		const jobNumber = await generateJobNumber(tenantId);
-		const jobId = crypto.randomUUID();
-
-		await db.insert(jobs).values({
-			id: jobId,
-			tenantId,
-			quoteId: optionId, // Link to the specific accepted option
-			jobNumber,
-			status: 'pending',
-			productionMethod: option.productionMethod,
-		});
-
-		// Get tenant's deposit percentage setting
-		let depositPercent = 50; // Default 50%
-		const [pricingSettingsRow] = await db
-			.select()
-			.from(tenantPricingSettings)
-			.where(eq(tenantPricingSettings.tenantId, tenantId))
-			.limit(1);
-
-		if (pricingSettingsRow?.defaultDepositPercent) {
-			depositPercent = parseFloat(pricingSettingsRow.defaultDepositPercent);
-		}
-
-		// Calculate deposit and balance amounts
-		const total = parseFloat(option.total);
-		const depositAmount = (total * depositPercent) / 100;
-		const balanceAmount = total - depositAmount;
-
-		// Create payment schedule items
-		await db.insert(jobPaymentScheduleItems).values({
-			id: crypto.randomUUID(),
-			tenantId,
-			jobId,
-			description: 'Deposit',
-			amount: depositAmount.toFixed(2),
-			dueDate: now,
-			paidAmount: '0',
-			sortOrder: 0,
-		});
-
-		await db.insert(jobPaymentScheduleItems).values({
-			id: crypto.randomUUID(),
-			tenantId,
-			jobId,
-			description: 'Balance',
-			amount: balanceAmount.toFixed(2),
-			dueDate: null,
-			paidAmount: '0',
-			sortOrder: 1,
-		});
-
-		// Auto-create workflow tasks from matching template
-		await seedDefaultWorkflowTemplates(tenantId);
-
-		const templateCondition = option.productionMethod
-			? eq(workflowTemplates.productionMethod, option.productionMethod)
-			: isNull(workflowTemplates.productionMethod);
-
-		const [template] = await db
-			.select()
-			.from(workflowTemplates)
-			.where(
-				and(
-					eq(workflowTemplates.tenantId, tenantId),
-					eq(workflowTemplates.quoteType, pkg.quoteType),
-					templateCondition,
-					eq(workflowTemplates.isActive, true),
-				),
-			)
-			.limit(1);
-
-		if (template) {
-			const steps = await db
-				.select()
-				.from(workflowSteps)
-				.where(eq(workflowSteps.templateId, template.id))
-				.orderBy(asc(workflowSteps.sortOrder));
-
-			if (steps.length > 0) {
-				await db.insert(jobWorkflowTasks).values(
-					steps.map((step) => ({
-						id: crypto.randomUUID(),
-						tenantId,
-						jobId,
-						workflowStepId: step.id,
-						name: step.name,
-						description: step.description,
-						sortOrder: step.sortOrder,
-						status: 'pending' as const,
-						assigneeId: step.defaultAssigneeId,
-						category: step.category,
-					})),
-				);
-			}
-		}
-
-		// Return updated package
-		const fullPackage = await getPackageWithOptions(packageId, tenantId);
-		return c.json({ package: fullPackage, jobId, jobNumber });
 	});
 
 export { quotesRoutes };

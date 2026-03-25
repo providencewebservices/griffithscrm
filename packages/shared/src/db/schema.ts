@@ -861,7 +861,6 @@ export const COMPONENT_TYPES = [
 // Quote status options
 export const QUOTE_STATUSES = [
 	'draft', // Being prepared
-	'review', // Awaiting internal approval
 	'ready', // Approved, ready to present to customer
 	'presented', // Shown/sent to customer
 	'accepted', // Customer accepted

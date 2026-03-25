@@ -1,12 +1,12 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { AlertCircle, CheckCircle, Clock, Loader2, XCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle, Loader2, Mail, Phone, XCircle } from 'lucide-react';
 import { useState } from 'react';
 import { useParams } from 'react-router';
 import { toast } from 'sonner';
 import { InscriptionText } from '@/components/inscription-text';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
 	Dialog,
 	DialogContent,
@@ -16,7 +16,9 @@ import {
 	DialogTitle,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -70,7 +72,6 @@ type PublicOption = {
 type PublicPackage = {
 	package: {
 		id: string;
-		packageNumber: string;
 		status: string;
 		quoteType: string;
 		notes: string | null;
@@ -78,14 +79,27 @@ type PublicPackage = {
 		validUntil: string | null;
 		createdAt: string;
 		customerFeedback: string | null;
-		customerFeedbackAt: string | null;
 		acceptedOptionId: string | null;
 		customerDecisionAt: string | null;
 	};
 	customer: { firstName: string; lastName: string } | null;
-	tenant: { id: string; name: string; hasLogo: boolean } | null;
+	tenant: {
+		id: string;
+		name: string;
+		hasLogo: boolean;
+		phone: string | null;
+		email: string | null;
+		website: string | null;
+	} | null;
 	options: PublicOption[];
 };
+
+function formatComponentType(type: string): string {
+	return type
+		.split('_')
+		.map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+		.join(' ');
+}
 
 // Fetch package by token
 async function fetchPublicPackage(token: string): Promise<PublicPackage> {
@@ -234,7 +248,7 @@ export function PublicPackageViewPage() {
 			<div className="min-h-screen bg-gray-50 flex items-center justify-center">
 				<div className="text-center">
 					<Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
-					<p className="text-muted-foreground">Loading quote package...</p>
+					<p className="text-muted-foreground">Loading your quotation...</p>
 				</div>
 			</div>
 		);
@@ -268,26 +282,77 @@ export function PublicPackageViewPage() {
 	const isExpired = pkg.validUntil && new Date(pkg.validUntil) < new Date();
 	const canRespond = pkg.status === 'presented' && !hasDecided && !isExpired;
 	const acceptedOption = options.find((o) => o.id === pkg.acceptedOptionId);
+	const isSingleOption = options.length === 1;
+
+	// Auto-select the only option for single-option quotes
+	const effectiveSelection = isSingleOption ? options[0].id : selectedOption;
+	const currentOption = options.find((o) => o.id === effectiveSelection);
+
+	const hasContactInfo = tenant?.phone || tenant?.email || tenant?.website;
+
+	const getOptionLabel = (option: PublicOption) =>
+		option.optionLabel || `Option ${String.fromCharCode(65 + option.optionOrder)}`;
 
 	return (
-		<div className="min-h-screen bg-gray-50">
-			{/* Header */}
-			<div className="bg-white border-b">
-				<div className="max-w-5xl mx-auto px-4 py-6">
-					<div className="flex items-center justify-between">
-						<div className="flex items-center gap-4">
-							{tenant?.hasLogo && (
-								<img
-									src={`${API_URL}/api/logo/${tenant.id}`}
-									alt={tenant.name}
-									className="h-12 max-w-[160px] object-contain"
-								/>
+		<div className="min-h-screen bg-gray-50 py-8 px-4">
+			<div className="max-w-3xl mx-auto">
+				<div className="bg-white shadow-lg border border-gray-200 rounded-sm">
+					{/* Letterhead Header */}
+					{tenant && (
+						<div className="px-10 sm:px-14 pt-10 pb-6">
+							{tenant.hasLogo ? (
+								<div className="text-center">
+									<img
+										src={`${API_URL}/api/logo/${tenant.id}`}
+										alt={tenant.name}
+										className="h-24 max-w-[280px] object-contain mx-auto"
+									/>
+									{hasContactInfo && (
+										<div className="text-sm text-muted-foreground mt-3 space-y-0.5">
+											{tenant.phone && <p>{tenant.phone}</p>}
+											{tenant.email && <p>{tenant.email}</p>}
+											{tenant.website && <p>{tenant.website}</p>}
+										</div>
+									)}
+								</div>
+							) : (
+								<div className="text-center">
+									<h1 className="text-2xl font-heading font-bold">{tenant.name}</h1>
+									{hasContactInfo && (
+										<div className="text-sm text-muted-foreground mt-3 space-y-0.5">
+											{tenant.phone && <p>{tenant.phone}</p>}
+											{tenant.email && <p>{tenant.email}</p>}
+											{tenant.website && <p>{tenant.website}</p>}
+										</div>
+									)}
+								</div>
 							)}
-							<div>
-								<h1 className="text-2xl font-bold">{tenant?.name || 'Quote Package'}</h1>
-								<p className="text-muted-foreground mt-1">Package {pkg.packageNumber}</p>
-							</div>
 						</div>
+					)}
+
+					<div className="px-10 sm:px-14">
+						<Separator />
+					</div>
+
+					{/* Document Title */}
+					<div className="px-10 sm:px-14 py-8 text-center space-y-2">
+						<h2>Quotation</h2>
+						{customer && (
+							<p className="text-sm">
+								<span className="text-muted-foreground">Prepared for </span>
+								<span className="font-medium">
+									{customer.firstName} {customer.lastName}
+								</span>
+							</p>
+						)}
+						<div className="flex items-center justify-center gap-4 text-sm text-muted-foreground">
+							<span>Date: {formatDate(pkg.createdAt)}</span>
+							{pkg.validUntil && !isExpired && (
+								<span>Valid until: {formatDate(pkg.validUntil)}</span>
+							)}
+						</div>
+
+						{/* Status badges */}
 						{pkg.status === 'accepted' && (
 							<Badge className="bg-green-100 text-green-800 border-green-200">
 								<CheckCircle className="h-4 w-4 mr-1" />
@@ -300,170 +365,429 @@ export function PublicPackageViewPage() {
 								Declined
 							</Badge>
 						)}
-						{isExpired && pkg.status !== 'accepted' && (
-							<Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">
-								<Clock className="h-4 w-4 mr-1" />
-								Expired
-							</Badge>
-						)}
 					</div>
-				</div>
-			</div>
 
-			{/* Main Content */}
-			<div className="max-w-5xl mx-auto px-4 py-8">
-				{/* Welcome Message */}
-				{customer && (
-					<p className="text-lg mb-6">
-						Dear {customer.firstName} {customer.lastName},
-					</p>
-				)}
+					{/* Status Messages */}
+					{(hasDecided || (isExpired && pkg.status !== 'accepted')) && (
+						<div className="px-10 sm:px-14 pb-6">
+							{hasDecided && pkg.status === 'accepted' && acceptedOption && (
+								<div className="bg-green-50 border border-green-200 rounded-lg p-4">
+									<div className="flex items-start gap-3">
+										<CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
+										<div>
+											<p className="font-medium text-green-800">
+												You accepted{' '}
+												{isSingleOption
+													? 'this quotation'
+													: acceptedOption.optionLabel || 'an option'}{' '}
+												on {formatDate(pkg.customerDecisionAt)}
+											</p>
+											<p className="text-green-700 text-sm mt-1">
+												Thank you for your response. We will be in touch shortly.
+											</p>
+										</div>
+									</div>
+								</div>
+							)}
 
-				{pkg.notes && (
-					<div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-						<p className="text-blue-800">{pkg.notes}</p>
-					</div>
-				)}
+							{hasDecided && pkg.status === 'rejected' && (
+								<div className="bg-red-50 border border-red-200 rounded-lg p-4">
+									<div className="flex items-start gap-3">
+										<XCircle className="h-5 w-5 text-red-600 mt-0.5" />
+										<div>
+											<p className="font-medium text-red-800">
+												You declined this quotation on {formatDate(pkg.customerDecisionAt)}
+											</p>
+											<p className="text-red-700 text-sm mt-1">
+												Thank you for your feedback.
+											</p>
+										</div>
+									</div>
+								</div>
+							)}
 
-				{/* Status Messages */}
-				{hasDecided && pkg.status === 'accepted' && acceptedOption && (
-					<div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-						<div className="flex items-start gap-3">
-							<CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
-							<div>
-								<p className="font-medium text-green-800">
-									You accepted {acceptedOption.optionLabel || 'an option'} on{' '}
-									{formatDate(pkg.customerDecisionAt)}
-								</p>
-								<p className="text-green-700 text-sm mt-1">
-									Thank you for your response. We will be in touch shortly.
-								</p>
+							{isExpired && !hasDecided && pkg.status !== 'accepted' && (
+								<div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+									<p className="text-yellow-800 text-sm">
+										This quotation expired on {formatDate(pkg.validUntil)}. Please contact
+										us if you would still like to proceed.
+									</p>
+								</div>
+							)}
+						</div>
+					)}
+
+					{/* Notes from staff */}
+					{pkg.notes && (
+						<div className="px-10 sm:px-14 pb-6">
+							<div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+								<p className="text-blue-800 text-sm">{pkg.notes}</p>
 							</div>
 						</div>
-					</div>
-				)}
+					)}
 
-				{hasDecided && pkg.status === 'rejected' && (
-					<div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-						<div className="flex items-start gap-3">
-							<XCircle className="h-5 w-5 text-red-600 mt-0.5" />
-							<div>
-								<p className="font-medium text-red-800">
-									You declined all options on {formatDate(pkg.customerDecisionAt)}
-								</p>
-								<p className="text-red-700 text-sm mt-1">Thank you for your feedback.</p>
+					{/* Option Selector (multiple options only) */}
+					{!isSingleOption && (
+						<>
+							<div className="px-10 sm:px-14">
+								<Separator />
 							</div>
-						</div>
-					</div>
-				)}
+							<div className="px-10 sm:px-14 py-6">
+								<p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-3">
+									{options.length} options for your consideration
+								</p>
+								<div className="space-y-2">
+									{options.map((option) => {
+										const isAccepted = pkg.acceptedOptionId === option.id;
+										const isSelected = effectiveSelection === option.id;
+										return (
+											<button
+												key={option.id}
+												onClick={
+													canRespond
+														? () => setSelectedOption(option.id)
+														: () => setSelectedOption(option.id)
+												}
+												className={cn(
+													'w-full flex items-center justify-between px-4 py-3 border rounded-sm text-sm transition-colors',
+													isAccepted
+														? 'border-green-500 bg-green-50 font-medium'
+														: isSelected
+															? 'border-primary/50 bg-primary/5 font-medium'
+															: 'border-gray-200 hover:border-gray-300',
+												)}
+											>
+												<span className="flex items-center gap-2">
+													{getOptionLabel(option)}
+													{option.product && (
+														<span className="text-muted-foreground">
+															– {option.product.name}
+														</span>
+													)}
+													{isAccepted && (
+														<Badge className="bg-green-100 text-green-800 border-green-200 text-xs">
+															Accepted
+														</Badge>
+													)}
+												</span>
+												<span className="font-medium">
+													{formatCurrency(option.total)}
+												</span>
+											</button>
+										);
+									})}
+								</div>
+							</div>
+						</>
+					)}
 
-				{/* Validity Notice */}
-				{!hasDecided && pkg.validUntil && (
-					<div
-						className={`border rounded-lg p-4 mb-6 ${isExpired ? 'bg-yellow-50 border-yellow-200' : 'bg-gray-50'}`}
-					>
-						<div className="flex items-center gap-2">
-							<Clock
-								className={`h-4 w-4 ${isExpired ? 'text-yellow-600' : 'text-muted-foreground'}`}
-							/>
-							<span className={isExpired ? 'text-yellow-800' : 'text-muted-foreground'}>
-								{isExpired
-									? `This quote expired on ${formatDate(pkg.validUntil)}`
-									: `Valid until ${formatDate(pkg.validUntil)}`}
-							</span>
-						</div>
-					</div>
-				)}
+					{/* Option Details */}
+					{currentOption && (
+						<>
+							<div className="px-10 sm:px-14">
+								<Separator />
+							</div>
 
-				{/* Proposed Inscription */}
-				{pkg.proposedInscription && (
-					<Card className="mb-6">
-						<CardHeader>
-							<CardTitle>Proposed Inscription</CardTitle>
-						</CardHeader>
-						<CardContent>
-							<pre className="whitespace-pre-wrap font-sans text-sm bg-muted p-4 rounded-md">
-								{pkg.proposedInscription}
-							</pre>
-						</CardContent>
-					</Card>
-				)}
+							<div className="px-10 sm:px-14 py-8 space-y-8">
+								{/* Product */}
+								{currentOption.product && (
+									<div>
+										<p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">
+											Product
+										</p>
+										<p className="text-xl font-semibold">
+											{currentOption.product.name}
+										</p>
+									</div>
+								)}
 
-				{/* Options */}
-				<h2 className="text-xl font-semibold mb-4">
-					{options.length} Option{options.length !== 1 ? 's' : ''} Available
-				</h2>
+								{/* Components */}
+								{currentOption.components.length > 0 && (
+									<div>
+										<p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">
+											Components
+										</p>
+										<div className="space-y-1">
+											{currentOption.components.map((comp, idx) => (
+												<div key={idx} className="text-sm">
+													{formatComponentType(comp.componentType)}
+													{comp.height && comp.width && comp.depth && (
+														<span className="text-muted-foreground ml-2">
+															({comp.height}" &times; {comp.width}" &times;{' '}
+															{comp.depth}")
+														</span>
+													)}
+													{comp.materialName && (
+														<span className="text-muted-foreground ml-1">
+															&ndash; {comp.materialName}
+														</span>
+													)}
+													{comp.finishName && (
+														<span className="text-muted-foreground ml-1">
+															({comp.finishName})
+														</span>
+													)}
+												</div>
+											))}
+										</div>
+									</div>
+								)}
 
-				<div className="space-y-4 mb-8">
-					{options.map((option) => (
-						<OptionCard
-							key={option.id}
-							option={option}
-							isSelected={selectedOption === option.id}
-							isAccepted={pkg.acceptedOptionId === option.id}
-							canSelect={canRespond}
-							formatCurrency={formatCurrency}
-							onSelect={() => setSelectedOption(option.id)}
-						/>
-					))}
+								{/* Flower Holes */}
+								{currentOption.flowerHoles && (
+									<div>
+										<p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">
+											Flower Holes
+										</p>
+										<p className="text-sm">
+											{currentOption.flowerHoles.replace(/_/g, ' ')}
+										</p>
+									</div>
+								)}
+
+								{/* Proposed Inscription */}
+								{pkg.proposedInscription && (
+									<div className="text-center">
+										<p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-3">
+											Proposed Inscription
+										</p>
+										<p className="whitespace-pre-wrap italic text-lg py-2">
+											{pkg.proposedInscription}
+										</p>
+									</div>
+								)}
+
+								{/* Lettering */}
+								{currentOption.lettering.length > 0 && (
+									<div>
+										<p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-3">
+											Lettering
+										</p>
+										<div className="space-y-4">
+											{currentOption.lettering.map((lett, idx) => (
+												<div key={idx} className="space-y-1">
+													<p className="text-sm text-muted-foreground">
+														{lett.techniqueName}
+														{lett.colorName && ` with ${lett.colorName}`} &middot;{' '}
+														{lett.letterCount} letters
+													</p>
+													{lett.text && (
+														<InscriptionText
+															text={`"${lett.text}"`}
+															fontId={lett.fontId}
+															fontName={lett.fontName}
+															fontS3Key={lett.fontS3Key}
+															className="italic text-sm"
+														/>
+													)}
+												</div>
+											))}
+										</div>
+									</div>
+								)}
+
+								{/* Sundries */}
+								{currentOption.sundries.length > 0 && (
+									<div>
+										<p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">
+											Additional Items
+										</p>
+										<div className="space-y-1">
+											{currentOption.sundries.map((s, idx) => (
+												<p key={idx} className="text-sm text-muted-foreground">
+													{s.sundryName} &times; {s.quantity}
+												</p>
+											))}
+										</div>
+									</div>
+								)}
+
+								{/* Custom Line Items */}
+								{currentOption.lineItems.filter((li) => !li.priceHidden || li.price != null)
+									.length > 0 && (
+									<div>
+										<p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">
+											Other Charges
+										</p>
+										<div className="space-y-1">
+											{currentOption.lineItems.map((li, idx) => (
+												<div key={idx} className="flex justify-between text-sm">
+													<span className="text-muted-foreground">
+														{li.description}
+														{li.vatExempt && (
+															<span className="text-xs ml-1">(VAT Exempt)</span>
+														)}
+													</span>
+													{!li.priceHidden && li.price != null && (
+														<span>{formatCurrency(li.price)}</span>
+													)}
+												</div>
+											))}
+										</div>
+									</div>
+								)}
+							</div>
+
+							<div className="px-10 sm:px-14">
+								<Separator />
+							</div>
+
+							{/* Pricing Summary */}
+							<div className="px-10 sm:px-14 py-8">
+								<div className="max-w-xs ml-auto space-y-2">
+									<div className="flex justify-between text-sm">
+										<span className="text-muted-foreground">Subtotal</span>
+										<span>{formatCurrency(currentOption.subtotal)}</span>
+									</div>
+									{parseFloat(currentOption.vatAmount) > 0 && (
+										<div className="flex justify-between text-sm">
+											<span className="text-muted-foreground">
+												VAT (
+												{(parseFloat(currentOption.vatRate) * 100).toFixed(0)}
+												%)
+											</span>
+											<span>{formatCurrency(currentOption.vatAmount)}</span>
+										</div>
+									)}
+									<Separator className="my-2" />
+									<div className="flex justify-between items-baseline pt-1">
+										<span className="text-sm font-medium">Total</span>
+										<span className="text-3xl font-heading font-bold">
+											{formatCurrency(currentOption.total)}
+										</span>
+									</div>
+								</div>
+							</div>
+						</>
+					)}
+
+					{/* Action Buttons */}
+					{canRespond && (
+						<>
+							<div className="px-10 sm:px-14">
+								<Separator />
+							</div>
+							<div className="px-10 sm:px-14 py-8 space-y-6">
+								<div className="flex flex-col sm:flex-row gap-3 justify-center">
+									<Button
+										size="lg"
+										onClick={() => setShowAcceptDialog(true)}
+										disabled={
+											(!isSingleOption && !selectedOption) ||
+											respondMutation.isPending
+										}
+									>
+										{respondMutation.isPending && (
+											<Loader2 className="h-4 w-4 mr-2 animate-spin" />
+										)}
+										<CheckCircle className="h-4 w-4 mr-2" />
+										{isSingleOption
+											? 'Accept This Quotation'
+											: effectiveSelection
+												? `Accept ${getOptionLabel(options.find((o) => o.id === effectiveSelection)!)}`
+												: 'Select an Option Above'}
+									</Button>
+									<Button
+										size="lg"
+										variant="outline"
+										onClick={() => setShowRejectDialog(true)}
+										disabled={respondMutation.isPending}
+									>
+										<XCircle className="h-4 w-4 mr-2" />
+										{isSingleOption ? 'Decline' : 'Decline All Options'}
+									</Button>
+								</div>
+
+								<p className="text-sm text-muted-foreground text-center">
+									Once you accept, we will be in touch to confirm the details and
+									arrange next steps.
+								</p>
+
+								{hasContactInfo && (
+									<div className="flex items-center justify-center gap-4 text-sm">
+										{tenant?.phone && (
+											<a
+												href={`tel:${tenant.phone}`}
+												className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
+											>
+												<Phone className="h-3.5 w-3.5" />
+												{tenant.phone}
+											</a>
+										)}
+										{tenant?.email && (
+											<a
+												href={`mailto:${tenant.email}`}
+												className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
+											>
+												<Mail className="h-3.5 w-3.5" />
+												{tenant.email}
+											</a>
+										)}
+									</div>
+								)}
+
+								<div className="text-center">
+									<Button
+										variant="link"
+										onClick={() => {
+											setNotes(pkg.customerFeedback || '');
+											setShowNotesDialog(true);
+										}}
+									>
+										Save notes without deciding
+									</Button>
+								</div>
+							</div>
+						</>
+					)}
+
+					{/* Footer */}
+					{tenant && (
+						<>
+							<div className="px-10 sm:px-14">
+								<Separator />
+							</div>
+							<div className="px-10 sm:px-14 py-8 text-center space-y-2">
+								<p className="text-sm text-muted-foreground italic">
+									Thank you for your enquiry
+								</p>
+								<p className="font-heading font-semibold">{tenant.name}</p>
+								{hasContactInfo && (
+									<p className="text-sm text-muted-foreground">
+										{[tenant.phone, tenant.email, tenant.website]
+											.filter(Boolean)
+											.join(' · ')}
+									</p>
+								)}
+							</div>
+						</>
+					)}
 				</div>
-
-				{/* Action Buttons */}
-				{canRespond && (
-					<div className="flex gap-4 justify-center">
-						<Button
-							size="lg"
-							onClick={() => setShowAcceptDialog(true)}
-							disabled={!selectedOption || respondMutation.isPending}
-						>
-							{respondMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-							<CheckCircle className="h-4 w-4 mr-2" />
-							Accept Selected Option
-						</Button>
-						<Button
-							size="lg"
-							variant="outline"
-							onClick={() => setShowRejectDialog(true)}
-							disabled={respondMutation.isPending}
-						>
-							<XCircle className="h-4 w-4 mr-2" />
-							Decline All Options
-						</Button>
-					</div>
-				)}
-
-				{/* Notes Button */}
-				{canRespond && (
-					<div className="text-center mt-4">
-						<Button
-							variant="link"
-							onClick={() => {
-								setNotes(pkg.customerFeedback || '');
-								setShowNotesDialog(true);
-							}}
-						>
-							Save notes without deciding
-						</Button>
-					</div>
-				)}
 			</div>
 
 			{/* Accept Dialog */}
 			<Dialog open={showAcceptDialog} onOpenChange={setShowAcceptDialog}>
 				<DialogContent>
 					<DialogHeader>
-						<DialogTitle>Accept Option</DialogTitle>
+						<DialogTitle>Confirm Acceptance</DialogTitle>
 						<DialogDescription>
-							{selectedOption && (
+							{effectiveSelection && (
 								<>
 									You are accepting{' '}
 									<strong>
-										{options.find((o) => o.id === selectedOption)?.optionLabel || 'this option'}
+										{isSingleOption
+											? 'this quotation'
+											: getOptionLabel(
+													options.find((o) => o.id === effectiveSelection)!,
+												)}
 									</strong>{' '}
 									for{' '}
 									<strong>
-										{formatCurrency(options.find((o) => o.id === selectedOption)?.total || '0')}
+										{formatCurrency(
+											options.find((o) => o.id === effectiveSelection)?.total || '0',
+										)}
 									</strong>
+									. We will be in touch to discuss next steps.
 								</>
 							)}
 						</DialogDescription>
@@ -484,7 +808,9 @@ export function PublicPackageViewPage() {
 							Cancel
 						</Button>
 						<Button onClick={handleAccept} disabled={respondMutation.isPending}>
-							{respondMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+							{respondMutation.isPending && (
+								<Loader2 className="h-4 w-4 mr-2 animate-spin" />
+							)}
 							Confirm Acceptance
 						</Button>
 					</DialogFooter>
@@ -495,10 +821,10 @@ export function PublicPackageViewPage() {
 			<Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
 				<DialogContent>
 					<DialogHeader>
-						<DialogTitle>Decline All Options</DialogTitle>
+						<DialogTitle>Decline Quotation</DialogTitle>
 						<DialogDescription>
-							Are you sure you want to decline all options? We would appreciate your feedback on why
-							these options don't meet your needs.
+							Are you sure? We value your feedback and would appreciate knowing how we can
+							help.
 						</DialogDescription>
 					</DialogHeader>
 					<div className="space-y-4 py-4">
@@ -521,8 +847,10 @@ export function PublicPackageViewPage() {
 							onClick={handleReject}
 							disabled={respondMutation.isPending}
 						>
-							{respondMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-							Decline All
+							{respondMutation.isPending && (
+								<Loader2 className="h-4 w-4 mr-2 animate-spin" />
+							)}
+							Decline
 						</Button>
 					</DialogFooter>
 				</DialogContent>
@@ -532,9 +860,10 @@ export function PublicPackageViewPage() {
 			<Dialog open={showNotesDialog} onOpenChange={setShowNotesDialog}>
 				<DialogContent>
 					<DialogHeader>
-						<DialogTitle>Save Notes</DialogTitle>
+						<DialogTitle>Your Notes</DialogTitle>
 						<DialogDescription>
-							Save your notes without making a decision. You can come back later.
+							Jot down any thoughts or questions. You can return to this page at any time
+							to make your decision.
 						</DialogDescription>
 					</DialogHeader>
 					<div className="space-y-4 py-4">
@@ -553,202 +882,14 @@ export function PublicPackageViewPage() {
 							Cancel
 						</Button>
 						<Button onClick={handleSaveNotes} disabled={notesMutation.isPending}>
-							{notesMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+							{notesMutation.isPending && (
+								<Loader2 className="h-4 w-4 mr-2 animate-spin" />
+							)}
 							Save Notes
 						</Button>
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>
 		</div>
-	);
-}
-
-// Option Card Component
-function OptionCard({
-	option,
-	isSelected,
-	isAccepted,
-	canSelect,
-	formatCurrency,
-	onSelect,
-}: {
-	option: PublicOption;
-	isSelected: boolean;
-	isAccepted: boolean;
-	canSelect: boolean;
-	formatCurrency: (value: string) => string;
-	onSelect: () => void;
-}) {
-	const [expanded, setExpanded] = useState(false);
-
-	return (
-		<Card
-			className={`cursor-pointer transition-all ${
-				isAccepted
-					? 'border-green-500 border-2 bg-green-50'
-					: isSelected
-						? 'border-primary border-2'
-						: 'hover:border-primary/50'
-			}`}
-			onClick={canSelect ? onSelect : undefined}
-		>
-			<CardHeader>
-				<div className="flex items-start justify-between">
-					<div>
-						<CardTitle className="flex items-center gap-2">
-							{option.optionLabel || `Option ${String.fromCharCode(65 + option.optionOrder)}`}
-							{isAccepted && (
-								<Badge className="bg-green-100 text-green-800 border-green-200">
-									<CheckCircle className="h-3 w-3 mr-1" />
-									Accepted
-								</Badge>
-							)}
-						</CardTitle>
-						{option.product && <p className="text-lg font-medium mt-1">{option.product.name}</p>}
-					</div>
-					<div className="text-right">
-						<div className="text-2xl font-bold">{formatCurrency(option.total)}</div>
-						{parseFloat(option.vatAmount) > 0 && (
-							<p className="text-sm text-muted-foreground">
-								inc. {formatCurrency(option.vatAmount)} VAT
-							</p>
-						)}
-					</div>
-				</div>
-			</CardHeader>
-
-			<CardContent>
-				<Button
-					variant="ghost"
-					size="sm"
-					onClick={(e) => {
-						e.stopPropagation();
-						setExpanded(!expanded);
-					}}
-				>
-					{expanded ? 'Hide Details' : 'Show Details'}
-				</Button>
-
-				{expanded && (
-					<div className="mt-4 space-y-4">
-						{/* Components */}
-						{option.components.length > 0 && (
-							<div>
-								<h4 className="font-medium mb-2">Components</h4>
-								<div className="space-y-1 text-sm">
-									{option.components.map((comp, idx) => (
-										<div key={idx} className="flex justify-between">
-											<span>
-												{comp.quantity}x {comp.materialName || comp.componentType}
-												{comp.finishName && ` (${comp.finishName})`}
-											</span>
-											<span>{formatCurrency(comp.lineTotal)}</span>
-										</div>
-									))}
-								</div>
-							</div>
-						)}
-
-						{/* Lettering */}
-						{option.lettering.length > 0 && (
-							<div>
-								<h4 className="font-medium mb-2">Lettering</h4>
-								<div className="space-y-2 text-sm">
-									{option.lettering.map((lett, idx) => (
-										<div key={idx} className="space-y-1">
-											<div className="flex justify-between">
-												<span>
-													{lett.techniqueName}
-													{lett.colorName && ` - ${lett.colorName}`} ({lett.letterCount} letters)
-												</span>
-												<span>{formatCurrency(lett.lineTotal)}</span>
-											</div>
-											{lett.text && (
-												<InscriptionText
-													text={`"${lett.text}"`}
-													fontId={lett.fontId}
-													fontName={lett.fontName}
-													fontS3Key={lett.fontS3Key}
-													className="italic text-muted-foreground"
-												/>
-											)}
-										</div>
-									))}
-								</div>
-							</div>
-						)}
-
-						{/* Sundries */}
-						{option.sundries.length > 0 && (
-							<div>
-								<h4 className="font-medium mb-2">Sundries</h4>
-								<div className="space-y-1 text-sm">
-									{option.sundries.map((sund, idx) => (
-										<div key={idx} className="flex justify-between">
-											<span>
-												{sund.quantity}x {sund.sundryName}
-											</span>
-											<span>{formatCurrency(sund.lineTotal)}</span>
-										</div>
-									))}
-								</div>
-							</div>
-						)}
-
-						{/* Line Items */}
-						{option.lineItems.length > 0 && (
-							<div>
-								<h4 className="font-medium mb-2">Additional Items</h4>
-								<div className="space-y-1 text-sm">
-									{option.lineItems.map((li, idx) => (
-										<div key={idx} className="flex justify-between">
-											<span>{li.description}</span>
-											{!li.priceHidden && li.price != null && (
-												<span>{formatCurrency(li.price)}</span>
-											)}
-										</div>
-									))}
-								</div>
-							</div>
-						)}
-
-						{/* Totals */}
-						<div className="border-t pt-2">
-							<div className="flex justify-between text-sm">
-								<span>Subtotal</span>
-								<span>{formatCurrency(option.subtotal)}</span>
-							</div>
-							{parseFloat(option.vatAmount) > 0 && (
-								<div className="flex justify-between text-sm">
-									<span>VAT ({(parseFloat(option.vatRate) * 100).toFixed(0)}%)</span>
-									<span>{formatCurrency(option.vatAmount)}</span>
-								</div>
-							)}
-							<div className="flex justify-between font-bold mt-1">
-								<span>Total</span>
-								<span>{formatCurrency(option.total)}</span>
-							</div>
-						</div>
-					</div>
-				)}
-			</CardContent>
-
-			{canSelect && (
-				<CardFooter className="pt-0">
-					<div className="flex items-center gap-2">
-						<div
-							className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-								isSelected ? 'border-primary bg-primary' : 'border-muted-foreground'
-							}`}
-						>
-							{isSelected && <CheckCircle className="h-3 w-3 text-white" />}
-						</div>
-						<span className="text-sm text-muted-foreground">
-							{isSelected ? 'Selected' : 'Click to select'}
-						</span>
-					</div>
-				</CardFooter>
-			)}
-		</Card>
 	);
 }

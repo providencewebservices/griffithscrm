@@ -1,8 +1,5 @@
-import crypto from 'node:crypto';
 import {
 	customers,
-	jobPaymentScheduleItems,
-	jobs,
 	products,
 	quoteComponents,
 	quoteLettering,
@@ -10,7 +7,6 @@ import {
 	quotePackages,
 	quoteSundries,
 	quotes,
-	tenantPricingSettings,
 	tenants,
 } from '@griffiths-crm/shared/db/schema';
 import { zValidator } from '@hono/zod-validator';
@@ -18,7 +14,7 @@ import { asc, eq } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { db } from '../lib/auth';
-import { generateJobNumber } from './jobs';
+import { createJobFromAcceptedQuote } from '../lib/quote-acceptance';
 
 // Validation schemas
 const respondSchema = z.object({
@@ -180,7 +176,16 @@ const publicQuotesRoutes = new Hono()
 			},
 			options,
 			customer,
-			tenant: tenant ? { id: tenant.id, name: tenant.name, hasLogo: !!tenant.logoUrl } : null,
+			tenant: tenant
+			? {
+					id: tenant.id,
+					name: tenant.name,
+					hasLogo: !!tenant.logoUrl,
+					phone: tenant.phone,
+					email: tenant.email,
+					website: tenant.website,
+				}
+			: null,
 		});
 	})
 
@@ -221,90 +226,41 @@ const publicQuotesRoutes = new Hono()
 		}
 
 		// Verify the accepted option exists in this package
-		let acceptedOption = null;
 		if (decision === 'accepted') {
 			const [opt] = await db.select().from(quotes).where(eq(quotes.id, acceptedOptionId!)).limit(1);
 
 			if (!opt || opt.packageId !== pkg.id) {
 				return c.json({ error: 'Invalid option selected' }, 400);
 			}
-			acceptedOption = opt;
 		}
 
-		const now = new Date();
-
-		// Update package with customer's decision
-		await db
-			.update(quotePackages)
-			.set({
-				status: decision,
-				acceptedOptionId: decision === 'accepted' ? acceptedOptionId : null,
-				customerDecisionAt: now,
-				customerFeedback: feedback || null,
-				customerFeedbackAt: feedback ? now : null,
-				updatedAt: now,
-			})
-			.where(eq(quotePackages.id, pkg.id));
-
-		// Update all options status to match
-		await db
-			.update(quotes)
-			.set({ status: decision, updatedAt: now })
-			.where(eq(quotes.packageId, pkg.id));
-
-		// If accepted, create a job from the accepted option
-		if (decision === 'accepted' && acceptedOption) {
-			const tenantId = pkg.tenantId;
-			const jobNumber = await generateJobNumber(tenantId);
-			const jobId = crypto.randomUUID();
-
-			await db.insert(jobs).values({
-				id: jobId,
-				tenantId,
-				quoteId: acceptedOptionId!, // Link to the specific accepted option
-				jobNumber,
-				status: 'pending',
+		if (decision === 'accepted') {
+			// Use shared helper for acceptance — creates job, payment schedule, and workflow tasks
+			await createJobFromAcceptedQuote({
+				tenantId: pkg.tenantId,
+				packageId: pkg.id,
+				optionId: acceptedOptionId!,
+				quoteType: pkg.quoteType,
+				feedback,
 			});
+		} else {
+			// Rejection — update package and options status
+			const now = new Date();
+			await db
+				.update(quotePackages)
+				.set({
+					status: 'rejected',
+					customerDecisionAt: now,
+					customerFeedback: feedback || null,
+					customerFeedbackAt: feedback ? now : null,
+					updatedAt: now,
+				})
+				.where(eq(quotePackages.id, pkg.id));
 
-			// Get tenant's deposit percentage setting
-			let depositPercent = 50; // Default 50%
-			const [pricingSettingsRow] = await db
-				.select()
-				.from(tenantPricingSettings)
-				.where(eq(tenantPricingSettings.tenantId, tenantId))
-				.limit(1);
-
-			if (pricingSettingsRow?.defaultDepositPercent) {
-				depositPercent = parseFloat(pricingSettingsRow.defaultDepositPercent);
-			}
-
-			// Calculate deposit and balance amounts
-			const total = parseFloat(acceptedOption.total);
-			const depositAmount = (total * depositPercent) / 100;
-			const balanceAmount = total - depositAmount;
-
-			// Create payment schedule items
-			await db.insert(jobPaymentScheduleItems).values({
-				id: crypto.randomUUID(),
-				tenantId,
-				jobId,
-				description: 'Deposit',
-				amount: depositAmount.toFixed(2),
-				dueDate: now,
-				paidAmount: '0',
-				sortOrder: 0,
-			});
-
-			await db.insert(jobPaymentScheduleItems).values({
-				id: crypto.randomUUID(),
-				tenantId,
-				jobId,
-				description: 'Balance',
-				amount: balanceAmount.toFixed(2),
-				dueDate: null,
-				paidAmount: '0',
-				sortOrder: 1,
-			});
+			await db
+				.update(quotes)
+				.set({ status: 'rejected', updatedAt: now })
+				.where(eq(quotes.packageId, pkg.id));
 		}
 
 		return c.json({

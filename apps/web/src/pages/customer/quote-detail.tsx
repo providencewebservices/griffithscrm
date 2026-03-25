@@ -60,12 +60,14 @@ import {
 	useAddComponentMutation,
 	useAddLetteringMutation,
 	useAddLineItemMutation,
+	useAddSundryMutation,
 	useCloneOptionMutation,
 	useDeleteComponentMutation,
 	useDeleteLetteringMutation,
 	useDeleteLineItemMutation,
 	useDeleteOptionMutation,
 	useDeleteQuoteMutation,
+	useDeleteSundryMutation,
 	useQuoteQuery,
 	useSendQuoteEmailMutation,
 	useUpdateComponentPricingMutation,
@@ -81,11 +83,10 @@ import { useTenantSettingsQuery } from '@/hooks/use-tenant-settings';
 const _API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 // Quote status order for progress indicator
-const QUOTE_STATUS_ORDER: QuoteStatus[] = ['draft', 'review', 'ready', 'presented', 'accepted'];
+const QUOTE_STATUS_ORDER: QuoteStatus[] = ['draft', 'ready', 'presented', 'accepted'];
 
 const QUOTE_STATUS_COLORS: Record<QuoteStatus, string> = {
 	draft: 'bg-amber-500',
-	review: 'bg-blue-500',
 	ready: 'bg-purple-500',
 	presented: 'bg-cyan-500',
 	accepted: 'bg-green-600',
@@ -100,6 +101,8 @@ export function QuoteDetailPage() {
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 	const [deleteOptionDialogOpen, setDeleteOptionDialogOpen] = useState(false);
 	const [sendEmailDialogOpen, setSendEmailDialogOpen] = useState(false);
+	const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+	const [expireDialogOpen, setExpireDialogOpen] = useState(false);
 	const [addOptionDialogOpen, setAddOptionDialogOpen] = useState(false);
 	const [customMessage, setCustomMessage] = useState('');
 	const [mutationError, setMutationError] = useState<string | null>(null);
@@ -126,6 +129,8 @@ export function QuoteDetailPage() {
 	const deleteLetteringMutation = useDeleteLetteringMutation();
 	const addComponentMutation = useAddComponentMutation();
 	const deleteComponentMutation = useDeleteComponentMutation();
+	const addSundryMutation = useAddSundryMutation();
+	const deleteSundryMutation = useDeleteSundryMutation();
 
 	// Line item presets for dropdown
 	const { data: lineItemPresets } = useLineItemPresetsQuery();
@@ -294,7 +299,16 @@ export function QuoteDetailPage() {
 		destructive?: boolean;
 	}[] = [];
 
-	if (canSendEmail) {
+	if (pkg.status === 'ready' && canSendEmail) {
+		// When ready + can send email, "Send to Customer" is the primary CTA
+		// so secondary gets the fallback "Mark as Presented" for in-person cases
+		secondaryActions.push({
+			label: 'Mark as Presented',
+			icon: Check,
+			onClick: () => handleStatusChange('presented'),
+		});
+	} else if (canSendEmail) {
+		// On presented status, "Send Email" stays in secondary (for re-sends)
 		secondaryActions.push({
 			label: `Send Email${pkg.emailSentCount > 0 ? ` (${pkg.emailSentCount})` : ''}`,
 			icon: Mail,
@@ -306,13 +320,13 @@ export function QuoteDetailPage() {
 		secondaryActions.push({
 			label: 'Reject',
 			icon: X,
-			onClick: () => handleStatusChange('rejected'),
+			onClick: () => setRejectDialogOpen(true),
 			destructive: true,
 		});
 		secondaryActions.push({
 			label: 'Mark Expired',
 			icon: Clock,
-			onClick: () => handleStatusChange('expired'),
+			onClick: () => setExpireDialogOpen(true),
 			destructive: true,
 		});
 	}
@@ -408,9 +422,26 @@ export function QuoteDetailPage() {
 				{/* Consolidated Header Actions */}
 				<div className="flex items-center gap-2">
 					{/* Primary CTA */}
-					{nextStatusLabel && (
+					{pkg.status === 'ready' ? (
+						canSendEmail ? (
+							<Button onClick={() => setSendEmailDialogOpen(true)}>
+								<Mail className="h-4 w-4 mr-2" />
+								Send to Customer
+							</Button>
+						) : (
+							<Button
+								onClick={() => handleStatusChange('presented')}
+								disabled={updateStatusMutation.isPending}
+							>
+								{updateStatusMutation.isPending ? (
+									<Loader2 className="h-4 w-4 mr-2 animate-spin" />
+								) : null}
+								Mark as Presented
+							</Button>
+						)
+					) : nextStatusLabel && nextStatus ? (
 						<Button
-							onClick={() => nextStatus && handleStatusChange(nextStatus)}
+							onClick={() => handleStatusChange(nextStatus)}
 							disabled={updateStatusMutation.isPending}
 						>
 							{updateStatusMutation.isPending ? (
@@ -418,7 +449,7 @@ export function QuoteDetailPage() {
 							) : null}
 							{nextStatusLabel}
 						</Button>
-					)}
+					) : null}
 					{isPresentedStatus && currentOption && (
 						<Button
 							onClick={() => handleAcceptOption(currentOption.id)}
@@ -568,6 +599,8 @@ export function QuoteDetailPage() {
 									deleteLetteringMutation={deleteLetteringMutation}
 									addComponentMutation={addComponentMutation}
 									deleteComponentMutation={deleteComponentMutation}
+									addSundryMutation={addSundryMutation}
+									deleteSundryMutation={deleteSundryMutation}
 									activePresets={activePresets}
 								/>
 							</div>
@@ -730,6 +763,36 @@ export function QuoteDetailPage() {
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>
+
+			{/* Reject Quote Confirmation */}
+			<DeleteConfirmDialog
+				open={rejectDialogOpen}
+				onOpenChange={setRejectDialogOpen}
+				onConfirm={() => {
+					handleStatusChange('rejected');
+					setRejectDialogOpen(false);
+				}}
+				title="Reject Quote"
+				description="Are you sure you want to reject this quote? This action cannot be undone."
+				isLoading={updateStatusMutation.isPending}
+				confirmLabel="Reject"
+				loadingLabel="Rejecting..."
+			/>
+
+			{/* Mark Expired Confirmation */}
+			<DeleteConfirmDialog
+				open={expireDialogOpen}
+				onOpenChange={setExpireDialogOpen}
+				onConfirm={() => {
+					handleStatusChange('expired');
+					setExpireDialogOpen(false);
+				}}
+				title="Mark Quote as Expired"
+				description="Are you sure you want to mark this quote as expired? This action cannot be undone."
+				isLoading={updateStatusMutation.isPending}
+				confirmLabel="Mark Expired"
+				loadingLabel="Updating..."
+			/>
 
 			{/* Add Option Dialog */}
 			{pkg.options && (

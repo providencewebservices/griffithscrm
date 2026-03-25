@@ -1361,10 +1361,9 @@ async function seedQuotes() {
 	const existingQuotes = await db.select().from(quotes).where(eq(quotes.tenantId, tenantId));
 
 	if (existingQuotes.length === 0) {
-		// Status distribution: 5 draft, 3 review, 5 ready, 8 presented, 12 accepted, 5 rejected, 2 expired
+		// Status distribution: 8 draft, 5 ready, 8 presented, 12 accepted, 5 rejected, 2 expired
 		const statusDistribution = [
-			...Array(5).fill('draft'),
-			...Array(3).fill('review'),
+			...Array(8).fill('draft'),
 			...Array(5).fill('ready'),
 			...Array(8).fill('presented'),
 			...Array(12).fill('accepted'),

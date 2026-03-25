@@ -967,6 +967,93 @@ export function useUpdateSundryPricingMutation() {
 	});
 }
 
+// Sundry add/delete functions
+type AddSundryInput = {
+	packageId: string;
+	optionId: string;
+	sundryId: string;
+	quantity: number;
+	notes?: string;
+};
+
+type DeleteSundryInput = {
+	packageId: string;
+	optionId: string;
+	itemId: string;
+};
+
+async function addSundry({
+	packageId,
+	optionId,
+	sundryId,
+	quantity,
+	notes,
+}: AddSundryInput): Promise<QuotePackageWithOptions> {
+	const response = await fetch(
+		`${API_URL}/api/quotes/${packageId}/options/${optionId}/sundries`,
+		{
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			credentials: 'include',
+			body: JSON.stringify({ sundryId, quantity, notes }),
+		},
+	);
+
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.error || 'Failed to add sundry');
+	}
+
+	const data: PackageResponse = await response.json();
+	return data.package;
+}
+
+async function deleteSundry({
+	packageId,
+	optionId,
+	itemId,
+}: DeleteSundryInput): Promise<QuotePackageWithOptions> {
+	const response = await fetch(
+		`${API_URL}/api/quotes/${packageId}/options/${optionId}/sundries/${itemId}`,
+		{
+			method: 'DELETE',
+			credentials: 'include',
+		},
+	);
+
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.error || 'Failed to delete sundry');
+	}
+
+	const data: PackageResponse = await response.json();
+	return data.package;
+}
+
+export function useAddSundryMutation() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: addSundry,
+		onSuccess: (data) => {
+			queryClient.setQueryData(['quote', data.id], data);
+			queryClient.invalidateQueries({ queryKey: ['quotes'] });
+		},
+	});
+}
+
+export function useDeleteSundryMutation() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: deleteSundry,
+		onSuccess: (data) => {
+			queryClient.setQueryData(['quote', data.id], data);
+			queryClient.invalidateQueries({ queryKey: ['quotes'] });
+		},
+	});
+}
+
 // Custom line item CRUD functions
 async function addLineItem({
 	packageId,
@@ -1324,8 +1411,6 @@ export function getQuoteStatusVariant(
 	switch (status) {
 		case 'draft':
 			return 'warning';
-		case 'review':
-			return 'outline';
 		case 'ready':
 			return 'secondary';
 		case 'presented':
@@ -1497,8 +1582,7 @@ export function formatQuoteNumberWithOptions(
 export function getNextQuoteStatus(current: QuoteStatus): QuoteStatus | null {
 	const transitions: Record<QuoteStatus, QuoteStatus | null> = {
 		draft: 'ready',
-		review: 'ready',
-		ready: 'presented',
+		ready: null,
 		presented: null,
 		accepted: null,
 		rejected: null,
@@ -1511,8 +1595,7 @@ export function getNextQuoteStatus(current: QuoteStatus): QuoteStatus | null {
 export function getNextQuoteStatusLabel(current: QuoteStatus): string | null {
 	const labels: Record<QuoteStatus, string | null> = {
 		draft: 'Mark Ready',
-		review: 'Mark Ready',
-		ready: 'Present to Customer',
+		ready: null,
 		presented: null,
 		accepted: null,
 		rejected: null,

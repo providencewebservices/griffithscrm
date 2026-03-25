@@ -16,6 +16,8 @@ interface DeleteConfirmDialogProps {
 	title: string;
 	description: string;
 	isLoading?: boolean;
+	confirmLabel?: string;
+	loadingLabel?: string;
 }
 
 export function DeleteConfirmDialog({
@@ -25,6 +27,8 @@ export function DeleteConfirmDialog({
 	title,
 	description,
 	isLoading,
+	confirmLabel,
+	loadingLabel,
 }: DeleteConfirmDialogProps) {
 	return (
 		<AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -40,7 +44,7 @@ export function DeleteConfirmDialog({
 						disabled={isLoading}
 						className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
 					>
-						{isLoading ? 'Deleting...' : 'Delete'}
+						{isLoading ? (loadingLabel ?? 'Deleting...') : (confirmLabel ?? 'Delete')}
 					</AlertDialogAction>
 				</AlertDialogFooter>
 			</AlertDialogContent>

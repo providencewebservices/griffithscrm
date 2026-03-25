@@ -1,19 +1,13 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from '@/components/ui/table';
 import type {
 	useAddComponentMutation,
 	useAddLetteringMutation,
 	useAddLineItemMutation,
+	useAddSundryMutation,
 	useDeleteComponentMutation,
 	useDeleteLetteringMutation,
 	useDeleteLineItemMutation,
+	useDeleteSundryMutation,
 	useUpdateComponentPricingMutation,
 	useUpdateLetteringMutation,
 	useUpdateLetteringPricingMutation,
@@ -29,8 +23,8 @@ import {
 } from '@/hooks/use-quotes';
 import { ComponentsSection } from './components-section';
 import { CustomLineItemsSection } from './custom-line-items-section';
-import { EditableNumber } from './editable-number';
 import { LetteringSection } from './lettering-section';
+import { SundriesSection } from './sundries-section';
 
 export function OptionContent({
 	pkg,
@@ -49,6 +43,8 @@ export function OptionContent({
 	deleteLetteringMutation,
 	addComponentMutation,
 	deleteComponentMutation,
+	addSundryMutation,
+	deleteSundryMutation,
 	activePresets,
 }: {
 	pkg: QuotePackageWithOptions;
@@ -67,6 +63,8 @@ export function OptionContent({
 	deleteLetteringMutation: ReturnType<typeof useDeleteLetteringMutation>;
 	addComponentMutation: ReturnType<typeof useAddComponentMutation>;
 	deleteComponentMutation: ReturnType<typeof useDeleteComponentMutation>;
+	addSundryMutation: ReturnType<typeof useAddSundryMutation>;
+	deleteSundryMutation: ReturnType<typeof useDeleteSundryMutation>;
 	activePresets: {
 		id: string;
 		name: string;
@@ -127,78 +125,17 @@ export function OptionContent({
 				)}
 
 				{/* Sundries */}
-				{sectionConfig.showSundries &&
-					(option.sundries.length > 0 ? (
-						<div>
-							<h4 className="font-medium mb-3">
-								Sundries ({option.sundries.length} item{option.sundries.length !== 1 ? 's' : ''})
-							</h4>
-							<div className="border rounded-lg overflow-x-auto">
-								<Table>
-									<TableHeader>
-										<TableRow>
-											<TableHead>Item</TableHead>
-											<TableHead className="text-center w-14">Qty</TableHead>
-											<TableHead className="text-right w-28">Supplier</TableHead>
-											<TableHead className="text-center w-24">Markup</TableHead>
-											<TableHead className="text-right w-24">Retail</TableHead>
-											<TableHead className="text-right w-24">Total</TableHead>
-										</TableRow>
-									</TableHeader>
-									<TableBody>
-										{option.sundries.map((sundry) => (
-											<TableRow key={sundry.id} className="[&_td]:py-3">
-												<TableCell className="font-medium">{sundry.sundryName || '-'}</TableCell>
-												<TableCell className="text-center">{sundry.quantity}</TableCell>
-												<TableCell className="text-right">
-													<EditableNumber
-														value={parseFloat(sundry.supplierCost)}
-														onSave={async (value) => {
-															await updateSundryPricing.mutateAsync({
-																packageId: pkg.id,
-																optionId: option.id,
-																itemId: sundry.id,
-																supplierCost: value,
-															});
-														}}
-														disabled={!canEditPricing}
-														isCurrency
-													/>
-												</TableCell>
-												<TableCell className="text-center text-muted-foreground text-sm">
-													<EditableNumber
-														value={parseFloat(sundry.markupPercent)}
-														onSave={async (value) => {
-															await updateSundryPricing.mutateAsync({
-																packageId: pkg.id,
-																optionId: option.id,
-																itemId: sundry.id,
-																markupPercent: value,
-															});
-														}}
-														disabled={!canEditPricing}
-														min={0}
-														align="center"
-														formatValue={(val) => `${val.toFixed(0)}%`}
-													/>
-												</TableCell>
-												<TableCell className="text-right">
-													{formatCurrency(sundry.unitPrice)}
-												</TableCell>
-												<TableCell className="text-right font-medium">
-													{formatCurrency(sundry.lineTotal)}
-												</TableCell>
-											</TableRow>
-										))}
-									</TableBody>
-								</Table>
-							</div>
-						</div>
-					) : (
-						<div className="border rounded-lg p-8 text-center text-muted-foreground border-dashed">
-							No sundries added yet.
-						</div>
-					))}
+				{sectionConfig.showSundries && (
+					<SundriesSection
+						pkg={pkg}
+						option={option}
+						canEditPricing={canEditPricing}
+						formatCurrency={formatCurrency}
+						updateSundryPricing={updateSundryPricing}
+						addSundryMutation={addSundryMutation}
+						deleteSundryMutation={deleteSundryMutation}
+					/>
+				)}
 
 				{/* Custom Line Items - always shown */}
 				<CustomLineItemsSection

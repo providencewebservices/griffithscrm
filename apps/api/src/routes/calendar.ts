@@ -216,7 +216,7 @@ const calendarRoutes = new Hono()
 						isNotNull(quotes.validUntil),
 						gte(quotes.validUntil, startDate),
 						lte(quotes.validUntil, endDate),
-						inArray(quotes.status, ['draft', 'review', 'ready', 'presented']),
+						inArray(quotes.status, ['draft', 'ready', 'presented']),
 					),
 				);
 

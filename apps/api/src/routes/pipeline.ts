@@ -10,7 +10,7 @@ const QUOTE_COLUMNS = [
 	{
 		id: 'drafting',
 		label: 'Drafting',
-		statuses: ['draft', 'review'],
+		statuses: ['draft'],
 		color: 'bg-gray-400',
 	},
 	{
