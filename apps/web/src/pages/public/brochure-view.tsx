@@ -132,9 +132,9 @@ export function PublicBrochureViewPage() {
 			<div className="min-h-screen bg-muted">
 				<div className="bg-background border-b">
 					<div className="max-w-5xl mx-auto px-4 py-6 sm:py-8">
-						<div className="flex items-center gap-4">
-							<Skeleton className="h-12 w-12 rounded" />
-							<Skeleton className="h-8 w-48" />
+						<div className="flex flex-col items-center text-center gap-3">
+							<Skeleton className="h-16 w-16 sm:h-20 sm:w-20 rounded" />
+							<Skeleton className="h-10 w-56" />
 						</div>
 					</div>
 				</div>
@@ -213,15 +213,15 @@ export function PublicBrochureViewPage() {
 			{/* Header */}
 			<div className="bg-background border-b">
 				<div className="max-w-5xl mx-auto px-4 py-6 sm:py-8">
-					<div className="flex items-center gap-4">
+					<div className="flex flex-col items-center text-center gap-3">
 						{tenant?.hasLogo && (
 							<img
 								src={`${API_URL}/api/logo/${tenant.id}`}
 								alt={tenant.name}
-								className="h-12 sm:h-14 max-w-[160px] object-contain"
+								className="h-16 sm:h-20 max-w-[200px] object-contain"
 							/>
 						)}
-						<h1 className="text-2xl sm:text-3xl">{tenant?.name || 'Memorial Selections'}</h1>
+						<h1 className="text-3xl sm:text-4xl font-semibold tracking-tight">{tenant?.name || 'Memorial Selections'}</h1>
 					</div>
 				</div>
 			</div>
@@ -367,7 +367,7 @@ function CollapsibleMessage({ message }: { message: string }) {
 	};
 
 	return (
-		<div className="bg-muted/50 border border-border rounded-lg p-4 sm:p-5 mb-6">
+		<div className="bg-background border border-border rounded-lg p-4 sm:p-5 mb-6">
 			<p
 				ref={checkClamped}
 				className={`text-foreground whitespace-pre-wrap leading-relaxed ${!expanded ? 'line-clamp-3' : ''}`}
@@ -398,11 +398,13 @@ function ProductCard({
 		<Card className="overflow-hidden">
 			{/* Product image */}
 			{product.productImageUrl ? (
-				<img
-					src={product.productImageUrl}
-					alt={product.productName}
-					className="w-full aspect-[4/3] object-cover"
-				/>
+				<div className="w-full aspect-[4/3] bg-muted flex items-center justify-center">
+					<img
+						src={product.productImageUrl}
+						alt={product.productName}
+						className="max-w-full max-h-full object-contain"
+					/>
+				</div>
 			) : (
 				<div className="w-full aspect-[4/3] bg-muted flex items-center justify-center">
 					<ImageIcon className="h-10 w-10 text-muted-foreground/40" />
@@ -412,7 +414,7 @@ function ProductCard({
 			<CardContent className="pt-4">
 				<div className="flex items-start justify-between gap-2">
 					<div className="flex-1 min-w-0">
-						<h3 className="font-semibold text-base truncate">{product.productName}</h3>
+						<h3 className="font-semibold text-base line-clamp-2">{product.productName}</h3>
 						{product.categoryName && (
 							<p className="text-sm text-muted-foreground">{product.categoryName}</p>
 						)}
