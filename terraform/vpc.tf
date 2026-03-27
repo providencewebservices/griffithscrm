@@ -19,17 +19,6 @@ module "vpc" {
     cidrsubnet(var.vpc_cidr, 8, 2)
   ]
 
-  # Database subnets (private, no internet access needed)
-  database_subnets = [
-    cidrsubnet(var.vpc_cidr, 8, 11),
-    cidrsubnet(var.vpc_cidr, 8, 12)
-  ]
-
-  # Create database subnet group for RDS
-  create_database_subnet_group       = true
-  create_database_subnet_route_table = true
-  database_subnet_group_name         = "${local.name}-db"
-
   # No NAT Gateway - cost savings
   enable_nat_gateway = false
   enable_vpn_gateway = false
@@ -42,10 +31,6 @@ module "vpc" {
 
   public_subnet_tags = {
     Type = "public"
-  }
-
-  database_subnet_tags = {
-    Type = "database"
   }
 }
 
@@ -108,24 +93,5 @@ resource "aws_security_group" "ecs_tasks" {
 
   tags = merge(local.tags, {
     Name = "${local.name}-ecs-tasks"
-  })
-}
-
-# Security Group for RDS
-resource "aws_security_group" "rds" {
-  name        = "${local.name}-rds"
-  description = "Security group for RDS"
-  vpc_id      = module.vpc.vpc_id
-
-  ingress {
-    description     = "PostgreSQL from ECS tasks"
-    from_port       = 5432
-    to_port         = 5432
-    protocol        = "tcp"
-    security_groups = [aws_security_group.ecs_tasks.id]
-  }
-
-  tags = merge(local.tags, {
-    Name = "${local.name}-rds"
   })
 }

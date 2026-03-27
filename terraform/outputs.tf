@@ -9,22 +9,6 @@ output "public_subnets" {
   value       = module.vpc.public_subnets
 }
 
-output "database_subnets" {
-  description = "Database subnet IDs"
-  value       = module.vpc.database_subnets
-}
-
-# RDS Outputs
-output "rds_endpoint" {
-  description = "RDS instance endpoint"
-  value       = module.rds.db_instance_endpoint
-}
-
-output "rds_database_name" {
-  description = "RDS database name"
-  value       = var.db_name
-}
-
 # ECS Outputs
 output "ecs_cluster_name" {
   description = "ECS cluster name"

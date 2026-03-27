@@ -40,8 +40,8 @@ Migration from AWS RDS PostgreSQL 16 to Neon PostgreSQL 17.
 
 > Manual steps, no code changes.
 
-- [ ] Create a Neon project with PostgreSQL 17
-- [ ] Note the two connection strings Neon provides:
+- [x] Create a Neon project with PostgreSQL 17
+- [x] Note the two connection strings Neon provides:
   - **Pooled** (via PgBouncer): `postgresql://user:pass@ep-xxx-pooler.eu-west-2.aws.neon.tech/griffiths_crm?sslmode=require` — for application queries
   - **Direct**: `postgresql://user:pass@ep-xxx.eu-west-2.aws.neon.tech/griffiths_crm?sslmode=require` (without `-pooler` in hostname) — for migrations
 - [ ] Optionally create a `dev` branch in Neon for non-production use
@@ -50,27 +50,22 @@ Migration from AWS RDS PostgreSQL 16 to Neon PostgreSQL 17.
 
 > Update the database client and migration script to support separate pooled/direct connection strings.
 
-### A. `packages/shared/src/db/index.ts` — No changes needed
+### A. `packages/shared/src/db/index.ts` — No changes needed ✅
 
 The `createDb` function takes a connection string parameter, so callers control which URL is used. No change required.
 
-### B. `apps/api/scripts/migrate.ts` — Use `DATABASE_URL_DIRECT` for migrations
+### B. `apps/api/scripts/migrate.ts` — Use `DATABASE_URL_DIRECT` for migrations ✅
 
 Neon's built-in PgBouncer runs in transaction mode, which doesn't support `SET` statements or advisory locks that Drizzle migrations may use. The direct connection bypasses the pooler.
 
 ```typescript
-// Change line 19 from:
-const DATABASE_URL = process.env.DATABASE_URL;
-
-// To:
+// Changed to:
 const DATABASE_URL = process.env.DATABASE_URL_DIRECT || process.env.DATABASE_URL;
 ```
 
-This prefers the direct (non-pooled) connection for migrations, falling back to `DATABASE_URL` for backwards compatibility (local dev).
+### C. `packages/shared/drizzle.config.ts` — Prefer `DATABASE_URL_DIRECT` ✅
 
-### C. `packages/shared/drizzle.config.ts` — Prefer `DATABASE_URL_DIRECT`
-
-Update `dbCredentials.url` so that `drizzle-kit` commands (generate/push/studio) use the direct connection:
+Updated `dbCredentials.url` to use the direct connection:
 
 ```typescript
 dbCredentials: {
@@ -86,97 +81,33 @@ Confirm no regressions — local Docker Compose postgres still works with the fa
 
 > Remove RDS infrastructure, update secrets and networking.
 
-### A. Remove the RDS module — `terraform/rds.tf`
+### A. Remove the RDS module — `terraform/rds.tf` ✅
 
-Delete the entire file. This removes:
-- `module "rds"` (lines 1–69)
-- SSM parameters for individual DB credentials: `db_host`, `db_name`, `db_username`, `db_password` (lines 72–106)
-- The `aws_ssm_parameter.database_url` resource (lines 108–116) — will be replaced with a Neon-sourced version
+Deleted the entire file.
 
-### B. Update `terraform/main.tf`
+### B. Update `terraform/main.tf` ✅
 
-- Remove `random_password.db_password` (lines 59–63) — no longer generating a password
+Removed `random_password.db_password` and the `random` provider (no longer needed).
 
-### C. Update `terraform/variables.tf`
+### C. Update `terraform/variables.tf` ✅
 
-- Remove RDS variables: `db_instance_class`, `db_allocated_storage`, `db_name` (lines 30–46)
-- Add Neon variables:
-  ```hcl
-  variable "neon_database_url" {
-    description = "Neon pooled database connection URL"
-    type        = string
-    sensitive   = true
-  }
+Replaced RDS variables with `neon_database_url` and `neon_database_url_direct` (both sensitive).
 
-  variable "neon_database_url_direct" {
-    description = "Neon direct (non-pooled) database connection URL for migrations"
-    type        = string
-    sensitive   = true
-  }
-  ```
+### D. Update `terraform/ecs.tf` ✅
 
-### D. Update `terraform/ecs.tf` — Add SSM parameters and secret injection
+Added Neon SSM parameters (`database_url`, `database_url_direct`) and `DATABASE_URL_DIRECT` secret to ECS task definition.
 
-Replace the deleted `aws_ssm_parameter.database_url` with new Neon-sourced parameters:
+### E. Update `terraform/vpc.tf` ✅
 
-```hcl
-# Neon Database URLs (stored in SSM Parameter Store)
-resource "aws_ssm_parameter" "database_url" {
-  name        = "/${local.name}/database/url"
-  description = "Neon pooled database connection URL"
-  type        = "SecureString"
-  value       = var.neon_database_url
-  tags        = local.tags
-}
+Removed RDS security group, database subnets, and database subnet group.
 
-resource "aws_ssm_parameter" "database_url_direct" {
-  name        = "/${local.name}/database/url-direct"
-  description = "Neon direct (non-pooled) database connection URL"
-  type        = "SecureString"
-  value       = var.neon_database_url_direct
-  tags        = local.tags
-}
-```
+### F. Update `terraform/outputs.tf` ✅
 
-Add `DATABASE_URL_DIRECT` to the ECS task definition secrets (after the existing `DATABASE_URL` entry around line 244):
+Removed `database_subnets`, `rds_endpoint`, and `rds_database_name` outputs.
 
-```hcl
-{
-  name      = "DATABASE_URL_DIRECT"
-  valueFrom = aws_ssm_parameter.database_url_direct.arn
-},
-```
+### G. Update `terraform/terraform.tfvars` ✅
 
-### E. Update `terraform/vpc.tf` — Remove RDS security group
-
-Delete the RDS security group (lines 114–131):
-```hcl
-# Security Group for RDS  <-- DELETE THIS BLOCK
-resource "aws_security_group" "rds" { ... }
-```
-
-Also remove or simplify the database subnets from the VPC module. The `database_subnets`, `create_database_subnet_group`, `create_database_subnet_route_table`, and `database_subnet_group_name` arguments (lines 23–31) can be removed since there's no more RDS.
-
-### F. Update `terraform/outputs.tf` — Remove RDS outputs
-
-Delete the RDS outputs block (lines 17–26):
-```hcl
-# RDS Outputs          <-- DELETE
-output "rds_endpoint"      { ... }
-output "rds_database_name" { ... }
-```
-
-Also delete the `database_subnets` output (lines 13–16) if no longer needed.
-
-### G. Update `terraform/terraform.tfvars`
-
-- Remove RDS variables: `db_instance_class`, `db_allocated_storage`, `db_name` (lines 14–17)
-- Add Neon connection strings (will be populated at cutover):
-  ```hcl
-  # Neon Database (set at cutover)
-  neon_database_url        = ""  # pooled URL
-  neon_database_url_direct = ""  # direct URL
-  ```
+Replaced RDS variables with empty Neon URL placeholders (to be populated at cutover).
 
 ## Phase 4: Docker Compose (Local Dev)
 

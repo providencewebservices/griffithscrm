@@ -243,6 +243,10 @@ resource "aws_ecs_task_definition" "api" {
           valueFrom = aws_ssm_parameter.database_url.arn
         },
         {
+          name      = "DATABASE_URL_DIRECT"
+          valueFrom = aws_ssm_parameter.database_url_direct.arn
+        },
+        {
           name      = "BETTER_AUTH_SECRET"
           valueFrom = aws_ssm_parameter.better_auth_secret.arn
         },
@@ -306,6 +310,23 @@ resource "aws_ecs_task_definition" "api" {
   ])
 
   tags = local.tags
+}
+
+# Neon Database URLs (stored in SSM Parameter Store)
+resource "aws_ssm_parameter" "database_url" {
+  name        = "/${local.name}/database/url"
+  description = "Neon pooled database connection URL"
+  type        = "SecureString"
+  value       = var.neon_database_url
+  tags        = local.tags
+}
+
+resource "aws_ssm_parameter" "database_url_direct" {
+  name        = "/${local.name}/database/url-direct"
+  description = "Neon direct (non-pooled) database connection URL"
+  type        = "SecureString"
+  value       = var.neon_database_url_direct
+  tags        = local.tags
 }
 
 # Store Better Auth Secret in SSM

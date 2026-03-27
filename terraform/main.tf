@@ -6,11 +6,7 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 6.27"
     }
-    random = {
-      source  = "hashicorp/random"
-      version = "~> 3.6"
-    }
-  }
+}
 
   backend "s3" {
     bucket         = "griffiths-crm-terraform-state"
@@ -54,10 +50,4 @@ locals {
     Project     = "griffiths-crm"
     Environment = var.environment
   }
-}
-
-# Random password for database
-resource "random_password" "db_password" {
-  length  = 32
-  special = false
 }

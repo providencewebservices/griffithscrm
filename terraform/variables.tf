@@ -26,23 +26,17 @@ variable "route53_zone_id" {
   default     = ""
 }
 
-# Database
-variable "db_instance_class" {
-  description = "RDS instance class"
+# Neon Database
+variable "neon_database_url" {
+  description = "Neon pooled database connection URL"
   type        = string
-  default     = "db.t4g.micro" # Cost-effective, ARM-based
+  sensitive   = true
 }
 
-variable "db_allocated_storage" {
-  description = "Allocated storage for RDS in GB"
-  type        = number
-  default     = 20
-}
-
-variable "db_name" {
-  description = "Name of the database"
+variable "neon_database_url_direct" {
+  description = "Neon direct (non-pooled) database connection URL for migrations"
   type        = string
-  default     = "griffiths_crm"
+  sensitive   = true
 }
 
 # ECS
