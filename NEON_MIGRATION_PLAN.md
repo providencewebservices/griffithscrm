@@ -111,20 +111,14 @@ Replaced RDS variables with empty Neon URL placeholders (to be populated at cuto
 
 ## Phase 4: Docker Compose (Local Dev)
 
-- [ ] Bump postgres image from `postgres:16` to `postgres:17-alpine` in `docker-compose.yml` to match Neon's version
-- [ ] Keep the local postgres service — provides offline development and fast local queries
+- [x] Bump postgres image from `postgres:16` to `postgres:17-alpine` in `docker-compose.yml` to match Neon's version
+- [x] Keep the local postgres service — provides offline development and fast local queries
 
 ## Phase 5: Data Migration
 
-- [ ] Take a `pg_dump` from RDS:
-  ```bash
-  pg_dump -Fc -h <rds-endpoint> -U griffiths_admin -d griffiths_crm > griffiths_crm_backup.dump
-  ```
-- [ ] Restore into Neon:
-  ```bash
-  pg_restore -h <neon-endpoint> -U <neon-user> -d griffiths_crm --no-owner --no-privileges griffiths_crm_backup.dump
-  ```
-- [ ] Verify: run the app against Neon, check key queries (customers, quotes, emails, payments)
+- [x] Take a `pg_dump` from RDS (via SSM port forwarding through ECS task)
+- [x] Restore into Neon
+- [x] Verify: data confirmed visible in Neon dashboard
 
 Alternative: Neon's dashboard has a guided import flow that can pull directly from an RDS endpoint if you temporarily allow Neon's IPs through the security group.
 
