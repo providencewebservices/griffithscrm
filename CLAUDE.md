@@ -58,7 +58,6 @@ Production uses programmatic migrations via `drizzle-orm/postgres-js/migrator` (
 Infrastructure is in `terraform/` directory. Key files:
 
 - `ecs.tf` - ECS cluster, service, task definition
-- `rds.tf` - PostgreSQL database and DATABASE_URL in SSM
 - `cloudfront.tf` - S3 bucket and CloudFront distribution
 - `terraform.tfvars` - Environment-specific variables
 
@@ -70,9 +69,14 @@ terraform plan    # Preview changes
 terraform apply   # Apply changes
 ```
 
-### RDS SSL
+### Neon (PostgreSQL 17)
 
-RDS requires SSL connections. The `DATABASE_URL` in SSM includes `?sslmode=require`.
+Production uses [Neon](https://neon.tech) serverless PostgreSQL 17. Two connection strings are stored in SSM:
+
+- `DATABASE_URL` — pooled connection (via Neon's built-in PgBouncer), used by the application
+- `DATABASE_URL_DIRECT` — direct connection, used for migrations (PgBouncer transaction mode doesn't support `SET` statements / advisory locks)
+
+Both include `?sslmode=require`.
 
 ### CloudFront Custom Domain
 

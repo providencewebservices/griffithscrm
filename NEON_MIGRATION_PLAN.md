@@ -135,13 +135,13 @@ Alternative: Neon's dashboard has a guided import flow that can pull directly fr
 
 ## Phase 7: Cleanup
 
-- [ ] Update `CLAUDE.md`:
+- [x] Update `CLAUDE.md`:
   - Change PostgreSQL reference from 16 to 17
   - Replace RDS mentions with Neon
   - Add note about `DATABASE_URL_DIRECT` for migrations
   - Remove `db_instance_class`, `db_allocated_storage` references
-- [ ] Update `.env.example` with comments noting Neon connection strings in production
-- [ ] Delete `terraform/rds.tf` file if not already done during terraform apply
+- [x] Update `.env.example` with comments noting Neon connection strings in production
+- [x] Delete `terraform/rds.tf` file if not already done during terraform apply
 
 ---
 
