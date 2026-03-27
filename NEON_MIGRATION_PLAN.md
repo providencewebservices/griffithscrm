@@ -124,17 +124,14 @@ Alternative: Neon's dashboard has a guided import flow that can pull directly fr
 
 ## Phase 6: Cutover
 
-- [ ] Put app in maintenance mode (or accept brief downtime)
-- [ ] Take final `pg_dump` from RDS
-- [ ] Restore into Neon
-- [ ] Update `terraform.tfvars` with Neon connection strings
-- [ ] `terraform apply` to update SSM parameters (and remove RDS)
-- [ ] Deploy (ECS picks up new secrets on next task launch — force new deployment):
-  ```bash
-  aws ecs update-service --cluster griffiths-crm-prod --service griffiths-crm-prod-api --force-new-deployment --region eu-west-2
-  ```
-- [ ] Verify app is working against Neon
-- [ ] Confirm RDS resources are destroyed by terraform apply
+- [x] Put app in maintenance mode (or accept brief downtime)
+- [x] Take final `pg_dump` from RDS
+- [x] Restore into Neon
+- [x] Update `terraform.tfvars` with Neon connection strings
+- [x] `terraform apply` — 2 added, 2 changed, 17 destroyed (RDS final snapshot: `griffiths-crm-prod-final-griffiths-crm-prod-456939f6`)
+- [x] ECS deployed with new task definition (revision 6), health checks passing
+- [x] Verify app is working against Neon
+- [x] Confirm RDS resources are destroyed by terraform apply
 
 ## Phase 7: Cleanup
 
