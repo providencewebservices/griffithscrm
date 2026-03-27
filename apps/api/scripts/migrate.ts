@@ -16,7 +16,7 @@ import { drizzle } from 'drizzle-orm/postgres-js';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import postgres from 'postgres';
 
-const DATABASE_URL = process.env.DATABASE_URL;
+const DATABASE_URL = process.env.DATABASE_URL_DIRECT || process.env.DATABASE_URL;
 
 if (!DATABASE_URL) {
 	console.error('ERROR: DATABASE_URL environment variable is required');
