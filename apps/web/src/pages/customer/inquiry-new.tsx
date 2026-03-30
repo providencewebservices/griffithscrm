@@ -463,20 +463,22 @@ export function InquiryNewPage() {
 									value={categoryFilter || 'all'}
 									onValueChange={(v) => setCategoryFilter(v === 'all' ? null : v)}
 								>
-									<TabsList className="h-8">
-										<TabsTrigger value="all" className="text-xs px-2 h-6">
-											All
-										</TabsTrigger>
-										{categories.map((cat) => (
-											<TabsTrigger
-												key={cat.id}
-												value={cat.id}
-												className="text-xs px-2 h-6"
-											>
-												{cat.name}
+									<div className="overflow-x-auto">
+										<TabsList className="h-8 w-max">
+											<TabsTrigger value="all" className="text-xs px-2 h-6">
+												All
 											</TabsTrigger>
-										))}
-									</TabsList>
+											{categories.map((cat) => (
+												<TabsTrigger
+													key={cat.id}
+													value={cat.id}
+													className="text-xs px-2 h-6"
+												>
+													{cat.name}
+												</TabsTrigger>
+											))}
+										</TabsList>
+									</div>
 								</Tabs>
 							)}
 
