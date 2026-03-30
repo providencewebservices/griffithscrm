@@ -71,6 +71,7 @@ export type Pagination = {
 
 export type CreateBrochureInput = {
 	customerId: string;
+	inquiryId?: string;
 	message?: string;
 	expiresAt?: string;
 	products: { productId: string; sortOrder: number }[];

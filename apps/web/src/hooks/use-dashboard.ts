@@ -38,6 +38,15 @@ export type RecentJob = {
 	updatedAt: string;
 };
 
+export type RecentInquiry = {
+	id: string;
+	firstName: string;
+	lastName: string;
+	source: string;
+	status: string;
+	createdAt: string;
+};
+
 export type DashboardStats = {
 	quotes: {
 		byStatus: Record<QuoteStatus, number>;
@@ -56,6 +65,10 @@ export type DashboardStats = {
 	tasks: {
 		myOpenCount: number;
 		myOverdueCount: number;
+	};
+	inquiries?: {
+		newCount: number;
+		recent: RecentInquiry[];
 	};
 	recent: {
 		quotes: RecentQuote[];

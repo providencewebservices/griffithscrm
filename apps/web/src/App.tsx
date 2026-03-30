@@ -9,6 +9,9 @@ import { AdminDashboard } from './pages/admin/dashboard';
 import { TenantsPage } from './pages/admin/tenants';
 import { UsersPage } from './pages/admin/users';
 import { CustomerDashboard } from './pages/customer';
+import { InquiriesPage } from './pages/customer/inquiries';
+import { InquiryDetailPage } from './pages/customer/inquiry-detail';
+import { InquiryNewPage } from './pages/customer/inquiry-new';
 import { BrochureDetailPage } from './pages/customer/brochure-detail';
 import { BrochureNewPage } from './pages/customer/brochure-new';
 import { BrochuresPage } from './pages/customer/brochures';
@@ -95,6 +98,9 @@ function App() {
 					}
 				>
 					<Route index element={<CustomerDashboard />} />
+					<Route path="inquiries" element={<InquiriesPage />} />
+					<Route path="inquiries/new" element={<InquiryNewPage />} />
+					<Route path="inquiries/:id" element={<InquiryDetailPage />} />
 					<Route path="brochures" element={<BrochuresPage />} />
 					<Route path="brochures/new" element={<BrochureNewPage />} />
 					<Route path="brochures/:id" element={<BrochureDetailPage />} />

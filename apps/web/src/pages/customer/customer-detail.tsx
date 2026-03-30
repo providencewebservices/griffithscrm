@@ -6,6 +6,7 @@ import {
 	Mail,
 	MapPin,
 	MessageSquare,
+	MessageSquareText,
 	Phone,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -42,6 +43,7 @@ import {
 	useUnarchiveCustomerMutation,
 	useUpdateCustomerMutation,
 } from '@/hooks/use-customers';
+import { useInquiriesQuery } from '@/hooks/use-inquiries';
 import { formatPriceRange, formatQuoteNumberWithOptions, useQuotesQuery } from '@/hooks/use-quotes';
 import { useTenantSettingsQuery } from '@/hooks/use-tenant-settings';
 
@@ -56,6 +58,9 @@ export function CustomerDetailPage() {
 	const { data: customer, isLoading, error } = useCustomerQuery(id || '');
 	const { data: tenantSettings } = useTenantSettingsQuery();
 	const { data: customerQuotes, isLoading: quotesLoading } = useQuotesQuery(
+		id ? { customerId: id } : undefined,
+	);
+	const { data: customerInquiries } = useInquiriesQuery(
 		id ? { customerId: id } : undefined,
 	);
 	const updateMutation = useUpdateCustomerMutation();
@@ -287,6 +292,63 @@ export function CustomerDetailPage() {
 										</TableCell>
 										<TableCell>
 											<Link to={`/app/quotes/${quote.id}`}>
+												<Button variant="ghost" size="sm">
+													View
+												</Button>
+											</Link>
+										</TableCell>
+									</TableRow>
+								))}
+							</TableBody>
+						</Table>
+					)}
+				</CardContent>
+			</Card>
+
+			{/* Inquiries */}
+			<Card className="mb-6">
+				<CardHeader>
+					<div className="flex items-center justify-between">
+						<CardTitle className="flex items-center gap-2">
+							<MessageSquareText className="h-5 w-5" />
+							Inquiries
+						</CardTitle>
+						<Link to={`/app/inquiries/new?customerId=${id}`}>
+							<Button variant="outline" size="sm">
+								New Inquiry
+							</Button>
+						</Link>
+					</div>
+				</CardHeader>
+				<CardContent>
+					{!customerInquiries?.items || customerInquiries.items.length === 0 ? (
+						<p className="text-sm text-muted-foreground text-center py-4">
+							No inquiries linked to this customer
+						</p>
+					) : (
+						<Table>
+							<TableHeader>
+								<TableRow>
+									<TableHead>Date</TableHead>
+									<TableHead>Source</TableHead>
+									<TableHead>Status</TableHead>
+									<TableHead></TableHead>
+								</TableRow>
+							</TableHeader>
+							<TableBody>
+								{customerInquiries.items.map((inquiry) => (
+									<TableRow key={inquiry.id}>
+										<TableCell>{formatDate(inquiry.createdAt)}</TableCell>
+										<TableCell>
+											{inquiry.source.charAt(0).toUpperCase() + inquiry.source.slice(1).replace('_', ' ')}
+										</TableCell>
+										<TableCell>
+											<Badge variant="outline">
+												{inquiry.status.charAt(0).toUpperCase() + inquiry.status.slice(1)}
+											</Badge>
+										</TableCell>
+										<TableCell>
+											<Link to={`/app/inquiries/${inquiry.id}`}>
 												<Button variant="ghost" size="sm">
 													View
 												</Button>

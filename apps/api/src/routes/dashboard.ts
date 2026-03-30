@@ -1,5 +1,7 @@
 import {
 	customers,
+	inquiries,
+	INQUIRY_STATUSES,
 	JOB_STATUSES,
 	jobPaymentScheduleItems,
 	jobs,
@@ -284,6 +286,37 @@ export const dashboardRoutes = new Hono()
 				),
 			);
 
+		// Inquiry stats
+		const [newInquiryCount] = await db
+			.select({ count: sql<number>`count(*)::int` })
+			.from(inquiries)
+			.where(
+				and(
+					eq(inquiries.tenantId, tenantId),
+					eq(inquiries.status, 'new'),
+					isNull(inquiries.archivedAt),
+				),
+			);
+
+		const recentInquiries = await db
+			.select({
+				id: inquiries.id,
+				firstName: inquiries.firstName,
+				lastName: inquiries.lastName,
+				source: inquiries.source,
+				status: inquiries.status,
+				createdAt: inquiries.createdAt,
+			})
+			.from(inquiries)
+			.where(
+				and(
+					eq(inquiries.tenantId, tenantId),
+					isNull(inquiries.archivedAt),
+				),
+			)
+			.orderBy(desc(inquiries.createdAt))
+			.limit(5);
+
 		return c.json({
 			quotes: {
 				byStatus: quotesByStatus,
@@ -302,6 +335,10 @@ export const dashboardRoutes = new Hono()
 			tasks: {
 				myOpenCount: taskOpenResult?.count || 0,
 				myOverdueCount: taskOverdueResult?.count || 0,
+			},
+			inquiries: {
+				newCount: newInquiryCount?.count || 0,
+				recent: recentInquiries,
 			},
 			recent: {
 				quotes: recentQuotes,

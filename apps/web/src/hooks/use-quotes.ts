@@ -283,6 +283,7 @@ export type CreateQuoteInput = {
 	existingMemorialDescription?: string;
 	productionMethod?: ProductionMethod;
 	relatedJobId?: string;
+	inquiryId?: string;
 	notes?: string;
 	internalNotes?: string;
 	validUntil?: string;

@@ -37,6 +37,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { useCreateBrochureMutation } from '@/hooks/use-brochures';
 import { useCustomersQuery } from '@/hooks/use-customers';
+import { useInquiryQuery } from '@/hooks/use-inquiries';
 import { useProductCategoriesQuery } from '@/hooks/use-product-categories';
 import { type Product, useProductsQuery } from '@/hooks/use-products';
 import { SortableProductList } from '@/components/sortable-product-list';
@@ -61,6 +62,10 @@ export function BrochureNewPage() {
 	const navigate = useNavigate();
 	const [searchParams] = useSearchParams();
 	const preselectedCustomerId = searchParams.get('customerId');
+	const inquiryId = searchParams.get('inquiryId');
+
+	// Inquiry pre-fill
+	const { data: inquiryData } = useInquiryQuery(inquiryId || undefined);
 
 	// Customer selector state
 	const [customerId, setCustomerId] = useState(preselectedCustomerId || '');
@@ -99,6 +104,25 @@ export function BrochureNewPage() {
 		isActive: 'true',
 		limit: 20,
 	});
+
+	// Pre-fill from inquiry data
+	useEffect(() => {
+		if (!inquiryData) return;
+		if (inquiryData.customerId && !customerId) {
+			setCustomerId(inquiryData.customerId);
+		}
+		if (inquiryData.products.length > 0 && selectedProducts.length === 0) {
+			setSelectedProducts(
+				inquiryData.products.map((p) => ({
+					productId: p.productId,
+					name: p.productName,
+					imageUrl: p.productImageUrl,
+					categoryName: p.productCategoryName,
+					description: null,
+				})),
+			);
+		}
+	}, [inquiryData]); // eslint-disable-line react-hooks/exhaustive-deps
 
 	// Debounce product search
 	useEffect(() => {
@@ -177,6 +201,7 @@ export function BrochureNewPage() {
 		try {
 			const brochure = await createBrochure.mutateAsync({
 				customerId,
+				inquiryId: inquiryId || undefined,
 				message: message || undefined,
 				expiresAt: expiresAt ? new Date(expiresAt).toISOString() : undefined,
 				products: selectedProducts.map((p, i) => ({

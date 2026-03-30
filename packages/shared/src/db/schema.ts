@@ -899,6 +899,45 @@ export const PACKAGE_STATUSES = QUOTE_STATUSES;
 // Payer types for quotes (who gets billed)
 export const PAYER_TYPES = ['customer', 'funeral_director'] as const;
 
+// Inquiry statuses
+export const INQUIRY_STATUSES = ['new', 'contacted', 'converted', 'closed'] as const;
+
+// Inquiries table (pre-quote customer interest capture)
+export const inquiries = pgTable(
+	'inquiries',
+	{
+		id: text('id').primaryKey(),
+		tenantId: text('tenant_id')
+			.notNull()
+			.references(() => tenants.id, { onDelete: 'cascade' }),
+		customerId: text('customer_id').references(() => customers.id, { onDelete: 'set null' }),
+		firstName: text('first_name').notNull(),
+		lastName: text('last_name').notNull(),
+		email: text('email'),
+		phone: text('phone'),
+		message: text('message'),
+		source: text('source').notNull(), // From ENQUIRY_SOURCES
+		status: text('status').notNull().default('new'), // From INQUIRY_STATUSES
+		archivedAt: timestamp('archived_at'),
+		createdAt: timestamp('created_at').notNull().defaultNow(),
+		updatedAt: timestamp('updated_at').notNull().defaultNow(),
+	},
+	(table) => ({
+		tenantIdx: index('inquiries_tenant_idx').on(table.tenantId),
+		tenantStatusIdx: index('inquiries_tenant_status_idx').on(table.tenantId, table.status),
+	}),
+);
+
+// Inquiry Products join table (products the prospect is interested in)
+export const inquiryProducts = pgTable('inquiry_products', {
+	id: text('id').primaryKey(),
+	inquiryId: text('inquiry_id')
+		.notNull()
+		.references(() => inquiries.id, { onDelete: 'cascade' }),
+	productId: text('product_id').references(() => products.id, { onDelete: 'set null' }),
+	createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
 // Quote Packages table (groups multiple quote options for customer presentation)
 export const quotePackages = pgTable('quote_packages', {
 	id: text('id').primaryKey(),
@@ -911,6 +950,7 @@ export const quotePackages = pgTable('quote_packages', {
 
 	// SHARED CONTEXT (shared across all options in package)
 	customerId: text('customer_id').references(() => customers.id, { onDelete: 'set null' }),
+	inquiryId: text('inquiry_id').references(() => inquiries.id, { onDelete: 'set null' }),
 	relationToDeceased: text('relation_to_deceased'),
 	payerType: text('payer_type'), // 'customer' | 'funeral_director' | null (backwards compat)
 
@@ -1840,6 +1880,7 @@ export const brochures = pgTable(
 			.notNull()
 			.references(() => tenants.id, { onDelete: 'cascade' }),
 		customerId: text('customer_id').references(() => customers.id, { onDelete: 'set null' }),
+		inquiryId: text('inquiry_id').references(() => inquiries.id, { onDelete: 'set null' }),
 		createdById: text('created_by_id').references(() => users.id, { onDelete: 'set null' }),
 		message: text('message'),
 		accessToken: text('access_token').unique(),

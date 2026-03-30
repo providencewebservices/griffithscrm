@@ -15,7 +15,7 @@ import {
 	User,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { Link, useNavigate, useSearchParams } from 'react-router';
 import {
 	Breadcrumb,
 	BreadcrumbItem,
@@ -88,6 +88,7 @@ import {
 	type SundryInput,
 	useCreateQuoteMutation,
 } from '@/hooks/use-quotes';
+import { useInquiryQuery } from '@/hooks/use-inquiries';
 import { useSundriesQuery } from '@/hooks/use-sundries';
 import { useTenantPricingSettingsQuery } from '@/hooks/use-tenant-pricing-settings';
 import { cn } from '@/lib/utils';
@@ -114,6 +115,12 @@ const NONE_VALUE = '_none';
 
 export function QuoteNewPage() {
 	const navigate = useNavigate();
+	const [searchParams] = useSearchParams();
+	const inquiryId = searchParams.get('inquiryId');
+	const preselectedCustomerId = searchParams.get('customerId');
+
+	// Inquiry pre-fill
+	const { data: inquiryData } = useInquiryQuery(inquiryId || undefined);
 
 	// Form state - Package-level (shared context)
 	const [quoteType, setQuoteType] = useState<QuoteType>('new_memorial');
@@ -200,6 +207,26 @@ export function QuoteNewPage() {
 	const completedJobs = completedJobsData?.jobs;
 
 	const createMutation = useCreateQuoteMutation();
+
+	// Pre-fill from inquiry data
+	useEffect(() => {
+		if (!inquiryData) return;
+		if (inquiryData.customerId && !payerId) {
+			setPayerId(inquiryData.customerId);
+			setPayerType('customer');
+		}
+		if (inquiryData.source && !source) {
+			setSource(inquiryData.source as EnquirySource);
+		}
+	}, [inquiryData]); // eslint-disable-line react-hooks/exhaustive-deps
+
+	// Pre-fill payer from URL param
+	useEffect(() => {
+		if (preselectedCustomerId && !payerId) {
+			setPayerId(preselectedCustomerId);
+			setPayerType('customer');
+		}
+	}, [preselectedCustomerId]); // eslint-disable-line react-hooks/exhaustive-deps
 
 	// Set default validUntil date based on tenant settings
 	useEffect(() => {
@@ -392,6 +419,7 @@ export function QuoteNewPage() {
 			proposedInscription: proposedInscription || undefined,
 			existingMemorialDescription: existingMemorialDescription || undefined,
 			relatedJobId: relatedJobId || undefined,
+			inquiryId: inquiryId || undefined,
 			notes: notes || undefined,
 			internalNotes: internalNotes || undefined,
 			validUntil: validUntil ? new Date(validUntil).toISOString() : undefined,

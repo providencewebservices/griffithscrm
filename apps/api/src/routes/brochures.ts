@@ -5,6 +5,7 @@ import {
 	contactInfo,
 	customerContactInfo,
 	customers,
+	inquiries,
 	productCategories,
 	products,
 	tenants,
@@ -21,6 +22,7 @@ import { requireAuth, requireTenant } from '../middleware/auth';
 // Validation schemas
 const createSchema = z.object({
 	customerId: z.string().min(1, 'Customer is required'),
+	inquiryId: z.string().optional(),
 	message: z.string().optional(),
 	expiresAt: z.string().optional(),
 	products: z.array(
@@ -264,6 +266,7 @@ const brochuresRoutes = new Hono()
 				id,
 				tenantId,
 				customerId: data.customerId,
+				inquiryId: data.inquiryId || null,
 				createdById: currentUser.id,
 				message: data.message || null,
 				accessToken,
@@ -281,6 +284,19 @@ const brochuresRoutes = new Hono()
 					sortOrder: p.sortOrder,
 				})),
 			);
+		}
+
+		// Auto-convert inquiry status when brochure is created from inquiry
+		if (data.inquiryId) {
+			await db
+				.update(inquiries)
+				.set({ status: 'converted', updatedAt: new Date() })
+				.where(
+					and(
+						eq(inquiries.id, data.inquiryId),
+						eq(inquiries.tenantId, tenantId),
+					),
+				);
 		}
 
 		return c.json({ brochure: { ...created, accessToken } }, 201);

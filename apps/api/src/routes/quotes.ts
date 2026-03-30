@@ -14,6 +14,7 @@ import {
 	fonts,
 	funeralDirectorContactInfo,
 	funeralDirectors,
+	inquiries,
 	jobPaymentScheduleItems,
 	jobs,
 	jobWorkflowTasks,
@@ -474,6 +475,7 @@ const createQuoteSchema = z.object({
 	existingMemorialDescription: z.string().optional(), // For refurbishment quotes
 	relatedJobId: z.string().optional(),
 	productionMethod: z.enum(PRODUCTION_METHODS).optional(),
+	inquiryId: z.string().optional(),
 	// For inline customer creation
 	customerDetails: customerDetailsSchema.optional(),
 	// First option fields (per-option)
@@ -1161,6 +1163,7 @@ const quotesRoutes = new Hono()
 			tenantId,
 			packageNumber: quoteNumber, // Use first quote number as package identifier
 			customerId: finalCustomerId,
+			inquiryId: data.inquiryId || null,
 			relationToDeceased: data.relationToDeceased || null,
 			payerType,
 			quoteType: data.quoteType,
@@ -1237,6 +1240,19 @@ const quotesRoutes = new Hono()
 					quoteId,
 				})),
 			);
+		}
+
+		// Auto-convert inquiry status when quote is created from inquiry
+		if (data.inquiryId) {
+			await db
+				.update(inquiries)
+				.set({ status: 'converted', updatedAt: new Date() })
+				.where(
+					and(
+						eq(inquiries.id, data.inquiryId),
+						eq(inquiries.tenantId, tenantId),
+					),
+				);
 		}
 
 		// Return full package with options

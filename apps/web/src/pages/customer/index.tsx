@@ -1,6 +1,7 @@
 import { Plus, UserPlus } from 'lucide-react';
 import { Link } from 'react-router';
 import { AttentionBanner } from '@/components/dashboard/attention-banner';
+import { NewInquiriesWidget } from '@/components/dashboard/new-inquiries-widget';
 import { PipelineSummary } from '@/components/dashboard/pipeline-summary';
 import { RecentActivity } from '@/components/dashboard/recent-activity';
 import { StatsCards } from '@/components/dashboard/StatsCards';
@@ -19,7 +20,8 @@ export function CustomerDashboard() {
 				<div className="lg:col-span-3">
 					<RecentActivity />
 				</div>
-				<div className="lg:col-span-2">
+				<div className="lg:col-span-2 space-y-6">
+					<NewInquiriesWidget />
 					<UpcomingEvents />
 				</div>
 			</div>

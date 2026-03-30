@@ -32,6 +32,7 @@ interface CustomerFormDialogProps {
 	onOpenChange: (open: boolean) => void;
 	onSubmit: (data: CreateCustomerInput) => void;
 	customer?: CustomerWithRelations | null;
+	initialValues?: { firstName?: string; lastName?: string; contactInfo?: ContactInfoInput[] };
 	isLoading?: boolean;
 	error?: string | null;
 	defaultCountry?: string;
@@ -82,6 +83,7 @@ export function CustomerFormDialog({
 	onOpenChange,
 	onSubmit,
 	customer,
+	initialValues,
 	isLoading,
 	error,
 	defaultCountry = 'GB',
@@ -131,6 +133,15 @@ export function CustomerFormDialog({
 			setDoNotEmail(customer.doNotEmail);
 			setDoNotMail(customer.doNotMail);
 			setCommunicationNotes(customer.communicationNotes || '');
+		} else if (initialValues) {
+			setFirstName(initialValues.firstName || '');
+			setLastName(initialValues.lastName || '');
+			setContacts(initialValues.contactInfo || []);
+			setAddresses([]);
+			setDoNotCall(false);
+			setDoNotEmail(false);
+			setDoNotMail(false);
+			setCommunicationNotes('');
 		} else {
 			setFirstName('');
 			setLastName('');
@@ -141,7 +152,7 @@ export function CustomerFormDialog({
 			setDoNotMail(false);
 			setCommunicationNotes('');
 		}
-	}, [customer]);
+	}, [customer, initialValues]);
 
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();

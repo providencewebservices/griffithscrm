@@ -12,12 +12,14 @@ import { dimensionCombosRoutes } from './routes/dimension-combos';
 import { documentFoldersRoutes } from './routes/document-folders';
 import { documentsRoutes } from './routes/documents';
 import { emailIntegrationsRoutes } from './routes/email-integrations';
+import { externalInquiriesRoutes } from './routes/external-inquiries';
 import { externalProductsRoutes } from './routes/external-products';
 import { finishesRoutes } from './routes/finishes';
 import { fontProxyRoutes } from './routes/font-proxy';
 import { fontsRoutes } from './routes/fonts';
 import { funeralDirectorsRoutes } from './routes/funeral-directors';
 import { inboxRoutes } from './routes/inbox';
+import { inquiriesRoutes } from './routes/inquiries';
 import { inboxWebhookRoutes } from './routes/inbox-webhook';
 import { jobFormsRoutes } from './routes/job-forms';
 import { jobProofsRoutes } from './routes/job-proofs';
@@ -77,6 +79,7 @@ app.on(['POST', 'GET'], '/api/auth/*', (c) => auth.handler(c.req.raw));
 
 // Public routes (no auth required)
 app.route('/api/external', externalProductsRoutes);
+app.route('/api/external', externalInquiriesRoutes);
 app.route('/api/public/quotes', publicQuotesRoutes);
 app.route('/api/public/payments', publicPaymentsRoutes);
 app.route('/api/public/brochures', publicBrochuresRoutes);
@@ -151,6 +154,9 @@ app.route('/api/quotes', quotesRoutes);
 
 // Brochure routes (for tenant users)
 app.route('/api/brochures', brochuresRoutes);
+
+// Inquiry routes (for tenant users)
+app.route('/api/inquiries', inquiriesRoutes);
 
 // Job routes (for tenant users)
 app.route('/api/jobs', jobsRouter);
