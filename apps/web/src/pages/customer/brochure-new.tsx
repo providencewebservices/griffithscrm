@@ -251,90 +251,95 @@ export function BrochureNewPage() {
 
 			<div className="max-w-3xl space-y-6">
 				{/* Customer, Message & Expiry */}
-				<div className="space-y-3">
-					<div className="space-y-1">
-						<FieldLabel className="text-xs font-medium text-muted-foreground">Customer</FieldLabel>
-						<Popover open={customerComboOpen} onOpenChange={setCustomerComboOpen}>
-							<PopoverTrigger asChild>
-								<Button
-									variant="outline"
-									role="combobox"
-									aria-expanded={customerComboOpen}
-									className="w-full justify-between font-normal h-9 text-sm"
-								>
-									<span className="truncate">
-										{customerId ? customerDisplayName || 'Select...' : 'Select a customer...'}
-									</span>
-									<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-								</Button>
-							</PopoverTrigger>
-							<PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-								<Command>
-									<CommandInput placeholder="Search customers..." />
-									<CommandList>
-										<CommandEmpty>No customers found.</CommandEmpty>
-										{customerId && (
+				<Card>
+					<CardHeader>
+						<CardTitle className="text-base">Details</CardTitle>
+					</CardHeader>
+					<CardContent className="space-y-3">
+						<div className="space-y-1">
+							<FieldLabel className="text-xs font-medium text-muted-foreground">Customer</FieldLabel>
+							<Popover open={customerComboOpen} onOpenChange={setCustomerComboOpen}>
+								<PopoverTrigger asChild>
+									<Button
+										variant="outline"
+										role="combobox"
+										aria-expanded={customerComboOpen}
+										className="w-full justify-between font-normal h-9 text-sm"
+									>
+										<span className="truncate">
+											{customerId ? customerDisplayName || 'Select...' : 'Select a customer...'}
+										</span>
+										<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+									</Button>
+								</PopoverTrigger>
+								<PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+									<Command>
+										<CommandInput placeholder="Search customers..." />
+										<CommandList>
+											<CommandEmpty>No customers found.</CommandEmpty>
+											{customerId && (
+												<CommandGroup>
+													<CommandItem
+														value="_clear"
+														onSelect={() => {
+															setCustomerId('');
+															setCustomerComboOpen(false);
+														}}
+													>
+														<span className="text-muted-foreground">Clear selection</span>
+													</CommandItem>
+												</CommandGroup>
+											)}
 											<CommandGroup>
-												<CommandItem
-													value="_clear"
-													onSelect={() => {
-														setCustomerId('');
-														setCustomerComboOpen(false);
-													}}
-												>
-													<span className="text-muted-foreground">Clear selection</span>
-												</CommandItem>
+												{customers?.map((customer) => (
+													<CommandItem
+														key={customer.id}
+														value={`${customer.firstName} ${customer.lastName}`}
+														onSelect={() => {
+															setCustomerId(customer.id);
+															setCustomerComboOpen(false);
+														}}
+													>
+														<Check
+															className={cn(
+																'mr-2 h-4 w-4',
+																customerId === customer.id ? 'opacity-100' : 'opacity-0',
+															)}
+														/>
+														{customer.firstName} {customer.lastName}
+													</CommandItem>
+												))}
 											</CommandGroup>
-										)}
-										<CommandGroup>
-											{customers?.map((customer) => (
-												<CommandItem
-													key={customer.id}
-													value={`${customer.firstName} ${customer.lastName}`}
-													onSelect={() => {
-														setCustomerId(customer.id);
-														setCustomerComboOpen(false);
-													}}
-												>
-													<Check
-														className={cn(
-															'mr-2 h-4 w-4',
-															customerId === customer.id ? 'opacity-100' : 'opacity-0',
-														)}
-													/>
-													{customer.firstName} {customer.lastName}
-												</CommandItem>
-											))}
-										</CommandGroup>
-									</CommandList>
-								</Command>
-							</PopoverContent>
-						</Popover>
-						{submitted && !customerId && (
-							<FieldError>Please select a customer</FieldError>
-						)}
-					</div>
+										</CommandList>
+									</Command>
+								</PopoverContent>
+							</Popover>
+							{submitted && !customerId && (
+								<FieldError>Please select a customer</FieldError>
+							)}
+						</div>
 
-					<div className="space-y-1">
-						<FieldLabel className="text-xs font-medium text-muted-foreground">Message (optional)</FieldLabel>
-						<Textarea
-							placeholder="Write a personal message for the customer..."
-							value={message}
-							onChange={(e) => setMessage(e.target.value)}
-							rows={3}
-						/>
-					</div>
+						<div className="space-y-1">
+							<FieldLabel className="text-xs font-medium text-muted-foreground">Message (optional)</FieldLabel>
+							<Textarea
+								placeholder="Write a personal message for the customer..."
+								value={message}
+								onChange={(e) => setMessage(e.target.value)}
+								rows={3}
+							/>
+						</div>
 
-					<div className="space-y-1">
-						<FieldLabel className="text-xs font-medium text-muted-foreground">Expires</FieldLabel>
-						<Input
-							type="date"
-							value={expiresAt}
-							onChange={(e) => setExpiresAt(e.target.value)}
-							className="h-9 text-sm max-w-[180px]"
-						/>
-					</div>
-				</div>
+						<div className="space-y-1">
+							<FieldLabel className="text-xs font-medium text-muted-foreground">Expires</FieldLabel>
+							<Input
+								type="date"
+								value={expiresAt}
+								onChange={(e) => setExpiresAt(e.target.value)}
+								className="h-9 text-sm max-w-[180px]"
+							/>
+						</div>
+					</CardContent>
+				</Card>
 
 				{/* Product Selector */}
 				<Card>
