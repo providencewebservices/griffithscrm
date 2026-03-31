@@ -2,9 +2,9 @@ import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import {
+	canUploadCategory,
 	generatePresignedUploadUrl,
 	getSignedImageUrl,
-	isS3Configured,
 	type UploadCategory,
 } from '../lib/s3';
 import { requireAuth, requireTenant } from '../middleware/auth';
@@ -31,12 +31,13 @@ const uploadRoutes = new Hono()
 
 	// Generate presigned URL for upload
 	.post('/presign', zValidator('json', presignRequestSchema), async (c) => {
-		// Check if S3 is configured
-		if (!isS3Configured()) {
+		const { category, entityId, filename, contentType } = c.req.valid('json');
+
+		if (!canUploadCategory(category as UploadCategory)) {
 			return c.json(
 				{
 					error:
-						'S3 is not configured. Please set S3_BUCKET, AWS_ACCESS_KEY_ID, and AWS_SECRET_ACCESS_KEY environment variables.',
+						'Upload storage is not configured. Set S3_BUCKET for private uploads and PUBLIC_MEDIA_BUCKET/PUBLIC_MEDIA_BASE_URL for public media delivery.',
 				},
 				503,
 			);
@@ -44,7 +45,6 @@ const uploadRoutes = new Hono()
 
 		const currentUser = c.get('user');
 		const tenantId = currentUser.tenantId!;
-		const { category, entityId, filename, contentType } = c.req.valid('json');
 
 		try {
 			const { uploadUrl, publicUrl, key } = await generatePresignedUploadUrl({
@@ -76,10 +76,6 @@ const uploadRoutes = new Hono()
 			}),
 		),
 		async (c) => {
-			if (!isS3Configured()) {
-				return c.json({ error: 'S3 is not configured' }, 503);
-			}
-
 			const { url } = c.req.valid('json');
 
 			try {
@@ -105,10 +101,6 @@ const uploadRoutes = new Hono()
 			}),
 		),
 		async (c) => {
-			if (!isS3Configured()) {
-				return c.json({ error: 'S3 is not configured' }, 503);
-			}
-
 			const { urls } = c.req.valid('json');
 
 			try {

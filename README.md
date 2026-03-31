@@ -88,6 +88,7 @@ bun run build:api    # Build API only
 bun run db:push      # Push schema changes to database (development)
 bun run db:generate  # Generate SQL migration files
 bun run db:studio    # Open Drizzle Studio
+bun run media:backfill # Dry-run public media backfill (set APPLY=true to execute)
 ```
 
 ## Production Deployment
@@ -98,7 +99,7 @@ The production environment runs on AWS with the following services:
 
 - **ECS Fargate**: Runs the API container
 - **RDS PostgreSQL**: Managed database (single-AZ for cost savings)
-- **S3**: Static web hosting + document storage
+- **S3**: Static web hosting + private document storage + public media storage
 - **CloudFront**: CDN for the web frontend
 - **ALB**: Load balancer for the API
 - **SSM Parameter Store**: Secrets management
@@ -145,6 +146,7 @@ terraform apply
 Key variables in `terraform.tfvars`:
 - `web_domain` - Custom domain for frontend
 - `api_domain` - Custom domain for API
+- `media_domain` - Optional custom domain for public media delivery
 - `route53_zone_id` - Set if using Route53 for DNS (leave empty for external DNS)
 
 ### ECS Exec (Shell Access)

@@ -42,9 +42,24 @@ output "cloudfront_domain_name" {
   value       = aws_cloudfront_distribution.web.domain_name
 }
 
+output "media_cloudfront_distribution_id" {
+  description = "CloudFront distribution ID for public media"
+  value       = aws_cloudfront_distribution.media.id
+}
+
+output "media_cloudfront_domain_name" {
+  description = "CloudFront distribution domain name for public media"
+  value       = aws_cloudfront_distribution.media.domain_name
+}
+
 output "web_url" {
   description = "Web frontend URL"
   value       = var.route53_zone_id != "" ? "https://${var.web_domain}" : "https://${aws_cloudfront_distribution.web.domain_name}"
+}
+
+output "media_url" {
+  description = "Public media base URL"
+  value       = var.media_domain != "" ? "https://${var.media_domain}" : "https://${aws_cloudfront_distribution.media.domain_name}"
 }
 
 # S3 Outputs
@@ -56,6 +71,11 @@ output "web_bucket_name" {
 output "documents_bucket_name" {
   description = "S3 bucket name for documents"
   value       = aws_s3_bucket.documents.id
+}
+
+output "public_media_bucket_name" {
+  description = "S3 bucket name for public media"
+  value       = aws_s3_bucket.public_media.id
 }
 
 # Deployment Commands
@@ -97,6 +117,17 @@ output "web_certificate_validation" {
   description = "DNS validation records for web certificate (add these to your DNS if not using Route53)"
   value = var.route53_zone_id == "" ? {
     for dvo in aws_acm_certificate.web.domain_validation_options : dvo.domain_name => {
+      name  = dvo.resource_record_name
+      type  = dvo.resource_record_type
+      value = dvo.resource_record_value
+    }
+  } : null
+}
+
+output "media_certificate_validation" {
+  description = "DNS validation records for media certificate (add these to your DNS if not using Route53)"
+  value = var.route53_zone_id == "" && var.media_domain != "" ? {
+    for dvo in aws_acm_certificate.media[0].domain_validation_options : dvo.domain_name => {
       name  = dvo.resource_record_name
       type  = dvo.resource_record_type
       value = dvo.resource_record_value

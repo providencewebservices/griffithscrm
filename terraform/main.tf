@@ -6,7 +6,7 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 6.27"
     }
-}
+  }
 
   backend "s3" {
     bucket         = "griffiths-crm-terraform-state"

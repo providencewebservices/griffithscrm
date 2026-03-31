@@ -73,7 +73,8 @@ export function ImageUpload({
 				URL.revokeObjectURL(blobUrlRef.current);
 			}
 
-			// Create local preview and keep it (S3 URLs are private and won't load)
+			// Keep a local preview during upload. Some stored URLs may still require
+			// a signed/private read path until legacy media is migrated.
 			const localPreview = URL.createObjectURL(file);
 			blobUrlRef.current = localPreview;
 			setPreview(localPreview);
@@ -85,7 +86,7 @@ export function ImageUpload({
 					file,
 				});
 
-				// Keep the blob preview (it works), just notify parent of S3 URL for storage
+				// Keep the blob preview until the parent reloads from persisted state.
 				onChange(publicUrl);
 			} catch (err) {
 				setError(err instanceof Error ? err.message : 'Failed to upload image');

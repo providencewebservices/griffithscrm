@@ -7,7 +7,7 @@ This guide covers deploying Griffiths CRM to AWS.
 - **Frontend**: React SPA hosted on S3 + CloudFront
 - **Backend**: Bun/Hono API running on ECS Fargate
 - **Database**: PostgreSQL on RDS
-- **Storage**: S3 for document uploads
+- **Storage**: S3 for private document uploads plus a dedicated public media bucket/CDN
 
 ## Prerequisites
 
@@ -35,6 +35,7 @@ environment       = "production"
 # Domains (must be configured in Cloudflare)
 web_domain        = "griffiths.example.com"
 api_domain        = "griffiths-api.example.com"
+media_domain      = "media.griffiths.example.com"
 
 # Database
 db_password       = "your-secure-db-password"
@@ -63,8 +64,8 @@ This creates:
 - RDS PostgreSQL instance
 - ECS cluster and service
 - ALB with HTTPS
-- S3 buckets for frontend and documents
-- CloudFront distribution
+- S3 buckets for frontend, documents, and public media
+- CloudFront distributions for frontend and public media
 - ECR repository
 
 ### 3. Configure DNS in Cloudflare
@@ -78,6 +79,7 @@ terraform output
 In Cloudflare, create:
 - `griffiths-api.example.com` → CNAME → ALB DNS name (proxy disabled)
 - `griffiths.example.com` → CNAME → CloudFront distribution
+- `media.griffiths.example.com` → CNAME → Media CloudFront distribution
 
 ## Initial Deployment
 

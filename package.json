@@ -17,6 +17,7 @@
 		"db:push": "bun run --cwd packages/shared db:push",
 		"db:studio": "bun run --cwd packages/shared db:studio",
 		"db:bootstrap": "bun run --cwd apps/api scripts/bootstrap-admin.ts",
+		"media:backfill": "bun run --env-file .env --cwd apps/api scripts/backfill-public-media.ts",
 		"db:seed": "bun run --env-file .env --cwd apps/api scripts/seed.ts",
 		"lint": "biome check .",
 		"lint:fix": "biome check --write .",

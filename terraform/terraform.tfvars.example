@@ -5,6 +5,7 @@ environment = "prod"
 # Domain Configuration
 web_domain = "griffiths.uwchlanventures.com"
 api_domain = "griffiths-api.uwchlanventures.com"
+media_domain = "media.griffiths.uwchlanventures.com"
 
 # Route53 Zone ID (optional - leave empty for manual DNS)
 # If you have a Route53 hosted zone for uwchlanventures.com, provide its ID
@@ -28,6 +29,7 @@ better_auth_secret = "your-secure-random-string-at-least-32-chars"
 # S3 Documents Bucket (optional - will auto-generate if empty)
 # Must be globally unique
 s3_documents_bucket_name = ""
+s3_public_media_bucket_name = ""
 
 # VPC CIDR (usually don't need to change)
 vpc_cidr = "10.0.0.0/16"

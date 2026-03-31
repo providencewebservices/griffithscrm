@@ -17,6 +17,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { z } from 'zod';
 import { db } from '../lib/auth';
+import { resolvePublicMediaUrl } from '../lib/s3';
 
 const externalProductsRoutes = new Hono();
 
@@ -63,7 +64,12 @@ externalProductsRoutes.get('/:slug/categories', async (c) => {
 		.where(eq(productCategories.tenantId, tenantId))
 		.orderBy(asc(productCategories.sortOrder));
 
-	return c.json({ categories });
+	return c.json({
+		categories: categories.map((category) => ({
+			...category,
+			imageUrl: resolvePublicMediaUrl(category.imageUrl),
+		})),
+	});
 });
 
 // GET /:slug/products — list products with pagination
@@ -119,7 +125,7 @@ externalProductsRoutes.get(
 			sku: p.sku,
 			name: p.name,
 			description: p.description,
-			imageUrl: p.imageUrl,
+			imageUrl: resolvePublicMediaUrl(p.imageUrl),
 			category: p.categoryId ? { id: p.categoryId, name: p.categoryName } : null,
 		}));
 
@@ -188,7 +194,13 @@ externalProductsRoutes.get('/:slug/products/:productId', async (c) => {
 				.where(eq(optionChoices.optionId, option.id))
 				.orderBy(asc(optionChoices.sortOrder), asc(optionChoices.name));
 
-			return { ...option, choices };
+			return {
+				...option,
+				choices: choices.map((choice) => ({
+					...choice,
+					imageUrl: resolvePublicMediaUrl(choice.imageUrl),
+				})),
+			};
 		}),
 	);
 
@@ -246,7 +258,7 @@ externalProductsRoutes.get('/:slug/products/:productId', async (c) => {
 			sku: product.sku,
 			name: product.name,
 			description: product.description,
-			imageUrl: product.imageUrl,
+			imageUrl: resolvePublicMediaUrl(product.imageUrl),
 			category: product.categoryId ? { id: product.categoryId, name: product.categoryName } : null,
 			options: optionsWithChoices,
 			components,
@@ -282,7 +294,13 @@ externalProductsRoutes.get('/:slug/materials', async (c) => {
 				.where(and(eq(materials.sectionId, section.id), eq(materials.isActive, true)))
 				.orderBy(asc(materials.sortOrder));
 
-			return { ...section, materials: sectionMaterials };
+			return {
+				...section,
+				materials: sectionMaterials.map((material) => ({
+					...material,
+					imageUrl: resolvePublicMediaUrl(material.imageUrl),
+				})),
+			};
 		}),
 	);
 

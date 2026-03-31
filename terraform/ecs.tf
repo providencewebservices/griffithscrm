@@ -96,7 +96,7 @@ resource "aws_iam_role" "ecs_task" {
   tags = local.tags
 }
 
-# Allow task role to access S3 documents bucket
+# Allow task role to access S3 documents and public media buckets
 resource "aws_iam_role_policy" "ecs_task_s3" {
   name = "${local.name}-ecs-task-s3"
   role = aws_iam_role.ecs_task.id
@@ -114,7 +114,9 @@ resource "aws_iam_role_policy" "ecs_task_s3" {
         ]
         Resource = [
           aws_s3_bucket.documents.arn,
-          "${aws_s3_bucket.documents.arn}/*"
+          "${aws_s3_bucket.documents.arn}/*",
+          aws_s3_bucket.public_media.arn,
+          "${aws_s3_bucket.public_media.arn}/*"
         ]
       }
     ]
@@ -218,6 +220,18 @@ resource "aws_ecs_task_definition" "api" {
         {
           name  = "S3_BUCKET"
           value = aws_s3_bucket.documents.id
+        },
+        {
+          name  = "PUBLIC_MEDIA_BUCKET"
+          value = aws_s3_bucket.public_media.id
+        },
+        {
+          name  = "PUBLIC_MEDIA_BASE_URL"
+          value = var.media_domain != "" ? "https://${var.media_domain}" : "https://${aws_cloudfront_distribution.media.domain_name}"
+        },
+        {
+          name  = "PUBLIC_MEDIA_REGION"
+          value = var.aws_region
         },
         {
           name  = "SES_REGION"

@@ -2,9 +2,7 @@ import { tenants } from '@griffiths-crm/shared/db/schema';
 import { eq } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { db } from '../lib/auth';
-import { extractKeyFromUrl, getObjectBuffer } from '../lib/s3';
-
-const ALLOWED_IMAGE_CONTENT_TYPES = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
+import { resolvePublicMediaUrl } from '../lib/s3';
 
 const logoProxyRoutes = new Hono()
 	// GET /api/logo/:tenantId — public, no auth
@@ -21,24 +19,12 @@ const logoProxyRoutes = new Hono()
 			return c.json({ error: 'Logo not found' }, 404);
 		}
 
-		const key = extractKeyFromUrl(tenant.logoUrl);
-		if (!key) {
+		const publicUrl = resolvePublicMediaUrl(tenant.logoUrl);
+		if (!publicUrl) {
 			return c.json({ error: 'Invalid logo URL' }, 400);
 		}
 
-		const { buffer, contentType } = await getObjectBuffer(key);
-
-		if (!ALLOWED_IMAGE_CONTENT_TYPES.has(contentType)) {
-			return c.json({ error: 'Invalid image type' }, 400);
-		}
-
-		return new Response(buffer, {
-			headers: {
-				'Content-Type': contentType,
-				'Cache-Control': 'public, max-age=3600',
-				'Access-Control-Allow-Origin': '*',
-			},
-		});
+		return c.redirect(publicUrl, 302);
 	});
 
 export { logoProxyRoutes };

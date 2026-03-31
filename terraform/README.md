@@ -9,7 +9,8 @@ Cost-conscious AWS infrastructure for Griffiths CRM using Terraform.
 - **RDS PostgreSQL**: Single-AZ t4g.micro instance (~$12/month)
 - **ALB**: Application Load Balancer for API
 - **CloudFront + S3**: Static web hosting for React frontend
-- **S3**: Document storage with lifecycle policies
+- **S3 + CloudFront**: Dedicated public media delivery path
+- **S3**: Private document storage with lifecycle policies
 
 **Estimated monthly cost: ~$25-35/month** (single user, minimal traffic)
 
@@ -32,6 +33,7 @@ Edit `terraform.tfvars` with your values:
 ```hcl
 web_domain         = "griffiths.uwchlanventures.com"
 api_domain         = "griffiths-api.uwchlanventures.com"
+media_domain       = "media.griffiths.uwchlanventures.com"
 better_auth_secret = "generate-a-32-char-random-string"
 route53_zone_id    = "Z1234567890ABC"  # Optional
 ```
@@ -69,6 +71,7 @@ Add the CNAME records to your DNS provider, then wait for certificate validation
 Also add:
 - `griffiths-api.uwchlanventures.com` → ALB DNS name (from `terraform output alb_dns_name`)
 - `griffiths.uwchlanventures.com` → CloudFront domain (from `terraform output cloudfront_domain_name`)
+- `media.griffiths.uwchlanventures.com` → Media CloudFront domain (from `terraform output media_cloudfront_domain_name`)
 
 ### 4. Build and Deploy Application
 

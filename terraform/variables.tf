@@ -20,6 +20,12 @@ variable "api_domain" {
   type        = string
 }
 
+variable "media_domain" {
+  description = "Optional domain name for public media delivery (e.g., media.griffiths.example.com)"
+  type        = string
+  default     = ""
+}
+
 variable "route53_zone_id" {
   description = "Route53 hosted zone ID for DNS records (optional - leave empty to skip DNS)"
   type        = string
@@ -110,6 +116,12 @@ variable "ses_region" {
 # S3 Documents
 variable "s3_documents_bucket_name" {
   description = "Name for the S3 documents bucket (must be globally unique)"
+  type        = string
+  default     = ""
+}
+
+variable "s3_public_media_bucket_name" {
+  description = "Name for the S3 public media bucket (must be globally unique)"
   type        = string
   default     = ""
 }
