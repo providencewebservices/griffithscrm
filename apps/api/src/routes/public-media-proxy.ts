@@ -2,9 +2,13 @@ import { Hono } from 'hono';
 import { getObjectBuffer, isPublicMediaKey } from '../lib/s3';
 
 const ALLOWED_IMAGE_CONTENT_TYPES = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
+const PUBLIC_MEDIA_PREFIX = '/api/public/media/';
 
 const publicMediaProxyRoutes = new Hono().get('/*', async (c) => {
-	const key = c.req.param('*')?.replace(/^\/+/, '') || '';
+	const pathname = new URL(c.req.url).pathname;
+	const key = pathname.startsWith(PUBLIC_MEDIA_PREFIX)
+		? pathname.slice(PUBLIC_MEDIA_PREFIX.length)
+		: '';
 
 	if (!key || !isPublicMediaKey(key)) {
 		return c.json({ error: 'Media not found' }, 404);
