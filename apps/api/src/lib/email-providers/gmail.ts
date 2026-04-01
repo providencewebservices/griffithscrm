@@ -64,6 +64,18 @@ function decodeBase64Url(data: string): string {
 	return Buffer.from(base64, 'base64').toString('utf-8');
 }
 
+function escapeRegExp(value: string): string {
+	return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function getPartHeader(part: any, name: string): string {
+	return getHeader(part?.headers || [], name);
+}
+
+function normalizeContentId(contentId: string): string {
+	return contentId.trim().replace(/^<|>$/g, '');
+}
+
 function extractBody(payload: any): { html: string; text: string } {
 	let html = '';
 	let text = '';
@@ -121,6 +133,39 @@ function extractAttachments(payload: any): EmailAttachmentMeta[] {
 	return attachments;
 }
 
+function extractInlineAttachmentParts(payload: any): Array<{
+	attachmentId: string;
+	mimeType: string;
+	contentId: string;
+}> {
+	const inlineParts: Array<{ attachmentId: string; mimeType: string; contentId: string }> = [];
+
+	function walk(part: any) {
+		if (!part) return;
+
+		const attachmentId = part.body?.attachmentId;
+		const contentId = getPartHeader(part, 'Content-ID');
+		const disposition = getPartHeader(part, 'Content-Disposition').toLowerCase();
+
+		if (attachmentId && contentId && (disposition.includes('inline') || part.mimeType?.startsWith('image/'))) {
+			inlineParts.push({
+				attachmentId,
+				mimeType: part.mimeType || 'application/octet-stream',
+				contentId: normalizeContentId(contentId),
+			});
+		}
+
+		if (part.parts) {
+			for (const child of part.parts) {
+				walk(child);
+			}
+		}
+	}
+
+	if (payload) walk(payload);
+	return inlineParts;
+}
+
 function parseMessageToSummary(msg: any): EmailMessageSummary {
 	const headers = msg.payload?.headers || [];
 	const from = getHeader(headers, 'From');
@@ -157,6 +202,45 @@ function parseMessageToFull(msg: any): EmailMessageFull {
 		bodyText: text,
 		attachments,
 		headers,
+	};
+}
+
+async function hydrateInlineImages(gmail: ReturnType<typeof createAuthenticatedClient>, msg: any): Promise<EmailMessageFull> {
+	const parsed = parseMessageToFull(msg);
+
+	if (!parsed.bodyHtml || !parsed.bodyHtml.includes('cid:')) {
+		return parsed;
+	}
+
+	const inlineParts = extractInlineAttachmentParts(msg.payload);
+	if (inlineParts.length === 0) {
+		return parsed;
+	}
+
+	let bodyHtml = parsed.bodyHtml;
+
+	for (const part of inlineParts) {
+		try {
+			const res = await gmail.users.messages.attachments.get({
+				userId: 'me',
+				messageId: msg.id!,
+				id: part.attachmentId,
+			});
+			const data = Buffer.from(res.data.data || '', 'base64url');
+			const dataUrl = `data:${part.mimeType};base64,${data.toString('base64')}`;
+			const contentIdPattern = escapeRegExp(part.contentId);
+			bodyHtml = bodyHtml.replace(
+				new RegExp(`cid:(?:%3C|<)?${contentIdPattern}(?:%3E|>)?`, 'gi'),
+				dataUrl,
+			);
+		} catch (err) {
+			console.error(`Failed to hydrate inline attachment ${part.attachmentId}:`, err);
+		}
+	}
+
+	return {
+		...parsed,
+		bodyHtml,
 	};
 }
 
@@ -244,7 +328,7 @@ export class GmailProvider implements IEmailProvider {
 			format: 'full',
 		});
 
-		const messages = (res.data.messages || []).map(parseMessageToFull);
+		const messages = await Promise.all((res.data.messages || []).map((msg) => hydrateInlineImages(gmail, msg)));
 
 		return {
 			providerThreadId: params.threadId,
@@ -263,7 +347,7 @@ export class GmailProvider implements IEmailProvider {
 			format: 'full',
 		});
 
-		return parseMessageToFull(res.data);
+		return hydrateInlineImages(gmail, res.data);
 	}
 
 	async getAttachment(params: { accessToken: string; messageId: string; attachmentId: string }) {
