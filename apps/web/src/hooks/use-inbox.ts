@@ -114,6 +114,26 @@ export function getInboxAttachmentUrl(messageId: string, attachmentId: string, d
 	return url.toString();
 }
 
+export async function fetchInboxAttachmentBlob(
+	messageId: string,
+	attachmentId: string,
+	mimeType?: string,
+): Promise<Blob> {
+	const response = await fetch(getInboxAttachmentUrl(messageId, attachmentId), {
+		credentials: 'include',
+	});
+
+	if (!response.ok) {
+		const error = await response.json().catch(() => ({ error: 'Failed to fetch attachment' }));
+		throw new Error(error.error || 'Failed to fetch attachment');
+	}
+
+	const data = await response.arrayBuffer();
+	return new Blob([data], {
+		type: mimeType || response.headers.get('Content-Type') || 'application/octet-stream',
+	});
+}
+
 // Fetch functions
 async function fetchEmailIntegrations(): Promise<EmailIntegration[]> {
 	const response = await fetch(`${API_URL}/api/email-integrations`, {

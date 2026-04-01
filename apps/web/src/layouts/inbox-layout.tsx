@@ -80,11 +80,11 @@ import { useCustomersQuery } from '@/hooks/use-customers';
 import { useFuneralDirectorsQuery } from '@/hooks/use-funeral-directors';
 import {
 	type EmailThread,
+	fetchInboxAttachmentBlob,
 	getConnectGmailUrl,
 	type ThreadsQueryParams,
 	useArchiveThreadMutation,
 	useEmailIntegrationsQuery,
-	getInboxAttachmentUrl,
 	useInboxThreadQuery,
 	useInboxThreadsQuery,
 	useMarkReadMutation,
@@ -882,6 +882,47 @@ function InboxLayoutInner() {
 		setComposeOpen(true);
 	};
 
+	const openAttachment = async (
+		messageId: string,
+		attachment: { attachmentId: string; filename: string; mimeType: string },
+	) => {
+		try {
+			const blob = await fetchInboxAttachmentBlob(
+				messageId,
+				attachment.attachmentId,
+				attachment.mimeType,
+			);
+			const objectUrl = URL.createObjectURL(blob);
+			window.open(objectUrl, '_blank', 'noopener,noreferrer');
+			setTimeout(() => URL.revokeObjectURL(objectUrl), 60000);
+		} catch {
+			toast.error('Failed to open attachment');
+		}
+	};
+
+	const downloadAttachment = async (
+		messageId: string,
+		attachment: { attachmentId: string; filename: string; mimeType: string },
+	) => {
+		try {
+			const blob = await fetchInboxAttachmentBlob(
+				messageId,
+				attachment.attachmentId,
+				attachment.mimeType,
+			);
+			const objectUrl = URL.createObjectURL(blob);
+			const link = document.createElement('a');
+			link.href = objectUrl;
+			link.download = attachment.filename;
+			document.body.appendChild(link);
+			link.click();
+			link.remove();
+			setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
+		} catch {
+			toast.error('Failed to download attachment');
+		}
+	};
+
 	const handleSync = async () => {
 		if (!activeIntegration) return;
 		try {
@@ -1202,24 +1243,16 @@ function InboxLayoutInner() {
 												</div>
 												<div className="flex flex-wrap gap-2">
 													{msg.attachments.map((att) => {
-														const attachmentUrl = msg.id
-															? getInboxAttachmentUrl(msg.id, att.attachmentId)
-															: null;
-														const downloadUrl = msg.id
-															? getInboxAttachmentUrl(msg.id, att.attachmentId, true)
-															: null;
-
 														return (
 															<div
 																key={att.attachmentId}
 																className="flex items-center gap-2 px-3 py-2 bg-muted border rounded-lg"
 															>
-																{attachmentUrl ? (
-																	<a
-																		href={attachmentUrl}
-																		target="_blank"
-																		rel="noopener noreferrer"
-																		className="flex min-w-0 flex-1 items-center gap-2"
+																{msg.id ? (
+																	<button
+																		type="button"
+																		onClick={() => openAttachment(msg.id!, att)}
+																		className="flex min-w-0 flex-1 items-center gap-2 text-left"
 																	>
 																		{getDocumentIcon(att.mimeType)}
 																		<div className="text-left min-w-0">
@@ -1230,7 +1263,7 @@ function InboxLayoutInner() {
 																				{formatFileSize(att.size)}
 																			</p>
 																		</div>
-																	</a>
+																	</button>
 																) : (
 																	<div className="flex min-w-0 flex-1 items-center gap-2 opacity-60">
 																		{getDocumentIcon(att.mimeType)}
@@ -1245,16 +1278,15 @@ function InboxLayoutInner() {
 																	</div>
 																)}
 
-																{downloadUrl && (
-																	<Button variant="ghost" size="icon" asChild className="size-8 shrink-0">
-																		<a
-																			href={downloadUrl}
-																			target="_blank"
-																			rel="noopener noreferrer"
-																			aria-label={`Download ${att.filename}`}
-																		>
+																{msg.id && (
+																	<Button
+																		variant="ghost"
+																		size="icon"
+																		className="size-8 shrink-0"
+																		onClick={() => downloadAttachment(msg.id!, att)}
+																		aria-label={`Download ${att.filename}`}
+																	>
 																			<Download className="h-4 w-4" />
-																		</a>
 																	</Button>
 																)}
 															</div>
