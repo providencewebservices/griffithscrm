@@ -1224,7 +1224,7 @@ function InboxLayoutInner() {
 											{msg.bodyHtml ? (
 												<iframe
 													srcDoc={msg.bodyHtml}
-													sandbox="allow-same-origin"
+													sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"
 													className="w-full border-0"
 													style={{ overflow: 'hidden' }}
 													onLoad={(e) => {
@@ -1233,6 +1233,10 @@ function InboxLayoutInner() {
 														if (!doc) return;
 														doc.body.style.overflow = 'hidden';
 														doc.body.style.margin = '0';
+														for (const link of doc.querySelectorAll<HTMLAnchorElement>('a[href]')) {
+															link.target = '_blank';
+															link.rel = 'noopener noreferrer';
+														}
 														const resize = () => {
 															iframe.style.height = `${doc.body.scrollHeight}px`;
 														};
