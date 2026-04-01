@@ -21,7 +21,7 @@ import {
 	Users,
 	X,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { NavLink, useSearchParams } from 'react-router';
 import { toast } from 'sonner';
 import { ComposeEmailDialog } from '@/components/inbox/compose-email-dialog';
@@ -297,6 +297,7 @@ function ThreadListPanel({
 	threads,
 	threadsLoading,
 	selectedThreadId,
+	registerThreadButton,
 	onSelectThread,
 	searchQuery,
 	onSearchChange,
@@ -324,6 +325,7 @@ function ThreadListPanel({
 	threads: EmailThread[];
 	threadsLoading: boolean;
 	selectedThreadId: string | null;
+	registerThreadButton: (threadId: string, node: HTMLButtonElement | null) => void;
 	onSelectThread: (thread: EmailThread) => void;
 	searchQuery: string;
 	onSearchChange: (q: string) => void;
@@ -575,6 +577,8 @@ function ThreadListPanel({
 						return (
 							<button
 								key={thread.id}
+								ref={(node) => registerThreadButton(thread.id, node)}
+								data-inbox-thread-item="true"
 								onClick={() => onSelectThread(thread)}
 								className={`w-full text-left px-3 py-3 border-b cursor-pointer transition-colors ${
 									isSelected ? 'bg-accent text-accent-foreground' : 'hover:bg-muted'
@@ -639,6 +643,7 @@ function ThreadListPanel({
 function InboxLayoutInner() {
 	const { isCustomerView, toggleCustomerView } = useCustomerView();
 	const { setOpenMobile, isMobile } = useSidebar();
+	const threadButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
 	const [searchParams, setSearchParams] = useSearchParams();
 	const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
@@ -761,6 +766,35 @@ function InboxLayoutInner() {
 		if (isMobile) setOpenMobile(false);
 	};
 
+	const registerThreadButton = (threadId: string, node: HTMLButtonElement | null) => {
+		threadButtonRefs.current[threadId] = node;
+	};
+
+	const scrollThreadIntoView = (threadId: string) => {
+		threadButtonRefs.current[threadId]?.scrollIntoView({
+			block: 'nearest',
+			inline: 'nearest',
+		});
+	};
+
+	const selectAdjacentThread = (direction: 1 | -1) => {
+		if (threads.length === 0) return;
+
+		const currentIndex = selectedThreadId ? threads.findIndex((thread) => thread.id === selectedThreadId) : -1;
+		const nextIndex =
+			currentIndex === -1
+				? direction === 1
+					? 0
+					: threads.length - 1
+				: Math.min(Math.max(currentIndex + direction, 0), threads.length - 1);
+
+		if (nextIndex === currentIndex) return;
+
+		const nextThread = threads[nextIndex];
+		handleSelectThread(nextThread);
+		requestAnimationFrame(() => scrollThreadIntoView(nextThread.id));
+	};
+
 	const handleArchive = async () => {
 		if (!selectedThreadId) return;
 		try {
@@ -862,6 +896,51 @@ function InboxLayoutInner() {
 		setContactSearch('');
 	};
 
+	useEffect(() => {
+		if (!selectedThreadId) return;
+		scrollThreadIntoView(selectedThreadId);
+	}, [selectedThreadId]);
+
+	useEffect(() => {
+		const handleKeyDown = (event: KeyboardEvent) => {
+			if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
+
+			const target = event.target;
+			if (target instanceof HTMLElement) {
+				if (
+					target.closest(
+						'input, textarea, select, [contenteditable="true"], [role="textbox"], [role="combobox"]',
+					)
+				) {
+					return;
+				}
+
+				if (
+					target.closest(
+						'[role="dialog"], [role="menu"], [role="listbox"], [cmdk-root], [data-radix-popper-content-wrapper]',
+					)
+				) {
+					return;
+				}
+
+				if (target.closest('button, a, [role="button"]') && !target.closest('[data-inbox-thread-item="true"]')) {
+					return;
+				}
+			}
+
+			if (event.key === 'ArrowDown') {
+				event.preventDefault();
+				selectAdjacentThread(1);
+			} else if (event.key === 'ArrowUp') {
+				event.preventDefault();
+				selectAdjacentThread(-1);
+			}
+		};
+
+		window.addEventListener('keydown', handleKeyDown);
+		return () => window.removeEventListener('keydown', handleKeyDown);
+	}, [selectAdjacentThread]);
+
 	// Loading state
 	if (integrationsLoading) {
 		return (
@@ -917,6 +996,7 @@ function InboxLayoutInner() {
 					threads={threads}
 					threadsLoading={threadsLoading}
 					selectedThreadId={selectedThreadId}
+					registerThreadButton={registerThreadButton}
 					onSelectThread={handleSelectThread}
 					searchQuery={searchQuery}
 					onSearchChange={setSearchQuery}
