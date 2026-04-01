@@ -132,6 +132,25 @@ function getDocumentIcon(mimeType: string) {
 	return <FileText className="h-4 w-4 text-gray-500" />;
 }
 
+function canPreviewAttachment(mimeType: string): boolean {
+	return (
+		mimeType.includes('pdf') ||
+		mimeType.startsWith('image/') ||
+		mimeType.startsWith('text/') ||
+		mimeType.startsWith('audio/') ||
+		mimeType.startsWith('video/')
+	);
+}
+
+function getAttachmentBadge(filename: string, mimeType: string): string {
+	const extension = filename.split('.').pop()?.trim().toUpperCase();
+	if (extension) return extension;
+	if (mimeType.includes('pdf')) return 'PDF';
+	if (mimeType.startsWith('image/')) return 'IMAGE';
+	if (mimeType.includes('spreadsheet') || mimeType.includes('excel')) return 'SHEET';
+	return 'FILE';
+}
+
 function formatFileSize(bytes: number): string {
 	if (bytes < 1024) return `${bytes} B`;
 	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
@@ -1241,53 +1260,50 @@ function InboxLayoutInner() {
 														{msg.attachments.length > 1 ? 's' : ''}
 													</span>
 												</div>
-												<div className="flex flex-wrap gap-2">
+												<div className="space-y-2">
 													{msg.attachments.map((att) => {
+														const previewable = canPreviewAttachment(att.mimeType);
+
 														return (
 															<div
 																key={att.attachmentId}
-																className="flex items-center gap-2 px-3 py-2 bg-muted border rounded-lg"
+																className="flex items-center gap-3 rounded-lg border bg-muted/50 px-3 py-2"
 															>
-																{msg.id ? (
-																	<button
-																		type="button"
-																		onClick={() => openAttachment(msg.id!, att)}
-																		className="flex min-w-0 flex-1 items-center gap-2 text-left"
-																	>
-																		{getDocumentIcon(att.mimeType)}
-																		<div className="text-left min-w-0">
-																			<p className="text-sm font-medium truncate max-w-[180px]">
-																				{att.filename}
-																			</p>
-																			<p className="text-xs text-muted-foreground">
-																				{formatFileSize(att.size)}
-																			</p>
-																		</div>
-																	</button>
-																) : (
-																	<div className="flex min-w-0 flex-1 items-center gap-2 opacity-60">
-																		{getDocumentIcon(att.mimeType)}
-																		<div className="text-left min-w-0">
-																			<p className="text-sm font-medium truncate max-w-[180px]">
-																				{att.filename}
-																			</p>
-																			<p className="text-xs text-muted-foreground">
-																				Attachment unavailable
-																			</p>
-																		</div>
+																<div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border bg-background">
+																	{getDocumentIcon(att.mimeType)}
+																</div>
+																<div className="min-w-0 flex-1">
+																	<div className="flex items-center gap-2">
+																		<p className="truncate text-sm font-medium">{att.filename}</p>
+																		<Badge variant="secondary" className="shrink-0 text-[10px] uppercase">
+																			{getAttachmentBadge(att.filename, att.mimeType)}
+																		</Badge>
 																	</div>
-																)}
-
+																	<p className="text-xs text-muted-foreground">
+																		{msg.id ? formatFileSize(att.size) : 'Attachment unavailable'}
+																	</p>
+																</div>
 																{msg.id && (
-																	<Button
-																		variant="ghost"
-																		size="icon"
-																		className="size-8 shrink-0"
-																		onClick={() => downloadAttachment(msg.id!, att)}
-																		aria-label={`Download ${att.filename}`}
-																	>
-																			<Download className="h-4 w-4" />
-																	</Button>
+																	<div className="flex shrink-0 items-center gap-2">
+																		{previewable && (
+																			<Button
+																				variant="outline"
+																				size="sm"
+																				onClick={() => openAttachment(msg.id!, att)}
+																			>
+																				<Eye className="mr-2 h-4 w-4" />
+																				Preview
+																			</Button>
+																		)}
+																		<Button
+																			variant={previewable ? 'ghost' : 'outline'}
+																			size="sm"
+																			onClick={() => downloadAttachment(msg.id!, att)}
+																		>
+																			<Download className="mr-2 h-4 w-4" />
+																			Download
+																		</Button>
+																	</div>
 																)}
 															</div>
 														);
