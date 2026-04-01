@@ -5,6 +5,7 @@ import { Hono } from 'hono';
 import { db } from '../lib/auth';
 import { getValidAccessToken } from '../lib/email-providers';
 import { GMAIL_SCOPES, GmailProvider, getOAuth2Client } from '../lib/email-providers/gmail';
+import type { EmailThreadSummary } from '../lib/email-providers/types';
 import { requireAuth, requireTenant } from '../middleware/auth';
 
 // HMAC-based state signing using BETTER_AUTH_SECRET
@@ -43,13 +44,42 @@ async function performInitialSync(integrationId: string, tenantId: string) {
 		const { accessToken } = await getValidAccessToken(integrationId);
 		const gmail = new GmailProvider();
 
-		const result = await gmail.listThreads({
-			accessToken,
-			maxResults: 50,
-			labelIds: ['INBOX'],
-		});
+		const [inboxResult, sentResult] = await Promise.all([
+			gmail.listThreads({
+				accessToken,
+				maxResults: 50,
+				labelIds: ['INBOX'],
+			}),
+			gmail.listThreads({
+				accessToken,
+				maxResults: 50,
+				labelIds: ['SENT'],
+			}),
+		]);
 
-		for (const thread of result.threads) {
+		const mergedThreads = new Map<string, EmailThreadSummary>();
+		for (const result of [inboxResult, sentResult]) {
+			for (const thread of result.threads) {
+				const existing = mergedThreads.get(thread.providerThreadId);
+				if (!existing) {
+					mergedThreads.set(thread.providerThreadId, thread);
+					continue;
+				}
+
+				mergedThreads.set(thread.providerThreadId, {
+					...thread,
+					messageCount: Math.max(existing.messageCount, thread.messageCount),
+					isUnread: existing.isUnread || thread.isUnread,
+					labelIds: Array.from(new Set([...existing.labelIds, ...thread.labelIds])),
+					messages:
+						existing.messages.length >= thread.messages.length ? existing.messages : thread.messages,
+					lastMessageAt:
+						existing.lastMessageAt > thread.lastMessageAt ? existing.lastMessageAt : thread.lastMessageAt,
+				});
+			}
+		}
+
+		for (const thread of mergedThreads.values()) {
 			const threadId = crypto.randomUUID();
 
 			await db.insert(emailThreads).values({
@@ -89,11 +119,12 @@ async function performInitialSync(integrationId: string, tenantId: string) {
 		}
 
 		// Update historyId and lastSyncAt
-		if (result.historyId) {
+		const historyId = inboxResult.historyId || sentResult.historyId;
+		if (historyId) {
 			await db
 				.update(emailIntegrations)
 				.set({
-					historyId: result.historyId,
+					historyId,
 					lastSyncAt: new Date(),
 					updatedAt: new Date(),
 				})

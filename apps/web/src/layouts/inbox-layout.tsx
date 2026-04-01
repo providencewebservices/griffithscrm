@@ -17,6 +17,7 @@ import {
 	RefreshCw,
 	Reply,
 	Search,
+	Send,
 	Trash2,
 	Undo2,
 	Users,
@@ -353,8 +354,8 @@ function ThreadListPanel({
 	debouncedSearch: string;
 	filter: ThreadsQueryParams['filter'];
 	onFilterChange: (f: ThreadsQueryParams['filter']) => void;
-	folder: 'inbox' | 'trash';
-	onFolderChange: (f: 'inbox' | 'trash') => void;
+	folder: 'inbox' | 'sent' | 'trash';
+	onFolderChange: (f: 'inbox' | 'sent' | 'trash') => void;
 	selectedContact: ContactFilterSelection | null;
 	onClearContact: () => void;
 	contactFilterOpen: boolean;
@@ -372,6 +373,7 @@ function ThreadListPanel({
 	globalUnreadCount: number;
 }) {
 	const unreadCount = threads.filter((t) => t.isUnread).length;
+	const folderTitle = folder === 'sent' ? 'Sent' : folder === 'trash' ? 'Trash' : 'Inbox';
 
 	return (
 		<Sidebar
@@ -380,7 +382,7 @@ function ThreadListPanel({
 		>
 			<SidebarHeader className="border-b p-0 gap-0">
 				<div className="flex items-center justify-between p-3 pb-0">
-					<h2 className="font-semibold text-base">Inbox</h2>
+					<h2 className="font-semibold text-base">{folderTitle}</h2>
 					<div className="flex items-center gap-1">
 						<Button
 							variant="ghost"
@@ -412,6 +414,17 @@ function ThreadListPanel({
 								{globalUnreadCount}
 							</Badge>
 						)}
+					</button>
+					<button
+						onClick={() => onFolderChange('sent')}
+						className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+							folder === 'sent'
+								? 'border-primary text-primary'
+								: 'border-transparent text-muted-foreground hover:text-foreground'
+						}`}
+					>
+						<Send className="h-4 w-4" />
+						Sent
 					</button>
 					<button
 						onClick={() => onFolderChange('trash')}
@@ -671,8 +684,8 @@ function InboxLayoutInner() {
 	const [searchQuery, setSearchQuery] = useState('');
 	const [debouncedSearch, setDebouncedSearch] = useState('');
 	const [filter, setFilter] = useState<ThreadsQueryParams['filter']>('all');
-	const folder = (searchParams.get('folder') as 'inbox' | 'trash') || 'inbox';
-	const setFolder = (f: 'inbox' | 'trash') => {
+	const folder = (searchParams.get('folder') as 'inbox' | 'sent' | 'trash') || 'inbox';
+	const setFolder = (f: 'inbox' | 'sent' | 'trash') => {
 		setSearchParams(
 			(prev) => {
 				if (f === 'inbox') {
@@ -1048,6 +1061,7 @@ function InboxLayoutInner() {
 
 	// Thread subject for breadcrumbs
 	const threadSubject = selectedThread?.messages?.[0]?.subject || '(no subject)';
+	const folderTitle = folder === 'sent' ? 'Sent' : folder === 'trash' ? 'Trash' : 'Inbox';
 
 	return (
 		<>
@@ -1099,10 +1113,10 @@ function InboxLayoutInner() {
 											className="hover:text-foreground transition-colors text-muted-foreground"
 											onClick={() => setSelectedThreadId(null)}
 										>
-											Inbox
+											{folderTitle}
 										</button>
 									) : (
-										<BreadcrumbPage>Inbox</BreadcrumbPage>
+										<BreadcrumbPage>{folderTitle}</BreadcrumbPage>
 									)}
 								</BreadcrumbItem>
 								{selectedThreadId && (

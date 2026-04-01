@@ -101,7 +101,7 @@ export type ThreadsQueryParams = {
 	filter?: 'all' | 'unread' | 'customers' | 'quotes' | 'jobs' | 'unlinked';
 	contactEntityType?: string;
 	contactEntityId?: string;
-	folder?: 'inbox' | 'trash';
+	folder?: 'inbox' | 'sent' | 'trash';
 };
 
 export function getInboxAttachmentUrl(messageId: string, attachmentId: string, download = false): string {

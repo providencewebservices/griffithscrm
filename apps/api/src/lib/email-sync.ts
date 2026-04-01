@@ -4,11 +4,57 @@ import { and, eq } from 'drizzle-orm';
 import { db } from './auth';
 import { autoLinkThreadByEmail, collectEmailAddresses } from './email-auto-link';
 import { getEmailProvider, getValidAccessToken } from './email-providers';
+import type { EmailThreadSummary, IEmailProvider } from './email-providers/types';
 
 export const SYNC_INTERVAL_MS = 60 * 1000; // 60 seconds
 
 // In-memory lock to prevent concurrent syncs for the same integration
 export const activeSyncs = new Map<string, Promise<void>>();
+
+const SYNC_LABEL_GROUPS = [['INBOX'], ['SENT']] as const;
+
+async function listSyncedThreads(
+	provider: IEmailProvider,
+	accessToken: string,
+	maxResults: number,
+): Promise<{ threads: EmailThreadSummary[]; historyId?: string }> {
+	const results = await Promise.all(
+		SYNC_LABEL_GROUPS.map((labelIds) =>
+			provider.listThreads({
+				accessToken,
+				maxResults,
+				labelIds: [...labelIds],
+			}),
+		),
+	);
+
+	const mergedThreads = new Map<string, EmailThreadSummary>();
+
+	for (const result of results) {
+		for (const thread of result.threads) {
+			const existing = mergedThreads.get(thread.providerThreadId);
+			if (!existing) {
+				mergedThreads.set(thread.providerThreadId, thread);
+				continue;
+			}
+
+			mergedThreads.set(thread.providerThreadId, {
+				...thread,
+				messageCount: Math.max(existing.messageCount, thread.messageCount),
+				isUnread: existing.isUnread || thread.isUnread,
+				labelIds: Array.from(new Set([...existing.labelIds, ...thread.labelIds])),
+				messages: existing.messages.length >= thread.messages.length ? existing.messages : thread.messages,
+				lastMessageAt:
+					existing.lastMessageAt > thread.lastMessageAt ? existing.lastMessageAt : thread.lastMessageAt,
+			});
+		}
+	}
+
+	return {
+		threads: Array.from(mergedThreads.values()),
+		historyId: results.find((result) => result.historyId)?.historyId,
+	};
+}
 
 // Perform incremental sync if needed
 export async function syncIfNeeded(integrationId: string, tenantId: string) {
@@ -50,11 +96,7 @@ export async function doSync(integrationId: string, tenantId: string) {
 			// Full re-sync: delete cached data and re-fetch
 			await db.delete(emailThreads).where(eq(emailThreads.integrationId, integrationId));
 
-			const listResult = await provider.listThreads({
-				accessToken,
-				maxResults: 50,
-				labelIds: ['INBOX'],
-			});
+			const listResult = await listSyncedThreads(provider, accessToken, 50);
 
 			for (const thread of listResult.threads) {
 				const threadId = crypto.randomUUID();
@@ -187,6 +229,8 @@ export async function doSync(integrationId: string, tenantId: string) {
 				});
 				thread = { id: threadId } as any;
 			} else {
+				const existingLabels = thread.labelIds ? JSON.parse(thread.labelIds) : [];
+				const mergedLabels = Array.from(new Set([...existingLabels, ...msg.labelIds]));
 				// Update thread metadata
 				await db
 					.update(emailThreads)
@@ -195,6 +239,8 @@ export async function doSync(integrationId: string, tenantId: string) {
 						lastMessageAt: msg.internalDate,
 						messageCount: thread.messageCount + 1,
 						isUnread: msg.isUnread || thread.isUnread,
+						isTrashed: mergedLabels.includes('TRASH'),
+						labelIds: JSON.stringify(mergedLabels),
 						updatedAt: new Date(),
 					})
 					.where(eq(emailThreads.id, thread.id));

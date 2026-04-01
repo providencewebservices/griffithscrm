@@ -25,7 +25,7 @@ const threadsQuerySchema = z.object({
 		.enum(['all', 'unread', 'customers', 'quotes', 'jobs', 'unlinked'])
 		.optional()
 		.default('all'),
-	folder: z.enum(['inbox', 'trash']).optional().default('inbox'),
+	folder: z.enum(['inbox', 'sent', 'trash']).optional().default('inbox'),
 	contactEntityType: z
 		.enum(['customer', 'funeral_director', 'memorial_site', 'supplier', 'quote', 'job'])
 		.optional(),
@@ -132,6 +132,10 @@ const inboxRoutes = new Hono()
 		if (folder === 'inbox') {
 			conditions.push(eq(emailThreads.isArchived, false));
 			conditions.push(eq(emailThreads.isTrashed, false));
+			conditions.push(like(emailThreads.labelIds, '%"INBOX"%'));
+		} else if (folder === 'sent') {
+			conditions.push(eq(emailThreads.isTrashed, false));
+			conditions.push(like(emailThreads.labelIds, '%"SENT"%'));
 		} else if (folder === 'trash') {
 			conditions.push(eq(emailThreads.isTrashed, true));
 		}
@@ -146,7 +150,7 @@ const inboxRoutes = new Hono()
 			);
 		}
 
-		if (folder !== 'trash' && filter === 'unread') {
+		if (folder === 'inbox' && filter === 'unread') {
 			conditions.push(eq(emailThreads.isUnread, true));
 		}
 

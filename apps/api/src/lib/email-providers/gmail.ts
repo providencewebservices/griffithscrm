@@ -416,7 +416,6 @@ export class GmailProvider implements IEmailProvider {
 				userId: 'me',
 				startHistoryId: params.historyId,
 				historyTypes: ['messageAdded', 'messageDeleted', 'labelAdded', 'labelRemoved'],
-				labelId: 'INBOX',
 			});
 
 			const history = res.data.history || [];
@@ -533,8 +532,8 @@ export class GmailProvider implements IEmailProvider {
 			userId: 'me',
 			requestBody: {
 				topicName: params.topicName,
-				labelIds: params.labelIds || ['INBOX'],
-				labelFilterBehavior: 'INCLUDE',
+				labelIds: params.labelIds,
+				labelFilterBehavior: params.labelIds?.length ? 'INCLUDE' : undefined,
 			},
 		});
 
