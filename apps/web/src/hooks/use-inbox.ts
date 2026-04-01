@@ -64,6 +64,7 @@ export type EmailAttachmentMeta = {
 };
 
 export type EmailMessageFull = {
+	id: string | null;
 	providerMessageId: string;
 	providerThreadId: string;
 	fromAddress: string;
@@ -102,6 +103,16 @@ export type ThreadsQueryParams = {
 	contactEntityId?: string;
 	folder?: 'inbox' | 'trash';
 };
+
+export function getInboxAttachmentUrl(messageId: string, attachmentId: string, download = false): string {
+	const url = new URL(
+		`${API_URL}/api/inbox/messages/${encodeURIComponent(messageId)}/attachments/${encodeURIComponent(attachmentId)}`,
+	);
+	if (download) {
+		url.searchParams.set('download', '1');
+	}
+	return url.toString();
+}
 
 // Fetch functions
 async function fetchEmailIntegrations(): Promise<EmailIntegration[]> {

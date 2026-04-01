@@ -246,6 +246,14 @@ const inboxRoutes = new Hono()
 			return c.json({ error: 'Thread not found' }, 404);
 		}
 
+		const localMessages = await db
+			.select({
+				id: emailMessages.id,
+				providerMessageId: emailMessages.providerMessageId,
+			})
+			.from(emailMessages)
+			.where(and(eq(emailMessages.threadId, threadId), eq(emailMessages.tenantId, tenantId)));
+
 		// Fetch full thread from provider (bodies on demand)
 		const { accessToken, integration } = await getValidAccessToken(thread.integrationId);
 		const provider = getEmailProvider(integration.provider as 'gmail' | 'microsoft');
@@ -266,6 +274,9 @@ const inboxRoutes = new Hono()
 				labelIds: thread.labelIds ? JSON.parse(thread.labelIds) : [],
 				links,
 				messages: fullThread.messages.map((msg) => ({
+					id:
+						localMessages.find((localMessage) => localMessage.providerMessageId === msg.providerMessageId)
+							?.id || null,
 					...msg,
 					internalDate: msg.internalDate.toISOString(),
 				})),
@@ -446,6 +457,7 @@ const inboxRoutes = new Hono()
 		const tenantId = user.tenantId!;
 		const messageId = c.req.param('messageId');
 		const attachmentId = c.req.param('attachmentId');
+		const shouldDownload = c.req.query('download') === '1';
 
 		// Find the message to get integration
 		const [message] = await db
@@ -470,7 +482,7 @@ const inboxRoutes = new Hono()
 		return new Response(attachment.data, {
 			headers: {
 				'Content-Type': attachment.mimeType,
-				'Content-Disposition': `attachment; filename="${attachment.filename}"`,
+				'Content-Disposition': `${shouldDownload ? 'attachment' : 'inline'}; filename="${attachment.filename.replace(/"/g, '')}"`,
 			},
 		});
 	})

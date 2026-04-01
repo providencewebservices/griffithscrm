@@ -6,6 +6,7 @@ import {
 	File,
 	FileSpreadsheet,
 	FileText,
+	Download,
 	Image,
 	Inbox,
 	Link2,
@@ -83,6 +84,7 @@ import {
 	type ThreadsQueryParams,
 	useArchiveThreadMutation,
 	useEmailIntegrationsQuery,
+	getInboxAttachmentUrl,
 	useInboxThreadQuery,
 	useInboxThreadsQuery,
 	useMarkReadMutation,
@@ -1199,22 +1201,65 @@ function InboxLayoutInner() {
 													</span>
 												</div>
 												<div className="flex flex-wrap gap-2">
-													{msg.attachments.map((att) => (
-														<div
-															key={att.attachmentId}
-															className="flex items-center gap-2 px-3 py-2 bg-muted border rounded-lg"
-														>
-															{getDocumentIcon(att.mimeType)}
-															<div className="text-left">
-																<p className="text-sm font-medium truncate max-w-[180px]">
-																	{att.filename}
-																</p>
-																<p className="text-xs text-muted-foreground">
-																	{formatFileSize(att.size)}
-																</p>
+													{msg.attachments.map((att) => {
+														const attachmentUrl = msg.id
+															? getInboxAttachmentUrl(msg.id, att.attachmentId)
+															: null;
+														const downloadUrl = msg.id
+															? getInboxAttachmentUrl(msg.id, att.attachmentId, true)
+															: null;
+
+														return (
+															<div
+																key={att.attachmentId}
+																className="flex items-center gap-2 px-3 py-2 bg-muted border rounded-lg"
+															>
+																{attachmentUrl ? (
+																	<a
+																		href={attachmentUrl}
+																		target="_blank"
+																		rel="noopener noreferrer"
+																		className="flex min-w-0 flex-1 items-center gap-2"
+																	>
+																		{getDocumentIcon(att.mimeType)}
+																		<div className="text-left min-w-0">
+																			<p className="text-sm font-medium truncate max-w-[180px]">
+																				{att.filename}
+																			</p>
+																			<p className="text-xs text-muted-foreground">
+																				{formatFileSize(att.size)}
+																			</p>
+																		</div>
+																	</a>
+																) : (
+																	<div className="flex min-w-0 flex-1 items-center gap-2 opacity-60">
+																		{getDocumentIcon(att.mimeType)}
+																		<div className="text-left min-w-0">
+																			<p className="text-sm font-medium truncate max-w-[180px]">
+																				{att.filename}
+																			</p>
+																			<p className="text-xs text-muted-foreground">
+																				Attachment unavailable
+																			</p>
+																		</div>
+																	</div>
+																)}
+
+																{downloadUrl && (
+																	<Button variant="ghost" size="icon" asChild className="size-8 shrink-0">
+																		<a
+																			href={downloadUrl}
+																			target="_blank"
+																			rel="noopener noreferrer"
+																			aria-label={`Download ${att.filename}`}
+																		>
+																			<Download className="h-4 w-4" />
+																		</a>
+																	</Button>
+																)}
 															</div>
-														</div>
-													))}
+														);
+													})}
 												</div>
 											</div>
 										)}
