@@ -97,7 +97,7 @@ const uploadRoutes = new Hono()
 		zValidator(
 			'json',
 			z.object({
-				urls: z.array(z.string()).min(1).max(200),
+				urls: z.array(z.string()).min(1).max(50),
 			}),
 		),
 		async (c) => {

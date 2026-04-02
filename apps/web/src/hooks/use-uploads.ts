@@ -131,7 +131,9 @@ export function useSignedUrl(url: string | null | undefined) {
 	});
 }
 
-// Get signed URLs for multiple images
+// Get signed URLs for multiple images (chunked to stay within API batch limits)
+const SIGN_BATCH_SIZE = 50;
+
 async function getSignedUrls(urls: string[]): Promise<Map<string, string>> {
 	// Filter out cached URLs
 	const uncachedUrls: string[] = [];
@@ -150,26 +152,38 @@ async function getSignedUrls(urls: string[]): Promise<Map<string, string>> {
 		return result;
 	}
 
-	const response = await fetch(`${API_URL}/api/uploads/sign-urls`, {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		credentials: 'include',
-		body: JSON.stringify({ urls: uncachedUrls }),
-	});
-
-	if (!response.ok) {
-		throw new Error('Failed to get signed URLs');
+	// Chunk into batches to stay within API limits
+	const chunks: string[][] = [];
+	for (let i = 0; i < uncachedUrls.length; i += SIGN_BATCH_SIZE) {
+		chunks.push(uncachedUrls.slice(i, i + SIGN_BATCH_SIZE));
 	}
 
-	const data = await response.json();
-
-	for (const item of data.signedUrls) {
-		if (item.signed) {
-			signedUrlCache.set(item.original, {
-				url: item.signed,
-				expiry: Date.now() + CACHE_DURATION,
+	const responses = await Promise.all(
+		chunks.map(async (chunk) => {
+			const response = await fetch(`${API_URL}/api/uploads/sign-urls`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				credentials: 'include',
+				body: JSON.stringify({ urls: chunk }),
 			});
-			result.set(item.original, item.signed);
+
+			if (!response.ok) {
+				throw new Error('Failed to get signed URLs');
+			}
+
+			return response.json();
+		}),
+	);
+
+	for (const data of responses) {
+		for (const item of data.signedUrls) {
+			if (item.signed) {
+				signedUrlCache.set(item.original, {
+					url: item.signed,
+					expiry: Date.now() + CACHE_DURATION,
+				});
+				result.set(item.original, item.signed);
+			}
 		}
 	}
 
