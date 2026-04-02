@@ -333,6 +333,15 @@ const ENDPOINTS: Endpoint[] = [
 	},
 ];
 
+const PHOTO_PLAQUE_FLOW = [
+	'Call `GET /products` or `GET /products/:productId` and check `requiresCustomerPhotoUpload` on the selected product.',
+	'If `requiresCustomerPhotoUpload` is `true`, show a file input on the website and display `customerPhotoUploadInstructions` when present.',
+	'Before submitting the inquiry, call `POST /inquiries/uploads/presign` with `productId`, `filename`, and `contentType`.',
+	'Upload the image file to the returned `uploadUrl` using an HTTP `PUT` request and the same `Content-Type` header you used in the presign request.',
+	'Submit `POST /inquiries` and include the product entry with `productId`, `customerPhotoUrl`, `customerPhotoFilename`, and `customerPhotoContentType` using the values from the upload step.',
+	'If the product does not require a photo, submit the product normally without the photo fields.',
+] as const;
+
 export function ApiTab() {
 	const { data: settings, isLoading, error } = useTenantSettingsQuery();
 
@@ -355,6 +364,11 @@ export function ApiTab() {
 		let md = `# API Documentation\n\n`;
 		md += `## Base URL\n\n\`\`\`\n${baseUrl}\n\`\`\`\n\n`;
 		md += `All endpoints are relative to this base URL. No authentication is required.\n\n---\n\n`;
+		md += `## Photo Plaque Implementation Flow\n\n`;
+		for (const [index, step] of PHOTO_PLAQUE_FLOW.entries()) {
+			md += `${index + 1}. ${step}\n`;
+		}
+		md += `\n---\n\n`;
 		md += `## Endpoints\n\n`;
 
 		for (const ep of ENDPOINTS) {
@@ -423,6 +437,23 @@ export function ApiTab() {
 							Download as Markdown
 						</Button>
 					</div>
+				</CardContent>
+			</Card>
+
+			<Card>
+				<CardHeader>
+					<CardTitle>Photo Plaque Flow</CardTitle>
+				</CardHeader>
+				<CardContent className="space-y-3">
+					<p className="text-sm text-muted-foreground">
+						Use this sequence when a product requires the customer to upload a photo with their
+						inquiry.
+					</p>
+					<ol className="list-decimal pl-5 space-y-2 text-sm text-muted-foreground">
+						{PHOTO_PLAQUE_FLOW.map((step) => (
+							<li key={step}>{step}</li>
+						))}
+					</ol>
 				</CardContent>
 			</Card>
 
