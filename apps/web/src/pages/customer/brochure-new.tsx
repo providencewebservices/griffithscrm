@@ -42,6 +42,7 @@ import { useProductCategoriesQuery } from '@/hooks/use-product-categories';
 import { type Product, useProductsQuery } from '@/hooks/use-products';
 import { SortableProductList } from '@/components/sortable-product-list';
 import { useSignedUrls } from '@/hooks/use-uploads';
+import { cn } from '@/lib/utils';
 
 type SelectedProduct = {
 	productId: string;
