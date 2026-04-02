@@ -33,7 +33,7 @@ import {
 import { FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useCreateBrochureMutation } from '@/hooks/use-brochures';
 import { useCustomersQuery } from '@/hooks/use-customers';
@@ -42,7 +42,6 @@ import { useProductCategoriesQuery } from '@/hooks/use-product-categories';
 import { type Product, useProductsQuery } from '@/hooks/use-products';
 import { SortableProductList } from '@/components/sortable-product-list';
 import { useSignedUrls } from '@/hooks/use-uploads';
-import { cn } from '@/lib/utils';
 
 type SelectedProduct = {
 	productId: string;
@@ -385,23 +384,24 @@ export function BrochureNewPage() {
 							<CardTitle className="text-base">Products</CardTitle>
 						</CardHeader>
 						<CardContent className="space-y-4">
-							{/* Category Tabs */}
+							{/* Category Filter */}
 							{categories && categories.length > 0 && (
-								<Tabs
+								<Select
 									value={categoryFilter || 'all'}
 									onValueChange={(v) => setCategoryFilter(v === 'all' ? null : v)}
 								>
-									<TabsList className="h-auto flex-wrap gap-1 p-1">
-										<TabsTrigger value="all" className="text-xs px-3 h-7">
-											All
-										</TabsTrigger>
+									<SelectTrigger className="w-[220px]">
+										<SelectValue placeholder="All categories" />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="all">All categories</SelectItem>
 										{categories.map((cat) => (
-											<TabsTrigger key={cat.id} value={cat.id} className="text-xs px-3 h-7">
+											<SelectItem key={cat.id} value={cat.id}>
 												{cat.name}
-											</TabsTrigger>
+											</SelectItem>
 										))}
-									</TabsList>
-								</Tabs>
+									</SelectContent>
+								</Select>
 							)}
 
 							{/* Search */}
@@ -438,7 +438,7 @@ export function BrochureNewPage() {
 														<img
 															src={signedUrl}
 															alt={product.name}
-															className="w-full aspect-[4/3] object-cover"
+															className="w-full aspect-[4/3] object-contain bg-muted/30"
 														/>
 													) : (
 														<div className="w-full aspect-[4/3] bg-muted flex items-center justify-center">
