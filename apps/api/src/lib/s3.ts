@@ -140,6 +140,7 @@ function getApiBaseUrl(): string {
 const PUBLIC_MEDIA_UPLOAD_CATEGORIES = new Set<UploadCategory>([
 	'products',
 	'options',
+	'sundries',
 	'categories',
 	'materials',
 	'branding',

@@ -9,6 +9,7 @@ import {
 	productComponents,
 	productOptions,
 	products,
+	sundries,
 	tenants,
 } from '@griffiths-crm/shared/db/schema';
 import { zValidator } from '@hono/zod-validator';
@@ -77,6 +78,11 @@ const productsQuerySchema = z.object({
 	page: z.coerce.number().min(1).optional().default(1),
 	limit: z.coerce.number().min(1).max(100).optional().default(20),
 	categoryId: z.string().optional(),
+});
+
+const sundriesQuerySchema = z.object({
+	page: z.coerce.number().min(1).optional().default(1),
+	limit: z.coerce.number().min(1).max(100).optional().default(20),
 });
 
 externalProductsRoutes.get(
@@ -263,6 +269,87 @@ externalProductsRoutes.get('/:slug/products/:productId', async (c) => {
 			options: optionsWithChoices,
 			components,
 			dimensionCombos: dimensionCombosWithValues,
+		},
+	});
+});
+
+// GET /:slug/sundries — list active sundries with pagination
+externalProductsRoutes.get(
+	'/:slug/sundries',
+	zValidator('query', sundriesQuerySchema),
+	async (c) => {
+		const tenantId = c.get('externalTenantId');
+		const { page, limit } = c.req.valid('query');
+
+		const conditions = [eq(sundries.tenantId, tenantId), eq(sundries.isActive, true)];
+		const offset = (page - 1) * limit;
+
+		const [sundryList, [totalResult]] = await Promise.all([
+			db
+				.select({
+					id: sundries.id,
+					name: sundries.name,
+					description: sundries.description,
+					price: sundries.price,
+					imageUrl: sundries.imageUrl,
+				})
+				.from(sundries)
+				.where(and(...conditions))
+				.orderBy(asc(sundries.sortOrder), asc(sundries.name))
+				.limit(limit)
+				.offset(offset),
+			db
+				.select({ count: count() })
+				.from(sundries)
+				.where(and(...conditions)),
+		]);
+
+		const total = Number(totalResult.count);
+
+		return c.json({
+			sundries: sundryList.map((sundry) => ({
+				...sundry,
+				imageUrl: resolvePublicMediaUrl(sundry.imageUrl),
+			})),
+			pagination: {
+				page,
+				limit,
+				total,
+				totalPages: Math.ceil(total / limit),
+			},
+		});
+	},
+);
+
+// GET /:slug/sundries/:sundryId — sundry detail
+externalProductsRoutes.get('/:slug/sundries/:sundryId', async (c) => {
+	const tenantId = c.get('externalTenantId');
+	const sundryId = c.req.param('sundryId');
+
+	const [sundry] = await db
+		.select({
+			id: sundries.id,
+			name: sundries.name,
+			description: sundries.description,
+			price: sundries.price,
+			imageUrl: sundries.imageUrl,
+			isActive: sundries.isActive,
+		})
+		.from(sundries)
+		.where(and(eq(sundries.id, sundryId), eq(sundries.tenantId, tenantId)))
+		.limit(1);
+
+	if (!sundry || !sundry.isActive) {
+		return c.json({ error: 'Not found' }, 404);
+	}
+
+	return c.json({
+		sundry: {
+			id: sundry.id,
+			name: sundry.name,
+			description: sundry.description,
+			price: sundry.price,
+			imageUrl: resolvePublicMediaUrl(sundry.imageUrl),
 		},
 	});
 });

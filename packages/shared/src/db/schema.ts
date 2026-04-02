@@ -938,6 +938,16 @@ export const inquiryProducts = pgTable('inquiry_products', {
 	createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
+// Inquiry Sundries join table (sundries the prospect is interested in)
+export const inquirySundries = pgTable('inquiry_sundries', {
+	id: text('id').primaryKey(),
+	inquiryId: text('inquiry_id')
+		.notNull()
+		.references(() => inquiries.id, { onDelete: 'cascade' }),
+	sundryId: text('sundry_id').references(() => sundries.id, { onDelete: 'set null' }),
+	createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
 // Quote Packages table (groups multiple quote options for customer presentation)
 export const quotePackages = pgTable('quote_packages', {
 	id: text('id').primaryKey(),

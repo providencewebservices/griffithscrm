@@ -11,6 +11,14 @@ export type InquiryProduct = {
 	productCategoryName: string | null;
 };
 
+export type InquirySundry = {
+	id: string;
+	sundryId: string | null;
+	sundryName: string | null;
+	sundryDescription: string | null;
+	sundryImageUrl: string | null;
+};
+
 export type InquiryListItem = {
 	id: string;
 	tenantId: string;
@@ -26,6 +34,8 @@ export type InquiryListItem = {
 	updatedAt: string;
 	customerName: string | null;
 	productCount: number;
+	sundryCount: number;
+	selectionCount: number;
 };
 
 export type LinkedBrochure = {
@@ -57,6 +67,7 @@ export type Inquiry = {
 	updatedAt: string;
 	customerName: string | null;
 	products: InquiryProduct[];
+	sundries: InquirySundry[];
 	linkedBrochures?: LinkedBrochure[];
 	linkedQuotePackages?: LinkedQuotePackage[];
 };
@@ -85,6 +96,7 @@ export type CreateInquiryInput = {
 	source: string;
 	customerId?: string;
 	products?: { productId: string }[];
+	sundries?: { sundryId: string }[];
 };
 
 export type UpdateInquiryInput = {
@@ -97,6 +109,7 @@ export type UpdateInquiryInput = {
 	source?: string;
 	status?: string;
 	products?: { productId: string }[];
+	sundries?: { sundryId: string }[];
 };
 
 type ListResponse = {

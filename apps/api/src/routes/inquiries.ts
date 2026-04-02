@@ -6,9 +6,11 @@ import {
 	INQUIRY_STATUSES,
 	inquiries,
 	inquiryProducts,
+	inquirySundries,
 	productCategories,
 	products,
 	quotePackages,
+	sundries,
 } from '@griffiths-crm/shared/db/schema';
 import { zValidator } from '@hono/zod-validator';
 import { and, count, desc, eq, isNull, sql } from 'drizzle-orm';
@@ -34,6 +36,14 @@ const createSchema = z.object({
 		)
 		.optional()
 		.default([]),
+	sundries: z
+		.array(
+			z.object({
+				sundryId: z.string().min(1),
+			}),
+		)
+		.optional()
+		.default([]),
 });
 
 const updateSchema = z.object({
@@ -51,13 +61,23 @@ const updateSchema = z.object({
 			}),
 		)
 		.optional(),
+	sundries: z
+		.array(
+			z.object({
+				sundryId: z.string().min(1),
+			}),
+		)
+		.optional(),
 });
 
 const listQuerySchema = z.object({
 	page: z.coerce.number().min(1).optional().default(1),
 	limit: z.coerce.number().min(1).max(100).optional().default(20),
 	search: z.string().optional(),
-	status: z.enum([...INQUIRY_STATUSES, 'all']).optional().default('all'),
+	status: z
+		.enum([...INQUIRY_STATUSES, 'all'])
+		.optional()
+		.default('all'),
 	customerId: z.string().optional(),
 });
 
@@ -105,7 +125,7 @@ export const inquiriesRoutes = new Hono()
 			.where(and(...conditions));
 		const total = Number(totalResult.count);
 
-		// Product count subquery
+		// Product and sundry count subqueries
 		const productCountSq = db
 			.select({
 				inquiryId: inquiryProducts.inquiryId,
@@ -114,6 +134,15 @@ export const inquiriesRoutes = new Hono()
 			.from(inquiryProducts)
 			.groupBy(inquiryProducts.inquiryId)
 			.as('product_counts');
+
+		const sundryCountSq = db
+			.select({
+				inquiryId: inquirySundries.inquiryId,
+				count: count().as('sundry_count'),
+			})
+			.from(inquirySundries)
+			.groupBy(inquirySundries.inquiryId)
+			.as('sundry_counts');
 
 		// Get paginated inquiries
 		const offset = (page - 1) * limit;
@@ -134,10 +163,12 @@ export const inquiriesRoutes = new Hono()
 				customerFirstName: customers.firstName,
 				customerLastName: customers.lastName,
 				productCount: productCountSq.count,
+				sundryCount: sundryCountSq.count,
 			})
 			.from(inquiries)
 			.leftJoin(customers, eq(inquiries.customerId, customers.id))
 			.leftJoin(productCountSq, eq(productCountSq.inquiryId, inquiries.id))
+			.leftJoin(sundryCountSq, eq(sundryCountSq.inquiryId, inquiries.id))
 			.where(and(...conditions))
 			.orderBy(desc(inquiries.createdAt))
 			.limit(limit)
@@ -149,6 +180,8 @@ export const inquiriesRoutes = new Hono()
 				? [i.customerFirstName, i.customerLastName].filter(Boolean).join(' ')
 				: null,
 			productCount: Number(i.productCount || 0),
+			sundryCount: Number(i.sundryCount || 0),
+			selectionCount: Number(i.productCount || 0) + Number(i.sundryCount || 0),
 		}));
 
 		return c.json({
@@ -210,6 +243,18 @@ export const inquiriesRoutes = new Hono()
 			.leftJoin(productCategories, eq(products.categoryId, productCategories.id))
 			.where(eq(inquiryProducts.inquiryId, inquiryId));
 
+		const inquirySundryList = await db
+			.select({
+				id: inquirySundries.id,
+				sundryId: inquirySundries.sundryId,
+				sundryName: sundries.name,
+				sundryDescription: sundries.description,
+				sundryImageUrl: sundries.imageUrl,
+			})
+			.from(inquirySundries)
+			.leftJoin(sundries, eq(sundries.id, inquirySundries.sundryId))
+			.where(eq(inquirySundries.inquiryId, inquiryId));
+
 		// Get linked brochures
 		const linkedBrochures = await db
 			.select({
@@ -240,6 +285,7 @@ export const inquiriesRoutes = new Hono()
 					? [inquiry.customerFirstName, inquiry.customerLastName].filter(Boolean).join(' ')
 					: null,
 				products: inquiryProductList,
+				sundries: inquirySundryList,
 				linkedBrochures,
 				linkedQuotePackages,
 			},
@@ -277,6 +323,16 @@ export const inquiriesRoutes = new Hono()
 					id: crypto.randomUUID(),
 					inquiryId: id,
 					productId: p.productId,
+				})),
+			);
+		}
+
+		if (data.sundries.length > 0) {
+			await db.insert(inquirySundries).values(
+				data.sundries.map((s) => ({
+					id: crypto.randomUUID(),
+					inquiryId: id,
+					sundryId: s.sundryId,
 				})),
 			);
 		}
@@ -323,6 +379,20 @@ export const inquiriesRoutes = new Hono()
 						id: crypto.randomUUID(),
 						inquiryId,
 						productId: p.productId,
+					})),
+				);
+			}
+		}
+
+		if (data.sundries !== undefined) {
+			await db.delete(inquirySundries).where(eq(inquirySundries.inquiryId, inquiryId));
+
+			if (data.sundries.length > 0) {
+				await db.insert(inquirySundries).values(
+					data.sundries.map((s) => ({
+						id: crypto.randomUUID(),
+						inquiryId,
+						sundryId: s.sundryId,
 					})),
 				);
 			}

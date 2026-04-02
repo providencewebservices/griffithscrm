@@ -3,7 +3,9 @@ import {
 	ENQUIRY_SOURCES,
 	inquiries,
 	inquiryProducts,
+	inquirySundries,
 	products,
+	sundries,
 	tenants,
 } from '@griffiths-crm/shared/db/schema';
 import { zValidator } from '@hono/zod-validator';
@@ -51,6 +53,14 @@ const submitInquirySchema = z.object({
 		)
 		.optional()
 		.default([]),
+	sundries: z
+		.array(
+			z.object({
+				sundryId: z.string().min(1),
+			}),
+		)
+		.optional()
+		.default([]),
 });
 
 // POST /:slug/inquiries — Submit inquiry from website (public, no auth)
@@ -84,6 +94,28 @@ externalInquiriesRoutes.post(
 			}
 		}
 
+		// Validate sundry IDs belong to tenant and are active
+		if (data.sundries.length > 0) {
+			const sundryIds = data.sundries.map((s) => s.sundryId);
+			for (const sundryId of sundryIds) {
+				const [sundry] = await db
+					.select({ id: sundries.id })
+					.from(sundries)
+					.where(
+						and(
+							eq(sundries.id, sundryId),
+							eq(sundries.tenantId, tenantId),
+							eq(sundries.isActive, true),
+						),
+					)
+					.limit(1);
+
+				if (!sundry) {
+					return c.json({ error: `Sundry ${sundryId} not found` }, 400);
+				}
+			}
+		}
+
 		const id = crypto.randomUUID();
 
 		await db.insert(inquiries).values({
@@ -104,6 +136,16 @@ externalInquiriesRoutes.post(
 					id: crypto.randomUUID(),
 					inquiryId: id,
 					productId: p.productId,
+				})),
+			);
+		}
+
+		if (data.sundries.length > 0) {
+			await db.insert(inquirySundries).values(
+				data.sundries.map((s) => ({
+					id: crypto.randomUUID(),
+					inquiryId: id,
+					sundryId: s.sundryId,
 				})),
 			);
 		}

@@ -40,10 +40,11 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { useCreateInquiryMutation } from '@/hooks/use-inquiries';
 import { useCustomersQuery } from '@/hooks/use-customers';
+import { useCreateInquiryMutation } from '@/hooks/use-inquiries';
 import { useProductCategoriesQuery } from '@/hooks/use-product-categories';
 import { type Product, useProductsQuery } from '@/hooks/use-products';
+import { type Sundry, useSundriesQuery } from '@/hooks/use-sundries';
 import { useSignedUrls } from '@/hooks/use-uploads';
 import { cn } from '@/lib/utils';
 
@@ -64,6 +65,13 @@ type SelectedProduct = {
 	name: string;
 	imageUrl: string | null;
 	categoryName: string | null;
+};
+
+type SelectedSundry = {
+	sundryId: string;
+	name: string;
+	description: string | null;
+	imageUrl: string | null;
 };
 
 export function InquiryNewPage() {
@@ -88,6 +96,8 @@ export function InquiryNewPage() {
 	const [debouncedProductSearch, setDebouncedProductSearch] = useState('');
 	const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
 	const [selectedProducts, setSelectedProducts] = useState<SelectedProduct[]>([]);
+	const [sundrySearch, setSundrySearch] = useState('');
+	const [selectedSundries, setSelectedSundries] = useState<SelectedSundry[]>([]);
 
 	// Validation + UI state
 	const [submitted, setSubmitted] = useState(false);
@@ -105,6 +115,7 @@ export function InquiryNewPage() {
 		isActive: 'true',
 		limit: 20,
 	});
+	const { data: sundriesData } = useSundriesQuery();
 
 	// Debounce product search
 	useEffect(() => {
@@ -117,8 +128,13 @@ export function InquiryNewPage() {
 	// Product image signed URLs
 	const searchResultImageUrls = productsData?.products.map((p) => p.imageUrl) ?? [];
 	const { data: searchSignedUrls } = useSignedUrls(searchResultImageUrls);
-	const selectedImageUrls = selectedProducts.map((p) => p.imageUrl);
-	const { data: selectedSignedUrls } = useSignedUrls(selectedImageUrls);
+	const selectedProductImageUrls = selectedProducts.map((p) => p.imageUrl);
+	const { data: selectedSignedUrls } = useSignedUrls(selectedProductImageUrls);
+	const sundryImageUrls =
+		sundriesData?.filter((sundry) => sundry.isActive).map((sundry) => sundry.imageUrl) ?? [];
+	const { data: sundrySignedUrls } = useSignedUrls(sundryImageUrls);
+	const selectedSundryImageUrls = selectedSundries.map((sundry) => sundry.imageUrl);
+	const { data: selectedSundrySignedUrls } = useSignedUrls(selectedSundryImageUrls);
 
 	// Filter out already-selected products
 	const selectedIds = useMemo(
@@ -129,6 +145,23 @@ export function InquiryNewPage() {
 		() => productsData?.products.filter((p) => !selectedIds.has(p.id)) ?? [],
 		[productsData, selectedIds],
 	);
+	const selectedSundryIds = useMemo(
+		() => new Set(selectedSundries.map((s) => s.sundryId)),
+		[selectedSundries],
+	);
+	const availableSundries = useMemo(() => {
+		if (!sundriesData) return [];
+		const search = sundrySearch.trim().toLowerCase();
+		return sundriesData.filter((sundry) => {
+			if (!sundry.isActive) return false;
+			if (selectedSundryIds.has(sundry.id)) return false;
+			if (!search) return true;
+			return (
+				sundry.name.toLowerCase().includes(search) ||
+				(sundry.description || '').toLowerCase().includes(search)
+			);
+		});
+	}, [sundriesData, selectedSundryIds, sundrySearch]);
 
 	// Customer display name
 	const selectedCustomer = customers?.find((c) => c.id === customerId);
@@ -145,9 +178,20 @@ export function InquiryNewPage() {
 			phone !== '' ||
 			message !== '' ||
 			selectedProducts.length > 0 ||
+			selectedSundries.length > 0 ||
 			customerId !== (preselectedCustomerId || '')
 		);
-	}, [firstName, lastName, email, phone, message, selectedProducts, customerId, preselectedCustomerId]);
+	}, [
+		firstName,
+		lastName,
+		email,
+		phone,
+		message,
+		selectedProducts,
+		selectedSundries,
+		customerId,
+		preselectedCustomerId,
+	]);
 
 	useEffect(() => {
 		if (!isDirty) return;
@@ -174,6 +218,22 @@ export function InquiryNewPage() {
 		setSelectedProducts((prev) => prev.filter((p) => p.productId !== productId));
 	}
 
+	function addSundry(sundry: Sundry) {
+		setSelectedSundries((prev) => [
+			...prev,
+			{
+				sundryId: sundry.id,
+				name: sundry.name,
+				description: sundry.description,
+				imageUrl: sundry.imageUrl,
+			},
+		]);
+	}
+
+	function removeSundry(sundryId: string) {
+		setSelectedSundries((prev) => prev.filter((s) => s.sundryId !== sundryId));
+	}
+
 	async function handleSubmit() {
 		setSubmitted(true);
 		if (!firstName.trim() || !lastName.trim() || !source) return;
@@ -188,6 +248,7 @@ export function InquiryNewPage() {
 				source,
 				customerId: customerId || undefined,
 				products: selectedProducts.map((p) => ({ productId: p.productId })),
+				sundries: selectedSundries.map((s) => ({ sundryId: s.sundryId })),
 			});
 			navigate(`/app/inquiries/${inquiry.id}`);
 		} catch {
@@ -203,8 +264,7 @@ export function InquiryNewPage() {
 		}
 	}
 
-	const canSave =
-		firstName.trim() && lastName.trim() && source && !createInquiry.isPending;
+	const canSave = firstName.trim() && lastName.trim() && source && !createInquiry.isPending;
 
 	return (
 		<div>
@@ -411,7 +471,7 @@ export function InquiryNewPage() {
 						{/* Selected products */}
 						{selectedProducts.length > 0 && (
 							<div className="space-y-2">
-								{selectedProducts.map((product, idx) => (
+								{selectedProducts.map((product) => (
 									<div
 										key={product.productId}
 										className="flex items-center gap-3 p-2 border rounded-md"
@@ -469,11 +529,7 @@ export function InquiryNewPage() {
 												All
 											</TabsTrigger>
 											{categories.map((cat) => (
-												<TabsTrigger
-													key={cat.id}
-													value={cat.id}
-													className="text-xs px-2 h-6"
-												>
+												<TabsTrigger key={cat.id} value={cat.id} className="text-xs px-2 h-6">
 													{cat.name}
 												</TabsTrigger>
 											))}
@@ -484,7 +540,7 @@ export function InquiryNewPage() {
 
 							{availableProducts.length > 0 && (
 								<div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-60 overflow-y-auto">
-									{availableProducts.map((product, idx) => (
+									{availableProducts.map((product) => (
 										<button
 											key={product.id}
 											type="button"
@@ -506,6 +562,97 @@ export function InquiryNewPage() {
 										</button>
 									))}
 								</div>
+							)}
+						</div>
+					</CardContent>
+				</Card>
+
+				{/* Sundries of Interest (optional) */}
+				<Card>
+					<CardHeader>
+						<CardTitle className="text-base">Sundries of Interest (optional)</CardTitle>
+					</CardHeader>
+					<CardContent className="space-y-4">
+						{selectedSundries.length > 0 && (
+							<div className="space-y-2">
+								{selectedSundries.map((sundry) => (
+									<div
+										key={sundry.sundryId}
+										className="flex items-center gap-3 p-2 border rounded-md"
+									>
+										{sundry.imageUrl && selectedSundrySignedUrls?.get(sundry.imageUrl) ? (
+											<img
+												src={selectedSundrySignedUrls.get(sundry.imageUrl)!}
+												alt={sundry.name}
+												className="w-10 h-10 rounded object-cover"
+											/>
+										) : (
+											<div className="w-10 h-10 rounded bg-muted flex items-center justify-center">
+												<ImageIcon className="h-4 w-4 text-muted-foreground" />
+											</div>
+										)}
+										<div className="flex-1 min-w-0">
+											<p className="text-sm font-medium truncate">{sundry.name}</p>
+											{sundry.description && (
+												<p className="text-xs text-muted-foreground truncate">
+													{sundry.description}
+												</p>
+											)}
+										</div>
+										<Button
+											variant="ghost"
+											size="icon"
+											className="h-7 w-7 shrink-0"
+											onClick={() => removeSundry(sundry.sundryId)}
+										>
+											<X className="h-3.5 w-3.5" />
+										</Button>
+									</div>
+								))}
+							</div>
+						)}
+
+						<div className="space-y-3">
+							<div className="relative">
+								<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+								<Input
+									placeholder="Search sundries..."
+									value={sundrySearch}
+									onChange={(e) => setSundrySearch(e.target.value)}
+									className="pl-9"
+								/>
+							</div>
+
+							{availableSundries.length > 0 ? (
+								<div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-60 overflow-y-auto">
+									{availableSundries.map((sundry) => (
+										<button
+											key={sundry.id}
+											type="button"
+											onClick={() => addSundry(sundry)}
+											className="flex flex-col items-center gap-1 p-2 border rounded-md hover:bg-accent transition-colors text-left"
+										>
+											{sundry.imageUrl && sundrySignedUrls?.get(sundry.imageUrl) ? (
+												<img
+													src={sundrySignedUrls.get(sundry.imageUrl)!}
+													alt={sundry.name}
+													className="w-full aspect-square rounded object-cover"
+												/>
+											) : (
+												<div className="w-full aspect-square rounded bg-muted flex items-center justify-center">
+													<ImageIcon className="h-6 w-6 text-muted-foreground" />
+												</div>
+											)}
+											<p className="text-xs font-medium truncate w-full">{sundry.name}</p>
+										</button>
+									))}
+								</div>
+							) : (
+								<p className="text-sm text-muted-foreground">
+									{sundrySearch.trim()
+										? 'No sundries found matching your search.'
+										: 'No active sundries available.'}
+								</p>
 							)}
 						</div>
 					</CardContent>

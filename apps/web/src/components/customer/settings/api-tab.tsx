@@ -24,22 +24,44 @@ const ENDPOINTS: Endpoint[] = [
 			'Submit an inquiry from your website. Creates a new inquiry with status "new" that appears in your inquiry list.',
 		params: null,
 		body: [
-			{ name: 'firstName', type: 'string', required: true, description: 'First name of the person enquiring' },
-			{ name: 'lastName', type: 'string', required: true, description: 'Last name of the person enquiring' },
+			{
+				name: 'firstName',
+				type: 'string',
+				required: true,
+				description: 'First name of the person enquiring',
+			},
+			{
+				name: 'lastName',
+				type: 'string',
+				required: true,
+				description: 'Last name of the person enquiring',
+			},
 			{ name: 'email', type: 'string', required: false, description: 'Email address' },
 			{ name: 'phone', type: 'string', required: false, description: 'Phone number' },
-			{ name: 'message', type: 'string', required: false, description: 'Message or notes from the enquirer' },
+			{
+				name: 'message',
+				type: 'string',
+				required: false,
+				description: 'Message or notes from the enquirer',
+			},
 			{
 				name: 'source',
 				type: 'string',
 				required: false,
-				description: 'Source of enquiry. Defaults to "website". Options: website, phone, walk_in, email, facebook, instagram, whatsapp, referral, other',
+				description:
+					'Source of enquiry. Defaults to "website". Options: website, phone, walk_in, email, facebook, instagram, whatsapp, referral, other',
 			},
 			{
 				name: 'products',
 				type: 'array',
 				required: false,
 				description: 'Array of { productId: string } for products the person is interested in',
+			},
+			{
+				name: 'sundries',
+				type: 'array',
+				required: false,
+				description: 'Array of { sundryId: string } for sundries the person is interested in',
 			},
 		],
 		example: `// Request body
@@ -52,6 +74,9 @@ const ENDPOINTS: Endpoint[] = [
   "source": "website",
   "products": [
     { "productId": "prod_abc123" }
+  ],
+  "sundries": [
+    { "sundryId": "snd_abc123" }
   ]
 }
 
@@ -168,6 +193,49 @@ const ENDPOINTS: Endpoint[] = [
         ]
       }
     ]
+  }
+}`,
+	},
+	{
+		method: 'GET',
+		path: '/sundries',
+		description: 'List active sundries with pagination.',
+		body: null,
+		params: [
+			{ name: 'page', type: 'number', default: '1', description: 'Page number' },
+			{ name: 'limit', type: 'number', default: '20', description: 'Items per page (max 100)' },
+		],
+		example: `{
+  "sundries": [
+    {
+      "id": "snd_abc123",
+      "name": "Ceramic Roses",
+      "description": "A pair of ceramic roses",
+      "price": "45.00",
+      "imageUrl": "https://example.com/ceramic-roses.jpg"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 8,
+    "totalPages": 1
+  }
+}`,
+	},
+	{
+		method: 'GET',
+		path: '/sundries/:sundryId',
+		description: 'Get full sundry detail for a public website detail page.',
+		params: null,
+		body: null,
+		example: `{
+  "sundry": {
+    "id": "snd_abc123",
+    "name": "Ceramic Roses",
+    "description": "A pair of ceramic roses",
+    "price": "45.00",
+    "imageUrl": "https://example.com/ceramic-roses.jpg"
   }
 }`,
 	},

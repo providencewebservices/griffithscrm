@@ -1,7 +1,6 @@
 import {
 	ArrowLeft,
 	BookOpen,
-	Check,
 	ChevronsUpDown,
 	FileText,
 	ImageIcon,
@@ -45,20 +44,19 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import {
+	type ContactInfoInput,
+	type CreateCustomerInput,
+	useCreateCustomerMutation,
+	useCustomersQuery,
+} from '@/hooks/use-customers';
+import {
 	useArchiveInquiryMutation,
 	useInquiryQuery,
 	useLinkCustomerMutation,
 	useUnlinkCustomerMutation,
 	useUpdateInquiryMutation,
 } from '@/hooks/use-inquiries';
-import {
-	type ContactInfoInput,
-	type CreateCustomerInput,
-	useCreateCustomerMutation,
-	useCustomersQuery,
-} from '@/hooks/use-customers';
 import { useTenantSettingsQuery } from '@/hooks/use-tenant-settings';
-import { cn } from '@/lib/utils';
 
 const SOURCE_LABELS: Record<string, string> = {
 	walk_in: 'Walk-in',
@@ -207,7 +205,12 @@ export function InquiryDetailPage() {
 			contactInfo.push({ type: 'email', value: inquiry.email, label: '', isPrimary: true });
 		}
 		if (inquiry.phone) {
-			contactInfo.push({ type: 'phone', value: inquiry.phone, label: '', isPrimary: !inquiry.email });
+			contactInfo.push({
+				type: 'phone',
+				value: inquiry.phone,
+				label: '',
+				isPrimary: !inquiry.email,
+			});
 		}
 		return { firstName: inquiry.firstName, lastName: inquiry.lastName, contactInfo };
 	}, [inquiry]);
@@ -341,9 +344,7 @@ export function InquiryDetailPage() {
 				</div>
 			</div>
 
-			{mutationError && (
-				<p className="text-sm text-destructive mb-4">{mutationError}</p>
-			)}
+			{mutationError && <p className="text-sm text-destructive mb-4">{mutationError}</p>}
 
 			<div className="grid gap-6 lg:grid-cols-3">
 				<div className="lg:col-span-2 space-y-6">
@@ -374,17 +375,11 @@ export function InquiryDetailPage() {
 									<div className="grid grid-cols-2 gap-4">
 										<div className="space-y-1">
 											<label className="text-sm font-medium">Email</label>
-											<Input
-												value={editEmail}
-												onChange={(e) => setEditEmail(e.target.value)}
-											/>
+											<Input value={editEmail} onChange={(e) => setEditEmail(e.target.value)} />
 										</div>
 										<div className="space-y-1">
 											<label className="text-sm font-medium">Phone</label>
-											<Input
-												value={editPhone}
-												onChange={(e) => setEditPhone(e.target.value)}
-											/>
+											<Input value={editPhone} onChange={(e) => setEditPhone(e.target.value)} />
 										</div>
 									</div>
 								</div>
@@ -409,9 +404,7 @@ export function InquiryDetailPage() {
 										</div>
 									)}
 									{!inquiry.email && !inquiry.phone && (
-										<p className="text-sm text-muted-foreground">
-											No contact details provided
-										</p>
+										<p className="text-sm text-muted-foreground">No contact details provided</p>
 									)}
 								</>
 							)}
@@ -433,9 +426,7 @@ export function InquiryDetailPage() {
 								/>
 							) : (
 								<p className="text-sm whitespace-pre-wrap">
-									{inquiry.message || (
-										<span className="text-muted-foreground">No message</span>
-									)}
+									{inquiry.message || <span className="text-muted-foreground">No message</span>}
 								</p>
 							)}
 						</CardContent>
@@ -451,16 +442,11 @@ export function InquiryDetailPage() {
 						</CardHeader>
 						<CardContent>
 							{inquiry.products.length === 0 ? (
-								<p className="text-sm text-muted-foreground">
-									No products specified
-								</p>
+								<p className="text-sm text-muted-foreground">No products specified</p>
 							) : (
 								<div className="space-y-2">
 									{inquiry.products.map((product) => (
-										<div
-											key={product.id}
-											className="flex items-center gap-3 p-2 border rounded-md"
-										>
+										<div key={product.id} className="flex items-center gap-3 p-2 border rounded-md">
 											<div className="w-10 h-10 rounded bg-muted flex items-center justify-center shrink-0">
 												<ImageIcon className="h-4 w-4 text-muted-foreground" />
 											</div>
@@ -474,6 +460,50 @@ export function InquiryDetailPage() {
 												{product.productCategoryName && (
 													<p className="text-xs text-muted-foreground">
 														{product.productCategoryName}
+													</p>
+												)}
+											</div>
+										</div>
+									))}
+								</div>
+							)}
+						</CardContent>
+					</Card>
+
+					{/* Sundries of Interest */}
+					<Card>
+						<CardHeader>
+							<CardTitle className="text-base flex items-center gap-2">
+								<Package className="h-4 w-4" />
+								Sundries of Interest
+							</CardTitle>
+						</CardHeader>
+						<CardContent>
+							{inquiry.sundries.length === 0 ? (
+								<p className="text-sm text-muted-foreground">No sundries specified</p>
+							) : (
+								<div className="space-y-2">
+									{inquiry.sundries.map((sundry) => (
+										<div key={sundry.id} className="flex items-center gap-3 p-2 border rounded-md">
+											<div className="w-10 h-10 rounded bg-muted flex items-center justify-center shrink-0">
+												<ImageIcon className="h-4 w-4 text-muted-foreground" />
+											</div>
+											<div className="flex-1 min-w-0">
+												{sundry.sundryId ? (
+													<Link
+														to={`/app/sundries/${sundry.sundryId}`}
+														className="text-sm font-medium hover:underline"
+													>
+														{sundry.sundryName || 'Unnamed sundry'}
+													</Link>
+												) : (
+													<p className="text-sm font-medium">
+														{sundry.sundryName || 'Deleted sundry'}
+													</p>
+												)}
+												{sundry.sundryDescription && (
+													<p className="text-xs text-muted-foreground truncate">
+														{sundry.sundryDescription}
 													</p>
 												)}
 											</div>
@@ -573,26 +603,17 @@ export function InquiryDetailPage() {
 								</div>
 							) : (
 								<div className="space-y-3">
-									<p className="text-sm text-muted-foreground">
-										No customer linked
-									</p>
+									<p className="text-sm text-muted-foreground">No customer linked</p>
 
 									{/* Link to existing customer */}
 									<Popover open={customerComboOpen} onOpenChange={setCustomerComboOpen}>
 										<PopoverTrigger asChild>
-											<Button
-												variant="outline"
-												size="sm"
-												className="w-full justify-between"
-											>
+											<Button variant="outline" size="sm" className="w-full justify-between">
 												Link to Existing Customer
 												<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
 											</Button>
 										</PopoverTrigger>
-										<PopoverContent
-											className="w-[--radix-popover-trigger-width] p-0"
-											align="start"
-										>
+										<PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
 											<Command>
 												<CommandInput placeholder="Search customers..." />
 												<CommandList>

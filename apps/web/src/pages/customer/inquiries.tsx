@@ -217,7 +217,7 @@ export function InquiriesPage() {
 								<TableHead>Email</TableHead>
 								<TableHead>Source</TableHead>
 								<TableHead>Status</TableHead>
-								<TableHead>Products</TableHead>
+								<TableHead>Selections</TableHead>
 								<TableHead>Created</TableHead>
 								<TableHead className="w-[100px]">Actions</TableHead>
 							</TableRow>
@@ -228,16 +228,14 @@ export function InquiriesPage() {
 									<TableCell className="font-medium font-display">
 										{inquiry.firstName} {inquiry.lastName}
 									</TableCell>
-									<TableCell className="text-muted-foreground">
-										{inquiry.email || '—'}
-									</TableCell>
+									<TableCell className="text-muted-foreground">{inquiry.email || '—'}</TableCell>
 									<TableCell>{SOURCE_LABELS[inquiry.source] || inquiry.source}</TableCell>
 									<TableCell>
 										<Badge variant={getStatusBadgeVariant(inquiry.status)}>
 											{formatStatus(inquiry.status)}
 										</Badge>
 									</TableCell>
-									<TableCell>{inquiry.productCount}</TableCell>
+									<TableCell>{inquiry.selectionCount}</TableCell>
 									<TableCell className="text-muted-foreground">
 										{formatDate(inquiry.createdAt)}
 									</TableCell>
@@ -357,11 +355,12 @@ function InquiryCard({
 							<span className="font-display">{inquiry.customerName}</span>
 						</div>
 					)}
-					{inquiry.productCount > 0 && (
+					{inquiry.selectionCount > 0 && (
 						<div className="flex items-center gap-1.5 text-sm text-muted-foreground">
 							<Package className="h-3.5 w-3.5" />
 							<span>
-								{inquiry.productCount} product{inquiry.productCount !== 1 ? 's' : ''}
+								{inquiry.selectionCount} selection
+								{inquiry.selectionCount !== 1 ? 's' : ''}
 							</span>
 						</div>
 					)}
