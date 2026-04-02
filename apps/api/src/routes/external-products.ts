@@ -109,6 +109,8 @@ externalProductsRoutes.get(
 					name: products.name,
 					description: products.description,
 					imageUrl: products.imageUrl,
+					requiresCustomerPhotoUpload: products.requiresCustomerPhotoUpload,
+					customerPhotoUploadInstructions: products.customerPhotoUploadInstructions,
 					categoryId: products.categoryId,
 					categoryName: productCategories.name,
 				})
@@ -132,6 +134,8 @@ externalProductsRoutes.get(
 			name: p.name,
 			description: p.description,
 			imageUrl: resolvePublicMediaUrl(p.imageUrl),
+			requiresCustomerPhotoUpload: p.requiresCustomerPhotoUpload,
+			customerPhotoUploadInstructions: p.customerPhotoUploadInstructions,
 			category: p.categoryId ? { id: p.categoryId, name: p.categoryName } : null,
 		}));
 
@@ -159,6 +163,8 @@ externalProductsRoutes.get('/:slug/products/:productId', async (c) => {
 			name: products.name,
 			description: products.description,
 			imageUrl: products.imageUrl,
+			requiresCustomerPhotoUpload: products.requiresCustomerPhotoUpload,
+			customerPhotoUploadInstructions: products.customerPhotoUploadInstructions,
 			categoryId: products.categoryId,
 			categoryName: productCategories.name,
 			isActive: products.isActive,
@@ -265,6 +271,8 @@ externalProductsRoutes.get('/:slug/products/:productId', async (c) => {
 			name: product.name,
 			description: product.description,
 			imageUrl: resolvePublicMediaUrl(product.imageUrl),
+			requiresCustomerPhotoUpload: product.requiresCustomerPhotoUpload,
+			customerPhotoUploadInstructions: product.customerPhotoUploadInstructions,
 			category: product.categoryId ? { id: product.categoryId, name: product.categoryName } : null,
 			options: optionsWithChoices,
 			components,

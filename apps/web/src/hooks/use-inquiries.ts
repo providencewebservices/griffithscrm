@@ -9,6 +9,9 @@ export type InquiryProduct = {
 	productSku: string;
 	productImageUrl: string | null;
 	productCategoryName: string | null;
+	customerPhotoUrl: string | null;
+	customerPhotoFilename: string | null;
+	customerPhotoContentType: string | null;
 };
 
 export type InquirySundry = {
@@ -95,7 +98,12 @@ export type CreateInquiryInput = {
 	message?: string;
 	source: string;
 	customerId?: string;
-	products?: { productId: string }[];
+	products?: {
+		productId: string;
+		customerPhotoUrl?: string;
+		customerPhotoFilename?: string;
+		customerPhotoContentType?: string;
+	}[];
 	sundries?: { sundryId: string }[];
 };
 
@@ -108,7 +116,12 @@ export type UpdateInquiryInput = {
 	message?: string | null;
 	source?: string;
 	status?: string;
-	products?: { productId: string }[];
+	products?: {
+		productId: string;
+		customerPhotoUrl?: string;
+		customerPhotoFilename?: string;
+		customerPhotoContentType?: string;
+	}[];
 	sundries?: { sundryId: string }[];
 };
 

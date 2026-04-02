@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
 	Dialog,
 	DialogContent,
@@ -48,6 +49,8 @@ export function ProductFormDialog({
 	const [categoryId, setCategoryId] = useState<string | null>(null);
 	const [supplierId, setSupplierId] = useState<string | null>(null);
 	const [imageUrl, setImageUrl] = useState<string | null>(null);
+	const [requiresCustomerPhotoUpload, setRequiresCustomerPhotoUpload] = useState(false);
+	const [customerPhotoUploadInstructions, setCustomerPhotoUploadInstructions] = useState('');
 	const [entityId, setEntityId] = useState('');
 
 	const isEditing = !!product;
@@ -61,6 +64,8 @@ export function ProductFormDialog({
 				setCategoryId(product.categoryId);
 				setSupplierId(product.supplierId);
 				setImageUrl(product.imageUrl);
+				setRequiresCustomerPhotoUpload(product.requiresCustomerPhotoUpload);
+				setCustomerPhotoUploadInstructions(product.customerPhotoUploadInstructions || '');
 				setEntityId(product.id);
 			} else {
 				setSku('');
@@ -69,6 +74,8 @@ export function ProductFormDialog({
 				setCategoryId(null);
 				setSupplierId(null);
 				setImageUrl(null);
+				setRequiresCustomerPhotoUpload(false);
+				setCustomerPhotoUploadInstructions('');
 				setEntityId(crypto.randomUUID());
 			}
 		}
@@ -82,6 +89,10 @@ export function ProductFormDialog({
 			categoryId: categoryId || null,
 			supplierId: supplierId || null,
 			imageUrl,
+			requiresCustomerPhotoUpload,
+			customerPhotoUploadInstructions: requiresCustomerPhotoUpload
+				? customerPhotoUploadInstructions || null
+				: null,
 		};
 		onSubmit(data);
 	};
@@ -174,6 +185,38 @@ export function ProductFormDialog({
 							entityId={entityId}
 						/>
 					</Field>
+
+					<Field className="space-y-3">
+						<div className="flex items-start gap-3">
+							<Checkbox
+								id="requires-photo-upload"
+								checked={requiresCustomerPhotoUpload}
+								onCheckedChange={(checked) => setRequiresCustomerPhotoUpload(checked === true)}
+							/>
+							<div className="space-y-1">
+								<FieldLabel htmlFor="requires-photo-upload">
+									Require customer photo upload
+								</FieldLabel>
+								<p className="text-sm text-muted-foreground">
+									Enable this for products like photo plaques that need the customer to upload an
+									image with their inquiry.
+								</p>
+							</div>
+						</div>
+					</Field>
+
+					{requiresCustomerPhotoUpload && (
+						<Field>
+							<FieldLabel htmlFor="photo-upload-instructions">Photo upload instructions</FieldLabel>
+							<Textarea
+								id="photo-upload-instructions"
+								value={customerPhotoUploadInstructions}
+								onChange={(e) => setCustomerPhotoUploadInstructions(e.target.value)}
+								placeholder="Optional instructions shown on the website, e.g. Upload a clear landscape photo at the highest resolution you have."
+								rows={3}
+							/>
+						</Field>
+					)}
 				</FieldGroup>
 
 				<DialogFooter>

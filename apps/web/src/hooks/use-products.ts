@@ -37,6 +37,8 @@ export type Product = {
 	name: string;
 	description: string | null;
 	imageUrl: string | null;
+	requiresCustomerPhotoUpload: boolean;
+	customerPhotoUploadInstructions: string | null;
 	isActive: boolean;
 	archivedAt: string | null;
 	createdAt: string;
@@ -76,6 +78,8 @@ export type CreateProductInput = {
 	categoryId?: string | null;
 	supplierId?: string | null;
 	imageUrl?: string | null;
+	requiresCustomerPhotoUpload?: boolean;
+	customerPhotoUploadInstructions?: string | null;
 	isActive?: boolean;
 };
 
@@ -86,6 +90,8 @@ export type UpdateProductInput = {
 	categoryId?: string | null;
 	supplierId?: string | null;
 	imageUrl?: string | null;
+	requiresCustomerPhotoUpload?: boolean;
+	customerPhotoUploadInstructions?: string | null;
 	isActive?: boolean;
 };
 

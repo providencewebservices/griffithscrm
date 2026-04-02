@@ -530,6 +530,8 @@ export const products = pgTable('products', {
 	name: text('name').notNull(),
 	description: text('description'),
 	imageUrl: text('image_url'),
+	requiresCustomerPhotoUpload: boolean('requires_customer_photo_upload').notNull().default(false),
+	customerPhotoUploadInstructions: text('customer_photo_upload_instructions'),
 	isActive: boolean('is_active').notNull().default(true),
 	archivedAt: timestamp('archived_at'),
 	createdAt: timestamp('created_at').notNull().defaultNow(),
@@ -935,6 +937,9 @@ export const inquiryProducts = pgTable('inquiry_products', {
 		.notNull()
 		.references(() => inquiries.id, { onDelete: 'cascade' }),
 	productId: text('product_id').references(() => products.id, { onDelete: 'set null' }),
+	customerPhotoUrl: text('customer_photo_url'),
+	customerPhotoFilename: text('customer_photo_filename'),
+	customerPhotoContentType: text('customer_photo_content_type'),
 	createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 

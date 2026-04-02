@@ -434,6 +434,8 @@ const supplierProductsRoutes = new Hono()
 					data.description !== undefined ? data.description : supplierProduct.description,
 				categoryId: data.categoryId || null,
 				imageUrl: data.imageUrl !== undefined ? data.imageUrl : supplierProduct.imageUrl,
+				requiresCustomerPhotoUpload: false,
+				customerPhotoUploadInstructions: null,
 				isActive: true,
 			})
 			.returning();

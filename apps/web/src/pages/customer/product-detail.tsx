@@ -420,6 +420,20 @@ export function ProductDetailPage() {
 								<p>{product.category?.name || '-'}</p>
 							</div>
 							<div>
+								<p className="text-sm font-medium text-muted-foreground">Customer photo upload</p>
+								<p>
+									{product.requiresCustomerPhotoUpload ? 'Required for inquiries' : 'Not required'}
+								</p>
+							</div>
+							{product.requiresCustomerPhotoUpload && product.customerPhotoUploadInstructions && (
+								<div>
+									<p className="text-sm font-medium text-muted-foreground">Upload instructions</p>
+									<p className="whitespace-pre-wrap text-sm">
+										{product.customerPhotoUploadInstructions}
+									</p>
+								</div>
+							)}
+							<div>
 								<p className="text-sm font-medium text-muted-foreground">Supplier</p>
 								{product.supplierName ? (
 									<Link

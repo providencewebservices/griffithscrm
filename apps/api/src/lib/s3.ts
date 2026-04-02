@@ -152,6 +152,7 @@ export type UploadCategory =
 	| 'sundries'
 	| 'categories'
 	| 'materials'
+	| 'inquiry-products'
 	| 'jobs'
 	| 'documents'
 	| 'fonts'

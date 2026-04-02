@@ -32,6 +32,9 @@ const createSchema = z.object({
 		.array(
 			z.object({
 				productId: z.string().min(1),
+				customerPhotoUrl: z.string().optional(),
+				customerPhotoFilename: z.string().optional(),
+				customerPhotoContentType: z.string().optional(),
 			}),
 		)
 		.optional()
@@ -58,6 +61,9 @@ const updateSchema = z.object({
 		.array(
 			z.object({
 				productId: z.string().min(1),
+				customerPhotoUrl: z.string().optional(),
+				customerPhotoFilename: z.string().optional(),
+				customerPhotoContentType: z.string().optional(),
 			}),
 		)
 		.optional(),
@@ -237,6 +243,9 @@ export const inquiriesRoutes = new Hono()
 				productSku: products.sku,
 				productImageUrl: products.imageUrl,
 				productCategoryName: productCategories.name,
+				customerPhotoUrl: inquiryProducts.customerPhotoUrl,
+				customerPhotoFilename: inquiryProducts.customerPhotoFilename,
+				customerPhotoContentType: inquiryProducts.customerPhotoContentType,
 			})
 			.from(inquiryProducts)
 			.leftJoin(products, eq(products.id, inquiryProducts.productId))
@@ -323,6 +332,9 @@ export const inquiriesRoutes = new Hono()
 					id: crypto.randomUUID(),
 					inquiryId: id,
 					productId: p.productId,
+					customerPhotoUrl: p.customerPhotoUrl || null,
+					customerPhotoFilename: p.customerPhotoFilename || null,
+					customerPhotoContentType: p.customerPhotoContentType || null,
 				})),
 			);
 		}
@@ -379,6 +391,9 @@ export const inquiriesRoutes = new Hono()
 						id: crypto.randomUUID(),
 						inquiryId,
 						productId: p.productId,
+						customerPhotoUrl: p.customerPhotoUrl || null,
+						customerPhotoFilename: p.customerPhotoFilename || null,
+						customerPhotoContentType: p.customerPhotoContentType || null,
 					})),
 				);
 			}

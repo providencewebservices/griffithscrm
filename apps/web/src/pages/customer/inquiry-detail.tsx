@@ -57,6 +57,7 @@ import {
 	useUpdateInquiryMutation,
 } from '@/hooks/use-inquiries';
 import { useTenantSettingsQuery } from '@/hooks/use-tenant-settings';
+import { useSignedUrls } from '@/hooks/use-uploads';
 
 const SOURCE_LABELS: Record<string, string> = {
 	walk_in: 'Walk-in',
@@ -119,6 +120,9 @@ export function InquiryDetailPage() {
 	const createCustomerMutation = useCreateCustomerMutation();
 	const { data: tenantSettings } = useTenantSettingsQuery();
 	const defaultCountry = tenantSettings?.address?.country || 'GB';
+	const inquiryProductPhotoUrls =
+		inquiry?.products.map((product) => product.customerPhotoUrl) ?? [];
+	const { data: signedInquiryProductPhotoUrls } = useSignedUrls(inquiryProductPhotoUrls);
 
 	const formatDate = (dateString: string) => {
 		return new Date(dateString).toLocaleDateString('en-GB', {
@@ -462,7 +466,32 @@ export function InquiryDetailPage() {
 														{product.productCategoryName}
 													</p>
 												)}
+												{product.customerPhotoFilename && (
+													<p className="text-xs text-muted-foreground">
+														Customer photo: {product.customerPhotoFilename}
+													</p>
+												)}
 											</div>
+											{product.customerPhotoUrl && (
+												<a
+													href={
+														signedInquiryProductPhotoUrls?.get(product.customerPhotoUrl) ||
+														product.customerPhotoUrl
+													}
+													target="_blank"
+													rel="noreferrer"
+													className="shrink-0"
+												>
+													<img
+														src={
+															signedInquiryProductPhotoUrls?.get(product.customerPhotoUrl) ||
+															product.customerPhotoUrl
+														}
+														alt={product.customerPhotoFilename || `${product.productName} upload`}
+														className="h-16 w-16 rounded-md border object-cover"
+													/>
+												</a>
+											)}
 										</div>
 									))}
 								</div>

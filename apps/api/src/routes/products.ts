@@ -22,6 +22,8 @@ const createSchema = z.object({
 	categoryId: z.string().optional().nullable(),
 	supplierId: z.string().optional().nullable(),
 	imageUrl: z.string().optional().nullable(),
+	requiresCustomerPhotoUpload: z.boolean().optional().default(false),
+	customerPhotoUploadInstructions: z.string().optional().nullable(),
 	isActive: z.boolean().optional().default(true),
 });
 
@@ -32,6 +34,8 @@ const updateSchema = z.object({
 	categoryId: z.string().optional().nullable(),
 	supplierId: z.string().optional().nullable(),
 	imageUrl: z.string().optional().nullable(),
+	requiresCustomerPhotoUpload: z.boolean().optional(),
+	customerPhotoUploadInstructions: z.string().optional().nullable(),
 	isActive: z.boolean().optional(),
 });
 
@@ -58,6 +62,8 @@ async function getProductWithRelations(productId: string, tenantId: string) {
 			name: products.name,
 			description: products.description,
 			imageUrl: products.imageUrl,
+			requiresCustomerPhotoUpload: products.requiresCustomerPhotoUpload,
+			customerPhotoUploadInstructions: products.customerPhotoUploadInstructions,
 			isActive: products.isActive,
 			archivedAt: products.archivedAt,
 			createdAt: products.createdAt,
@@ -175,6 +181,8 @@ const productsRoutes = new Hono()
 				name: products.name,
 				description: products.description,
 				imageUrl: products.imageUrl,
+				requiresCustomerPhotoUpload: products.requiresCustomerPhotoUpload,
+				customerPhotoUploadInstructions: products.customerPhotoUploadInstructions,
 				isActive: products.isActive,
 				archivedAt: products.archivedAt,
 				categoryId: products.categoryId,
@@ -285,6 +293,8 @@ const productsRoutes = new Hono()
 				categoryId: data.categoryId || null,
 				supplierId: data.supplierId || null,
 				imageUrl: data.imageUrl || null,
+				requiresCustomerPhotoUpload: data.requiresCustomerPhotoUpload ?? false,
+				customerPhotoUploadInstructions: data.customerPhotoUploadInstructions || null,
 				isActive: data.isActive ?? true,
 			})
 			.returning();
@@ -353,6 +363,12 @@ const productsRoutes = new Hono()
 		if (data.categoryId !== undefined) updateData.categoryId = data.categoryId;
 		if (data.supplierId !== undefined) updateData.supplierId = data.supplierId;
 		if (data.imageUrl !== undefined) updateData.imageUrl = data.imageUrl;
+		if (data.requiresCustomerPhotoUpload !== undefined) {
+			updateData.requiresCustomerPhotoUpload = data.requiresCustomerPhotoUpload;
+		}
+		if (data.customerPhotoUploadInstructions !== undefined) {
+			updateData.customerPhotoUploadInstructions = data.customerPhotoUploadInstructions;
+		}
 		if (data.isActive !== undefined) updateData.isActive = data.isActive;
 
 		await db.update(products).set(updateData).where(eq(products.id, productId));
@@ -488,6 +504,9 @@ const productsRoutes = new Hono()
 			description: existing.description,
 			categoryId: existing.categoryId,
 			supplierId: existing.supplierId,
+			imageUrl: existing.imageUrl,
+			requiresCustomerPhotoUpload: existing.requiresCustomerPhotoUpload,
+			customerPhotoUploadInstructions: existing.customerPhotoUploadInstructions,
 			isActive: false, // New copies start inactive
 		});
 

@@ -19,6 +19,48 @@ type Endpoint = {
 const ENDPOINTS: Endpoint[] = [
 	{
 		method: 'POST',
+		path: '/inquiries/uploads/presign',
+		description:
+			'Generate a presigned upload URL for a customer image that belongs to a product inquiry, such as a photo plaque.',
+		params: null,
+		body: [
+			{
+				name: 'productId',
+				type: 'string',
+				required: true,
+				description: 'Product ID for the item the customer is enquiring about',
+			},
+			{
+				name: 'filename',
+				type: 'string',
+				required: true,
+				description: 'Original filename of the uploaded image',
+			},
+			{
+				name: 'contentType',
+				type: 'string',
+				required: true,
+				description: 'Image MIME type. One of image/jpeg, image/png, image/gif, image/webp',
+			},
+		],
+		example: `// Request body
+{
+  "productId": "prod_abc123",
+  "filename": "family-photo.jpg",
+  "contentType": "image/jpeg"
+}
+
+// Response (200 OK)
+{
+  "uploadUrl": "https://storage.example.com/presigned-put-url",
+  "fileUrl": "https://private-bucket.example.com/tenant/inquiry-products/...",
+  "key": "tenant/inquiry-products/prod_abc123/...",
+  "filename": "family-photo.jpg",
+  "contentType": "image/jpeg"
+}`,
+	},
+	{
+		method: 'POST',
 		path: '/inquiries',
 		description:
 			'Submit an inquiry from your website. Creates a new inquiry with status "new" that appears in your inquiry list.',
@@ -55,7 +97,8 @@ const ENDPOINTS: Endpoint[] = [
 				name: 'products',
 				type: 'array',
 				required: false,
-				description: 'Array of { productId: string } for products the person is interested in',
+				description:
+					'Array of product selections. Each item can include { productId, customerPhotoUrl, customerPhotoFilename, customerPhotoContentType } when the product requires a customer-uploaded image',
 			},
 			{
 				name: 'sundries',
@@ -73,7 +116,12 @@ const ENDPOINTS: Endpoint[] = [
   "message": "Interested in a black granite headstone",
   "source": "website",
   "products": [
-    { "productId": "prod_abc123" }
+    {
+      "productId": "prod_abc123",
+      "customerPhotoUrl": "https://private-bucket.example.com/tenant/inquiry-products/...",
+      "customerPhotoFilename": "family-photo.jpg",
+      "customerPhotoContentType": "image/jpeg"
+    }
   ],
   "sundries": [
     { "sundryId": "snd_abc123" }
@@ -122,6 +170,8 @@ const ENDPOINTS: Endpoint[] = [
       "name": "Classic Headstone",
       "description": "A traditional upright headstone",
       "imageUrl": "https://example.com/classic.jpg",
+      "requiresCustomerPhotoUpload": false,
+      "customerPhotoUploadInstructions": null,
       "category": { "id": "cat_abc123", "name": "Headstones" }
     }
   ],
@@ -147,6 +197,8 @@ const ENDPOINTS: Endpoint[] = [
     "name": "Classic Headstone",
     "description": "A traditional upright headstone",
     "imageUrl": "https://example.com/classic.jpg",
+    "requiresCustomerPhotoUpload": true,
+    "customerPhotoUploadInstructions": "Upload a clear high-resolution image",
     "category": { "id": "cat_abc123", "name": "Headstones" },
     "options": [
       {
