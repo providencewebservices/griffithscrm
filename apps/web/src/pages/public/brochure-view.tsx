@@ -141,7 +141,7 @@ export function PublicBrochureViewPage() {
 					<Skeleton className="h-5 w-80 mb-8" />
 					<div
 						className="grid gap-6"
-						style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 350px))' }}
+						style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}
 					>
 						{[1, 2, 3, 4].map((i) => (
 							<Card key={i}>
@@ -243,7 +243,7 @@ export function PublicBrochureViewPage() {
 				) : (
 					<div
 						className="grid gap-6"
-						style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 350px))' }}
+						style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}
 					>
 						{products.map((product) => (
 							<ProductCard
