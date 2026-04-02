@@ -320,7 +320,7 @@ function InquiryCard({
 }) {
 	return (
 		<Link to={`/app/inquiries/${inquiry.id}`} className="block">
-			<Card className="hover:shadow-md transition-shadow">
+			<Card className="h-full hover:shadow-md transition-shadow">
 				<CardHeader className="pb-3">
 					<div className="flex items-start justify-between">
 						<div className="space-y-1">
