@@ -25,7 +25,7 @@ export function NewInquiriesWidget() {
 	const { newCount, recent } = stats.inquiries;
 
 	return (
-		<Card className="h-full">
+		<Card>
 			<CardHeader className="pb-3">
 				<div className="flex items-center justify-between">
 					<CardTitle className="text-base font-semibold flex items-center gap-2">

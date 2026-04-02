@@ -20,7 +20,7 @@ export function CustomerDashboard() {
 				<div className="lg:col-span-3">
 					<RecentActivity />
 				</div>
-				<div className="lg:col-span-2 space-y-6">
+				<div className="lg:col-span-2 flex flex-col gap-6">
 					<NewInquiriesWidget />
 					<UpcomingEvents />
 				</div>

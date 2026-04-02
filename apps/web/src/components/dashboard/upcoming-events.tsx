@@ -90,7 +90,7 @@ export function UpcomingEvents() {
 	const grouped = useMemo(() => groupEventsByDay(upcoming), [upcoming]);
 
 	return (
-		<Card className="h-full">
+		<Card className="flex-1">
 			<CardHeader className="pb-3">
 				<div className="flex items-center justify-between">
 					<div className="flex items-center gap-2">
