@@ -414,7 +414,7 @@ function ProductCard({
 			<CardContent className="pt-4">
 				<div className="flex items-start justify-between gap-2">
 					<div className="flex-1 min-w-0">
-						<h3 className="font-semibold text-base line-clamp-2">{product.productName}</h3>
+						<h3 className="font-semibold text-base">{product.productName}</h3>
 						{product.categoryName && (
 							<p className="text-sm text-muted-foreground">{product.categoryName}</p>
 						)}
