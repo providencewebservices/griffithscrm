@@ -1,4 +1,4 @@
-import { ArrowLeft, Check, ChevronsUpDown, Eye, ImageIcon, Package, Plus, Search } from 'lucide-react';
+import { ArrowLeft, Check, CheckCircle2, ChevronsUpDown, Eye, ImageIcon, Package, Plus, Search } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import {
@@ -99,7 +99,7 @@ export function BrochureNewPage() {
 		search: debouncedProductSearch || undefined,
 		categoryId: categoryFilter || undefined,
 		isActive: 'true',
-		limit: 20,
+		limit: 100,
 	});
 
 	// Pre-fill from inquiry data
@@ -137,16 +137,13 @@ export function BrochureNewPage() {
 	const searchResultImageUrls = productsData?.products.map((p) => p.imageUrl) ?? [];
 	const { data: searchSignedUrls } = useSignedUrls(searchResultImageUrls);
 
-	// Filter out already-selected products from search results
+	// Track selected IDs for toggle behavior
 	const selectedIds = useMemo(
 		() => new Set(selectedProducts.map((p) => p.productId)),
 		[selectedProducts],
 	);
 
-	const availableProducts = useMemo(
-		() => productsData?.products.filter((p) => !selectedIds.has(p.id)) ?? [],
-		[productsData, selectedIds],
-	);
+	const allProducts = productsData?.products ?? [];
 
 	// Find customer name for display
 	const selectedCustomer = customers?.find((c) => c.id === customerId);
@@ -174,22 +171,49 @@ export function BrochureNewPage() {
 		return () => window.removeEventListener('beforeunload', handler);
 	}, [isDirty]);
 
-	function addProduct(product: Product) {
-		setSelectedProducts((prev) => [
-			...prev,
-			{
-				productId: product.id,
-				name: product.name,
-				imageUrl: product.imageUrl,
-				categoryName: product.category?.name ?? null,
-				description: product.description,
-			},
-		]);
+	function toggleProduct(product: Product) {
+		if (selectedIds.has(product.id)) {
+			setSelectedProducts((prev) => prev.filter((p) => p.productId !== product.id));
+		} else {
+			setSelectedProducts((prev) => [
+				...prev,
+				{
+					productId: product.id,
+					name: product.name,
+					imageUrl: product.imageUrl,
+					categoryName: product.category?.name ?? null,
+					description: product.description,
+				},
+			]);
+		}
+	}
+
+	function addAllVisible() {
+		const newProducts = allProducts
+			.filter((p) => !selectedIds.has(p.id))
+			.map((p) => ({
+				productId: p.id,
+				name: p.name,
+				imageUrl: p.imageUrl,
+				categoryName: p.category?.name ?? null,
+				description: p.description,
+			}));
+		if (newProducts.length > 0) {
+			setSelectedProducts((prev) => [...prev, ...newProducts]);
+		}
+	}
+
+	function removeAllVisible() {
+		const visibleIds = new Set(allProducts.map((p) => p.id));
+		setSelectedProducts((prev) => prev.filter((p) => !visibleIds.has(p.productId)));
 	}
 
 	function removeProduct(productId: string) {
 		setSelectedProducts((prev) => prev.filter((p) => p.productId !== productId));
 	}
+
+	const allVisibleSelected = allProducts.length > 0 && allProducts.every((p) => selectedIds.has(p.id));
+	const someVisibleSelected = allProducts.some((p) => selectedIds.has(p.id));
 
 	async function handleSubmit(openPreview = false) {
 		setSubmitted(true);
@@ -385,25 +409,50 @@ export function BrochureNewPage() {
 							<CardTitle className="text-base">Products</CardTitle>
 						</CardHeader>
 						<CardContent className="space-y-4">
-							{/* Category Filter */}
-							{categories && categories.length > 0 && (
-								<Select
-									value={categoryFilter || 'all'}
-									onValueChange={(v) => setCategoryFilter(v === 'all' ? null : v)}
-								>
-									<SelectTrigger className="w-[220px]">
-										<SelectValue placeholder="All categories" />
-									</SelectTrigger>
-									<SelectContent>
-										<SelectItem value="all">All categories</SelectItem>
-										{categories.map((cat) => (
-											<SelectItem key={cat.id} value={cat.id}>
-												{cat.name}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-							)}
+							{/* Category Filter + Bulk Actions */}
+							<div className="flex items-center gap-3">
+								{categories && categories.length > 0 && (
+									<Select
+										value={categoryFilter || 'all'}
+										onValueChange={(v) => setCategoryFilter(v === 'all' ? null : v)}
+									>
+										<SelectTrigger className="w-[220px]">
+											<SelectValue placeholder="All categories" />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value="all">All categories</SelectItem>
+											{categories.map((cat) => (
+												<SelectItem key={cat.id} value={cat.id}>
+													{cat.name}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+								)}
+								{allProducts.length > 0 && (
+									<>
+										{allVisibleSelected ? (
+											<Button
+												type="button"
+												variant="outline"
+												size="sm"
+												onClick={removeAllVisible}
+											>
+												Deselect All
+											</Button>
+										) : (
+											<Button
+												type="button"
+												variant="outline"
+												size="sm"
+												onClick={addAllVisible}
+											>
+												{someVisibleSelected ? 'Select Remaining' : 'Select All'}
+											</Button>
+										)}
+									</>
+								)}
+							</div>
 
 							{/* Search */}
 							<div className="relative">
@@ -418,22 +467,28 @@ export function BrochureNewPage() {
 
 							{/* Product Grid */}
 							<div className="border rounded-lg max-h-[32rem] overflow-y-auto">
-								{availableProducts.length === 0 ? (
+								{allProducts.length === 0 ? (
 									<div className="p-8 text-sm text-muted-foreground text-center">
 										No products found.
 									</div>
 								) : (
 									<div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 p-3">
-										{availableProducts.map((product) => {
+										{allProducts.map((product) => {
 											const signedUrl = product.imageUrl
 												? searchSignedUrls?.get(product.imageUrl)
 												: null;
+											const isSelected = selectedIds.has(product.id);
 											return (
 												<button
 													key={product.id}
 													type="button"
-													onClick={() => addProduct(product)}
-													className="group relative text-left rounded-lg border bg-background hover:bg-muted/50 overflow-hidden transition-colors"
+													onClick={() => toggleProduct(product)}
+													className={cn(
+														"group relative text-left rounded-lg border overflow-hidden transition-colors",
+														isSelected
+															? "border-primary ring-2 ring-primary/20 bg-primary/5"
+															: "bg-background hover:bg-muted/50"
+													)}
 												>
 													{signedUrl ? (
 														<img
@@ -454,11 +509,17 @@ export function BrochureNewPage() {
 															</p>
 														)}
 													</div>
-													<div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-lg pointer-events-none">
-														<div className="rounded-full bg-white/90 p-1.5">
-															<Plus className="h-4 w-4 text-foreground" />
+													{isSelected ? (
+														<div className="absolute top-2 right-2">
+															<CheckCircle2 className="h-5 w-5 text-primary drop-shadow-sm" />
 														</div>
-													</div>
+													) : (
+														<div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-lg pointer-events-none">
+															<div className="rounded-full bg-white/90 p-1.5">
+																<Plus className="h-4 w-4 text-foreground" />
+															</div>
+														</div>
+													)}
 												</button>
 											);
 										})}
