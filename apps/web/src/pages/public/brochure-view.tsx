@@ -129,12 +129,11 @@ export function PublicBrochureViewPage() {
 	// Loading state
 	if (isLoading) {
 		return (
-			<div className="min-h-screen bg-muted">
+			<div className="min-h-screen bg-stone-50">
 				<div className="bg-background border-b">
-					<div className="max-w-5xl mx-auto px-4 py-6 sm:py-8">
-						<div className="flex flex-col items-center text-center gap-3">
-							<Skeleton className="h-16 w-16 sm:h-20 sm:w-20 rounded" />
-							<Skeleton className="h-10 w-56" />
+					<div className="max-w-5xl mx-auto px-4 py-8 sm:py-12">
+						<div className="flex flex-col items-center text-center">
+							<Skeleton className="h-20 w-48 sm:h-28 sm:w-64 rounded" />
 						</div>
 					</div>
 				</div>
@@ -142,7 +141,7 @@ export function PublicBrochureViewPage() {
 					<Skeleton className="h-5 w-80 mb-8" />
 					<div
 						className="grid gap-6"
-						style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}
+						style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 350px))' }}
 					>
 						{[1, 2, 3, 4].map((i) => (
 							<Card key={i}>
@@ -163,7 +162,7 @@ export function PublicBrochureViewPage() {
 	// Expired state
 	if (error instanceof Error && error.message === 'expired') {
 		return (
-			<div className="min-h-screen bg-muted flex items-center justify-center p-4">
+			<div className="min-h-screen bg-stone-50 flex items-center justify-center p-4">
 				<Card className="max-w-md w-full">
 					<CardHeader>
 						<CardTitle className="flex items-center gap-2 text-yellow-700">
@@ -185,7 +184,7 @@ export function PublicBrochureViewPage() {
 	// Error state
 	if (error || !data) {
 		return (
-			<div className="min-h-screen bg-muted flex items-center justify-center p-4">
+			<div className="min-h-screen bg-stone-50 flex items-center justify-center p-4">
 				<Card className="max-w-md w-full">
 					<CardHeader>
 						<CardTitle className="flex items-center gap-2 text-destructive">
@@ -209,19 +208,20 @@ export function PublicBrochureViewPage() {
 	const interestedCount = interestedProducts.length;
 
 	return (
-		<div className="min-h-screen bg-muted pb-24">
+		<div className="min-h-screen bg-stone-50 pb-24">
 			{/* Header */}
 			<div className="bg-background border-b">
-				<div className="max-w-5xl mx-auto px-4 py-6 sm:py-8">
-					<div className="flex flex-col items-center text-center gap-3">
-						{tenant?.hasLogo && (
+				<div className="max-w-5xl mx-auto px-4 py-8 sm:py-12">
+					<div className="flex flex-col items-center text-center">
+						{tenant?.hasLogo ? (
 							<img
 								src={`${API_URL}/api/logo/${tenant.id}`}
 								alt={tenant.name}
-								className="h-16 sm:h-20 max-w-[200px] object-contain"
+								className="h-20 sm:h-28 max-w-[320px] object-contain"
 							/>
+						) : (
+							<h1 className="text-3xl sm:text-4xl font-semibold tracking-tight">{tenant?.name || 'Memorial Selections'}</h1>
 						)}
-						<h1 className="text-3xl sm:text-4xl font-semibold tracking-tight">{tenant?.name || 'Memorial Selections'}</h1>
 					</div>
 				</div>
 			</div>
@@ -229,10 +229,10 @@ export function PublicBrochureViewPage() {
 			{/* Main Content */}
 			<div className="max-w-5xl mx-auto px-4 py-8">
 				{/* Staff message */}
-				{brochure.message && <CollapsibleMessage message={brochure.message} />}
+				{brochure.message && <CollapsibleMessage message={brochure.message} tenantName={tenant?.name} />}
 
 				{/* Orientation text */}
-				<p className="text-muted-foreground mb-8">
+				<p className="text-base text-muted-foreground mb-8">
 					Browse the selections below. Bookmark any you'd like to discuss, then let us know when
 					you're ready to talk.
 				</p>
@@ -243,7 +243,7 @@ export function PublicBrochureViewPage() {
 				) : (
 					<div
 						className="grid gap-6"
-						style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}
+						style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 350px))' }}
 					>
 						{products.map((product) => (
 							<ProductCard
@@ -260,7 +260,7 @@ export function PublicBrochureViewPage() {
 			<div className="fixed bottom-0 left-0 right-0 bg-background border-t shadow-lg z-10">
 				<div className="max-w-5xl mx-auto px-4 py-4">
 					{isReady ? (
-						<div className="text-center space-y-2">
+						<div className="text-center space-y-3">
 							<div className="flex items-center justify-center gap-2 text-green-700">
 								<CheckCircle className="h-5 w-5" />
 								<span className="font-medium">
@@ -268,22 +268,22 @@ export function PublicBrochureViewPage() {
 								</span>
 							</div>
 							{(tenant?.phone || tenant?.email) && (
-								<div className="flex items-center justify-center gap-4 text-sm text-muted-foreground">
+								<div className="flex items-center justify-center gap-5 text-sm">
 									{tenant?.phone && (
 										<a
 											href={`tel:${tenant.phone}`}
-											className="inline-flex items-center gap-1.5 hover:text-foreground transition-colors"
+											className="inline-flex items-center gap-2 font-medium hover:text-primary transition-colors"
 										>
-											<Phone className="h-3.5 w-3.5" />
+											<Phone className="h-4 w-4" />
 											{tenant.phone}
 										</a>
 									)}
 									{tenant?.email && (
 										<a
 											href={`mailto:${tenant.email}`}
-											className="inline-flex items-center gap-1.5 hover:text-foreground transition-colors"
+											className="inline-flex items-center gap-2 font-medium hover:text-primary transition-colors"
 										>
-											<Mail className="h-3.5 w-3.5" />
+											<Mail className="h-4 w-4" />
 											{tenant.email}
 										</a>
 									)}
@@ -353,7 +353,7 @@ export function PublicBrochureViewPage() {
 	);
 }
 
-function CollapsibleMessage({ message }: { message: string }) {
+function CollapsibleMessage({ message, tenantName }: { message: string; tenantName?: string }) {
 	const [expanded, setExpanded] = useState(false);
 	const [clamped, setClamped] = useState(false);
 	const textRef = useRef<HTMLParagraphElement>(null);
@@ -367,7 +367,12 @@ function CollapsibleMessage({ message }: { message: string }) {
 	};
 
 	return (
-		<div className="bg-background border border-border rounded-lg p-4 sm:p-5 mb-6">
+		<div className="bg-background border border-border rounded-lg p-5 sm:p-6 mb-6">
+			{tenantName && (
+				<p className="text-sm font-medium text-muted-foreground mb-2">
+					A note from {tenantName}
+				</p>
+			)}
 			<p
 				ref={checkClamped}
 				className={`text-foreground whitespace-pre-wrap leading-relaxed ${!expanded ? 'line-clamp-3' : ''}`}
@@ -395,10 +400,16 @@ function ProductCard({
 	onToggleInterest: () => void;
 }) {
 	return (
-		<Card className="overflow-hidden">
+		<Card
+			className={`overflow-hidden transition-all duration-200 ${
+				product.isInterested
+					? 'ring-2 ring-primary/30 shadow-md'
+					: ''
+			}`}
+		>
 			{/* Product image */}
 			{product.productImageUrl ? (
-				<div className="w-full aspect-[4/3] bg-muted flex items-center justify-center">
+				<div className="w-full aspect-[4/3] bg-stone-100 flex items-center justify-center">
 					<img
 						src={product.productImageUrl}
 						alt={product.productName}
@@ -406,7 +417,7 @@ function ProductCard({
 					/>
 				</div>
 			) : (
-				<div className="w-full aspect-[4/3] bg-muted flex items-center justify-center">
+				<div className="w-full aspect-[4/3] bg-stone-100 flex items-center justify-center">
 					<ImageIcon className="h-10 w-10 text-muted-foreground/40" />
 				</div>
 			)}
@@ -422,18 +433,24 @@ function ProductCard({
 					<button
 						type="button"
 						onClick={onToggleInterest}
-						className="shrink-0 p-2 rounded-full hover:bg-muted transition-colors touch-manipulation"
+						className={`shrink-0 p-2 rounded-full transition-all duration-200 touch-manipulation ${
+							product.isInterested
+								? 'bg-primary/10 hover:bg-primary/20'
+								: 'hover:bg-muted'
+						}`}
 						aria-label={product.isInterested ? 'Remove bookmark' : 'Bookmark this memorial'}
 					>
 						<Bookmark
-							className={`h-6 w-6 transition-colors ${
-								product.isInterested ? 'fill-primary text-primary' : 'text-muted-foreground'
+							className={`h-6 w-6 transition-all duration-200 ${
+								product.isInterested
+									? 'fill-primary text-primary scale-110'
+									: 'text-muted-foreground'
 							}`}
 						/>
 					</button>
 				</div>
 				{product.productDescription && (
-					<p className="text-sm text-muted-foreground mt-2 line-clamp-3">
+					<p className="text-sm text-muted-foreground/80 mt-2 line-clamp-2">
 						{product.productDescription}
 					</p>
 				)}
