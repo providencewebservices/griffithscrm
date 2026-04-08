@@ -33,7 +33,7 @@ export function CustomerView({
 		vatAmount: opt.vatAmount,
 		vatRate: opt.vatRate,
 		flowerHoles: opt.flowerHoles,
-		product: opt.product ? { name: opt.product.name } : null,
+		product: opt.product ? { name: opt.product.name, imageUrl: opt.product.imageUrl ?? null } : null,
 		components: opt.components.map((c) => ({
 			key: c.id,
 			componentType: c.componentType,

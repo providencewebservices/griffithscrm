@@ -102,6 +102,7 @@ export type QuoteProduct = {
 	id: string;
 	name: string;
 	sku: string;
+	imageUrl: string | null;
 };
 
 export type QuoteFuneralDirector = {

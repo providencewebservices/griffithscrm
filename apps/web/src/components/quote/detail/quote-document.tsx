@@ -51,7 +51,7 @@ export type DisplayOption = {
 	vatAmount: string;
 	vatRate: string;
 	flowerHoles: string | null;
-	product: { name: string } | null;
+	product: { name: string; imageUrl: string | null } | null;
 	components: DisplayComponent[];
 	lettering: DisplayLettering[];
 	sundries: DisplaySundry[];
@@ -139,7 +139,7 @@ export function QuoteDocument({
 						<img
 							src={`${API_URL}/api/logo/${tenant.id}`}
 							alt={tenant.name}
-							className="h-24 max-w-[280px] object-contain mx-auto"
+							className="h-32 max-w-[320px] object-contain mx-auto"
 						/>
 						{hasContactInfo && (
 							<div className="text-sm text-muted-foreground mt-3 space-y-0.5">
@@ -169,7 +169,9 @@ export function QuoteDocument({
 
 			{/* Document Title */}
 			<div className="px-10 sm:px-14 py-8 text-center space-y-2">
-				<h2>Quotation</h2>
+				<p className="text-2xl font-heading font-light tracking-wide text-foreground/80">
+					Quotation
+				</p>
 				<p className="text-sm">
 					<span className="text-muted-foreground">Prepared for </span>
 					<span className="font-medium">{customerName}</span>
@@ -249,7 +251,16 @@ export function QuoteDocument({
 						{currentOption.product && (
 							<div>
 								<SectionLabel>Product</SectionLabel>
-								<p className="text-xl font-semibold">{currentOption.product.name}</p>
+								{currentOption.product.imageUrl && (
+									<div className="my-3">
+										<img
+											src={currentOption.product.imageUrl}
+											alt={currentOption.product.name}
+											className="max-h-48 max-w-full object-contain rounded"
+										/>
+									</div>
+								)}
+								<p className="text-base font-medium">{currentOption.product.name}</p>
 							</div>
 						)}
 

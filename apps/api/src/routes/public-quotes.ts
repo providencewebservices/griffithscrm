@@ -85,7 +85,7 @@ const publicQuotesRoutes = new Hono()
 				let product = null;
 				if (opt.productId) {
 					const [productResult] = await db
-						.select({ name: products.name })
+						.select({ name: products.name, imageUrl: products.imageUrl })
 						.from(products)
 						.where(eq(products.id, opt.productId))
 						.limit(1);

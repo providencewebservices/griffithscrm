@@ -32,7 +32,7 @@ type PublicOption = {
 	total: string;
 	vatRate: string;
 	flowerHoles: string | null;
-	product: { name: string } | null;
+	product: { name: string; imageUrl: string | null } | null;
 	components: {
 		componentType: string;
 		height: string | null;
