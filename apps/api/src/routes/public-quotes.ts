@@ -15,6 +15,7 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { db } from '../lib/auth';
 import { createJobFromAcceptedQuote } from '../lib/quote-acceptance';
+import { getSignedImageUrl } from '../lib/s3';
 
 // Validation schemas
 const respondSchema = z.object({
@@ -81,7 +82,7 @@ const publicQuotesRoutes = new Hono()
 						.orderBy(asc(quoteLineItems.sortOrder)),
 				]);
 
-				// Get product name if set
+				// Get product name and image if set
 				let product = null;
 				if (opt.productId) {
 					const [productResult] = await db
@@ -89,7 +90,10 @@ const publicQuotesRoutes = new Hono()
 						.from(products)
 						.where(eq(products.id, opt.productId))
 						.limit(1);
-					product = productResult || null;
+					if (productResult) {
+						const signedImageUrl = await getSignedImageUrl(productResult.imageUrl);
+						product = { name: productResult.name, imageUrl: signedImageUrl };
+					}
 				}
 
 				return {
