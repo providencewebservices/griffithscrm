@@ -363,141 +363,144 @@ export function QuoteDetailPage() {
 
 	return (
 		<div>
-			{/* Breadcrumb */}
-			<Breadcrumb className="mb-4">
-				<BreadcrumbList>
-					<BreadcrumbItem>
-						<BreadcrumbLink asChild>
-							<Link to="/app/quotes">Quotes</Link>
-						</BreadcrumbLink>
-					</BreadcrumbItem>
-					<BreadcrumbSeparator />
-					<BreadcrumbItem>
-						<BreadcrumbPage>{firstQuoteNumber}</BreadcrumbPage>
-					</BreadcrumbItem>
-				</BreadcrumbList>
-			</Breadcrumb>
+			{/* Breadcrumb + Header — hidden in customer view */}
+			{!isCustomerView && (
+				<>
+					<Breadcrumb className="mb-4">
+						<BreadcrumbList>
+							<BreadcrumbItem>
+								<BreadcrumbLink asChild>
+									<Link to="/app/quotes">Quotes</Link>
+								</BreadcrumbLink>
+							</BreadcrumbItem>
+							<BreadcrumbSeparator />
+							<BreadcrumbItem>
+								<BreadcrumbPage>{firstQuoteNumber}</BreadcrumbPage>
+							</BreadcrumbItem>
+						</BreadcrumbList>
+					</Breadcrumb>
 
-			{/* Header */}
-			<div className="flex items-center justify-between mb-6">
-				<div className="flex items-center gap-4">
-					<Link to="/app/quotes">
-						<Button variant="ghost" size="icon">
-							<ArrowLeft className="h-4 w-4" />
-						</Button>
-					</Link>
-					<div>
-						<div className="flex items-center gap-3">
-							<h2 className="text-2xl font-bold">{firstQuoteNumber}</h2>
-							{pkg.quoteType && pkg.quoteType !== 'new_memorial' && (
-								<Badge variant="outline">{QUOTE_TYPE_LABELS[pkg.quoteType as QuoteType]}</Badge>
-							)}
+					<div className="flex items-center justify-between mb-6">
+						<div className="flex items-center gap-4">
+							<Link to="/app/quotes">
+								<Button variant="ghost" size="icon">
+									<ArrowLeft className="h-4 w-4" />
+								</Button>
+							</Link>
+							<div>
+								<div className="flex items-center gap-3">
+									<h2 className="text-2xl font-bold">{firstQuoteNumber}</h2>
+									{pkg.quoteType && pkg.quoteType !== 'new_memorial' && (
+										<Badge variant="outline">{QUOTE_TYPE_LABELS[pkg.quoteType as QuoteType]}</Badge>
+									)}
+								</div>
+								<p className="text-muted-foreground mt-1">
+									{customerName} &bull; {formatPriceRange(priceRange)}
+								</p>
+								{/* Status Progress Indicator */}
+								<div className="flex items-center gap-3 mt-2">
+									<div className="flex items-center gap-2">
+										<div className={`w-2.5 h-2.5 rounded-full ${QUOTE_STATUS_COLORS[pkg.status]}`} />
+										<span className="font-medium">{formatQuoteStatus(pkg.status)}</span>
+									</div>
+									<div className="flex items-center gap-1.5">
+										{QUOTE_STATUS_ORDER.map((status, index) => {
+											const currentIndex = ['rejected', 'expired'].includes(pkg.status)
+												? QUOTE_STATUS_ORDER.indexOf('presented')
+												: QUOTE_STATUS_ORDER.indexOf(pkg.status);
+											const isFilled = index <= currentIndex;
+											return (
+												<div
+													key={status}
+													className={`w-4 h-1 rounded-full ${isFilled ? QUOTE_STATUS_COLORS[pkg.status] : 'bg-muted'}`}
+												/>
+											);
+										})}
+									</div>
+								</div>
+							</div>
 						</div>
-						<p className="text-muted-foreground mt-1">
-							{customerName} &bull; {formatPriceRange(priceRange)}
-						</p>
-						{/* Status Progress Indicator */}
-						<div className="flex items-center gap-3 mt-2">
-							<div className="flex items-center gap-2">
-								<div className={`w-2.5 h-2.5 rounded-full ${QUOTE_STATUS_COLORS[pkg.status]}`} />
-								<span className="font-medium">{formatQuoteStatus(pkg.status)}</span>
-							</div>
-							<div className="flex items-center gap-1.5">
-								{QUOTE_STATUS_ORDER.map((status, index) => {
-									const currentIndex = ['rejected', 'expired'].includes(pkg.status)
-										? QUOTE_STATUS_ORDER.indexOf('presented')
-										: QUOTE_STATUS_ORDER.indexOf(pkg.status);
-									const isFilled = index <= currentIndex;
-									return (
-										<div
-											key={status}
-											className={`w-4 h-1 rounded-full ${isFilled ? QUOTE_STATUS_COLORS[pkg.status] : 'bg-muted'}`}
-										/>
-									);
-								})}
-							</div>
+						{/* Consolidated Header Actions */}
+						<div className="flex items-center gap-2">
+							{/* Primary CTA */}
+							{pkg.status === 'ready' ? (
+								canSendEmail ? (
+									<Button onClick={() => setSendEmailDialogOpen(true)}>
+										<Mail className="h-4 w-4 mr-2" />
+										Send to Customer
+									</Button>
+								) : (
+									<Button
+										onClick={() => handleStatusChange('presented')}
+										disabled={updateStatusMutation.isPending}
+									>
+										{updateStatusMutation.isPending ? (
+											<Loader2 className="h-4 w-4 mr-2 animate-spin" />
+										) : null}
+										Mark as Presented
+									</Button>
+								)
+							) : nextStatusLabel && nextStatus ? (
+								<Button
+									onClick={() => handleStatusChange(nextStatus)}
+									disabled={updateStatusMutation.isPending}
+								>
+									{updateStatusMutation.isPending ? (
+										<Loader2 className="h-4 w-4 mr-2 animate-spin" />
+									) : null}
+									{nextStatusLabel}
+								</Button>
+							) : null}
+							{isPresentedStatus && currentOption && (
+								<Button
+									onClick={() => handleAcceptOption(currentOption.id)}
+									disabled={acceptOptionMutation.isPending}
+								>
+									{acceptOptionMutation.isPending ? (
+										<Loader2 className="h-4 w-4 mr-2 animate-spin" />
+									) : (
+										<Check className="h-4 w-4 mr-2" />
+									)}
+									Accept {currentOption.quoteNumber}
+								</Button>
+							)}
+							{/* Secondary Actions Dropdown */}
+							{secondaryActions.length > 0 && (
+								<DropdownMenu>
+									<DropdownMenuTrigger asChild>
+										<Button variant="outline" size="icon">
+											<MoreHorizontal className="h-4 w-4" />
+										</Button>
+									</DropdownMenuTrigger>
+									<DropdownMenuContent align="end">
+										{secondaryActions.map((action, i) => {
+											const isFirstDestructive =
+												action.destructive && (i === 0 || !secondaryActions[i - 1].destructive);
+											return (
+												<span key={action.label}>
+													{isFirstDestructive && i > 0 && <DropdownMenuSeparator />}
+													<DropdownMenuItem
+														onClick={action.onClick}
+														className={action.destructive ? 'text-destructive' : ''}
+													>
+														<action.icon className="h-4 w-4 mr-2" />
+														{action.label}
+													</DropdownMenuItem>
+												</span>
+											);
+										})}
+									</DropdownMenuContent>
+								</DropdownMenu>
+							)}
 						</div>
 					</div>
-				</div>
-				{/* Consolidated Header Actions */}
-				<div className="flex items-center gap-2">
-					{/* Primary CTA */}
-					{pkg.status === 'ready' ? (
-						canSendEmail ? (
-							<Button onClick={() => setSendEmailDialogOpen(true)}>
-								<Mail className="h-4 w-4 mr-2" />
-								Send to Customer
-							</Button>
-						) : (
-							<Button
-								onClick={() => handleStatusChange('presented')}
-								disabled={updateStatusMutation.isPending}
-							>
-								{updateStatusMutation.isPending ? (
-									<Loader2 className="h-4 w-4 mr-2 animate-spin" />
-								) : null}
-								Mark as Presented
-							</Button>
-						)
-					) : nextStatusLabel && nextStatus ? (
-						<Button
-							onClick={() => handleStatusChange(nextStatus)}
-							disabled={updateStatusMutation.isPending}
-						>
-							{updateStatusMutation.isPending ? (
-								<Loader2 className="h-4 w-4 mr-2 animate-spin" />
-							) : null}
-							{nextStatusLabel}
-						</Button>
-					) : null}
-					{isPresentedStatus && currentOption && (
-						<Button
-							onClick={() => handleAcceptOption(currentOption.id)}
-							disabled={acceptOptionMutation.isPending}
-						>
-							{acceptOptionMutation.isPending ? (
-								<Loader2 className="h-4 w-4 mr-2 animate-spin" />
-							) : (
-								<Check className="h-4 w-4 mr-2" />
-							)}
-							Accept {currentOption.quoteNumber}
-						</Button>
-					)}
-					{/* Secondary Actions Dropdown */}
-					{secondaryActions.length > 0 && (
-						<DropdownMenu>
-							<DropdownMenuTrigger asChild>
-								<Button variant="outline" size="icon">
-									<MoreHorizontal className="h-4 w-4" />
-								</Button>
-							</DropdownMenuTrigger>
-							<DropdownMenuContent align="end">
-								{secondaryActions.map((action, i) => {
-									const isFirstDestructive =
-										action.destructive && (i === 0 || !secondaryActions[i - 1].destructive);
-									return (
-										<span key={action.label}>
-											{isFirstDestructive && i > 0 && <DropdownMenuSeparator />}
-											<DropdownMenuItem
-												onClick={action.onClick}
-												className={action.destructive ? 'text-destructive' : ''}
-											>
-												<action.icon className="h-4 w-4 mr-2" />
-												{action.label}
-											</DropdownMenuItem>
-										</span>
-									);
-								})}
-							</DropdownMenuContent>
-						</DropdownMenu>
-					)}
-				</div>
-			</div>
 
-			{mutationError && (
-				<div className="bg-destructive/10 text-destructive px-4 py-2 rounded mb-4">
-					{mutationError}
-				</div>
+					{mutationError && (
+						<div className="bg-destructive/10 text-destructive px-4 py-2 rounded mb-4">
+							{mutationError}
+						</div>
+					)}
+				</>
 			)}
 
 			{/* Customer View */}
