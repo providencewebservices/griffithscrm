@@ -91,6 +91,7 @@ export function CustomerView({
 				phone: settings.phone ?? null,
 				email: settings.email ?? null,
 				website: settings.website ?? null,
+				address: settings.address?.formattedAddress ?? null,
 			}}
 			customerName={customerName}
 			createdAt={pkg.createdAt}

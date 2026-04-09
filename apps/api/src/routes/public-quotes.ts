@@ -1,4 +1,5 @@
 import {
+	addresses,
 	customers,
 	products,
 	quoteComponents,
@@ -152,6 +153,13 @@ const publicQuotesRoutes = new Hono()
 		// Get tenant info for branding
 		const [tenant] = await db.select().from(tenants).where(eq(tenants.id, pkg.tenantId)).limit(1);
 
+		// Get tenant address if exists
+		let tenantAddress: string | null = null;
+		if (tenant?.addressId) {
+			const [addr] = await db.select().from(addresses).where(eq(addresses.id, tenant.addressId)).limit(1);
+			if (addr) tenantAddress = addr.formattedAddress;
+		}
+
 		// Get customer name
 		let customer = null;
 		if (pkg.customerId) {
@@ -188,6 +196,7 @@ const publicQuotesRoutes = new Hono()
 					phone: tenant.phone,
 					email: tenant.email,
 					website: tenant.website,
+					address: tenantAddress,
 				}
 			: null,
 		});

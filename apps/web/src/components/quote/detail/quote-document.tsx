@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react';
 import { InscriptionText } from '@/components/inscription-text';
-import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -65,6 +64,7 @@ export type DisplayTenant = {
 	phone: string | null;
 	email: string | null;
 	website: string | null;
+	address?: string | null;
 };
 
 type QuoteDocumentProps = {
@@ -93,21 +93,6 @@ function formatComponentType(type: string): string {
 		.join(' ');
 }
 
-// --- Section label component ---
-
-function SectionLabel({ children, className }: { children: ReactNode; className?: string }) {
-	return (
-		<p
-			className={cn(
-				'text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-2',
-				className,
-			)}
-		>
-			{children}
-		</p>
-	);
-}
-
 // --- Main component ---
 
 export function QuoteDocument({
@@ -130,80 +115,105 @@ export function QuoteDocument({
 	const currentOption = options.find((o) => o.id === selectedOptionId);
 	const hasContactInfo = tenant.phone || tenant.email || tenant.website;
 
+	const px = 'px-10 sm:px-14';
+	const sectionLabelClass = 'text-xs font-medium text-stone-500 tracking-wide border-b border-stone-200 pb-1 mb-2';
+
+	function optionButtonClass(option: DisplayOption): string {
+		const isSelected = selectedOptionId === option.id;
+		if (option.isAccepted) return 'border-stone-400 bg-stone-50 font-medium print:bg-white';
+		if (isSelected) return 'border-stone-400/50 bg-stone-50/50 font-medium print:bg-white';
+		return 'border-stone-200 hover:border-stone-300';
+	}
+
+	const renderSep = () => (
+		<div className={px}>
+			<div className="border-t border-stone-200" />
+		</div>
+	);
+
 	return (
-		<div className="bg-white shadow-lg border border-gray-200 print:shadow-none print:border-none">
-			{/* Letterhead */}
-			<div className="px-10 sm:px-14 pt-10 pb-6">
+		<div className="bg-white shadow-sm border border-stone-200/60 border-t-2 border-t-primary print:shadow-none print:border-none">
+			{/* ── Letterhead ── */}
+			<div className={cn(px, 'pt-10 pb-8')}>
 				{tenant.hasLogo ? (
-					<div className="text-center">
-						<img
-							src={`${API_URL}/api/logo/${tenant.id}`}
-							alt={tenant.name}
-							className="h-32 max-w-[320px] object-contain mx-auto"
-						/>
-						{hasContactInfo && (
-							<div className="text-sm text-muted-foreground mt-3 space-y-0.5">
-								{tenant.phone && <p>{tenant.phone}</p>}
-								{tenant.email && <p>{tenant.email}</p>}
-								{tenant.website && <p>{tenant.website}</p>}
-							</div>
-						)}
+					<div className="flex items-start justify-between gap-6">
+						<div className="shrink-0">
+							<img
+								src={`${API_URL}/api/logo/${tenant.id}`}
+								alt={tenant.name}
+								className="h-24 max-w-[200px] object-contain"
+							/>
+						</div>
+						<div className="text-right space-y-0.5 pt-1">
+							<p className="font-heading font-semibold text-primary text-lg tracking-tight">
+								{tenant.name}
+							</p>
+							{tenant.address && (
+								<p className="text-sm text-primary/60 whitespace-pre-line">
+									{tenant.address.split(', ').join('\n')}
+								</p>
+							)}
+							{tenant.phone && (
+								<p className="text-sm text-primary/60 tabular-nums">{tenant.phone}</p>
+							)}
+						</div>
 					</div>
 				) : (
-					<div className="text-center">
-						<h1 className="text-2xl font-heading font-bold">{tenant.name}</h1>
-						{hasContactInfo && (
-							<div className="text-sm text-muted-foreground mt-3 space-y-0.5">
-								{tenant.phone && <p>{tenant.phone}</p>}
-								{tenant.email && <p>{tenant.email}</p>}
-								{tenant.website && <p>{tenant.website}</p>}
+					<div className="text-center space-y-2">
+						<p className="text-3xl font-heading font-semibold text-primary tracking-tight">
+							{tenant.name}
+						</p>
+						{(tenant.address || tenant.phone) && (
+							<div className="text-sm text-primary/60 space-y-0.5">
+								{tenant.address && <p>{tenant.address}</p>}
+								{tenant.phone && <p className="tabular-nums">{tenant.phone}</p>}
 							</div>
 						)}
 					</div>
 				)}
 			</div>
 
-			<div className="px-10 sm:px-14">
-				<Separator />
+			<div className={px}>
+				<div className="border-t border-primary/15" />
 			</div>
 
-			{/* Document Title */}
-			<div className="px-10 sm:px-14 py-8 text-center space-y-2">
-				<p className="text-2xl font-heading font-light tracking-wide text-foreground/80">
+			{/* ── Document Title ── */}
+			<div className={cn(px, 'py-10 text-center space-y-3')}>
+				<p className="text-3xl font-heading tracking-wider text-primary/70">
 					Quotation
 				</p>
 				<p className="text-sm">
-					<span className="text-muted-foreground">Prepared for </span>
-					<span className="font-medium">{customerName}</span>
+					<span className="text-primary/50">Prepared for </span>
+					<span className="font-medium text-primary">{customerName}</span>
 				</p>
-				<div className="flex items-center justify-center gap-4 text-sm text-muted-foreground">
+				<div className="flex items-center justify-center gap-4 text-sm text-primary/40 tabular-nums">
 					<span>Date: {formatDate(createdAt)}</span>
-					{validUntil && !isExpired && <span>Valid until: {formatDate(validUntil)}</span>}
+					{validUntil && !isExpired && (
+						<span>Valid until: {formatDate(validUntil)}</span>
+					)}
 				</div>
 			</div>
 
-			{/* Status Banner (slot) */}
+			{/* ── Status Banner (slot) ── */}
 			{statusBanner}
 
-			{/* Staff Notes */}
+			{/* ── Staff Notes ── */}
 			{notes && (
-				<div className="px-10 sm:px-14 pb-6">
-					<div className="bg-blue-50 border border-blue-200 rounded-lg p-4 print:bg-white print:border-gray-300">
-						<p className="text-blue-800 text-sm print:text-foreground">{notes}</p>
+				<div className={cn(px, 'pb-6')}>
+					<div className="border-l-4 border-stone-300 pl-4 py-2 bg-stone-50/50 rounded-r">
+						<p className="text-stone-700 text-sm">{notes}</p>
 					</div>
 				</div>
 			)}
 
-			{/* Option Selector (multiple options only) */}
+			{/* ── Option Selector (multiple options only) ── */}
 			{!isSingleOption && (
 				<>
-					<div className="px-10 sm:px-14">
-						<Separator />
-					</div>
-					<div className="px-10 sm:px-14 py-6">
-						<SectionLabel className="mb-3">
+					{renderSep()}
+					<div className={cn(px, 'py-6')}>
+						<p className={cn(sectionLabelClass, 'mb-3')}>
 							{options.length} options for your consideration
-						</SectionLabel>
+						</p>
 						<div className="space-y-2">
 							{options.map((option) => (
 								<button
@@ -211,11 +221,7 @@ export function QuoteDocument({
 									onClick={() => onSelectOption(option.id)}
 									className={cn(
 										'w-full flex items-center justify-between px-4 py-3 border text-sm transition-colors print:border-gray-300',
-										option.isAccepted
-											? 'border-green-500 bg-green-50 font-medium print:bg-white'
-											: selectedOptionId === option.id
-												? 'border-primary/50 bg-primary/5 font-medium print:bg-white'
-												: 'border-gray-200 hover:border-gray-300',
+										optionButtonClass(option),
 									)}
 								>
 									<span className="flex items-center gap-2">
@@ -226,12 +232,14 @@ export function QuoteDocument({
 											</span>
 										)}
 										{option.isAccepted && (
-											<span className="inline-flex items-center rounded-full bg-green-100 text-green-800 border border-green-200 px-2 py-0.5 text-xs font-medium">
+											<span className="inline-flex items-center rounded-full bg-stone-100 text-stone-700 border border-stone-200 px-2 py-0.5 text-xs font-medium">
 												Accepted
 											</span>
 										)}
 									</span>
-									<span className="font-medium">{formatCurrency(option.total)}</span>
+									<span className="font-medium tabular-nums">
+										{formatCurrency(option.total)}
+									</span>
 								</button>
 							))}
 						</div>
@@ -239,18 +247,16 @@ export function QuoteDocument({
 				</>
 			)}
 
-			{/* Option Details */}
+			{/* ── Option Details ── */}
 			{currentOption && (
 				<>
-					<div className="px-10 sm:px-14">
-						<Separator />
-					</div>
+					{renderSep()}
 
-					<div className="px-10 sm:px-14 py-8 space-y-8">
+					<div className={cn(px, 'py-10 space-y-10')}>
 						{/* Product */}
 						{currentOption.product && (
 							<div>
-								<SectionLabel>Product</SectionLabel>
+								<p className={sectionLabelClass}>Product</p>
 								{currentOption.product.imageUrl && (
 									<div className="my-3">
 										<img
@@ -260,25 +266,37 @@ export function QuoteDocument({
 										/>
 									</div>
 								)}
-								<p className="text-base font-medium">{currentOption.product.name}</p>
+								<p className="text-lg font-medium text-stone-800">
+									{currentOption.product.name}
+								</p>
 							</div>
 						)}
 
 						{/* Components */}
 						{currentOption.components.length > 0 && (
 							<div>
-								<SectionLabel>Components</SectionLabel>
-								<div className="space-y-1">
+								<p className={sectionLabelClass}>Components</p>
+								<div className="space-y-2">
 									{currentOption.components.map((comp) => (
-										<div key={comp.key} className="text-sm">
-											<span>{formatComponentType(comp.componentType)}</span>
-											{comp.height && comp.width && comp.depth && (
-												<span className="text-muted-foreground ml-2">
-													({comp.height}" × {comp.width}" × {comp.depth}")
-												</span>
-											)}
+										<div
+											key={comp.key}
+											className="text-sm bg-stone-50 rounded px-3 py-1.5"
+										>
+											<span className="font-medium text-stone-700">
+												{formatComponentType(comp.componentType)}
+											</span>
+											{comp.height &&
+												comp.width &&
+												comp.depth && (
+													<span className="text-muted-foreground ml-2">
+														({comp.height}" × {comp.width}" ×{' '}
+														{comp.depth}")
+													</span>
+												)}
 											{comp.materialName && (
-												<span className="ml-1">– {comp.materialName}</span>
+												<span className="ml-1">
+													– {comp.materialName}
+												</span>
 											)}
 											{comp.finishName && (
 												<span className="text-muted-foreground ml-1">
@@ -294,18 +312,20 @@ export function QuoteDocument({
 						{/* Flower Holes */}
 						{currentOption.flowerHoles && (
 							<div>
-								<SectionLabel>Flower Holes</SectionLabel>
+								<p className={sectionLabelClass}>Flower Holes</p>
 								<p className="text-sm">
 									{currentOption.flowerHoles.replace(/_/g, ' ')}
 								</p>
 							</div>
 						)}
 
-						{/* Proposed Inscription — elevated treatment */}
+						{/* Proposed Inscription */}
 						{proposedInscription && (
-							<div className="text-center bg-stone-50 -mx-10 sm:-mx-14 px-10 sm:px-14 py-8 print:bg-white">
-								<SectionLabel className="mb-4">Proposed Inscription</SectionLabel>
-								<p className="whitespace-pre-wrap italic text-xl leading-relaxed py-2">
+							<div className="text-center -mx-10 sm:-mx-14 px-10 sm:px-14 py-12 bg-stone-50">
+								<p className={cn(sectionLabelClass, 'mb-6')}>
+									Proposed Inscription
+								</p>
+								<p className="whitespace-pre-wrap text-3xl font-heading leading-relaxed py-4 max-w-lg mx-auto text-stone-800">
 									{proposedInscription}
 								</p>
 							</div>
@@ -314,12 +334,14 @@ export function QuoteDocument({
 						{/* Lettering */}
 						{currentOption.lettering.length > 0 && (
 							<div>
-								<SectionLabel className="mb-3">Lettering</SectionLabel>
+								<p className={cn(sectionLabelClass, 'mb-3')}>Lettering</p>
 								<div className="space-y-4">
 									{currentOption.lettering.map((lett) => (
 										<div key={lett.key} className="space-y-1">
 											<p className="text-sm">
-												<span>{lett.techniqueName}</span>
+												<span className="font-medium text-stone-700">
+													{lett.techniqueName}
+												</span>
 												{lett.colorName && (
 													<span> with {lett.colorName}</span>
 												)}
@@ -346,10 +368,13 @@ export function QuoteDocument({
 						{/* Sundries */}
 						{currentOption.sundries.length > 0 && (
 							<div>
-								<SectionLabel>Additional Items</SectionLabel>
+								<p className={sectionLabelClass}>Additional Items</p>
 								<div className="space-y-1">
 									{currentOption.sundries.map((s) => (
-										<p key={s.key} className="text-sm text-muted-foreground">
+										<p
+											key={s.key}
+											className="text-sm text-muted-foreground"
+										>
 											{s.sundryName} × {s.quantity}
 										</p>
 									))}
@@ -360,18 +385,25 @@ export function QuoteDocument({
 						{/* Custom Line Items */}
 						{currentOption.lineItems.length > 0 && (
 							<div>
-								<SectionLabel>Other Charges</SectionLabel>
+								<p className={sectionLabelClass}>Other Charges</p>
 								<div className="space-y-1">
 									{currentOption.lineItems.map((li) => (
-										<div key={li.key} className="flex justify-between text-sm">
+										<div
+											key={li.key}
+											className="flex justify-between text-sm"
+										>
 											<span className="text-muted-foreground">
 												{li.description}
 												{li.vatExempt && (
-													<span className="text-xs ml-1">(VAT Exempt)</span>
+													<span className="text-xs ml-1">
+														(VAT Exempt)
+													</span>
 												)}
 											</span>
 											{li.showPrice && li.price != null && (
-												<span>{formatCurrency(li.price)}</span>
+												<span className="tabular-nums">
+													{formatCurrency(li.price)}
+												</span>
 											)}
 										</div>
 									))}
@@ -380,31 +412,37 @@ export function QuoteDocument({
 						)}
 					</div>
 
-					<div className="px-10 sm:px-14">
-						<Separator />
-					</div>
+					{renderSep()}
 
-					{/* Pricing Summary */}
-					<div className="px-10 sm:px-14 py-8">
-						<div className="max-w-xs ml-auto space-y-2">
+					{/* ── Pricing Summary ── */}
+					<div className={cn(px, 'py-10')}>
+						<div className="max-w-xs ml-auto space-y-2 tabular-nums bg-stone-50 rounded-lg p-4">
 							<div className="flex justify-between text-sm">
-								<span className="text-muted-foreground">Subtotal</span>
-								<span>{formatCurrency(currentOption.subtotal)}</span>
+								<span className="text-stone-500">Subtotal</span>
+								<span className="text-stone-700">
+									{formatCurrency(currentOption.subtotal)}
+								</span>
 							</div>
 							{parseFloat(currentOption.vatAmount) > 0 && (
 								<div className="flex justify-between text-sm">
-									<span className="text-muted-foreground">
+									<span className="text-stone-500">
 										VAT (
-										{(parseFloat(currentOption.vatRate) * 100).toFixed(0)}
+										{(parseFloat(currentOption.vatRate) * 100).toFixed(
+											0,
+										)}
 										%)
 									</span>
-									<span>{formatCurrency(currentOption.vatAmount)}</span>
+									<span className="text-stone-700">
+										{formatCurrency(currentOption.vatAmount)}
+									</span>
 								</div>
 							)}
-							<Separator className="my-2" />
+							<div className="border-t border-stone-200 my-2" />
 							<div className="flex justify-between items-baseline pt-1">
-								<span className="text-sm font-medium">Total</span>
-								<span className="text-2xl font-heading font-semibold">
+								<span className="text-sm font-medium text-stone-600">
+									Total
+								</span>
+								<span className="text-2xl font-heading font-semibold text-stone-800">
 									{formatCurrency(currentOption.total)}
 								</span>
 							</div>
@@ -413,22 +451,26 @@ export function QuoteDocument({
 				</>
 			)}
 
-			{/* Action Area (slot) */}
+			{/* ── Action Area (slot) ── */}
 			{actionArea}
 
-			{/* Footer */}
-			<div className="px-10 sm:px-14">
-				<Separator />
+			{/* ── Footer ── */}
+			<div className={px}>
+				<div className="border-t border-primary/15" />
 			</div>
-			<div className="px-10 sm:px-14 py-8 text-center space-y-2">
-				<p className="text-sm text-muted-foreground italic">Thank you for your enquiry</p>
-				<p className="font-heading font-semibold">{tenant.name}</p>
+			<div className={cn(px, 'py-10 text-center space-y-4')}>
+				<p className="text-sm text-primary/40 italic">
+					Thank you for your enquiry
+				</p>
+				<p className="font-heading font-semibold text-primary text-lg">
+					{tenant.name}
+				</p>
 				{hasContactInfo && (
-					<p className="text-sm text-muted-foreground">
-						{[tenant.phone, tenant.email, tenant.website]
-							.filter(Boolean)
-							.join(' · ')}
-					</p>
+					<div className="flex items-center justify-center gap-4 flex-wrap text-sm text-primary/50">
+						{tenant.phone && <span className="tabular-nums">{tenant.phone}</span>}
+						{tenant.email && <span>{tenant.email}</span>}
+						{tenant.website && <span>{tenant.website}</span>}
+					</div>
 				)}
 			</div>
 		</div>

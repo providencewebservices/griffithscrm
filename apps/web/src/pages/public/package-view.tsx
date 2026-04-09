@@ -90,6 +90,7 @@ type PublicPackage = {
 		phone: string | null;
 		email: string | null;
 		website: string | null;
+		address: string | null;
 	} | null;
 	options: PublicOption[];
 };
@@ -333,7 +334,6 @@ export function PublicPackageViewPage() {
 
 	const displayOptions = mapToDisplayOptions(rawOptions, pkg.acceptedOptionId);
 
-	// Pre-select the first option so the page is never empty
 	const effectiveSelection =
 		isSingleOption
 			? rawOptions[0].id
@@ -348,22 +348,21 @@ export function PublicPackageViewPage() {
 	// --- Status banner ---
 
 	const statusBanner = (() => {
-		// Show a single, consolidated status banner
 		if (hasDecided && pkg.status === 'accepted' && acceptedOption) {
 			return (
 				<div className="px-10 sm:px-14 pb-6">
-					<div className="bg-green-50 border border-green-200 rounded-lg p-4 print:bg-white print:border-gray-300">
+					<div className="bg-stone-50 border border-stone-200 rounded-lg p-4 print:bg-white print:border-gray-300">
 						<div className="flex items-start gap-3">
-							<CheckCircle className="h-5 w-5 text-green-600 mt-0.5 print:text-foreground" />
+							<CheckCircle className="h-5 w-5 text-stone-400 mt-0.5 print:text-foreground" />
 							<div>
-								<p className="font-medium text-green-800 print:text-foreground">
+								<p className="font-medium text-stone-800 print:text-foreground">
 									You accepted{' '}
 									{isSingleOption
 										? 'this quotation'
 										: acceptedOption.optionLabel || 'an option'}{' '}
 									on {formatDate(pkg.customerDecisionAt)}
 								</p>
-								<p className="text-green-700 text-sm mt-1 print:text-muted-foreground">
+								<p className="text-stone-600 text-sm mt-1 print:text-muted-foreground">
 									Thank you for your response. We will be in touch shortly.
 								</p>
 							</div>
@@ -372,19 +371,20 @@ export function PublicPackageViewPage() {
 				</div>
 			);
 		}
-
 		if (hasDecided && pkg.status === 'rejected') {
 			return (
 				<div className="px-10 sm:px-14 pb-6">
-					<div className="bg-red-50 border border-red-200 rounded-lg p-4 print:bg-white print:border-gray-300">
+					<div className="bg-stone-50 border border-stone-200 rounded-lg p-4 print:bg-white print:border-gray-300">
 						<div className="flex items-start gap-3">
-							<XCircle className="h-5 w-5 text-red-600 mt-0.5 print:text-foreground" />
+							<XCircle className="h-5 w-5 text-stone-400 mt-0.5 print:text-foreground" />
 							<div>
-								<p className="font-medium text-red-800 print:text-foreground">
-									You declined this quotation on {formatDate(pkg.customerDecisionAt)}
+								<p className="font-medium text-stone-800 print:text-foreground">
+									You declined this quotation on{' '}
+									{formatDate(pkg.customerDecisionAt)}
 								</p>
-								<p className="text-red-700 text-sm mt-1 print:text-muted-foreground">
-									Thank you for your feedback.
+								<p className="text-stone-600 text-sm mt-1 print:text-muted-foreground">
+									Thank you for letting us know. Please don't hesitate to get
+									in touch if we can help.
 								</p>
 							</div>
 						</div>
@@ -392,40 +392,32 @@ export function PublicPackageViewPage() {
 				</div>
 			);
 		}
-
 		if (isExpired && !hasDecided && pkg.status !== 'accepted') {
 			return (
 				<div className="px-10 sm:px-14 pb-6">
-					<div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 print:bg-white print:border-gray-300">
-						<p className="text-yellow-800 text-sm print:text-foreground">
-							This quotation expired on {formatDate(pkg.validUntil)}. Please contact us
-							if you would still like to proceed.
+					<div className="bg-stone-50 border border-stone-200 rounded-lg p-4 print:bg-white print:border-gray-300">
+						<p className="text-stone-700 text-sm print:text-foreground">
+							This quotation expired on {formatDate(pkg.validUntil)}. Please contact
+							us if you would still like to proceed.
 						</p>
 					</div>
 				</div>
 			);
 		}
-
-		// Status badges for non-banner states
 		if (pkg.status === 'accepted' || pkg.status === 'rejected') {
 			return (
 				<div className="px-10 sm:px-14 pb-4 text-center">
-					{pkg.status === 'accepted' && (
-						<Badge className="bg-green-100 text-green-800 border-green-200">
+					<Badge className="bg-stone-100 text-stone-700 border-stone-200">
+						{pkg.status === 'accepted' ? (
 							<CheckCircle className="h-4 w-4 mr-1" />
-							Accepted
-						</Badge>
-					)}
-					{pkg.status === 'rejected' && (
-						<Badge className="bg-red-100 text-red-800 border-red-200">
+						) : (
 							<XCircle className="h-4 w-4 mr-1" />
-							Declined
-						</Badge>
-					)}
+						)}
+						{pkg.status === 'accepted' ? 'Accepted' : 'Declined'}
+					</Badge>
 				</div>
 			);
 		}
-
 		return null;
 	})();
 
@@ -434,10 +426,10 @@ export function PublicPackageViewPage() {
 	const actionArea = canRespond ? (
 		<>
 			<div className="px-10 sm:px-14">
-				<Separator />
+				<div className="border-t border-stone-200" />
 			</div>
-			<div className="px-10 sm:px-14 py-10 space-y-6 print:hidden">
-				<div className="flex flex-col sm:flex-row gap-3 justify-center">
+			<div className="px-10 sm:px-14 py-10 print:hidden">
+				<div className="flex flex-col items-center gap-4">
 					<Button
 						size="lg"
 						onClick={() => setShowAcceptDialog(true)}
@@ -446,30 +438,24 @@ export function PublicPackageViewPage() {
 						{respondMutation.isPending && (
 							<Loader2 className="h-4 w-4 mr-2 animate-spin" />
 						)}
-						<CheckCircle className="h-4 w-4 mr-2" />
 						{isSingleOption
-							? 'Accept This Quotation'
-							: `Accept ${getOptionLabel(rawOptions.find((o) => o.id === effectiveSelection)!)}`}
+							? 'Proceed with This Quotation'
+							: `Proceed with ${getOptionLabel(rawOptions.find((o) => o.id === effectiveSelection)!)}`}
 					</Button>
-					<Button
-						size="lg"
-						variant="outline"
-						onClick={() => setShowRejectDialog(true)}
-						disabled={respondMutation.isPending}
-					>
-						{isSingleOption ? 'Decline' : 'Decline All Options'}
-					</Button>
-				</div>
-
-				<p className="text-sm text-muted-foreground text-center">
-					Once you accept, we will confirm the details and arrange next steps — typically
-					within two working days.
-				</p>
-
-				<p className="text-xs text-muted-foreground text-center">
+					<p className="text-sm text-muted-foreground text-center max-w-md">
+						Once you proceed, we will confirm the details and arrange next steps —
+						typically within two working days.
+					</p>
 					<button
 						type="button"
-						className="underline hover:text-foreground transition-colors"
+						className="text-sm text-muted-foreground underline hover:text-foreground transition-colors"
+						onClick={() => setShowRejectDialog(true)}
+					>
+						I'd like to discuss further
+					</button>
+					<button
+						type="button"
+						className="text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors"
 						onClick={() => {
 							setNotes(pkg.customerFeedback || '');
 							setShowNotesDialog(true);
@@ -477,7 +463,7 @@ export function PublicPackageViewPage() {
 					>
 						Save notes without deciding
 					</button>
-				</p>
+				</div>
 			</div>
 		</>
 	) : null;
@@ -516,14 +502,16 @@ export function PublicPackageViewPage() {
 										{isSingleOption
 											? 'this quotation'
 											: getOptionLabel(
-													rawOptions.find((o) => o.id === effectiveSelection)!,
+													rawOptions.find(
+														(o) => o.id === effectiveSelection,
+													)!,
 												)}
 									</strong>{' '}
 									for{' '}
 									<strong>
 										{formatCurrency(
-											rawOptions.find((o) => o.id === effectiveSelection)?.total ||
-												'0',
+											rawOptions.find((o) => o.id === effectiveSelection)
+												?.total || '0',
 										)}
 									</strong>
 									. We will be in touch to discuss next steps.
@@ -543,10 +531,16 @@ export function PublicPackageViewPage() {
 						</div>
 					</div>
 					<DialogFooter>
-						<Button variant="outline" onClick={() => setShowAcceptDialog(false)}>
+						<Button
+							variant="outline"
+							onClick={() => setShowAcceptDialog(false)}
+						>
 							Cancel
 						</Button>
-						<Button onClick={handleAccept} disabled={respondMutation.isPending}>
+						<Button
+							onClick={handleAccept}
+							disabled={respondMutation.isPending}
+						>
 							{respondMutation.isPending && (
 								<Loader2 className="h-4 w-4 mr-2 animate-spin" />
 							)}
@@ -562,8 +556,8 @@ export function PublicPackageViewPage() {
 					<DialogHeader>
 						<DialogTitle>Decline Quotation</DialogTitle>
 						<DialogDescription>
-							We understand — and we're happy to help however we can. If you'd like to
-							discuss your options, please don't hesitate to get in touch.
+							We understand — and we're happy to help however we can. If you'd like
+							to discuss your options, please don't hesitate to get in touch.
 						</DialogDescription>
 					</DialogHeader>
 					<div className="space-y-4 py-4">
@@ -578,7 +572,10 @@ export function PublicPackageViewPage() {
 						</div>
 					</div>
 					<DialogFooter>
-						<Button variant="outline" onClick={() => setShowRejectDialog(false)}>
+						<Button
+							variant="outline"
+							onClick={() => setShowRejectDialog(false)}
+						>
 							Go Back
 						</Button>
 						<Button
@@ -617,10 +614,16 @@ export function PublicPackageViewPage() {
 						</div>
 					</div>
 					<DialogFooter>
-						<Button variant="outline" onClick={() => setShowNotesDialog(false)}>
+						<Button
+							variant="outline"
+							onClick={() => setShowNotesDialog(false)}
+						>
 							Cancel
 						</Button>
-						<Button onClick={handleSaveNotes} disabled={notesMutation.isPending}>
+						<Button
+							onClick={handleSaveNotes}
+							disabled={notesMutation.isPending}
+						>
 							{notesMutation.isPending && (
 								<Loader2 className="h-4 w-4 mr-2 animate-spin" />
 							)}
