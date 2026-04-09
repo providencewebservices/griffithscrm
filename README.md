@@ -62,21 +62,70 @@ This allows flexible pricing where some colors may cost more than the base techn
    - `DATABASE_URL` - PostgreSQL connection string
    - `BETTER_AUTH_SECRET` - Random secret for auth
    - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` - OAuth credentials
+   - `POSTGRES_PORT`, `SMTP_PORT`, `MAILPIT_UI_PORT`, `LOCALSTACK_PORT` if this project
+     needs to move off its default local port block
 
 3. Install dependencies:
    ```bash
    bun install
    ```
 
-4. Push database schema:
+4. Start local services:
+   ```bash
+   docker compose up -d
+   ```
+
+5. Push database schema:
    ```bash
    bun run db:push
    ```
 
-5. Start development servers:
+6. Start development servers:
    ```bash
    bun run dev
    ```
+
+### Local Docker Stack
+
+This repo follows the same local Docker pattern as the other Uwchlan apps:
+
+- `docker-compose.yml` reads published host ports from env vars
+- `.env` is the source of truth for the app's local service endpoints
+- `COMPOSE_PROJECT_NAME` isolates container, network, and volume names per checkout
+- no `container_name` values are pinned, so compose project isolation works correctly
+
+Default local service endpoints for this repo are:
+
+- Postgres: `localhost:5433`
+- Mailpit SMTP: `localhost:1026`
+- Mailpit UI: `localhost:8026`
+- LocalStack S3: `localhost:4577`
+
+If you need to run this repo alongside another compose stack, keep the same pattern as
+`littleford-os` and `permithound-core`: set a distinct `COMPOSE_PROJECT_NAME`, move this repo's
+published ports via env vars, and keep the app env in sync.
+
+Example:
+
+```bash
+export COMPOSE_PROJECT_NAME=griffiths-crm-karlo
+export POSTGRES_PORT=55433
+export SMTP_PORT=11026
+export MAILPIT_UI_PORT=18026
+export LOCALSTACK_PORT=14577
+
+docker compose up -d
+```
+
+When you change the published ports, update the matching local app env values:
+
+- `DATABASE_URL=postgres://griffiths_crm_app:supersecretpassword@localhost:${POSTGRES_PORT}/griffiths_crm`
+- `SMTP_PORT=${SMTP_PORT}`
+- `S3_ENDPOINT=http://localhost:${LOCALSTACK_PORT}`
+
+These settings are only used for local development. Production deploys still use the checked-in
+AWS/Terraform and Docker build flow documented below; nothing in the production deployment path
+reads `docker-compose.yml` or these local port vars.
 
 ### Available Scripts
 

@@ -1,31 +1,31 @@
 services:
   postgres:
     image: postgres:17-alpine
-    container_name: griffiths-crm-db
+    restart: unless-stopped
     environment:
       POSTGRES_USER: griffiths_crm_app
       POSTGRES_PASSWORD: supersecretpassword
       POSTGRES_DB: griffiths_crm
     ports:
-      - "5433:5432"
+      - "${POSTGRES_PORT:-5433}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
   mailpit:
     image: axllent/mailpit
-    container_name: griffiths-crm-mail
+    restart: unless-stopped
     ports:
-      - "1026:1025"  # SMTP
-      - "8026:8025"  # Web UI
+      - "${SMTP_PORT:-1026}:1025"  # SMTP
+      - "${MAILPIT_UI_PORT:-8026}:8025"  # Web UI
     environment:
       MP_SMTP_AUTH_ACCEPT_ANY: 1
       MP_SMTP_AUTH_ALLOW_INSECURE: 1
 
   localstack:
     image: localstack/localstack:latest
-    container_name: griffiths-crm-localstack
+    restart: unless-stopped
     ports:
-      - "4577:4566"  # LocalStack gateway
+      - "${LOCALSTACK_PORT:-4577}:4566"  # LocalStack gateway
     environment:
       - SERVICES=s3
       - DEBUG=0
