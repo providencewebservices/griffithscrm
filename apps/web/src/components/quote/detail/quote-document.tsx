@@ -116,23 +116,23 @@ export function QuoteDocument({
 	const hasContactInfo = tenant.phone || tenant.email || tenant.website;
 
 	const px = 'px-10 sm:px-14';
-	const sectionLabelClass = 'text-xs font-medium text-stone-500 tracking-wide border-b border-stone-200 pb-1 mb-2';
+	const sectionLabelClass = 'text-xs font-medium text-primary/45 tracking-wide border-b border-primary/10 pb-1 mb-2';
 
 	function optionButtonClass(option: DisplayOption): string {
 		const isSelected = selectedOptionId === option.id;
-		if (option.isAccepted) return 'border-stone-400 bg-stone-50 font-medium print:bg-white';
-		if (isSelected) return 'border-stone-400/50 bg-stone-50/50 font-medium print:bg-white';
-		return 'border-stone-200 hover:border-stone-300';
+		if (option.isAccepted) return 'border-primary/30 bg-primary/5 font-medium print:bg-white';
+		if (isSelected) return 'border-primary/20 bg-primary/[0.03] font-medium print:bg-white';
+		return 'border-primary/10 hover:border-primary/20';
 	}
 
 	const renderSep = () => (
 		<div className={px}>
-			<div className="border-t border-stone-200" />
+			<div className="border-t border-primary/10" />
 		</div>
 	);
 
 	return (
-		<div className="bg-white shadow-sm border border-stone-200/60 border-t-2 border-t-primary print:shadow-none print:border-none">
+		<div className="bg-white shadow-sm border border-primary/10 border-t-2 border-t-primary print:shadow-none print:border-none">
 			{/* ── Letterhead ── */}
 			<div className={cn(px, 'pt-10 pb-8')}>
 				{tenant.hasLogo ? (
@@ -200,8 +200,8 @@ export function QuoteDocument({
 			{/* ── Staff Notes ── */}
 			{notes && (
 				<div className={cn(px, 'pb-6')}>
-					<div className="border-l-4 border-stone-300 pl-4 py-2 bg-stone-50/50 rounded-r">
-						<p className="text-stone-700 text-sm">{notes}</p>
+					<div className="border-l-4 border-primary/20 pl-4 py-2 bg-primary/[0.03] rounded-r">
+						<p className="text-primary/70 text-sm">{notes}</p>
 					</div>
 				</div>
 			)}
@@ -232,7 +232,7 @@ export function QuoteDocument({
 											</span>
 										)}
 										{option.isAccepted && (
-											<span className="inline-flex items-center rounded-full bg-stone-100 text-stone-700 border border-stone-200 px-2 py-0.5 text-xs font-medium">
+											<span className="inline-flex items-center rounded-full bg-primary/5 text-primary/80 border border-primary/15 px-2 py-0.5 text-xs font-medium">
 												Accepted
 											</span>
 										)}
@@ -266,7 +266,7 @@ export function QuoteDocument({
 										/>
 									</div>
 								)}
-								<p className="text-lg font-medium text-stone-800">
+								<p className="text-lg font-medium text-primary">
 									{currentOption.product.name}
 								</p>
 							</div>
@@ -280,9 +280,9 @@ export function QuoteDocument({
 									{currentOption.components.map((comp) => (
 										<div
 											key={comp.key}
-											className="text-sm bg-stone-50 rounded px-3 py-1.5"
+											className="text-sm bg-primary/[0.03] rounded px-3 py-1.5"
 										>
-											<span className="font-medium text-stone-700">
+											<span className="font-medium text-primary/80">
 												{formatComponentType(comp.componentType)}
 											</span>
 											{comp.height &&
@@ -321,11 +321,11 @@ export function QuoteDocument({
 
 						{/* Proposed Inscription */}
 						{proposedInscription && (
-							<div className="text-center -mx-10 sm:-mx-14 px-10 sm:px-14 py-12 bg-stone-50">
+							<div className="text-center py-6">
 								<p className={cn(sectionLabelClass, 'mb-6')}>
 									Proposed Inscription
 								</p>
-								<p className="whitespace-pre-wrap text-3xl font-heading leading-relaxed py-4 max-w-lg mx-auto text-stone-800">
+								<p className="whitespace-pre-wrap text-3xl font-heading leading-relaxed max-w-lg mx-auto text-primary/80">
 									{proposedInscription}
 								</p>
 							</div>
@@ -339,7 +339,7 @@ export function QuoteDocument({
 									{currentOption.lettering.map((lett) => (
 										<div key={lett.key} className="space-y-1">
 											<p className="text-sm">
-												<span className="font-medium text-stone-700">
+												<span className="font-medium text-primary/80">
 													{lett.techniqueName}
 												</span>
 												{lett.colorName && (
@@ -416,33 +416,33 @@ export function QuoteDocument({
 
 					{/* ── Pricing Summary ── */}
 					<div className={cn(px, 'py-10')}>
-						<div className="max-w-xs ml-auto space-y-2 tabular-nums bg-stone-50 rounded-lg p-4">
+						<div className="max-w-xs ml-auto space-y-2 tabular-nums border border-primary/10 rounded-lg p-4">
 							<div className="flex justify-between text-sm">
-								<span className="text-stone-500">Subtotal</span>
-								<span className="text-stone-700">
+								<span className="text-primary/50">Subtotal</span>
+								<span className="text-primary/80">
 									{formatCurrency(currentOption.subtotal)}
 								</span>
 							</div>
 							{parseFloat(currentOption.vatAmount) > 0 && (
 								<div className="flex justify-between text-sm">
-									<span className="text-stone-500">
+									<span className="text-primary/50">
 										VAT (
 										{(parseFloat(currentOption.vatRate) * 100).toFixed(
 											0,
 										)}
 										%)
 									</span>
-									<span className="text-stone-700">
+									<span className="text-primary/80">
 										{formatCurrency(currentOption.vatAmount)}
 									</span>
 								</div>
 							)}
-							<div className="border-t border-stone-200 my-2" />
+							<div className="border-t border-primary/10 my-2" />
 							<div className="flex justify-between items-baseline pt-1">
-								<span className="text-sm font-medium text-stone-600">
+								<span className="text-sm font-medium text-primary/60">
 									Total
 								</span>
-								<span className="text-2xl font-heading font-semibold text-stone-800">
+								<span className="text-2xl font-heading font-semibold text-primary">
 									{formatCurrency(currentOption.total)}
 								</span>
 							</div>
