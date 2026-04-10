@@ -1403,7 +1403,7 @@ function InboxLayoutInner() {
 export function InboxLayout() {
 	return (
 		<CustomerViewProvider>
-			<SidebarProvider style={{ '--sidebar-width': '350px' } as React.CSSProperties}>
+			<SidebarProvider defaultOpen={false} style={{ '--sidebar-width': '350px' } as React.CSSProperties}>
 				<InboxLayoutInner />
 			</SidebarProvider>
 		</CustomerViewProvider>

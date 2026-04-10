@@ -9,7 +9,7 @@ import { CustomerViewProvider, useCustomerView } from '@/contexts/customer-view-
 export function CustomerLayout() {
 	return (
 		<CustomerViewProvider>
-			<SidebarProvider>
+			<SidebarProvider defaultOpen={false}>
 				<CustomerLayoutInner />
 			</SidebarProvider>
 		</CustomerViewProvider>
