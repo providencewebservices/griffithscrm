@@ -70,12 +70,12 @@
 	--radius: 0.625rem;
 	--sidebar: #191d24;
 	--sidebar-foreground: hsl(0 0% 100%);
-	--sidebar-primary: hsl(172 66% 50%);
-	--sidebar-primary-foreground: hsl(222 47% 11%);
-	--sidebar-accent: hsl(172 66% 50% / 0.15);
-	--sidebar-accent-foreground: hsl(172 66% 50%);
+	--sidebar-primary: #BC9565;
+	--sidebar-primary-foreground: #191d24;
+	--sidebar-accent: rgb(188 149 101 / 0.15);
+	--sidebar-accent-foreground: #BC9565;
 	--sidebar-border: #12151b;
-	--sidebar-ring: hsl(172 66% 50%);
+	--sidebar-ring: #BC9565;
 }
 
 .dark {
