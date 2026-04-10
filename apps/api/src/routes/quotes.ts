@@ -422,7 +422,7 @@ const componentInputSchema = z.object({
 });
 
 const letteringInputSchema = z.object({
-	techniqueId: z.string().min(1),
+	techniqueId: z.string().min(1).optional(),
 	colorId: z.string().optional(),
 	fontId: z.string().optional(),
 	text: z.string().min(1),
@@ -532,7 +532,7 @@ const addComponentSchema = z.object({
 
 // Schema for adding a new lettering item
 const addLetteringItemSchema = z.object({
-	techniqueId: z.string().min(1),
+	techniqueId: z.string().min(1).optional(),
 	colorId: z.string().optional(),
 	fontId: z.string().optional(),
 	text: z.string().min(1),
@@ -548,7 +548,7 @@ const updateLetteringItemSchema = z.object({
 	supplierCost: z.number().min(0).optional(),
 	markupPercent: z.number().min(0).optional(),
 	// Content fields (new)
-	techniqueId: z.string().min(1).optional(),
+	techniqueId: z.string().min(1).optional().nullable(),
 	colorId: z.string().optional().nullable(),
 	fontId: z.string().optional().nullable(),
 	text: z.string().min(1).optional(),
@@ -712,18 +712,21 @@ async function processLetteringInput({
 }) {
 	return Promise.all(
 		letteringInput.map(async (lett, index) => {
-			const [technique] = await db
-				.select()
-				.from(letteringTechniques)
-				.where(
-					and(
-						eq(letteringTechniques.id, lett.techniqueId),
-						eq(letteringTechniques.tenantId, tenantId),
-					),
-				)
-				.limit(1);
+			let technique = null;
+			if (lett.techniqueId) {
+				[technique] = await db
+					.select()
+					.from(letteringTechniques)
+					.where(
+						and(
+							eq(letteringTechniques.id, lett.techniqueId),
+							eq(letteringTechniques.tenantId, tenantId),
+						),
+					)
+					.limit(1);
+			}
 
-			if (!technique) {
+			if (lett.techniqueId && !technique) {
 				throw new Error(`Lettering technique not found: ${lett.techniqueId}`);
 			}
 
@@ -745,11 +748,13 @@ async function processLetteringInput({
 					.limit(1);
 			}
 
-			const activeCostRule = await findActiveLetteringCostRule({
-				techniqueId: lett.techniqueId,
-				colorId: lett.colorId,
-				appliesTo: lett.appliesTo,
-			});
+			const activeCostRule = lett.techniqueId
+				? await findActiveLetteringCostRule({
+						techniqueId: lett.techniqueId,
+						colorId: lett.colorId,
+						appliesTo: lett.appliesTo,
+					})
+				: null;
 			const resolvedQuoteComponentId = await resolveLetteringQuoteComponentId({
 				quoteId,
 				quoteComponentId: lett.quoteComponentId,
@@ -768,7 +773,7 @@ async function processLetteringInput({
 			return {
 				id: crypto.randomUUID(),
 				quoteComponentId: resolvedQuoteComponentId,
-				techniqueId: lett.techniqueId,
+				techniqueId: lett.techniqueId || null,
 				colorId: lett.colorId || null,
 				fontId: font?.id || null,
 				fontName: font?.name || null,
@@ -781,7 +786,7 @@ async function processLetteringInput({
 				markupPercent: String(markupPercent),
 				unitPrice: String(unitPrice),
 				lineTotal: String(lineTotal),
-				techniqueName: technique.name,
+				techniqueName: technique?.name || null,
 				colorName: color?.name || null,
 				notes: lett.notes || null,
 				sortOrder: index,
@@ -3112,18 +3117,21 @@ ${tenantName}
 			}
 
 			// Get technique
-			const [technique] = await db
-				.select()
-				.from(letteringTechniques)
-				.where(
-					and(
-						eq(letteringTechniques.id, data.techniqueId),
-						eq(letteringTechniques.tenantId, tenantId),
-					),
-				)
-				.limit(1);
+			let technique = null;
+			if (data.techniqueId) {
+				[technique] = await db
+					.select()
+					.from(letteringTechniques)
+					.where(
+						and(
+							eq(letteringTechniques.id, data.techniqueId),
+							eq(letteringTechniques.tenantId, tenantId),
+						),
+					)
+					.limit(1);
+			}
 
-			if (!technique) {
+			if (data.techniqueId && !technique) {
 				return c.json({ error: 'Lettering technique not found' }, 404);
 			}
 
@@ -3167,11 +3175,13 @@ ${tenantName}
 				quoteComponentId = component.id;
 			}
 
-			const activeCostRule = await findActiveLetteringCostRule({
-				techniqueId: data.techniqueId,
-				colorId: data.colorId,
-				appliesTo: data.appliesTo,
-			});
+			const activeCostRule = data.techniqueId
+				? await findActiveLetteringCostRule({
+						techniqueId: data.techniqueId,
+						colorId: data.colorId,
+						appliesTo: data.appliesTo,
+					})
+				: null;
 
 			// Get pricing settings
 			const pricingSettings = await getTenantPricingSettings(tenantId);
@@ -3197,7 +3207,7 @@ ${tenantName}
 				id: letteringId,
 				quoteId: optionId,
 				quoteComponentId,
-				techniqueId: data.techniqueId,
+				techniqueId: data.techniqueId || null,
 				colorId: data.colorId || null,
 				fontId: font?.id || null,
 				fontName: font?.name || null,
@@ -3210,7 +3220,7 @@ ${tenantName}
 				markupPercent: String(markupPercent),
 				unitPrice: String(unitPrice),
 				lineTotal: String(lineTotal),
-				techniqueName: technique.name,
+				techniqueName: technique?.name || null,
 				colorName: color?.name || null,
 				notes: data.notes || null,
 				sortOrder: (maxSortOrder.maxOrder ?? -1) + 1,
@@ -3275,7 +3285,7 @@ ${tenantName}
 			}
 
 			// Determine final values
-			const techniqueId = data.techniqueId ?? existing.techniqueId;
+			const techniqueId = data.techniqueId !== undefined ? data.techniqueId : existing.techniqueId;
 			const colorId = data.colorId !== undefined ? data.colorId : existing.colorId;
 			const text = data.text ?? existing.text;
 			const appliesTo = data.appliesTo ?? existing.appliesTo;
@@ -3343,6 +3353,8 @@ ${tenantName}
 						return c.json({ error: 'Lettering technique not found' }, 404);
 					}
 					techniqueName = technique.name;
+				} else if (data.techniqueId === null) {
+					techniqueName = null;
 				}
 
 				// Get color name if changed
@@ -3363,13 +3375,17 @@ ${tenantName}
 
 				// Only recalculate supplier cost from rules if not explicitly provided
 				if (data.supplierCost === undefined) {
-					const activeCostRule = await findActiveLetteringCostRule({
-						techniqueId: techniqueId!,
-						colorId,
-						appliesTo: appliesTo!,
-					});
+					if (techniqueId) {
+						const activeCostRule = await findActiveLetteringCostRule({
+							techniqueId,
+							colorId,
+							appliesTo: appliesTo!,
+						});
 
-					supplierCost = parseFloat(activeCostRule?.pricePerLetter || '0');
+						supplierCost = parseFloat(activeCostRule?.pricePerLetter || '0');
+					} else {
+						supplierCost = 0;
+					}
 				}
 			}
 

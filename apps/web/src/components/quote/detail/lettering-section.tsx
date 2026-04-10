@@ -91,12 +91,12 @@ export function LetteringSection({
 	}));
 
 	const handleAddLettering = async () => {
-		if (!newTechniqueId || !newText.trim()) return;
+		if (!newText.trim()) return;
 
 		await addLetteringMutation.mutateAsync({
 			packageId: pkg.id,
 			optionId: option.id,
-			techniqueId: newTechniqueId,
+			techniqueId: newTechniqueId || undefined,
 			colorId: newColorId || undefined,
 			fontId: newFontId || undefined,
 			quoteComponentId: newQuoteComponentId || undefined,
@@ -125,13 +125,13 @@ export function LetteringSection({
 	};
 
 	const handleSaveEdit = async (itemId: string) => {
-		if (!editTechniqueId || !editText.trim()) return;
+		if (!editText.trim()) return;
 
 		await updateLetteringMutation.mutateAsync({
 			packageId: pkg.id,
 			optionId: option.id,
 			itemId,
-			techniqueId: editTechniqueId,
+			techniqueId: editTechniqueId || null,
 			colorId: editColorId || null,
 			fontId: editFontId || null,
 			quoteComponentId: editQuoteComponentId || null,
@@ -199,12 +199,16 @@ export function LetteringSection({
 							</Select>
 						</div>
 						<div>
-							<Label className="text-sm mb-1 block">Technique *</Label>
-							<Select value={newTechniqueId} onValueChange={setNewTechniqueId}>
+							<Label className="text-sm mb-1 block">Technique</Label>
+							<Select
+								value={newTechniqueId || '_none'}
+								onValueChange={(v) => setNewTechniqueId(v === '_none' ? '' : v)}
+							>
 								<SelectTrigger>
-									<SelectValue placeholder="Select technique" />
+									<SelectValue placeholder="Not specified" />
 								</SelectTrigger>
 								<SelectContent>
+									<SelectItem value="_none">Not specified</SelectItem>
 									{activeTechniques.map((t) => (
 										<SelectItem key={t.id} value={t.id}>
 											{t.name}
@@ -301,7 +305,7 @@ export function LetteringSection({
 						<Button
 							size="sm"
 							onClick={handleAddLettering}
-							disabled={!newTechniqueId || !newText.trim() || addLetteringMutation.isPending}
+							disabled={!newText.trim() || addLetteringMutation.isPending}
 						>
 							{addLetteringMutation.isPending ? (
 								<Loader2 className="h-4 w-4 mr-1 animate-spin" />
@@ -378,11 +382,15 @@ export function LetteringSection({
 												</Select>
 											</TableCell>
 											<TableCell>
-												<Select value={editTechniqueId} onValueChange={setEditTechniqueId}>
+												<Select
+													value={editTechniqueId || '_none'}
+													onValueChange={(v) => setEditTechniqueId(v === '_none' ? '' : v)}
+												>
 													<SelectTrigger className="h-8">
-														<SelectValue />
+														<SelectValue placeholder="Not specified" />
 													</SelectTrigger>
 													<SelectContent>
+														<SelectItem value="_none">Not specified</SelectItem>
 														{activeTechniques.map((t) => (
 															<SelectItem key={t.id} value={t.id}>
 																{t.name}
@@ -460,11 +468,7 @@ export function LetteringSection({
 														variant="ghost"
 														size="sm"
 														onClick={() => handleSaveEdit(lett.id)}
-														disabled={
-															!editTechniqueId ||
-															!editText.trim() ||
-															updateLetteringMutation.isPending
-														}
+														disabled={!editText.trim() || updateLetteringMutation.isPending}
 														className="h-7 px-2"
 													>
 														{updateLetteringMutation.isPending ? (

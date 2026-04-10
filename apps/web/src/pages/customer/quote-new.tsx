@@ -445,7 +445,7 @@ export function QuoteNewPage() {
 
 		// All sundries must have sundryId (if any added)
 		const sundriesValid = sundries.every((s) => s.sundryId);
-		const letteringValid = lettering.every((item) => item.techniqueId && item.text.trim());
+		const letteringValid = lettering.every((item) => item.text.trim());
 
 		// Line items are optional, but if added they must be complete
 		return componentsValid && sundriesValid && letteringValid;
@@ -1420,7 +1420,7 @@ export function QuoteNewPage() {
 													</Field>
 
 													<Field>
-														<FieldLabel>Technique *</FieldLabel>
+														<FieldLabel>Technique</FieldLabel>
 														<Select
 															value={item.techniqueId || NONE_VALUE}
 															onValueChange={(value) =>
@@ -1430,10 +1430,10 @@ export function QuoteNewPage() {
 															}
 														>
 															<SelectTrigger>
-																<SelectValue placeholder="Select technique" />
+																<SelectValue placeholder="Not specified" />
 															</SelectTrigger>
 															<SelectContent>
-																<SelectItem value={NONE_VALUE}>Select technique</SelectItem>
+																<SelectItem value={NONE_VALUE}>Not specified</SelectItem>
 																{activeLetteringTechniques.map((technique) => (
 																	<SelectItem key={technique.id} value={technique.id}>
 																		{technique.name}

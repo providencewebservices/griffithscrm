@@ -239,7 +239,7 @@ export type ComponentInput = {
 };
 
 export type LetteringInput = {
-	techniqueId: string;
+	techniqueId?: string;
 	colorId?: string;
 	fontId?: string;
 	text: string;
@@ -772,7 +772,7 @@ export type DeleteLineItemInput = {
 export type AddLetteringInput = {
 	packageId: string;
 	optionId: string;
-	techniqueId: string;
+	techniqueId?: string;
 	colorId?: string;
 	fontId?: string;
 	text: string;
@@ -786,7 +786,7 @@ export type UpdateLetteringInput = {
 	packageId: string;
 	optionId: string;
 	itemId: string;
-	techniqueId?: string;
+	techniqueId?: string | null;
 	colorId?: string | null;
 	fontId?: string | null;
 	text?: string;
