@@ -344,16 +344,12 @@ export function LetteringSection({
 					<Table>
 						<TableHeader>
 							<TableRow>
-								<TableHead>Component</TableHead>
-								<TableHead>Technique</TableHead>
-								<TableHead>Color</TableHead>
-								<TableHead>Placement</TableHead>
-								<TableHead>Text</TableHead>
-								<TableHead className="text-center w-16">Letters</TableHead>
-								<TableHead className="text-right w-28">Cost/Letter</TableHead>
-								<TableHead className="text-center w-24">Markup</TableHead>
-								<TableHead className="text-right w-24">Retail</TableHead>
-								<TableHead className="text-right w-24">Total</TableHead>
+								<TableHead>Inscription</TableHead>
+								<TableHead className="text-center w-16 whitespace-nowrap">Letters</TableHead>
+								<TableHead className="text-right w-28 whitespace-nowrap">Cost/Letter</TableHead>
+								<TableHead className="text-center w-24 whitespace-nowrap">Markup</TableHead>
+								<TableHead className="text-right w-24 whitespace-nowrap">Retail</TableHead>
+								<TableHead className="text-right w-24 whitespace-nowrap">Total</TableHead>
 								{canEditPricing && <TableHead className="w-[80px]"></TableHead>}
 							</TableRow>
 						</TableHeader>
@@ -364,74 +360,73 @@ export function LetteringSection({
 										// Edit mode
 										<>
 											<TableCell>
-												<Select
-													value={editQuoteComponentId || '_none'}
-													onValueChange={(v) => setEditQuoteComponentId(v === '_none' ? '' : v)}
-												>
-													<SelectTrigger className="h-8">
-														<SelectValue />
-													</SelectTrigger>
-													<SelectContent>
-														<SelectItem value="_none">Not specified</SelectItem>
-														{componentOptions.map((component) => (
-															<SelectItem key={component.id} value={component.id}>
-																{component.label}
-															</SelectItem>
-														))}
-													</SelectContent>
-												</Select>
-											</TableCell>
-											<TableCell>
-												<Select
-													value={editTechniqueId || '_none'}
-													onValueChange={(v) => setEditTechniqueId(v === '_none' ? '' : v)}
-												>
-													<SelectTrigger className="h-8">
-														<SelectValue placeholder="Not specified" />
-													</SelectTrigger>
-													<SelectContent>
-														<SelectItem value="_none">Not specified</SelectItem>
-														{activeTechniques.map((t) => (
-															<SelectItem key={t.id} value={t.id}>
-																{t.name}
-															</SelectItem>
-														))}
-													</SelectContent>
-												</Select>
-											</TableCell>
-											<TableCell>
-												<Select
-													value={editColorId || '_none'}
-													onValueChange={(v) => setEditColorId(v === '_none' ? '' : v)}
-												>
-													<SelectTrigger className="h-8">
-														<SelectValue />
-													</SelectTrigger>
-													<SelectContent>
-														<SelectItem value="_none">-</SelectItem>
-														{activeColors.map((c) => (
-															<SelectItem key={c.id} value={c.id}>
-																{c.name}
-															</SelectItem>
-														))}
-													</SelectContent>
-												</Select>
-											</TableCell>
-											<TableCell>
-												<Input
-													value={editPlacementDescription}
-													onChange={(e) => setEditPlacementDescription(e.target.value)}
-													className="h-8"
-													placeholder="Placement"
-												/>
-											</TableCell>
-											<TableCell>
-												<div className="space-y-1">
+												<div className="space-y-2">
 													<Input
 														value={editText}
 														onChange={(e) => setEditText(e.target.value)}
 														className="h-8"
+														placeholder="Inscription text"
 													/>
+													<div className="grid grid-cols-2 gap-2">
+														<Select
+															value={editQuoteComponentId || '_none'}
+															onValueChange={(v) =>
+																setEditQuoteComponentId(v === '_none' ? '' : v)
+															}
+														>
+															<SelectTrigger className="h-8">
+																<SelectValue placeholder="Component" />
+															</SelectTrigger>
+															<SelectContent>
+																<SelectItem value="_none">No component</SelectItem>
+																{componentOptions.map((component) => (
+																	<SelectItem key={component.id} value={component.id}>
+																		{component.label}
+																	</SelectItem>
+																))}
+															</SelectContent>
+														</Select>
+														<Select
+															value={editTechniqueId || '_none'}
+															onValueChange={(v) =>
+																setEditTechniqueId(v === '_none' ? '' : v)
+															}
+														>
+															<SelectTrigger className="h-8">
+																<SelectValue placeholder="Technique" />
+															</SelectTrigger>
+															<SelectContent>
+																<SelectItem value="_none">No technique</SelectItem>
+																{activeTechniques.map((t) => (
+																	<SelectItem key={t.id} value={t.id}>
+																		{t.name}
+																	</SelectItem>
+																))}
+															</SelectContent>
+														</Select>
+														<Select
+															value={editColorId || '_none'}
+															onValueChange={(v) => setEditColorId(v === '_none' ? '' : v)}
+														>
+															<SelectTrigger className="h-8">
+																<SelectValue placeholder="Color" />
+															</SelectTrigger>
+															<SelectContent>
+																<SelectItem value="_none">No color</SelectItem>
+																{activeColors.map((c) => (
+																	<SelectItem key={c.id} value={c.id}>
+																		{c.name}
+																	</SelectItem>
+																))}
+															</SelectContent>
+														</Select>
+														<Input
+															value={editPlacementDescription}
+															onChange={(e) => setEditPlacementDescription(e.target.value)}
+															className="h-8"
+															placeholder="Placement"
+														/>
+													</div>
 													<Select
 														value={editFontId || '_none'}
 														onValueChange={(v) => setEditFontId(v === '_none' ? '' : v)}
@@ -450,7 +445,7 @@ export function LetteringSection({
 													</Select>
 												</div>
 											</TableCell>
-											<TableCell className="text-center">
+											<TableCell className="text-center tabular-nums">
 												{editText.replace(/\s/g, '').length}
 											</TableCell>
 											<TableCell colSpan={4}></TableCell>
@@ -483,19 +478,35 @@ export function LetteringSection({
 									) : (
 										// Display mode
 										<>
-											<TableCell className="text-sm">
-												{componentOptions.find(
-													(component) => component.id === lett.quoteComponentId,
-												)?.label || '-'}
+											<TableCell>
+												<div>
+													<p>{lett.text || '-'}</p>
+													{(() => {
+														const parts = [
+															componentOptions.find(
+																(c) => c.id === lett.quoteComponentId,
+															)?.label,
+															lett.techniqueName,
+															lett.colorName,
+															lett.placementDescription,
+														].filter(Boolean);
+														return parts.length > 0 ? (
+															<p className="text-sm text-muted-foreground mt-1">
+																{parts.join(' \u00b7 ')}
+															</p>
+														) : null;
+													})()}
+													{!lett.techniqueId && (
+														<p className="text-sm text-amber-600 mt-1">
+															No technique set — pricing unavailable
+														</p>
+													)}
+												</div>
 											</TableCell>
-											<TableCell className="font-medium">{lett.techniqueName || '-'}</TableCell>
-											<TableCell>{lett.colorName || '-'}</TableCell>
-											<TableCell className="max-w-[180px] truncate">
-												{lett.placementDescription || '-'}
+											<TableCell className="text-center tabular-nums">
+												{lett.letterCount}
 											</TableCell>
-											<TableCell className="max-w-[200px] truncate">{lett.text || '-'}</TableCell>
-											<TableCell className="text-center">{lett.letterCount}</TableCell>
-											<TableCell className="text-right">
+											<TableCell className="text-right tabular-nums">
 												<EditableNumber
 													value={parseFloat(lett.supplierCost)}
 													onSave={async (value) => {
@@ -510,7 +521,7 @@ export function LetteringSection({
 													isCurrency
 												/>
 											</TableCell>
-											<TableCell className="text-center text-muted-foreground text-sm">
+											<TableCell className="text-center text-muted-foreground text-sm tabular-nums">
 												<EditableNumber
 													value={parseFloat(lett.markupPercent)}
 													onSave={async (value) => {
@@ -527,8 +538,10 @@ export function LetteringSection({
 													formatValue={(val) => `${val.toFixed(0)}%`}
 												/>
 											</TableCell>
-											<TableCell className="text-right">{formatCurrency(lett.unitPrice)}</TableCell>
-											<TableCell className="text-right font-medium">
+											<TableCell className="text-right tabular-nums">
+												{formatCurrency(lett.unitPrice)}
+											</TableCell>
+											<TableCell className="text-right font-medium tabular-nums">
 												{formatCurrency(lett.lineTotal)}
 											</TableCell>
 											{canEditPricing && (
@@ -538,19 +551,19 @@ export function LetteringSection({
 															variant="ghost"
 															size="sm"
 															onClick={() => handleStartEdit(lett)}
-															className="h-8 w-8 p-0"
+															className="size-8 p-0"
 															title="Edit"
 														>
-															<Pencil className="h-4 w-4" />
+															<Pencil className="size-4" />
 														</Button>
 														<Button
 															variant="ghost"
 															size="sm"
 															onClick={() => setDeleteConfirmId(lett.id)}
-															className="h-8 w-8 p-0 text-muted-foreground/60 hover:text-destructive transition-colors"
+															className="size-8 p-0 text-muted-foreground/60 hover:text-destructive transition-colors"
 															title="Delete"
 														>
-															<Trash2 className="h-4 w-4" />
+															<Trash2 className="size-4" />
 														</Button>
 													</div>
 												</TableCell>
