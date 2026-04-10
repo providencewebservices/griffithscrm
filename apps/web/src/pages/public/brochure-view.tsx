@@ -308,7 +308,7 @@ export function PublicBrochureViewPage() {
 			</div>
 
 			{/* Sticky bottom bar */}
-			<div className="fixed bottom-0 left-0 right-0 z-10 bg-[#1b294b] text-white shadow-2xl">
+			<div className="fixed bottom-0 left-0 right-0 z-10 bg-[#191d24] text-white shadow-2xl">
 				<div className="max-w-5xl mx-auto px-4 py-4">
 					{isReady ? (
 						<div className="text-center space-y-3">
@@ -348,7 +348,7 @@ export function PublicBrochureViewPage() {
 								<AlertDialogTrigger asChild>
 									<Button
 										size="lg"
-										className="w-full sm:w-auto bg-white text-[#1b294b] hover:bg-white/90"
+										className="w-full sm:w-auto bg-white text-[#191d24] hover:bg-white/90"
 									>
 										<MessageSquare className="size-4 mr-2" />
 										I'm Ready to Discuss
