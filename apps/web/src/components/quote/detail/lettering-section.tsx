@@ -62,12 +62,16 @@ export function LetteringSection({
 	const [newTechniqueId, setNewTechniqueId] = useState('');
 	const [newColorId, setNewColorId] = useState('');
 	const [newFontId, setNewFontId] = useState('');
+	const [newQuoteComponentId, setNewQuoteComponentId] = useState('');
+	const [newPlacementDescription, setNewPlacementDescription] = useState('');
 	const [newText, setNewText] = useState('');
 
 	// Edit form state
 	const [editTechniqueId, setEditTechniqueId] = useState('');
 	const [editColorId, setEditColorId] = useState('');
 	const [editFontId, setEditFontId] = useState('');
+	const [editQuoteComponentId, setEditQuoteComponentId] = useState('');
+	const [editPlacementDescription, setEditPlacementDescription] = useState('');
 	const [editText, setEditText] = useState('');
 
 	// Fetch techniques, colors, and fonts
@@ -78,6 +82,13 @@ export function LetteringSection({
 	const activeTechniques = techniques?.filter((t) => t.isActive) || [];
 	const activeColors = colors?.filter((c) => c.isActive) || [];
 	const activeFonts = fontsList?.filter((f) => f.isActive) || [];
+	const componentOptions = option.components.map((component, index) => ({
+		id: component.id,
+		label: `Component ${index + 1}: ${component.componentType
+			.split('_')
+			.map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+			.join(' ')}`,
+	}));
 
 	const handleAddLettering = async () => {
 		if (!newTechniqueId || !newText.trim()) return;
@@ -88,6 +99,8 @@ export function LetteringSection({
 			techniqueId: newTechniqueId,
 			colorId: newColorId || undefined,
 			fontId: newFontId || undefined,
+			quoteComponentId: newQuoteComponentId || undefined,
+			placementDescription: newPlacementDescription.trim() || undefined,
 			text: newText.trim(),
 		});
 
@@ -95,6 +108,8 @@ export function LetteringSection({
 		setNewTechniqueId('');
 		setNewColorId('');
 		setNewFontId('');
+		setNewQuoteComponentId('');
+		setNewPlacementDescription('');
 		setNewText('');
 		setShowAddForm(false);
 	};
@@ -104,6 +119,8 @@ export function LetteringSection({
 		setEditTechniqueId(lett.techniqueId || '');
 		setEditColorId(lett.colorId || '');
 		setEditFontId(lett.fontId || '');
+		setEditQuoteComponentId(lett.quoteComponentId || '');
+		setEditPlacementDescription(lett.placementDescription || '');
 		setEditText(lett.text || '');
 	};
 
@@ -117,6 +134,8 @@ export function LetteringSection({
 			techniqueId: editTechniqueId,
 			colorId: editColorId || null,
 			fontId: editFontId || null,
+			quoteComponentId: editQuoteComponentId || null,
+			placementDescription: editPlacementDescription.trim() || null,
 			text: editText.trim(),
 		});
 
@@ -128,6 +147,8 @@ export function LetteringSection({
 		setEditTechniqueId('');
 		setEditColorId('');
 		setEditFontId('');
+		setEditQuoteComponentId('');
+		setEditPlacementDescription('');
 		setEditText('');
 	};
 
@@ -158,6 +179,25 @@ export function LetteringSection({
 			{showAddForm && canEditPricing && (
 				<div className="border rounded-lg p-4 mb-4 bg-muted/50">
 					<div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+						<div>
+							<Label className="text-sm mb-1 block">Component</Label>
+							<Select
+								value={newQuoteComponentId || '_none'}
+								onValueChange={(v) => setNewQuoteComponentId(v === '_none' ? '' : v)}
+							>
+								<SelectTrigger>
+									<SelectValue placeholder="Not specified" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="_none">Not specified</SelectItem>
+									{componentOptions.map((component) => (
+										<SelectItem key={component.id} value={component.id}>
+											{component.label}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</div>
 						<div>
 							<Label className="text-sm mb-1 block">Technique *</Label>
 							<Select value={newTechniqueId} onValueChange={setNewTechniqueId}>
@@ -212,6 +252,14 @@ export function LetteringSection({
 							</Select>
 						</div>
 						<div className="md:col-span-3">
+							<Label className="text-sm mb-1 block">Placement Description</Label>
+							<Input
+								value={newPlacementDescription}
+								onChange={(e) => setNewPlacementDescription(e.target.value)}
+								placeholder="Describe where the inscription should go"
+							/>
+						</div>
+						<div className="md:col-span-3">
 							<Label className="text-sm mb-1 block">
 								Text * ({newText.replace(/\s/g, '').length} letters)
 							</Label>
@@ -243,6 +291,8 @@ export function LetteringSection({
 								setNewTechniqueId('');
 								setNewColorId('');
 								setNewFontId('');
+								setNewQuoteComponentId('');
+								setNewPlacementDescription('');
 								setNewText('');
 							}}
 						>
@@ -290,8 +340,10 @@ export function LetteringSection({
 					<Table>
 						<TableHeader>
 							<TableRow>
+								<TableHead>Component</TableHead>
 								<TableHead>Technique</TableHead>
 								<TableHead>Color</TableHead>
+								<TableHead>Placement</TableHead>
 								<TableHead>Text</TableHead>
 								<TableHead className="text-center w-16">Letters</TableHead>
 								<TableHead className="text-right w-28">Cost/Letter</TableHead>
@@ -307,6 +359,24 @@ export function LetteringSection({
 									{editingId === lett.id ? (
 										// Edit mode
 										<>
+											<TableCell>
+												<Select
+													value={editQuoteComponentId || '_none'}
+													onValueChange={(v) => setEditQuoteComponentId(v === '_none' ? '' : v)}
+												>
+													<SelectTrigger className="h-8">
+														<SelectValue />
+													</SelectTrigger>
+													<SelectContent>
+														<SelectItem value="_none">Not specified</SelectItem>
+														{componentOptions.map((component) => (
+															<SelectItem key={component.id} value={component.id}>
+																{component.label}
+															</SelectItem>
+														))}
+													</SelectContent>
+												</Select>
+											</TableCell>
 											<TableCell>
 												<Select value={editTechniqueId} onValueChange={setEditTechniqueId}>
 													<SelectTrigger className="h-8">
@@ -340,6 +410,14 @@ export function LetteringSection({
 												</Select>
 											</TableCell>
 											<TableCell>
+												<Input
+													value={editPlacementDescription}
+													onChange={(e) => setEditPlacementDescription(e.target.value)}
+													className="h-8"
+													placeholder="Placement"
+												/>
+											</TableCell>
+											<TableCell>
 												<div className="space-y-1">
 													<Input
 														value={editText}
@@ -367,7 +445,7 @@ export function LetteringSection({
 											<TableCell className="text-center">
 												{editText.replace(/\s/g, '').length}
 											</TableCell>
-											<TableCell colSpan={3}></TableCell>
+											<TableCell colSpan={4}></TableCell>
 											<TableCell className="text-right">
 												<div className="flex gap-1 justify-end">
 													<Button
@@ -401,8 +479,16 @@ export function LetteringSection({
 									) : (
 										// Display mode
 										<>
+											<TableCell className="text-sm">
+												{componentOptions.find(
+													(component) => component.id === lett.quoteComponentId,
+												)?.label || '-'}
+											</TableCell>
 											<TableCell className="font-medium">{lett.techniqueName || '-'}</TableCell>
 											<TableCell>{lett.colorName || '-'}</TableCell>
+											<TableCell className="max-w-[180px] truncate">
+												{lett.placementDescription || '-'}
+											</TableCell>
 											<TableCell className="max-w-[200px] truncate">{lett.text || '-'}</TableCell>
 											<TableCell className="text-center">{lett.letterCount}</TableCell>
 											<TableCell className="text-right">

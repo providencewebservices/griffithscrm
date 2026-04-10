@@ -34,6 +34,7 @@ type PublicOption = {
 	flowerHoles: string | null;
 	product: { name: string; imageUrl: string | null } | null;
 	components: {
+		id: string;
 		componentType: string;
 		height: string | null;
 		width: string | null;
@@ -45,7 +46,8 @@ type PublicOption = {
 		finishName: string | null;
 	}[];
 	lettering: {
-		text: string;
+		quoteComponentId: string | null;
+		text: string | null;
 		letterCount: number;
 		unitPrice: string;
 		lineTotal: string;
@@ -54,6 +56,7 @@ type PublicOption = {
 		fontId: string | null;
 		fontName: string | null;
 		fontS3Key: string | null;
+		placementDescription: string | null;
 	}[];
 	sundries: {
 		quantity: number;
@@ -170,6 +173,7 @@ function mapToDisplayOptions(
 		product: opt.product,
 		components: opt.components.map((c, idx) => ({
 			key: `comp-${idx}`,
+			componentId: c.id,
 			componentType: c.componentType,
 			height: c.height,
 			width: c.width,
@@ -179,6 +183,7 @@ function mapToDisplayOptions(
 		})),
 		lettering: opt.lettering.map((l, idx) => ({
 			key: `lett-${idx}`,
+			quoteComponentId: l.quoteComponentId,
 			text: l.text,
 			letterCount: l.letterCount,
 			techniqueName: l.techniqueName,
@@ -186,6 +191,7 @@ function mapToDisplayOptions(
 			fontId: l.fontId,
 			fontName: l.fontName,
 			fontS3Key: l.fontS3Key,
+			placementDescription: l.placementDescription,
 		})),
 		sundries: opt.sundries.map((s, idx) => ({
 			key: `sund-${idx}`,
@@ -314,9 +320,7 @@ export function PublicPackageViewPage() {
 					</CardHeader>
 					<CardContent>
 						<p className="text-muted-foreground">
-							{error instanceof Error
-								? error.message
-								: 'This link may be invalid or expired.'}
+							{error instanceof Error ? error.message : 'This link may be invalid or expired.'}
 						</p>
 					</CardContent>
 				</Card>
@@ -334,16 +338,13 @@ export function PublicPackageViewPage() {
 
 	const displayOptions = mapToDisplayOptions(rawOptions, pkg.acceptedOptionId);
 
-	const effectiveSelection =
-		isSingleOption
-			? rawOptions[0].id
-			: selectedOption ?? rawOptions[0]?.id ?? null;
+	const effectiveSelection = isSingleOption
+		? rawOptions[0].id
+		: (selectedOption ?? rawOptions[0]?.id ?? null);
 
 	const acceptedOption = rawOptions.find((o) => o.id === pkg.acceptedOptionId);
 
-	const customerName = customer
-		? `${customer.firstName} ${customer.lastName}`
-		: 'Customer';
+	const customerName = customer ? `${customer.firstName} ${customer.lastName}` : 'Customer';
 
 	// --- Status banner ---
 
@@ -357,10 +358,8 @@ export function PublicPackageViewPage() {
 							<div>
 								<p className="font-medium text-stone-800 print:text-foreground">
 									You accepted{' '}
-									{isSingleOption
-										? 'this quotation'
-										: acceptedOption.optionLabel || 'an option'}{' '}
-									on {formatDate(pkg.customerDecisionAt)}
+									{isSingleOption ? 'this quotation' : acceptedOption.optionLabel || 'an option'} on{' '}
+									{formatDate(pkg.customerDecisionAt)}
 								</p>
 								<p className="text-stone-600 text-sm mt-1 print:text-muted-foreground">
 									Thank you for your response. We will be in touch shortly.
@@ -379,12 +378,11 @@ export function PublicPackageViewPage() {
 							<XCircle className="h-5 w-5 text-stone-400 mt-0.5 print:text-foreground" />
 							<div>
 								<p className="font-medium text-stone-800 print:text-foreground">
-									You declined this quotation on{' '}
-									{formatDate(pkg.customerDecisionAt)}
+									You declined this quotation on {formatDate(pkg.customerDecisionAt)}
 								</p>
 								<p className="text-stone-600 text-sm mt-1 print:text-muted-foreground">
-									Thank you for letting us know. Please don't hesitate to get
-									in touch if we can help.
+									Thank you for letting us know. Please don't hesitate to get in touch if we can
+									help.
 								</p>
 							</div>
 						</div>
@@ -397,8 +395,8 @@ export function PublicPackageViewPage() {
 				<div className="px-10 sm:px-14 pb-6">
 					<div className="bg-stone-50 border border-stone-200 rounded-lg p-4 print:bg-white print:border-gray-300">
 						<p className="text-stone-700 text-sm print:text-foreground">
-							This quotation expired on {formatDate(pkg.validUntil)}. Please contact
-							us if you would still like to proceed.
+							This quotation expired on {formatDate(pkg.validUntil)}. Please contact us if you would
+							still like to proceed.
 						</p>
 					</div>
 				</div>
@@ -435,16 +433,14 @@ export function PublicPackageViewPage() {
 						onClick={() => setShowAcceptDialog(true)}
 						disabled={!effectiveSelection || respondMutation.isPending}
 					>
-						{respondMutation.isPending && (
-							<Loader2 className="h-4 w-4 mr-2 animate-spin" />
-						)}
+						{respondMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
 						{isSingleOption
 							? 'Proceed with This Quotation'
 							: `Proceed with ${getOptionLabel(rawOptions.find((o) => o.id === effectiveSelection)!)}`}
 					</Button>
 					<p className="text-sm text-muted-foreground text-center max-w-md">
-						Once you proceed, we will confirm the details and arrange next steps —
-						typically within two working days.
+						Once you proceed, we will confirm the details and arrange next steps — typically within
+						two working days.
 					</p>
 					<button
 						type="button"
@@ -501,17 +497,12 @@ export function PublicPackageViewPage() {
 									<strong>
 										{isSingleOption
 											? 'this quotation'
-											: getOptionLabel(
-													rawOptions.find(
-														(o) => o.id === effectiveSelection,
-													)!,
-												)}
+											: getOptionLabel(rawOptions.find((o) => o.id === effectiveSelection)!)}
 									</strong>{' '}
 									for{' '}
 									<strong>
 										{formatCurrency(
-											rawOptions.find((o) => o.id === effectiveSelection)
-												?.total || '0',
+											rawOptions.find((o) => o.id === effectiveSelection)?.total || '0',
 										)}
 									</strong>
 									. We will be in touch to discuss next steps.
@@ -531,19 +522,11 @@ export function PublicPackageViewPage() {
 						</div>
 					</div>
 					<DialogFooter>
-						<Button
-							variant="outline"
-							onClick={() => setShowAcceptDialog(false)}
-						>
+						<Button variant="outline" onClick={() => setShowAcceptDialog(false)}>
 							Cancel
 						</Button>
-						<Button
-							onClick={handleAccept}
-							disabled={respondMutation.isPending}
-						>
-							{respondMutation.isPending && (
-								<Loader2 className="h-4 w-4 mr-2 animate-spin" />
-							)}
+						<Button onClick={handleAccept} disabled={respondMutation.isPending}>
+							{respondMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
 							Confirm Acceptance
 						</Button>
 					</DialogFooter>
@@ -556,8 +539,8 @@ export function PublicPackageViewPage() {
 					<DialogHeader>
 						<DialogTitle>Decline Quotation</DialogTitle>
 						<DialogDescription>
-							We understand — and we're happy to help however we can. If you'd like
-							to discuss your options, please don't hesitate to get in touch.
+							We understand — and we're happy to help however we can. If you'd like to discuss your
+							options, please don't hesitate to get in touch.
 						</DialogDescription>
 					</DialogHeader>
 					<div className="space-y-4 py-4">
@@ -572,10 +555,7 @@ export function PublicPackageViewPage() {
 						</div>
 					</div>
 					<DialogFooter>
-						<Button
-							variant="outline"
-							onClick={() => setShowRejectDialog(false)}
-						>
+						<Button variant="outline" onClick={() => setShowRejectDialog(false)}>
 							Go Back
 						</Button>
 						<Button
@@ -583,9 +563,7 @@ export function PublicPackageViewPage() {
 							onClick={handleReject}
 							disabled={respondMutation.isPending}
 						>
-							{respondMutation.isPending && (
-								<Loader2 className="h-4 w-4 mr-2 animate-spin" />
-							)}
+							{respondMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
 							Decline Quotation
 						</Button>
 					</DialogFooter>
@@ -598,8 +576,8 @@ export function PublicPackageViewPage() {
 					<DialogHeader>
 						<DialogTitle>Your Notes</DialogTitle>
 						<DialogDescription>
-							Jot down any thoughts or questions. You can return to this page at any
-							time to make your decision.
+							Jot down any thoughts or questions. You can return to this page at any time to make
+							your decision.
 						</DialogDescription>
 					</DialogHeader>
 					<div className="space-y-4 py-4">
@@ -614,19 +592,11 @@ export function PublicPackageViewPage() {
 						</div>
 					</div>
 					<DialogFooter>
-						<Button
-							variant="outline"
-							onClick={() => setShowNotesDialog(false)}
-						>
+						<Button variant="outline" onClick={() => setShowNotesDialog(false)}>
 							Cancel
 						</Button>
-						<Button
-							onClick={handleSaveNotes}
-							disabled={notesMutation.isPending}
-						>
-							{notesMutation.isPending && (
-								<Loader2 className="h-4 w-4 mr-2 animate-spin" />
-							)}
+						<Button onClick={handleSaveNotes} disabled={notesMutation.isPending}>
+							{notesMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
 							Save Notes
 						</Button>
 					</DialogFooter>

@@ -22,10 +22,12 @@ export type JobQuoteComponent = {
 
 export type JobQuoteLettering = {
 	id: string;
+	quoteComponentId: string | null;
 	text: string | null;
 	letterCount: number;
 	techniqueName: string | null;
 	colorName: string | null;
+	placementDescription: string | null;
 };
 
 export type JobQuoteSundry = {

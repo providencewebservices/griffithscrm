@@ -1,0 +1,3 @@
+ALTER TABLE "quote_lettering" ADD COLUMN "quote_component_id" text;--> statement-breakpoint
+ALTER TABLE "quote_lettering" ADD COLUMN "placement_description" text;--> statement-breakpoint
+ALTER TABLE "quote_lettering" ADD CONSTRAINT "quote_lettering_quote_component_id_quote_components_id_fk" FOREIGN KEY ("quote_component_id") REFERENCES "public"."quote_components"("id") ON DELETE set null ON UPDATE no action;

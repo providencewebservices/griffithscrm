@@ -39,7 +39,8 @@ export function CustomerView({
 
 		return {
 			id: opt.id,
-			label: opt.quoteNumber || opt.optionLabel || `Option ${String.fromCharCode(65 + opt.optionOrder)}`,
+			label:
+				opt.quoteNumber || opt.optionLabel || `Option ${String.fromCharCode(65 + opt.optionOrder)}`,
 			total: opt.total,
 			subtotal: opt.subtotal,
 			vatAmount: opt.vatAmount,
@@ -48,6 +49,7 @@ export function CustomerView({
 			product: opt.product ? { name: opt.product.name, imageUrl: resolvedImageUrl } : null,
 			components: opt.components.map((c) => ({
 				key: c.id,
+				componentId: c.id,
 				componentType: c.componentType,
 				height: c.height,
 				width: c.width,
@@ -57,6 +59,7 @@ export function CustomerView({
 			})),
 			lettering: opt.lettering.map((l) => ({
 				key: l.id,
+				quoteComponentId: l.quoteComponentId,
 				text: l.text,
 				letterCount: l.letterCount,
 				techniqueName: l.techniqueName,
@@ -64,6 +67,7 @@ export function CustomerView({
 				fontId: l.fontId,
 				fontName: l.fontName,
 				fontS3Key: l.fontS3Key,
+				placementDescription: l.placementDescription,
 			})),
 			sundries: opt.sundries.map((s) => ({
 				key: s.id,

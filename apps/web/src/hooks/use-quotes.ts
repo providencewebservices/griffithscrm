@@ -43,11 +43,13 @@ export type QuoteComponent = {
 export type QuoteLettering = {
 	id: string;
 	quoteId: string;
+	quoteComponentId: string | null;
 	techniqueId: string | null;
 	colorId: string | null;
 	text: string | null;
 	letterCount: number;
 	appliesTo: string | null;
+	placementDescription: string | null;
 	supplierCost: string;
 	markupPercent: string;
 	unitPrice: string;
@@ -225,6 +227,7 @@ export type QuotePackageWithOptions = QuotePackage & {
 
 // Input types for creating/updating
 export type ComponentInput = {
+	clientId?: string;
 	componentType: ComponentType;
 	materialId: string;
 	finishId?: string;
@@ -238,8 +241,12 @@ export type ComponentInput = {
 export type LetteringInput = {
 	techniqueId: string;
 	colorId?: string;
+	fontId?: string;
 	text: string;
+	quoteComponentId?: string;
+	componentClientId?: string;
 	appliesTo?: 'new_memorial' | 'refurbishment' | 'both';
+	placementDescription?: string;
 	notes?: string;
 };
 
@@ -769,7 +776,9 @@ export type AddLetteringInput = {
 	colorId?: string;
 	fontId?: string;
 	text: string;
+	quoteComponentId?: string | null;
 	appliesTo?: 'new_memorial' | 'refurbishment' | 'both';
+	placementDescription?: string;
 	notes?: string;
 };
 
@@ -781,7 +790,9 @@ export type UpdateLetteringInput = {
 	colorId?: string | null;
 	fontId?: string | null;
 	text?: string;
+	quoteComponentId?: string | null;
 	appliesTo?: 'new_memorial' | 'refurbishment' | 'both';
+	placementDescription?: string | null;
 	notes?: string | null;
 	supplierCost?: number;
 	markupPercent?: number;
@@ -991,15 +1002,12 @@ async function addSundry({
 	quantity,
 	notes,
 }: AddSundryInput): Promise<QuotePackageWithOptions> {
-	const response = await fetch(
-		`${API_URL}/api/quotes/${packageId}/options/${optionId}/sundries`,
-		{
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			credentials: 'include',
-			body: JSON.stringify({ sundryId, quantity, notes }),
-		},
-	);
+	const response = await fetch(`${API_URL}/api/quotes/${packageId}/options/${optionId}/sundries`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		credentials: 'include',
+		body: JSON.stringify({ sundryId, quantity, notes }),
+	});
 
 	if (!response.ok) {
 		const error = await response.json();

@@ -63,8 +63,11 @@ import {
 	useDimensionCombosQuery,
 } from '@/hooks/use-dimension-combos';
 import { useFinishesQuery } from '@/hooks/use-finishes';
+import { useFontsQuery } from '@/hooks/use-fonts';
 import { useFuneralDirectorsQuery } from '@/hooks/use-funeral-directors';
 import { useJobsQuery } from '@/hooks/use-jobs';
+import { useLetteringColorsQuery } from '@/hooks/use-lettering-colors';
+import { useLetteringTechniquesQuery } from '@/hooks/use-lettering-techniques';
 import { useMaterialSectionsQuery } from '@/hooks/use-material-sections';
 import { useMaterialsQuery } from '@/hooks/use-materials';
 import { useMemorialSiteQuery, useMemorialSitesQuery } from '@/hooks/use-memorial-sites';
@@ -79,6 +82,7 @@ import {
 	type FlowerHoleChoice,
 	type FlowerTopColorChoice,
 	formatComponentType,
+	type LetteringInput,
 	type PayerType,
 	QUOTE_TYPE_DESCRIPTIONS,
 	QUOTE_TYPE_LABELS,
@@ -95,6 +99,10 @@ import { cn } from '@/lib/utils';
 
 // Types for form state
 type ComponentFormItem = ComponentInput & { id: string; sectionId?: string };
+type LetteringFormItem = Omit<LetteringInput, 'quoteComponentId' | 'componentClientId'> & {
+	id: string;
+	componentId?: string;
+};
 type SundryFormItem = SundryInput & { id: string };
 type EnquirySource = (typeof ENQUIRY_SOURCES)[number];
 
@@ -141,7 +149,6 @@ export function QuoteNewPage() {
 	const [memorialSiteComboOpen, setMemorialSiteComboOpen] = useState(false);
 	const [memorialLocation, setMemorialLocation] = useState<string>('');
 	const [source, setSource] = useState<EnquirySource | ''>('');
-	const [proposedInscription, setProposedInscription] = useState('');
 	const [existingMemorialDescription, setExistingMemorialDescription] = useState('');
 	const [relatedJobId, setRelatedJobId] = useState<string>('');
 	const [relatedJobComboOpen, setRelatedJobComboOpen] = useState(false);
@@ -181,6 +188,7 @@ export function QuoteNewPage() {
 
 	// Line items state
 	const [components, setComponents] = useState<ComponentFormItem[]>([]);
+	const [lettering, setLettering] = useState<LetteringFormItem[]>([]);
 	const [sundries, setSundries] = useState<SundryFormItem[]>([]);
 
 	const [mutationError, setMutationError] = useState<string | null>(null);
@@ -194,6 +202,9 @@ export function QuoteNewPage() {
 	const { data: materialSections } = useMaterialSectionsQuery();
 	const { data: allMaterials } = useMaterialsQuery();
 	const { data: finishes } = useFinishesQuery();
+	const { data: letteringTechniques } = useLetteringTechniquesQuery();
+	const { data: letteringColors } = useLetteringColorsQuery();
+	const { data: fonts } = useFontsQuery();
 	const { data: sundryItems } = useSundriesQuery();
 	const { data: funeralDirectors } = useFuneralDirectorsQuery();
 	const { data: memorialSites } = useMemorialSitesQuery();
@@ -205,6 +216,9 @@ export function QuoteNewPage() {
 		sectionConfig?.showRelatedJob ? { status: 'completed' } : undefined,
 	);
 	const completedJobs = completedJobsData?.jobs;
+	const activeLetteringTechniques = letteringTechniques?.filter((item) => item.isActive) || [];
+	const activeLetteringColors = letteringColors?.filter((item) => item.isActive) || [];
+	const activeFonts = fonts?.filter((item) => item.isActive) || [];
 
 	const createMutation = useCreateQuoteMutation();
 
@@ -330,6 +344,23 @@ export function QuoteNewPage() {
 		]);
 	};
 
+	const handleAddLettering = () => {
+		setLettering([
+			...lettering,
+			{
+				id: generateId(),
+				componentId: '',
+				techniqueId: '',
+				colorId: '',
+				fontId: '',
+				text: '',
+				placementDescription: '',
+				appliesTo: quoteType === 'refurbishment' ? 'refurbishment' : 'new_memorial',
+				notes: '',
+			},
+		]);
+	};
+
 	// Update handlers
 	const updateComponent = (id: string, updates: Partial<ComponentFormItem>) => {
 		setComponents(components.map((c) => (c.id === id ? { ...c, ...updates } : c)));
@@ -339,14 +370,35 @@ export function QuoteNewPage() {
 		setSundries(sundries.map((s) => (s.id === id ? { ...s, ...updates } : s)));
 	};
 
+	const updateLettering = (id: string, updates: Partial<LetteringFormItem>) => {
+		setLettering(lettering.map((item) => (item.id === id ? { ...item, ...updates } : item)));
+	};
+
 	// Remove handlers
 	const removeComponent = (id: string) => {
 		setComponents(components.filter((c) => c.id !== id));
+		setLettering((prev) =>
+			prev.map((item) => (item.componentId === id ? { ...item, componentId: '' } : item)),
+		);
 	};
 
 	const removeSundry = (id: string) => {
 		setSundries(sundries.filter((s) => s.id !== id));
 	};
+
+	const removeLettering = (id: string) => {
+		setLettering(lettering.filter((item) => item.id !== id));
+	};
+
+	useEffect(() => {
+		setLettering((prev) =>
+			prev.map((item) =>
+				item.componentId && !components.some((component) => component.id === item.componentId)
+					? { ...item, componentId: '' }
+					: item,
+			),
+		);
+	}, [components]);
 
 	// Clear sidebar fields when quote type changes and config hides them
 	useEffect(() => {
@@ -365,8 +417,8 @@ export function QuoteNewPage() {
 		if (sectionConfig?.showSundries && sundries.length > 0) {
 			items.push({ label: 'Sundries', value: String(sundries.length) });
 		}
-		if (sectionConfig?.showProposedInscription && proposedInscription) {
-			items.push({ label: 'Inscription', value: `${proposedInscription.length} chars` });
+		if (sectionConfig?.showLettering && lettering.length > 0) {
+			items.push({ label: 'Lettering', value: String(lettering.length) });
 		}
 		if (sectionConfig?.showProductSelection && productId) {
 			const product = productsData?.products?.find((p) => p.id === productId);
@@ -380,7 +432,7 @@ export function QuoteNewPage() {
 		sectionConfig,
 		components.length,
 		sundries.length,
-		proposedInscription,
+		lettering.length,
 		productId,
 		productsData,
 		existingMemorialDescription,
@@ -393,10 +445,11 @@ export function QuoteNewPage() {
 
 		// All sundries must have sundryId (if any added)
 		const sundriesValid = sundries.every((s) => s.sundryId);
+		const letteringValid = lettering.every((item) => item.techniqueId && item.text.trim());
 
 		// Line items are optional, but if added they must be complete
-		return componentsValid && sundriesValid;
-	}, [components, sundries]);
+		return componentsValid && sundriesValid && letteringValid;
+	}, [components, lettering, sundries]);
 
 	const handleSubmit = async () => {
 		setMutationError(null);
@@ -416,7 +469,6 @@ export function QuoteNewPage() {
 			memorialSiteId: memorialSiteId || undefined,
 			memorialLocation: memorialLocation || undefined,
 			source: source || undefined,
-			proposedInscription: proposedInscription || undefined,
 			existingMemorialDescription: existingMemorialDescription || undefined,
 			relatedJobId: relatedJobId || undefined,
 			inquiryId: inquiryId || undefined,
@@ -438,8 +490,17 @@ export function QuoteNewPage() {
 			intermentDate: intermentDate || undefined,
 			intermentTime: intermentTime || undefined,
 			components: components.map(({ id, sectionId, ...c }) => ({
+				clientId: id,
 				...c,
 				quantity: c.quantity || 1,
+			})),
+			lettering: lettering.map(({ id, componentId, ...item }) => ({
+				...item,
+				colorId: item.colorId || undefined,
+				fontId: item.fontId || undefined,
+				componentClientId: componentId || undefined,
+				placementDescription: item.placementDescription?.trim() || undefined,
+				text: item.text.trim(),
 			})),
 			sundries: sundries.map(({ id, ...s }) => ({
 				...s,
@@ -1297,33 +1358,191 @@ export function QuoteNewPage() {
 						</Card>
 					)}
 
-					{/* Proposed Inscription Card */}
-					{sectionConfig?.showProposedInscription && (
+					{/* Lettering Card */}
+					{sectionConfig?.showLettering && (
 						<Card>
 							<CardHeader>
-								<CardTitle>Proposed Inscription</CardTitle>
-								<CardDescription>
-									Enter the full text for the memorial inscription. Lettering details (technique,
-									color) can be added after creating the quote.
-								</CardDescription>
+								<div className="flex items-center justify-between">
+									<div>
+										<CardTitle>Lettering</CardTitle>
+										<CardDescription>
+											Add inscriptions for this quote. Component selection is optional.
+										</CardDescription>
+									</div>
+									<Button onClick={handleAddLettering}>
+										<Plus className="h-4 w-4 mr-2" />
+										Add Lettering
+									</Button>
+								</div>
 							</CardHeader>
 							<CardContent>
-								<div className="space-y-3">
-									<div className="flex items-center justify-between">
-										<span className="text-sm text-muted-foreground">
-											{proposedInscription
-												? `${proposedInscription.length} characters`
-												: 'No text entered'}
-										</span>
+								{lettering.length === 0 ? (
+									<div className="text-center py-8 text-muted-foreground border rounded-lg">
+										No lettering added yet.
 									</div>
-									<Textarea
-										value={proposedInscription}
-										onChange={(e) => setProposedInscription(e.target.value)}
-										placeholder="Enter the full text of the desired inscription..."
-										rows={4}
-										className="font-mono"
-									/>
-								</div>
+								) : (
+									<div className="space-y-4">
+										{lettering.map((item, index) => (
+											<div key={item.id} className="border rounded-lg p-4">
+												<div className="flex items-center justify-between mb-4">
+													<span className="font-medium">Lettering {index + 1}</span>
+													<Button
+														variant="ghost"
+														size="sm"
+														onClick={() => removeLettering(item.id)}
+													>
+														<Trash2 className="h-4 w-4" />
+													</Button>
+												</div>
+												<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+													<Field>
+														<FieldLabel>Component</FieldLabel>
+														<Select
+															value={item.componentId || NONE_VALUE}
+															onValueChange={(value) =>
+																updateLettering(item.id, {
+																	componentId: value === NONE_VALUE ? '' : value,
+																})
+															}
+														>
+															<SelectTrigger>
+																<SelectValue placeholder="Not specified" />
+															</SelectTrigger>
+															<SelectContent>
+																<SelectItem value={NONE_VALUE}>Not specified</SelectItem>
+																{components.map((component, componentIndex) => (
+																	<SelectItem key={component.id} value={component.id}>
+																		{`Component ${componentIndex + 1}: ${formatComponentType(component.componentType)}`}
+																	</SelectItem>
+																))}
+															</SelectContent>
+														</Select>
+													</Field>
+
+													<Field>
+														<FieldLabel>Technique *</FieldLabel>
+														<Select
+															value={item.techniqueId || NONE_VALUE}
+															onValueChange={(value) =>
+																updateLettering(item.id, {
+																	techniqueId: value === NONE_VALUE ? '' : value,
+																})
+															}
+														>
+															<SelectTrigger>
+																<SelectValue placeholder="Select technique" />
+															</SelectTrigger>
+															<SelectContent>
+																<SelectItem value={NONE_VALUE}>Select technique</SelectItem>
+																{activeLetteringTechniques.map((technique) => (
+																	<SelectItem key={technique.id} value={technique.id}>
+																		{technique.name}
+																	</SelectItem>
+																))}
+															</SelectContent>
+														</Select>
+													</Field>
+
+													<Field>
+														<FieldLabel>Color</FieldLabel>
+														<Select
+															value={item.colorId || NONE_VALUE}
+															onValueChange={(value) =>
+																updateLettering(item.id, {
+																	colorId: value === NONE_VALUE ? '' : value,
+																})
+															}
+														>
+															<SelectTrigger>
+																<SelectValue placeholder="No color" />
+															</SelectTrigger>
+															<SelectContent>
+																<SelectItem value={NONE_VALUE}>No color</SelectItem>
+																{activeLetteringColors.map((color) => (
+																	<SelectItem key={color.id} value={color.id}>
+																		{color.name}
+																	</SelectItem>
+																))}
+															</SelectContent>
+														</Select>
+													</Field>
+
+													<Field>
+														<FieldLabel>Font</FieldLabel>
+														<Select
+															value={item.fontId || NONE_VALUE}
+															onValueChange={(value) =>
+																updateLettering(item.id, {
+																	fontId: value === NONE_VALUE ? '' : value,
+																})
+															}
+														>
+															<SelectTrigger>
+																<SelectValue placeholder="Default font" />
+															</SelectTrigger>
+															<SelectContent>
+																<SelectItem value={NONE_VALUE}>Default font</SelectItem>
+																{activeFonts.map((font) => (
+																	<SelectItem key={font.id} value={font.id}>
+																		{font.name}
+																	</SelectItem>
+																))}
+															</SelectContent>
+														</Select>
+													</Field>
+
+													<Field>
+														<FieldLabel>Placement Description</FieldLabel>
+														<Input
+															value={item.placementDescription || ''}
+															onChange={(e) =>
+																updateLettering(item.id, {
+																	placementDescription: e.target.value,
+																})
+															}
+															placeholder="e.g. Left side of base"
+														/>
+													</Field>
+
+													<Field>
+														<FieldLabel>Applies To</FieldLabel>
+														<Select
+															value={item.appliesTo || 'new_memorial'}
+															onValueChange={(value) =>
+																updateLettering(item.id, {
+																	appliesTo: value as LetteringInput['appliesTo'],
+																})
+															}
+														>
+															<SelectTrigger>
+																<SelectValue />
+															</SelectTrigger>
+															<SelectContent>
+																<SelectItem value="new_memorial">New memorial</SelectItem>
+																<SelectItem value="refurbishment">Refurbishment</SelectItem>
+																<SelectItem value="both">Both</SelectItem>
+															</SelectContent>
+														</Select>
+													</Field>
+
+													<div className="md:col-span-3">
+														<Field>
+															<FieldLabel>
+																Text * ({item.text.replace(/\s/g, '').length} letters)
+															</FieldLabel>
+															<Textarea
+																value={item.text}
+																onChange={(e) => updateLettering(item.id, { text: e.target.value })}
+																placeholder="Enter inscription text..."
+																rows={3}
+															/>
+														</Field>
+													</div>
+												</div>
+											</div>
+										))}
+									</div>
+								)}
 							</CardContent>
 						</Card>
 					)}

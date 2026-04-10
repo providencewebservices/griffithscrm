@@ -239,10 +239,12 @@ async function getJobWithQuoteSummary(jobId: string, tenantId: string) {
 			})),
 			lettering: lettering.map((l) => ({
 				id: l.id,
+				quoteComponentId: l.quoteComponentId,
 				text: l.text,
 				letterCount: l.letterCount,
 				techniqueName: l.techniqueName,
 				colorName: l.colorName,
+				placementDescription: l.placementDescription,
 			})),
 			sundries: sundries.map((s) => ({
 				id: s.id,

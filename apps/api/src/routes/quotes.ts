@@ -410,6 +410,7 @@ function calculatePriceRange(options: { total: string }[]) {
 // ============================================
 
 const componentInputSchema = z.object({
+	clientId: z.string().optional(),
 	componentType: z.enum(COMPONENT_TYPES),
 	materialId: z.string().min(1),
 	finishId: z.string().optional(),
@@ -425,7 +426,10 @@ const letteringInputSchema = z.object({
 	colorId: z.string().optional(),
 	fontId: z.string().optional(),
 	text: z.string().min(1),
+	quoteComponentId: z.string().optional(),
+	componentClientId: z.string().optional(),
 	appliesTo: z.enum(LETTERING_COST_APPLIES_TO).default('new_memorial'),
+	placementDescription: z.string().optional(),
 	notes: z.string().optional(),
 });
 
@@ -532,7 +536,9 @@ const addLetteringItemSchema = z.object({
 	colorId: z.string().optional(),
 	fontId: z.string().optional(),
 	text: z.string().min(1),
+	quoteComponentId: z.string().optional().nullable(),
 	appliesTo: z.enum(LETTERING_COST_APPLIES_TO).optional().default('new_memorial'),
+	placementDescription: z.string().optional(),
 	notes: z.string().optional(),
 });
 
@@ -546,7 +552,9 @@ const updateLetteringItemSchema = z.object({
 	colorId: z.string().optional().nullable(),
 	fontId: z.string().optional().nullable(),
 	text: z.string().min(1).optional(),
+	quoteComponentId: z.string().optional().nullable(),
 	appliesTo: z.enum(LETTERING_COST_APPLIES_TO).optional(),
+	placementDescription: z.string().optional().nullable(),
 	notes: z.string().optional().nullable(),
 });
 
@@ -578,6 +586,209 @@ const listQuerySchema = z.object({
 	page: z.coerce.number().min(1).optional().default(1),
 	limit: z.coerce.number().min(1).max(100).optional().default(20),
 });
+
+type QuoteComponentInputPayload = z.infer<typeof componentInputSchema>;
+type QuoteLetteringInputPayload = z.infer<typeof letteringInputSchema>;
+
+async function findActiveLetteringCostRule({
+	techniqueId,
+	colorId,
+	appliesTo,
+}: {
+	techniqueId: string;
+	colorId?: string | null;
+	appliesTo: (typeof LETTERING_COST_APPLIES_TO)[number];
+}) {
+	let activeCostRule = null;
+
+	if (colorId) {
+		[activeCostRule] = await db
+			.select()
+			.from(letteringCosts)
+			.where(
+				and(
+					eq(letteringCosts.techniqueId, techniqueId),
+					eq(letteringCosts.colorId, colorId),
+					eq(letteringCosts.appliesTo, appliesTo),
+				),
+			)
+			.limit(1);
+
+		if (!activeCostRule) {
+			[activeCostRule] = await db
+				.select()
+				.from(letteringCosts)
+				.where(
+					and(
+						eq(letteringCosts.techniqueId, techniqueId),
+						eq(letteringCosts.colorId, colorId),
+						eq(letteringCosts.appliesTo, 'both'),
+					),
+				)
+				.limit(1);
+		}
+	}
+
+	if (!activeCostRule) {
+		const defaultRules = await db
+			.select()
+			.from(letteringCosts)
+			.where(
+				and(eq(letteringCosts.techniqueId, techniqueId), eq(letteringCosts.appliesTo, appliesTo)),
+			);
+		activeCostRule = defaultRules.find((r) => r.colorId === null) || null;
+	}
+
+	if (!activeCostRule) {
+		const bothRules = await db
+			.select()
+			.from(letteringCosts)
+			.where(
+				and(eq(letteringCosts.techniqueId, techniqueId), eq(letteringCosts.appliesTo, 'both')),
+			);
+		activeCostRule = bothRules.find((r) => r.colorId === null) || null;
+	}
+
+	return activeCostRule;
+}
+
+async function resolveLetteringQuoteComponentId({
+	quoteId,
+	quoteComponentId,
+	componentClientId,
+	componentIdMap,
+}: {
+	quoteId?: string;
+	quoteComponentId?: string | null;
+	componentClientId?: string;
+	componentIdMap?: Map<string, string>;
+}) {
+	if (componentClientId) {
+		const mappedId = componentIdMap?.get(componentClientId);
+		if (!mappedId) {
+			throw new Error(`Lettering component not found: ${componentClientId}`);
+		}
+		return mappedId;
+	}
+
+	if (!quoteComponentId) {
+		return null;
+	}
+
+	const mappedId = componentIdMap?.get(quoteComponentId);
+	if (mappedId) {
+		return mappedId;
+	}
+
+	if (!quoteId) {
+		throw new Error(`Lettering component not found: ${quoteComponentId}`);
+	}
+
+	const [component] = await db
+		.select({ id: quoteComponents.id })
+		.from(quoteComponents)
+		.where(and(eq(quoteComponents.id, quoteComponentId), eq(quoteComponents.quoteId, quoteId)))
+		.limit(1);
+
+	if (!component) {
+		throw new Error(`Lettering component not found: ${quoteComponentId}`);
+	}
+
+	return component.id;
+}
+
+async function processLetteringInput({
+	tenantId,
+	pricingSettings,
+	letteringInput,
+	quoteId,
+	componentIdMap,
+}: {
+	tenantId: string;
+	pricingSettings: Awaited<ReturnType<typeof getTenantPricingSettings>>;
+	letteringInput: QuoteLetteringInputPayload[];
+	quoteId?: string;
+	componentIdMap?: Map<string, string>;
+}) {
+	return Promise.all(
+		letteringInput.map(async (lett, index) => {
+			const [technique] = await db
+				.select()
+				.from(letteringTechniques)
+				.where(
+					and(
+						eq(letteringTechniques.id, lett.techniqueId),
+						eq(letteringTechniques.tenantId, tenantId),
+					),
+				)
+				.limit(1);
+
+			if (!technique) {
+				throw new Error(`Lettering technique not found: ${lett.techniqueId}`);
+			}
+
+			let color = null;
+			if (lett.colorId) {
+				[color] = await db
+					.select()
+					.from(letteringColors)
+					.where(and(eq(letteringColors.id, lett.colorId), eq(letteringColors.tenantId, tenantId)))
+					.limit(1);
+			}
+
+			let font = null;
+			if (lett.fontId) {
+				[font] = await db
+					.select()
+					.from(fonts)
+					.where(and(eq(fonts.id, lett.fontId), eq(fonts.tenantId, tenantId)))
+					.limit(1);
+			}
+
+			const activeCostRule = await findActiveLetteringCostRule({
+				techniqueId: lett.techniqueId,
+				colorId: lett.colorId,
+				appliesTo: lett.appliesTo,
+			});
+			const resolvedQuoteComponentId = await resolveLetteringQuoteComponentId({
+				quoteId,
+				quoteComponentId: lett.quoteComponentId,
+				componentClientId: lett.componentClientId,
+				componentIdMap,
+			});
+
+			const letterCount = lett.text.replace(/\s/g, '').length;
+			const freeLetters = activeCostRule?.freeLetters || 0;
+			const supplierCostPerLetter = parseFloat(activeCostRule?.pricePerLetter || '0');
+			const billableLetters = Math.max(0, letterCount - freeLetters);
+			const markupPercent = pricingSettings.defaultMarkupPercent;
+			const unitPrice = calculateRetailPrice(supplierCostPerLetter, markupPercent);
+			const lineTotal = billableLetters * unitPrice;
+
+			return {
+				id: crypto.randomUUID(),
+				quoteComponentId: resolvedQuoteComponentId,
+				techniqueId: lett.techniqueId,
+				colorId: lett.colorId || null,
+				fontId: font?.id || null,
+				fontName: font?.name || null,
+				fontS3Key: font?.s3Key || null,
+				text: lett.text,
+				letterCount,
+				appliesTo: lett.appliesTo,
+				placementDescription: lett.placementDescription?.trim() || null,
+				supplierCost: String(supplierCostPerLetter),
+				markupPercent: String(markupPercent),
+				unitPrice: String(unitPrice),
+				lineTotal: String(lineTotal),
+				techniqueName: technique.name,
+				colorName: color?.name || null,
+				notes: lett.notes || null,
+				sortOrder: index,
+			};
+		}),
+	);
+}
 
 // ============================================
 // ROUTES
@@ -918,7 +1129,7 @@ const quotesRoutes = new Hono()
 
 		// Process components and calculate prices
 		const processedComponents = await Promise.all(
-			data.components.map(async (comp, index) => {
+			data.components.map(async (comp: QuoteComponentInputPayload, index) => {
 				const [material] = await db
 					.select()
 					.from(materials)
@@ -945,6 +1156,7 @@ const quotesRoutes = new Hono()
 
 				return {
 					id: crypto.randomUUID(),
+					clientId: comp.clientId,
 					componentType: comp.componentType,
 					materialId: comp.materialId,
 					finishId: comp.finishId || null,
@@ -963,139 +1175,19 @@ const quotesRoutes = new Hono()
 				};
 			}),
 		);
+		const componentIdMap = new Map(
+			processedComponents.flatMap((comp) =>
+				comp.clientId ? [[comp.clientId, comp.id] as const] : [],
+			),
+		);
 
 		// Process lettering
-		const processedLettering = await Promise.all(
-			data.lettering.map(async (lett, index) => {
-				const [technique] = await db
-					.select()
-					.from(letteringTechniques)
-					.where(
-						and(
-							eq(letteringTechniques.id, lett.techniqueId),
-							eq(letteringTechniques.tenantId, tenantId),
-						),
-					)
-					.limit(1);
-
-				if (!technique) {
-					throw new Error(`Lettering technique not found: ${lett.techniqueId}`);
-				}
-
-				// Get color if specified
-				let color = null;
-				if (lett.colorId) {
-					[color] = await db
-						.select()
-						.from(letteringColors)
-						.where(
-							and(eq(letteringColors.id, lett.colorId), eq(letteringColors.tenantId, tenantId)),
-						)
-						.limit(1);
-				}
-
-				// Get font if specified
-				let font = null;
-				if (lett.fontId) {
-					[font] = await db
-						.select()
-						.from(fonts)
-						.where(and(eq(fonts.id, lett.fontId), eq(fonts.tenantId, tenantId)))
-						.limit(1);
-				}
-
-				// Find cost rule using priority: specific color + appliesTo > specific color + 'both' > default + appliesTo > default + 'both'
-				let activeCostRule = null;
-
-				// 1. Try specific color + specific appliesTo
-				if (lett.colorId) {
-					[activeCostRule] = await db
-						.select()
-						.from(letteringCosts)
-						.where(
-							and(
-								eq(letteringCosts.techniqueId, lett.techniqueId),
-								eq(letteringCosts.colorId, lett.colorId),
-								eq(letteringCosts.appliesTo, lett.appliesTo),
-							),
-						)
-						.limit(1);
-
-					// 2. Try specific color + 'both'
-					if (!activeCostRule) {
-						[activeCostRule] = await db
-							.select()
-							.from(letteringCosts)
-							.where(
-								and(
-									eq(letteringCosts.techniqueId, lett.techniqueId),
-									eq(letteringCosts.colorId, lett.colorId),
-									eq(letteringCosts.appliesTo, 'both'),
-								),
-							)
-							.limit(1);
-					}
-				}
-
-				// 3. Fall back to default (no color) + specific appliesTo
-				if (!activeCostRule) {
-					const defaultRules = await db
-						.select()
-						.from(letteringCosts)
-						.where(
-							and(
-								eq(letteringCosts.techniqueId, lett.techniqueId),
-								eq(letteringCosts.appliesTo, lett.appliesTo),
-							),
-						);
-					// Find the one with colorId = null (default)
-					activeCostRule = defaultRules.find((r) => r.colorId === null) || null;
-				}
-
-				// 4. Fall back to default (no color) + 'both'
-				if (!activeCostRule) {
-					const bothRules = await db
-						.select()
-						.from(letteringCosts)
-						.where(
-							and(
-								eq(letteringCosts.techniqueId, lett.techniqueId),
-								eq(letteringCosts.appliesTo, 'both'),
-							),
-						);
-					// Find the one with colorId = null (default)
-					activeCostRule = bothRules.find((r) => r.colorId === null) || null;
-				}
-
-				const letterCount = lett.text.replace(/\s/g, '').length; // Count non-space characters
-				const freeLetters = activeCostRule?.freeLetters || 0;
-				const supplierCostPerLetter = parseFloat(activeCostRule?.pricePerLetter || '0');
-				const billableLetters = Math.max(0, letterCount - freeLetters);
-				const markupPercent = pricingSettings.defaultMarkupPercent;
-				const unitPrice = calculateRetailPrice(supplierCostPerLetter, markupPercent);
-				const lineTotal = billableLetters * unitPrice;
-
-				return {
-					id: crypto.randomUUID(),
-					techniqueId: lett.techniqueId,
-					colorId: lett.colorId || null,
-					fontId: font?.id || null,
-					fontName: font?.name || null,
-					fontS3Key: font?.s3Key || null,
-					text: lett.text,
-					letterCount,
-					appliesTo: lett.appliesTo,
-					supplierCost: String(supplierCostPerLetter),
-					markupPercent: String(markupPercent),
-					unitPrice: String(unitPrice),
-					lineTotal: String(lineTotal),
-					techniqueName: technique.name,
-					colorName: color?.name || null,
-					notes: lett.notes || null,
-					sortOrder: index,
-				};
-			}),
-		);
+		const processedLettering = await processLetteringInput({
+			tenantId,
+			pricingSettings,
+			letteringInput: data.lettering,
+			componentIdMap,
+		});
 
 		// Process sundries
 		const processedSundries = await Promise.all(
@@ -1217,8 +1309,8 @@ const quotesRoutes = new Hono()
 		// Step 3: Insert line items for the first option
 		if (processedComponents.length > 0) {
 			await db.insert(quoteComponents).values(
-				processedComponents.map((c) => ({
-					...c,
+				processedComponents.map(({ clientId: _clientId, ...component }) => ({
+					...component,
 					quoteId,
 				})),
 			);
@@ -1247,12 +1339,7 @@ const quotesRoutes = new Hono()
 			await db
 				.update(inquiries)
 				.set({ status: 'converted', updatedAt: new Date() })
-				.where(
-					and(
-						eq(inquiries.id, data.inquiryId),
-						eq(inquiries.tenantId, tenantId),
-					),
-				);
+				.where(and(eq(inquiries.id, data.inquiryId), eq(inquiries.tenantId, tenantId)));
 		}
 
 		// Return full package with options
@@ -1290,6 +1377,7 @@ const quotesRoutes = new Hono()
 				data.components.length > 0
 					? data.components
 					: original.components.map((c) => ({
+							clientId: c.id,
 							componentType: c.componentType as (typeof COMPONENT_TYPES)[number],
 							materialId: c.materialId!,
 							finishId: c.finishId || undefined,
@@ -1305,8 +1393,12 @@ const quotesRoutes = new Hono()
 					: original.lettering.map((l) => ({
 							techniqueId: l.techniqueId!,
 							colorId: l.colorId || undefined,
+							fontId: l.fontId || undefined,
 							text: l.text!,
-							appliesTo: 'new_memorial' as const,
+							quoteComponentId: l.quoteComponentId || undefined,
+							appliesTo:
+								(l.appliesTo as (typeof LETTERING_COST_APPLIES_TO)[number]) || 'new_memorial',
+							placementDescription: l.placementDescription || undefined,
 							notes: l.notes || undefined,
 						})),
 			sundries:
@@ -1321,7 +1413,7 @@ const quotesRoutes = new Hono()
 
 		// Process all line items (same as create)
 		const processedComponents = await Promise.all(
-			mergedData.components.map(async (comp, index) => {
+			mergedData.components.map(async (comp: QuoteComponentInputPayload, index) => {
 				const [material] = await db
 					.select()
 					.from(materials)
@@ -1348,6 +1440,7 @@ const quotesRoutes = new Hono()
 
 				return {
 					id: crypto.randomUUID(),
+					clientId: comp.clientId,
 					componentType: comp.componentType,
 					materialId: comp.materialId,
 					finishId: comp.finishId || null,
@@ -1366,138 +1459,24 @@ const quotesRoutes = new Hono()
 				};
 			}),
 		);
+		const componentIdMap = new Map<string, string>();
+		processedComponents.forEach((comp) => {
+			if (comp.clientId) {
+				componentIdMap.set(comp.clientId, comp.id);
+			}
+		});
+		if (data.components.length === 0) {
+			original.components.forEach((component, index) => {
+				componentIdMap.set(component.id, processedComponents[index].id);
+			});
+		}
 
-		const processedLettering = await Promise.all(
-			mergedData.lettering.map(async (lett, index) => {
-				const [technique] = await db
-					.select()
-					.from(letteringTechniques)
-					.where(
-						and(
-							eq(letteringTechniques.id, lett.techniqueId),
-							eq(letteringTechniques.tenantId, tenantId),
-						),
-					)
-					.limit(1);
-
-				if (!technique) {
-					throw new Error(`Lettering technique not found: ${lett.techniqueId}`);
-				}
-
-				// Get color if specified
-				let color = null;
-				if (lett.colorId) {
-					[color] = await db
-						.select()
-						.from(letteringColors)
-						.where(
-							and(eq(letteringColors.id, lett.colorId), eq(letteringColors.tenantId, tenantId)),
-						)
-						.limit(1);
-				}
-
-				// Get font if specified
-				let font = null;
-				if (lett.fontId) {
-					[font] = await db
-						.select()
-						.from(fonts)
-						.where(and(eq(fonts.id, lett.fontId), eq(fonts.tenantId, tenantId)))
-						.limit(1);
-				}
-
-				// Find cost rule using priority: specific color + appliesTo > specific color + 'both' > default + appliesTo > default + 'both'
-				let activeCostRule = null;
-
-				// 1. Try specific color + specific appliesTo
-				if (lett.colorId) {
-					[activeCostRule] = await db
-						.select()
-						.from(letteringCosts)
-						.where(
-							and(
-								eq(letteringCosts.techniqueId, lett.techniqueId),
-								eq(letteringCosts.colorId, lett.colorId),
-								eq(letteringCosts.appliesTo, lett.appliesTo),
-							),
-						)
-						.limit(1);
-
-					// 2. Try specific color + 'both'
-					if (!activeCostRule) {
-						[activeCostRule] = await db
-							.select()
-							.from(letteringCosts)
-							.where(
-								and(
-									eq(letteringCosts.techniqueId, lett.techniqueId),
-									eq(letteringCosts.colorId, lett.colorId),
-									eq(letteringCosts.appliesTo, 'both'),
-								),
-							)
-							.limit(1);
-					}
-				}
-
-				// 3. Fall back to default (no color) + specific appliesTo
-				if (!activeCostRule) {
-					const defaultRules = await db
-						.select()
-						.from(letteringCosts)
-						.where(
-							and(
-								eq(letteringCosts.techniqueId, lett.techniqueId),
-								eq(letteringCosts.appliesTo, lett.appliesTo),
-							),
-						);
-					// Find the one with colorId = null (default)
-					activeCostRule = defaultRules.find((r) => r.colorId === null) || null;
-				}
-
-				// 4. Fall back to default (no color) + 'both'
-				if (!activeCostRule) {
-					const bothRules = await db
-						.select()
-						.from(letteringCosts)
-						.where(
-							and(
-								eq(letteringCosts.techniqueId, lett.techniqueId),
-								eq(letteringCosts.appliesTo, 'both'),
-							),
-						);
-					// Find the one with colorId = null (default)
-					activeCostRule = bothRules.find((r) => r.colorId === null) || null;
-				}
-
-				const letterCount = lett.text.replace(/\s/g, '').length;
-				const freeLetters = activeCostRule?.freeLetters || 0;
-				const supplierCostPerLetter = parseFloat(activeCostRule?.pricePerLetter || '0');
-				const billableLetters = Math.max(0, letterCount - freeLetters);
-				const markupPercent = pricingSettings.defaultMarkupPercent;
-				const unitPrice = calculateRetailPrice(supplierCostPerLetter, markupPercent);
-				const lineTotal = billableLetters * unitPrice;
-
-				return {
-					id: crypto.randomUUID(),
-					techniqueId: lett.techniqueId,
-					colorId: lett.colorId || null,
-					fontId: font?.id || null,
-					fontName: font?.name || null,
-					fontS3Key: font?.s3Key || null,
-					text: lett.text,
-					letterCount,
-					appliesTo: lett.appliesTo,
-					supplierCost: String(supplierCostPerLetter),
-					markupPercent: String(markupPercent),
-					unitPrice: String(unitPrice),
-					lineTotal: String(lineTotal),
-					techniqueName: technique.name,
-					colorName: color?.name || null,
-					notes: lett.notes || null,
-					sortOrder: index,
-				};
-			}),
-		);
+		const processedLettering = await processLetteringInput({
+			tenantId,
+			pricingSettings,
+			letteringInput: mergedData.lettering,
+			componentIdMap,
+		});
 
 		const processedSundries = await Promise.all(
 			mergedData.sundries.map(async (sund, index) => {
@@ -1590,8 +1569,8 @@ const quotesRoutes = new Hono()
 		// Insert line items
 		if (processedComponents.length > 0) {
 			await db.insert(quoteComponents).values(
-				processedComponents.map((c) => ({
-					...c,
+				processedComponents.map(({ clientId: _clientId, ...component }) => ({
+					...component,
 					quoteId,
 				})),
 			);
@@ -2666,6 +2645,7 @@ ${tenantName}
 		// Process components (from source or from data)
 		const componentsInput =
 			sourceOption?.components?.map((c) => ({
+				clientId: c.id,
 				componentType: c.componentType as (typeof COMPONENT_TYPES)[number],
 				materialId: c.materialId!,
 				finishId: c.finishId || undefined,
@@ -2677,7 +2657,7 @@ ${tenantName}
 			})) || data.components;
 
 		const processedComponents = await Promise.all(
-			componentsInput.map(async (comp, index) => {
+			componentsInput.map(async (comp: QuoteComponentInputPayload, index) => {
 				const [material] = await db
 					.select()
 					.from(materials)
@@ -2704,6 +2684,7 @@ ${tenantName}
 
 				return {
 					id: crypto.randomUUID(),
+					clientId: comp.clientId,
 					componentType: comp.componentType,
 					materialId: comp.materialId,
 					finishId: comp.finishId || null,
@@ -2722,6 +2703,15 @@ ${tenantName}
 				};
 			}),
 		);
+		const componentIdMap = new Map<string, string>();
+		processedComponents.forEach((comp) => {
+			if (comp.clientId) {
+				componentIdMap.set(comp.clientId, comp.id);
+			}
+		});
+		sourceOption?.components.forEach((component, index) => {
+			componentIdMap.set(component.id, processedComponents[index].id);
+		});
 
 		// Process lettering
 		const letteringInput =
@@ -2730,84 +2720,17 @@ ${tenantName}
 				colorId: l.colorId || undefined,
 				fontId: l.fontId || undefined,
 				text: l.text!,
+				quoteComponentId: l.quoteComponentId || undefined,
 				appliesTo: (l.appliesTo as (typeof LETTERING_COST_APPLIES_TO)[number]) || 'new_memorial',
+				placementDescription: l.placementDescription || undefined,
 				notes: l.notes || undefined,
 			})) || data.lettering;
-
-		const processedLettering = await Promise.all(
-			letteringInput.map(async (lett, index) => {
-				const [technique] = await db
-					.select()
-					.from(letteringTechniques)
-					.where(
-						and(
-							eq(letteringTechniques.id, lett.techniqueId),
-							eq(letteringTechniques.tenantId, tenantId),
-						),
-					)
-					.limit(1);
-
-				if (!technique) {
-					throw new Error(`Lettering technique not found: ${lett.techniqueId}`);
-				}
-
-				let color = null;
-				if (lett.colorId) {
-					[color] = await db
-						.select()
-						.from(letteringColors)
-						.where(
-							and(eq(letteringColors.id, lett.colorId), eq(letteringColors.tenantId, tenantId)),
-						)
-						.limit(1);
-				}
-
-				// Get font if specified
-				let font = null;
-				if (lett.fontId) {
-					[font] = await db
-						.select()
-						.from(fonts)
-						.where(and(eq(fonts.id, lett.fontId), eq(fonts.tenantId, tenantId)))
-						.limit(1);
-				}
-
-				// Find cost rule (simplified - use default)
-				const [activeCostRule] = await db
-					.select()
-					.from(letteringCosts)
-					.where(eq(letteringCosts.techniqueId, lett.techniqueId))
-					.limit(1);
-
-				const letterCount = lett.text.replace(/\s/g, '').length;
-				const freeLetters = activeCostRule?.freeLetters || 0;
-				const supplierCostPerLetter = parseFloat(activeCostRule?.pricePerLetter || '0');
-				const billableLetters = Math.max(0, letterCount - freeLetters);
-				const markupPercent = pricingSettings.defaultMarkupPercent;
-				const unitPrice = calculateRetailPrice(supplierCostPerLetter, markupPercent);
-				const lineTotal = billableLetters * unitPrice;
-
-				return {
-					id: crypto.randomUUID(),
-					techniqueId: lett.techniqueId,
-					colorId: lett.colorId || null,
-					fontId: font?.id || null,
-					fontName: font?.name || null,
-					fontS3Key: font?.s3Key || null,
-					text: lett.text,
-					letterCount,
-					appliesTo: lett.appliesTo,
-					supplierCost: String(supplierCostPerLetter),
-					markupPercent: String(markupPercent),
-					unitPrice: String(unitPrice),
-					lineTotal: String(lineTotal),
-					techniqueName: technique.name,
-					colorName: color?.name || null,
-					notes: lett.notes || null,
-					sortOrder: index,
-				};
-			}),
-		);
+		const processedLettering = await processLetteringInput({
+			tenantId,
+			pricingSettings,
+			letteringInput,
+			componentIdMap,
+		});
 
 		// Process sundries
 		const sundriesInput =
@@ -2905,7 +2828,12 @@ ${tenantName}
 
 		// Insert line items
 		if (processedComponents.length > 0) {
-			await db.insert(quoteComponents).values(processedComponents.map((c) => ({ ...c, quoteId })));
+			await db.insert(quoteComponents).values(
+				processedComponents.map(({ clientId: _clientId, ...component }) => ({
+					...component,
+					quoteId,
+				})),
+			);
 		}
 
 		if (processedLettering.length > 0) {
@@ -2976,6 +2904,7 @@ ${tenantName}
 		// Clone components
 		const processedComponents = sourceOption.components.map((c, index) => ({
 			id: crypto.randomUUID(),
+			clientId: c.id,
 			componentType: c.componentType,
 			materialId: c.materialId,
 			finishId: c.finishId,
@@ -2992,10 +2921,16 @@ ${tenantName}
 			notes: c.notes,
 			sortOrder: index,
 		}));
+		const componentIdMap = new Map(
+			sourceOption.components.map(
+				(component, index) => [component.id, processedComponents[index].id] as const,
+			),
+		);
 
 		// Clone lettering
 		const processedLettering = sourceOption.lettering.map((l, index) => ({
 			id: crypto.randomUUID(),
+			quoteComponentId: l.quoteComponentId ? componentIdMap.get(l.quoteComponentId) || null : null,
 			techniqueId: l.techniqueId,
 			colorId: l.colorId,
 			fontId: l.fontId,
@@ -3004,6 +2939,7 @@ ${tenantName}
 			text: l.text,
 			letterCount: l.letterCount,
 			appliesTo: l.appliesTo,
+			placementDescription: l.placementDescription,
 			supplierCost: l.supplierCost,
 			markupPercent: l.markupPercent,
 			unitPrice: l.unitPrice,
@@ -3062,7 +2998,12 @@ ${tenantName}
 
 		// Insert line items
 		if (processedComponents.length > 0) {
-			await db.insert(quoteComponents).values(processedComponents.map((c) => ({ ...c, quoteId })));
+			await db.insert(quoteComponents).values(
+				processedComponents.map(({ clientId: _clientId, ...component }) => ({
+					...component,
+					quoteId,
+				})),
+			);
 		}
 
 		if (processedLettering.length > 0) {
@@ -3206,66 +3147,31 @@ ${tenantName}
 					.limit(1);
 			}
 
-			// Find cost rule using priority
-			let activeCostRule = null;
-
-			// 1. Try specific color + specific appliesTo
-			if (data.colorId) {
-				[activeCostRule] = await db
-					.select()
-					.from(letteringCosts)
+			let quoteComponentId: string | null = null;
+			if (data.quoteComponentId) {
+				const [component] = await db
+					.select({ id: quoteComponents.id })
+					.from(quoteComponents)
 					.where(
 						and(
-							eq(letteringCosts.techniqueId, data.techniqueId),
-							eq(letteringCosts.colorId, data.colorId),
-							eq(letteringCosts.appliesTo, data.appliesTo),
+							eq(quoteComponents.id, data.quoteComponentId),
+							eq(quoteComponents.quoteId, optionId),
 						),
 					)
 					.limit(1);
 
-				// 2. Try specific color + 'both'
-				if (!activeCostRule) {
-					[activeCostRule] = await db
-						.select()
-						.from(letteringCosts)
-						.where(
-							and(
-								eq(letteringCosts.techniqueId, data.techniqueId),
-								eq(letteringCosts.colorId, data.colorId),
-								eq(letteringCosts.appliesTo, 'both'),
-							),
-						)
-						.limit(1);
+				if (!component) {
+					return c.json({ error: 'Selected component does not belong to this option' }, 400);
 				}
+
+				quoteComponentId = component.id;
 			}
 
-			// 3. Fall back to default (no color) + specific appliesTo
-			if (!activeCostRule) {
-				const defaultRules = await db
-					.select()
-					.from(letteringCosts)
-					.where(
-						and(
-							eq(letteringCosts.techniqueId, data.techniqueId),
-							eq(letteringCosts.appliesTo, data.appliesTo),
-						),
-					);
-				activeCostRule = defaultRules.find((r) => r.colorId === null) || null;
-			}
-
-			// 4. Fall back to default (no color) + 'both'
-			if (!activeCostRule) {
-				const bothRules = await db
-					.select()
-					.from(letteringCosts)
-					.where(
-						and(
-							eq(letteringCosts.techniqueId, data.techniqueId),
-							eq(letteringCosts.appliesTo, 'both'),
-						),
-					);
-				activeCostRule = bothRules.find((r) => r.colorId === null) || null;
-			}
+			const activeCostRule = await findActiveLetteringCostRule({
+				techniqueId: data.techniqueId,
+				colorId: data.colorId,
+				appliesTo: data.appliesTo,
+			});
 
 			// Get pricing settings
 			const pricingSettings = await getTenantPricingSettings(tenantId);
@@ -3290,6 +3196,7 @@ ${tenantName}
 			await db.insert(quoteLettering).values({
 				id: letteringId,
 				quoteId: optionId,
+				quoteComponentId,
 				techniqueId: data.techniqueId,
 				colorId: data.colorId || null,
 				fontId: font?.id || null,
@@ -3298,6 +3205,7 @@ ${tenantName}
 				text: data.text,
 				letterCount,
 				appliesTo: data.appliesTo,
+				placementDescription: data.placementDescription?.trim() || null,
 				supplierCost: String(supplierCostPerLetter),
 				markupPercent: String(markupPercent),
 				unitPrice: String(unitPrice),
@@ -3371,11 +3279,43 @@ ${tenantName}
 			const colorId = data.colorId !== undefined ? data.colorId : existing.colorId;
 			const text = data.text ?? existing.text;
 			const appliesTo = data.appliesTo ?? existing.appliesTo;
+			const placementDescription =
+				data.placementDescription !== undefined
+					? data.placementDescription?.trim() || null
+					: existing.placementDescription;
 			const notes = data.notes !== undefined ? data.notes : existing.notes;
+			let quoteComponentId =
+				data.quoteComponentId !== undefined ? data.quoteComponentId : existing.quoteComponentId;
+
+			if (data.quoteComponentId !== undefined) {
+				if (data.quoteComponentId) {
+					const [component] = await db
+						.select({ id: quoteComponents.id })
+						.from(quoteComponents)
+						.where(
+							and(
+								eq(quoteComponents.id, data.quoteComponentId),
+								eq(quoteComponents.quoteId, optionId),
+							),
+						)
+						.limit(1);
+
+					if (!component) {
+						return c.json({ error: 'Selected component does not belong to this option' }, 400);
+					}
+
+					quoteComponentId = component.id;
+				} else {
+					quoteComponentId = null;
+				}
+			}
 
 			// If technique, color, or text changed, recalculate pricing from cost rules
 			const contentChanged =
-				data.techniqueId !== undefined || data.colorId !== undefined || data.text !== undefined;
+				data.techniqueId !== undefined ||
+				data.colorId !== undefined ||
+				data.text !== undefined ||
+				data.appliesTo !== undefined;
 
 			let techniqueName = existing.techniqueName;
 			let colorName = existing.colorName;
@@ -3423,66 +3363,11 @@ ${tenantName}
 
 				// Only recalculate supplier cost from rules if not explicitly provided
 				if (data.supplierCost === undefined) {
-					// Find cost rule using priority
-					let activeCostRule = null;
-
-					// 1. Try specific color + specific appliesTo
-					if (colorId) {
-						[activeCostRule] = await db
-							.select()
-							.from(letteringCosts)
-							.where(
-								and(
-									eq(letteringCosts.techniqueId, techniqueId!),
-									eq(letteringCosts.colorId, colorId),
-									eq(letteringCosts.appliesTo, appliesTo!),
-								),
-							)
-							.limit(1);
-
-						// 2. Try specific color + 'both'
-						if (!activeCostRule) {
-							[activeCostRule] = await db
-								.select()
-								.from(letteringCosts)
-								.where(
-									and(
-										eq(letteringCosts.techniqueId, techniqueId!),
-										eq(letteringCosts.colorId, colorId),
-										eq(letteringCosts.appliesTo, 'both'),
-									),
-								)
-								.limit(1);
-						}
-					}
-
-					// 3. Fall back to default (no color) + specific appliesTo
-					if (!activeCostRule) {
-						const defaultRules = await db
-							.select()
-							.from(letteringCosts)
-							.where(
-								and(
-									eq(letteringCosts.techniqueId, techniqueId!),
-									eq(letteringCosts.appliesTo, appliesTo!),
-								),
-							);
-						activeCostRule = defaultRules.find((r) => r.colorId === null) || null;
-					}
-
-					// 4. Fall back to default (no color) + 'both'
-					if (!activeCostRule) {
-						const bothRules = await db
-							.select()
-							.from(letteringCosts)
-							.where(
-								and(
-									eq(letteringCosts.techniqueId, techniqueId!),
-									eq(letteringCosts.appliesTo, 'both'),
-								),
-							);
-						activeCostRule = bothRules.find((r) => r.colorId === null) || null;
-					}
+					const activeCostRule = await findActiveLetteringCostRule({
+						techniqueId: techniqueId!,
+						colorId,
+						appliesTo: appliesTo!,
+					});
 
 					supplierCost = parseFloat(activeCostRule?.pricePerLetter || '0');
 				}
@@ -3514,6 +3399,7 @@ ${tenantName}
 				.update(quoteLettering)
 				.set({
 					techniqueId,
+					quoteComponentId,
 					colorId,
 					fontId,
 					fontName,
@@ -3521,6 +3407,7 @@ ${tenantName}
 					text,
 					letterCount,
 					appliesTo,
+					placementDescription,
 					notes,
 					techniqueName,
 					colorName,

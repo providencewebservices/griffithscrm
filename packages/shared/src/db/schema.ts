@@ -1109,6 +1109,9 @@ export const quoteLettering = pgTable('quote_lettering', {
 	quoteId: text('quote_id')
 		.notNull()
 		.references(() => quotes.id, { onDelete: 'cascade' }),
+	quoteComponentId: text('quote_component_id').references(() => quoteComponents.id, {
+		onDelete: 'set null',
+	}),
 	techniqueId: text('technique_id').references(() => letteringTechniques.id, {
 		onDelete: 'set null',
 	}),
@@ -1116,6 +1119,7 @@ export const quoteLettering = pgTable('quote_lettering', {
 	text: text('text'), // The actual inscription text
 	letterCount: integer('letter_count').notNull().default(0),
 	appliesTo: text('applies_to'), // 'new_memorial' | 'refurbishment' | 'both'
+	placementDescription: text('placement_description'),
 	// Price snapshots
 	supplierCost: numeric('supplier_cost', { precision: 10, scale: 2 }).notNull().default('0'), // Cost per letter
 	markupPercent: numeric('markup_percent', { precision: 10, scale: 2 }).notNull().default('100'), // 100 = 100% markup

@@ -110,6 +110,7 @@ const publicQuotesRoutes = new Hono()
 					vatRate: opt.vatRate,
 					// Line items with customer-visible fields only (NO supplier costs, multipliers)
 					components: components.map((comp) => ({
+						id: comp.id,
 						componentType: comp.componentType,
 						height: comp.height,
 						width: comp.width,
@@ -121,6 +122,7 @@ const publicQuotesRoutes = new Hono()
 						finishName: comp.finishName,
 					})),
 					lettering: lettering.map((lett) => ({
+						quoteComponentId: lett.quoteComponentId,
 						text: lett.text,
 						letterCount: lett.letterCount,
 						unitPrice: lett.unitPrice,
@@ -130,6 +132,7 @@ const publicQuotesRoutes = new Hono()
 						fontId: lett.fontId,
 						fontName: lett.fontName,
 						fontS3Key: lett.fontS3Key,
+						placementDescription: lett.placementDescription,
 					})),
 					sundries: sundryItems.map((s) => ({
 						quantity: s.quantity,
@@ -156,7 +159,11 @@ const publicQuotesRoutes = new Hono()
 		// Get tenant address if exists
 		let tenantAddress: string | null = null;
 		if (tenant?.addressId) {
-			const [addr] = await db.select().from(addresses).where(eq(addresses.id, tenant.addressId)).limit(1);
+			const [addr] = await db
+				.select()
+				.from(addresses)
+				.where(eq(addresses.id, tenant.addressId))
+				.limit(1);
 			if (addr) tenantAddress = addr.formattedAddress;
 		}
 
@@ -189,16 +196,16 @@ const publicQuotesRoutes = new Hono()
 			options,
 			customer,
 			tenant: tenant
-			? {
-					id: tenant.id,
-					name: tenant.name,
-					hasLogo: !!tenant.logoUrl,
-					phone: tenant.phone,
-					email: tenant.email,
-					website: tenant.website,
-					address: tenantAddress,
-				}
-			: null,
+				? {
+						id: tenant.id,
+						name: tenant.name,
+						hasLogo: !!tenant.logoUrl,
+						phone: tenant.phone,
+						email: tenant.email,
+						website: tenant.website,
+						address: tenantAddress,
+					}
+				: null,
 		});
 	})
 

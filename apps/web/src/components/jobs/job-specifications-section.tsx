@@ -14,6 +14,15 @@ export function JobSpecificationsSection({ job }: { job: JobWithQuoteSummary }) 
 	const quoteType = job.quote.quoteType as QuoteType;
 	const sectionConfig = QUOTE_TYPE_SECTION_CONFIG[quoteType];
 	const heading = MEMORIAL_HEADINGS[quoteType] || 'Memorial Details';
+	const getComponentLabel = (componentId: string | null) => {
+		if (!componentId) return null;
+		const component = job.quote.components.find((item) => item.id === componentId);
+		if (!component) return null;
+		return component.componentType
+			.split('_')
+			.map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+			.join(' ');
+	};
 
 	const hasSpecifications =
 		(sectionConfig?.showComponents && job.quote.components.length > 0) ||
@@ -84,8 +93,7 @@ export function JobSpecificationsSection({ job }: { job: JobWithQuoteSummary }) 
 											</div>
 											{(comp.height || comp.width || comp.depth) && (
 												<div className="text-sm text-muted-foreground mt-1">
-													{[comp.height, comp.width, comp.depth].filter(Boolean).join('" \u00d7 ')}
-													"
+													{[comp.height, comp.width, comp.depth].filter(Boolean).join('" \u00d7 ')}"
 													{comp.quantity > 1 && ` \u00d7 ${comp.quantity}`}
 												</div>
 											)}
@@ -102,12 +110,22 @@ export function JobSpecificationsSection({ job }: { job: JobWithQuoteSummary }) 
 								<div className="space-y-2">
 									{job.quote.lettering.map((lett) => (
 										<div key={lett.id} className="bg-muted/50 rounded-lg p-3">
+											{getComponentLabel(lett.quoteComponentId) && (
+												<div className="text-sm font-medium text-muted-foreground mb-1">
+													{getComponentLabel(lett.quoteComponentId)}
+												</div>
+											)}
 											{lett.text && <div className="font-medium">"{lett.text}"</div>}
 											<div className="text-sm text-muted-foreground mt-1">
 												{lett.techniqueName}
 												{lett.colorName && ` \u2022 ${lett.colorName}`}
 												{` \u2022 ${lett.letterCount} letters`}
 											</div>
+											{lett.placementDescription && (
+												<div className="text-sm text-muted-foreground mt-1">
+													Placement: {lett.placementDescription}
+												</div>
+											)}
 										</div>
 									))}
 								</div>
@@ -127,9 +145,7 @@ export function JobSpecificationsSection({ job }: { job: JobWithQuoteSummary }) 
 						{/* Sundries */}
 						{sectionConfig?.showSundries && job.quote.sundries.length > 0 && (
 							<div>
-								<h4 className="text-sm font-medium text-muted-foreground mb-2">
-									ADDITIONAL ITEMS
-								</h4>
+								<h4 className="text-sm font-medium text-muted-foreground mb-2">ADDITIONAL ITEMS</h4>
 								<ul className="space-y-1">
 									{job.quote.sundries.map((sundry) => (
 										<li key={sundry.id} className="flex items-center gap-2 text-sm">
