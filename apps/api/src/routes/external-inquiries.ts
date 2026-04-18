@@ -1,9 +1,12 @@
 import crypto from 'node:crypto';
 import {
 	ENQUIRY_SOURCES,
+	FLOWER_HOLE_CHOICES,
+	FLOWER_TOP_COLOR_CHOICES,
 	inquiries,
 	inquiryProducts,
 	inquirySundries,
+	materials,
 	products,
 	sundries,
 	tenants,
@@ -46,11 +49,15 @@ const submitInquirySchema = z.object({
 	email: z.string().optional(),
 	phone: z.string().optional(),
 	message: z.string().optional(),
+	proposedInscription: z.string().optional(),
 	source: z.enum(ENQUIRY_SOURCES).optional().default('website'),
 	products: z
 		.array(
 			z.object({
 				productId: z.string().min(1),
+				materialId: z.string().optional(),
+				flowerHoles: z.enum(FLOWER_HOLE_CHOICES).optional(),
+				flowerTopColor: z.enum(FLOWER_TOP_COLOR_CHOICES).optional(),
 				customerPhotoUrl: z.string().optional(),
 				customerPhotoFilename: z.string().optional(),
 				customerPhotoContentType: z.enum(ALLOWED_CONTENT_TYPES).optional(),
@@ -203,6 +210,38 @@ externalInquiriesRoutes.post(
 					);
 				}
 
+				if (productInput.flowerTopColor && !productInput.flowerHoles) {
+					return c.json(
+						{
+							error: `Flower hole top color for product ${productInput.productId} requires flowerHoles`,
+						},
+						400,
+					);
+				}
+
+				if (productInput.materialId) {
+					const [material] = await db
+						.select({ id: materials.id })
+						.from(materials)
+						.where(
+							and(
+								eq(materials.id, productInput.materialId),
+								eq(materials.tenantId, tenantId),
+								eq(materials.isActive, true),
+							),
+						)
+						.limit(1);
+
+					if (!material) {
+						return c.json(
+							{
+								error: `Material ${productInput.materialId} not found for product ${productInput.productId}`,
+							},
+							400,
+						);
+					}
+				}
+
 				if (
 					hasPhotoData &&
 					!isValidInquiryProductPhotoUrl(productInput.customerPhotoUrl!, tenantId)
@@ -247,6 +286,7 @@ externalInquiriesRoutes.post(
 			email: data.email || null,
 			phone: data.phone || null,
 			message: data.message || null,
+			proposedInscription: data.proposedInscription || null,
 			source: data.source,
 			status: 'new',
 		});
@@ -257,6 +297,9 @@ externalInquiriesRoutes.post(
 					id: crypto.randomUUID(),
 					inquiryId: id,
 					productId: p.productId,
+					materialId: p.materialId || null,
+					flowerHoles: p.flowerHoles || null,
+					flowerTopColor: p.flowerTopColor || null,
 					customerPhotoUrl: p.customerPhotoUrl || null,
 					customerPhotoFilename: p.customerPhotoFilename || null,
 					customerPhotoContentType: p.customerPhotoContentType || null,

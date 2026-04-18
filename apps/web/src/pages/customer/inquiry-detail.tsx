@@ -436,6 +436,17 @@ export function InquiryDetailPage() {
 						</CardContent>
 					</Card>
 
+					{inquiry.proposedInscription && (
+						<Card>
+							<CardHeader>
+								<CardTitle className="text-base">Proposed Inscription</CardTitle>
+							</CardHeader>
+							<CardContent>
+								<p className="text-sm whitespace-pre-wrap">{inquiry.proposedInscription}</p>
+							</CardContent>
+						</Card>
+					)}
+
 					{/* Products of Interest */}
 					<Card>
 						<CardHeader>
@@ -464,6 +475,17 @@ export function InquiryDetailPage() {
 												{product.productCategoryName && (
 													<p className="text-xs text-muted-foreground">
 														{product.productCategoryName}
+													</p>
+												)}
+												{product.materialName && (
+													<p className="text-xs text-muted-foreground">
+														Material: {product.materialName}
+													</p>
+												)}
+												{product.flowerHoles && (
+													<p className="text-xs text-muted-foreground">
+														Flower holes: {product.flowerHoles}
+														{product.flowerTopColor ? ` (${product.flowerTopColor} top)` : ''}
 													</p>
 												)}
 												{product.customerPhotoFilename && (

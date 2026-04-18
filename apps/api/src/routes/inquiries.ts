@@ -3,10 +3,13 @@ import {
 	brochures,
 	customers,
 	ENQUIRY_SOURCES,
+	FLOWER_HOLE_CHOICES,
+	FLOWER_TOP_COLOR_CHOICES,
 	INQUIRY_STATUSES,
 	inquiries,
 	inquiryProducts,
 	inquirySundries,
+	materials,
 	productCategories,
 	products,
 	quotePackages,
@@ -26,12 +29,16 @@ const createSchema = z.object({
 	email: z.string().optional(),
 	phone: z.string().optional(),
 	message: z.string().optional(),
+	proposedInscription: z.string().optional(),
 	source: z.enum(ENQUIRY_SOURCES),
 	customerId: z.string().optional(),
 	products: z
 		.array(
 			z.object({
 				productId: z.string().min(1),
+				materialId: z.string().optional(),
+				flowerHoles: z.enum(FLOWER_HOLE_CHOICES).optional(),
+				flowerTopColor: z.enum(FLOWER_TOP_COLOR_CHOICES).optional(),
 				customerPhotoUrl: z.string().optional(),
 				customerPhotoFilename: z.string().optional(),
 				customerPhotoContentType: z.string().optional(),
@@ -55,12 +62,16 @@ const updateSchema = z.object({
 	email: z.string().nullable().optional(),
 	phone: z.string().nullable().optional(),
 	message: z.string().nullable().optional(),
+	proposedInscription: z.string().nullable().optional(),
 	source: z.enum(ENQUIRY_SOURCES).optional(),
 	status: z.enum(INQUIRY_STATUSES).optional(),
 	products: z
 		.array(
 			z.object({
 				productId: z.string().min(1),
+				materialId: z.string().optional(),
+				flowerHoles: z.enum(FLOWER_HOLE_CHOICES).optional(),
+				flowerTopColor: z.enum(FLOWER_TOP_COLOR_CHOICES).optional(),
 				customerPhotoUrl: z.string().optional(),
 				customerPhotoFilename: z.string().optional(),
 				customerPhotoContentType: z.string().optional(),
@@ -217,6 +228,7 @@ export const inquiriesRoutes = new Hono()
 				email: inquiries.email,
 				phone: inquiries.phone,
 				message: inquiries.message,
+				proposedInscription: inquiries.proposedInscription,
 				source: inquiries.source,
 				status: inquiries.status,
 				archivedAt: inquiries.archivedAt,
@@ -243,6 +255,10 @@ export const inquiriesRoutes = new Hono()
 				productSku: products.sku,
 				productImageUrl: products.imageUrl,
 				productCategoryName: productCategories.name,
+				materialId: inquiryProducts.materialId,
+				materialName: materials.name,
+				flowerHoles: inquiryProducts.flowerHoles,
+				flowerTopColor: inquiryProducts.flowerTopColor,
 				customerPhotoUrl: inquiryProducts.customerPhotoUrl,
 				customerPhotoFilename: inquiryProducts.customerPhotoFilename,
 				customerPhotoContentType: inquiryProducts.customerPhotoContentType,
@@ -250,6 +266,7 @@ export const inquiriesRoutes = new Hono()
 			.from(inquiryProducts)
 			.leftJoin(products, eq(products.id, inquiryProducts.productId))
 			.leftJoin(productCategories, eq(products.categoryId, productCategories.id))
+			.leftJoin(materials, eq(materials.id, inquiryProducts.materialId))
 			.where(eq(inquiryProducts.inquiryId, inquiryId));
 
 		const inquirySundryList = await db
@@ -320,6 +337,7 @@ export const inquiriesRoutes = new Hono()
 				email: data.email || null,
 				phone: data.phone || null,
 				message: data.message || null,
+				proposedInscription: data.proposedInscription || null,
 				source: data.source,
 				status: 'new',
 			})
@@ -332,6 +350,9 @@ export const inquiriesRoutes = new Hono()
 					id: crypto.randomUUID(),
 					inquiryId: id,
 					productId: p.productId,
+					materialId: p.materialId || null,
+					flowerHoles: p.flowerHoles || null,
+					flowerTopColor: p.flowerTopColor || null,
 					customerPhotoUrl: p.customerPhotoUrl || null,
 					customerPhotoFilename: p.customerPhotoFilename || null,
 					customerPhotoContentType: p.customerPhotoContentType || null,
@@ -376,6 +397,8 @@ export const inquiriesRoutes = new Hono()
 		if (data.email !== undefined) updateData.email = data.email;
 		if (data.phone !== undefined) updateData.phone = data.phone;
 		if (data.message !== undefined) updateData.message = data.message;
+		if (data.proposedInscription !== undefined)
+			updateData.proposedInscription = data.proposedInscription;
 		if (data.source !== undefined) updateData.source = data.source;
 		if (data.status !== undefined) updateData.status = data.status;
 
@@ -391,6 +414,9 @@ export const inquiriesRoutes = new Hono()
 						id: crypto.randomUUID(),
 						inquiryId,
 						productId: p.productId,
+						materialId: p.materialId || null,
+						flowerHoles: p.flowerHoles || null,
+						flowerTopColor: p.flowerTopColor || null,
 						customerPhotoUrl: p.customerPhotoUrl || null,
 						customerPhotoFilename: p.customerPhotoFilename || null,
 						customerPhotoContentType: p.customerPhotoContentType || null,

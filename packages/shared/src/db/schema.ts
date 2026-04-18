@@ -918,6 +918,7 @@ export const inquiries = pgTable(
 		email: text('email'),
 		phone: text('phone'),
 		message: text('message'),
+		proposedInscription: text('proposed_inscription'),
 		source: text('source').notNull(), // From ENQUIRY_SOURCES
 		status: text('status').notNull().default('new'), // From INQUIRY_STATUSES
 		archivedAt: timestamp('archived_at'),
@@ -937,6 +938,9 @@ export const inquiryProducts = pgTable('inquiry_products', {
 		.notNull()
 		.references(() => inquiries.id, { onDelete: 'cascade' }),
 	productId: text('product_id').references(() => products.id, { onDelete: 'set null' }),
+	materialId: text('material_id').references(() => materials.id, { onDelete: 'set null' }),
+	flowerHoles: text('flower_holes'),
+	flowerTopColor: text('flower_top_color'),
 	customerPhotoUrl: text('customer_photo_url'),
 	customerPhotoFilename: text('customer_photo_filename'),
 	customerPhotoContentType: text('customer_photo_content_type'),

@@ -87,6 +87,13 @@ const ENDPOINTS: Endpoint[] = [
 				description: 'Message or notes from the enquirer',
 			},
 			{
+				name: 'proposedInscription',
+				type: 'string',
+				required: false,
+				description:
+					'Full proposed inscription text for the enquiry. Best sent as a top-level field because it usually applies to the overall memorial request.',
+			},
+			{
 				name: 'source',
 				type: 'string',
 				required: false,
@@ -97,14 +104,63 @@ const ENDPOINTS: Endpoint[] = [
 				name: 'products',
 				type: 'array',
 				required: false,
+				description: 'Array of product selections',
+			},
+			{
+				name: 'products[].productId',
+				type: 'string',
+				required: true,
+				description: 'Product ID for the selected product',
+			},
+			{
+				name: 'products[].materialId',
+				type: 'string',
+				required: false,
+				description: 'Material ID from `GET /materials`',
+			},
+			{
+				name: 'products[].flowerHoles',
+				type: 'string',
+				required: false,
 				description:
-					'Array of product selections. Each item can include { productId, customerPhotoUrl, customerPhotoFilename, customerPhotoContentType } when the product requires a customer-uploaded image',
+					'Flower hole selection. Options: None Required, Left, Center, Right, Left & Right, Three Flower Holes',
+			},
+			{
+				name: 'products[].flowerTopColor',
+				type: 'string',
+				required: false,
+				description:
+					'Flower hole top color. Options: gold, silver. Only send when `products[].flowerHoles` is also present',
+			},
+			{
+				name: 'products[].customerPhotoUrl',
+				type: 'string',
+				required: false,
+				description: 'Uploaded customer photo URL for products that require a photo',
+			},
+			{
+				name: 'products[].customerPhotoFilename',
+				type: 'string',
+				required: false,
+				description: 'Original filename for the uploaded customer photo',
+			},
+			{
+				name: 'products[].customerPhotoContentType',
+				type: 'string',
+				required: false,
+				description: 'MIME type for the uploaded customer photo',
 			},
 			{
 				name: 'sundries',
 				type: 'array',
 				required: false,
-				description: 'Array of { sundryId: string } for sundries the person is interested in',
+				description: 'Array of sundry selections',
+			},
+			{
+				name: 'sundries[].sundryId',
+				type: 'string',
+				required: true,
+				description: 'Sundry ID for a sundry the person is interested in',
 			},
 		],
 		example: `// Request body
@@ -114,10 +170,14 @@ const ENDPOINTS: Endpoint[] = [
   "email": "john@example.com",
   "phone": "07700 900000",
   "message": "Interested in a black granite headstone",
+  "proposedInscription": "In loving memory of...",
   "source": "website",
   "products": [
     {
       "productId": "prod_abc123",
+      "materialId": "mat_black_granite",
+      "flowerHoles": "Left & Right",
+      "flowerTopColor": "gold",
       "customerPhotoUrl": "https://private-bucket.example.com/tenant/inquiry-products/...",
       "customerPhotoFilename": "family-photo.jpg",
       "customerPhotoContentType": "image/jpeg"
@@ -338,7 +398,7 @@ const PHOTO_PLAQUE_FLOW = [
 	'If `requiresCustomerPhotoUpload` is `true`, show a file input on the website and display `customerPhotoUploadInstructions` when present.',
 	'Before submitting the inquiry, call `POST /inquiries/uploads/presign` with `productId`, `filename`, and `contentType`.',
 	'Upload the image file to the returned `uploadUrl` using an HTTP `PUT` request and the same `Content-Type` header you used in the presign request.',
-	'Submit `POST /inquiries` and include the product entry with `productId`, `customerPhotoUrl`, `customerPhotoFilename`, and `customerPhotoContentType` using the values from the upload step.',
+	'Submit `POST /inquiries` and include the product entry with `productId`, optional `materialId` / `flowerHoles` / `flowerTopColor`, plus `customerPhotoUrl`, `customerPhotoFilename`, and `customerPhotoContentType` using the values from the upload step.',
 	'If the product does not require a photo, submit the product normally without the photo fields.',
 ] as const;
 
@@ -402,6 +462,7 @@ export function ApiTab() {
 		md += `- **Caching:** All responses include a \`Cache-Control: public, max-age=300\` header (5 minute TTL).\n`;
 		md += `- **CORS:** Requests are allowed from any origin. No preflight restrictions apply.\n`;
 		md += `- **Authentication:** No authentication is required. All endpoints are publicly accessible.\n`;
+		md += `- **Product selections:** When sending \`materialId\`, use a value from \`GET /materials\`. Only send \`flowerTopColor\` when \`flowerHoles\` is also present.\n`;
 
 		const blob = new Blob([md], { type: 'text/markdown' });
 		const url = URL.createObjectURL(blob);
@@ -560,6 +621,21 @@ export function ApiTab() {
 						<li>
 							<span className="font-medium text-foreground">Authentication:</span> No authentication
 							is required. All endpoints are publicly accessible.
+						</li>
+						<li>
+							<span className="font-medium text-foreground">Product selections:</span> When sending{' '}
+							<code className="bg-muted px-1.5 py-0.5 rounded font-mono text-xs">materialId</code>,
+							use a value from{' '}
+							<code className="bg-muted px-1.5 py-0.5 rounded font-mono text-xs">
+								GET /materials
+							</code>
+							. Only send{' '}
+							<code className="bg-muted px-1.5 py-0.5 rounded font-mono text-xs">
+								flowerTopColor
+							</code>{' '}
+							when{' '}
+							<code className="bg-muted px-1.5 py-0.5 rounded font-mono text-xs">flowerHoles</code>{' '}
+							is also present.
 						</li>
 					</ul>
 				</CardContent>

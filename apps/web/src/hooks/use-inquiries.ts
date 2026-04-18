@@ -9,6 +9,10 @@ export type InquiryProduct = {
 	productSku: string;
 	productImageUrl: string | null;
 	productCategoryName: string | null;
+	materialId: string | null;
+	materialName: string | null;
+	flowerHoles: string | null;
+	flowerTopColor: string | null;
 	customerPhotoUrl: string | null;
 	customerPhotoFilename: string | null;
 	customerPhotoContentType: string | null;
@@ -63,6 +67,7 @@ export type Inquiry = {
 	email: string | null;
 	phone: string | null;
 	message: string | null;
+	proposedInscription: string | null;
 	source: string;
 	status: string;
 	archivedAt: string | null;
@@ -100,6 +105,9 @@ export type CreateInquiryInput = {
 	customerId?: string;
 	products?: {
 		productId: string;
+		materialId?: string;
+		flowerHoles?: string;
+		flowerTopColor?: string;
 		customerPhotoUrl?: string;
 		customerPhotoFilename?: string;
 		customerPhotoContentType?: string;
@@ -114,10 +122,14 @@ export type UpdateInquiryInput = {
 	email?: string | null;
 	phone?: string | null;
 	message?: string | null;
+	proposedInscription?: string | null;
 	source?: string;
 	status?: string;
 	products?: {
 		productId: string;
+		materialId?: string;
+		flowerHoles?: string;
+		flowerTopColor?: string;
 		customerPhotoUrl?: string;
 		customerPhotoFilename?: string;
 		customerPhotoContentType?: string;

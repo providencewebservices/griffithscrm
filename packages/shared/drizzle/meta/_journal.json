@@ -351,6 +351,13 @@
       "when": 1775828562407,
       "tag": "0049_wakeful_nova",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1776447309221,
+      "tag": "0050_mean_forge",
+      "breakpoints": true
     }
   ]
 }
