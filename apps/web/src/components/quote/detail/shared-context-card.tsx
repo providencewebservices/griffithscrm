@@ -66,7 +66,7 @@ export function SharedContextCard({
 					</div>
 				)}
 				{quoteType === 'new_memorial' && (
-					<div>
+					<div id="quote-blocker-production-method" className="scroll-mt-24">
 						<p className="text-sm font-medium text-muted-foreground">Production Method</p>
 						{canEdit ? (
 							<Select

@@ -91,10 +91,9 @@ export function SundriesSection({
 			<div className="flex items-center justify-between mb-3">
 				<h4 className="font-medium">
 					Sundries
-					{sundries.length > 0 &&
-						` (${sundries.length} item${sundries.length !== 1 ? 's' : ''})`}
+					{sundries.length > 0 && ` (${sundries.length} item${sundries.length !== 1 ? 's' : ''})`}
 				</h4>
-				{canEditPricing && !showAddForm && sundries.length > 0 && (
+				{canEditPricing && !showAddForm && (
 					<Button variant="outline" size="sm" onClick={() => setShowAddForm(true)}>
 						<Plus className="h-4 w-4 mr-1" />
 						Add Sundry
@@ -159,26 +158,6 @@ export function SundriesSection({
 				</div>
 			)}
 
-			{/* Empty State */}
-			{sundries.length === 0 && !showAddForm && (
-				<div className="border rounded-lg p-8 text-center text-muted-foreground border-dashed">
-					No sundries added yet.
-					{canEditPricing && (
-						<>
-							{' '}
-							<Button
-								variant="link"
-								size="sm"
-								className="p-0 h-auto"
-								onClick={() => setShowAddForm(true)}
-							>
-								Add one now
-							</Button>
-						</>
-					)}
-				</div>
-			)}
-
 			{/* Table */}
 			{sundries.length > 0 && (
 				<div className="border rounded-lg overflow-x-auto">
@@ -231,9 +210,7 @@ export function SundriesSection({
 											formatValue={(val) => `${val.toFixed(0)}%`}
 										/>
 									</TableCell>
-									<TableCell className="text-right">
-										{formatCurrency(sundry.unitPrice)}
-									</TableCell>
+									<TableCell className="text-right">{formatCurrency(sundry.unitPrice)}</TableCell>
 									<TableCell className="text-right font-medium">
 										{formatCurrency(sundry.lineTotal)}
 									</TableCell>

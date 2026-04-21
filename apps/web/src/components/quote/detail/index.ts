@@ -4,5 +4,7 @@ export { CustomerView } from './customer-view';
 export { EditableNumber } from './editable-number';
 export { EditableText } from './editable-text';
 export { LetteringSection } from './lettering-section';
+export { OptionCompareDialog } from './option-compare';
 export { OptionContent } from './option-content';
+export { PricingCard } from './pricing-card';
 export { SharedContextCard } from './shared-context-card';

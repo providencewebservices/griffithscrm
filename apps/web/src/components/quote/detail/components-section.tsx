@@ -11,7 +11,6 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
 	Table,
 	TableBody,
@@ -20,6 +19,7 @@ import {
 	TableHeader,
 	TableRow,
 } from '@/components/ui/table';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useFinishesQuery } from '@/hooks/use-finishes';
 import { useMaterialSectionsQuery } from '@/hooks/use-material-sections';
 import { useMaterialsQuery } from '@/hooks/use-materials';
@@ -114,35 +114,48 @@ export function ComponentsSection({
 
 	return (
 		<>
-			<div className="flex items-center justify-between mb-3">
-				<h4 className="font-medium">Stone Components</h4>
-				{canEditPricing && (
-					<Tabs
-						value={isProductPricing ? 'product' : 'components'}
-						onValueChange={async (val) => {
-							if (val === 'components' && isProductPricing) {
-								await updateProductPricing.mutateAsync({
-									packageId: pkg.id,
-									optionId: option.id,
-									supplierCost: null,
-									retailPrice: null,
-								});
-							} else if (val === 'product' && !isProductPricing) {
-								await updateProductPricing.mutateAsync({
-									packageId: pkg.id,
-									optionId: option.id,
-									supplierCost: 0,
-									retailPrice: 0,
-								});
-							}
-						}}
-					>
-						<TabsList>
-							<TabsTrigger value="components">Price by components</TabsTrigger>
-							<TabsTrigger value="product">Product price</TabsTrigger>
-						</TabsList>
-					</Tabs>
-				)}
+			<div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
+				<h4 className="font-medium">
+					Stone Components
+					{!isProductPricing &&
+						option.components.length > 0 &&
+						` (${option.components.length} item${option.components.length !== 1 ? 's' : ''})`}
+				</h4>
+				<div className="flex items-center gap-2">
+					{canEditPricing && (
+						<Tabs
+							value={isProductPricing ? 'product' : 'components'}
+							onValueChange={async (val) => {
+								if (val === 'components' && isProductPricing) {
+									await updateProductPricing.mutateAsync({
+										packageId: pkg.id,
+										optionId: option.id,
+										supplierCost: null,
+										retailPrice: null,
+									});
+								} else if (val === 'product' && !isProductPricing) {
+									await updateProductPricing.mutateAsync({
+										packageId: pkg.id,
+										optionId: option.id,
+										supplierCost: 0,
+										retailPrice: 0,
+									});
+								}
+							}}
+						>
+							<TabsList>
+								<TabsTrigger value="components">Price by components</TabsTrigger>
+								<TabsTrigger value="product">Product price</TabsTrigger>
+							</TabsList>
+						</Tabs>
+					)}
+					{canEditPricing && !isProductPricing && !showAddForm && (
+						<Button variant="outline" size="sm" onClick={() => setShowAddForm(true)}>
+							<Plus className="h-4 w-4 mr-1" />
+							Add Component
+						</Button>
+					)}
+				</div>
 			</div>
 			{isProductPricing ? (
 				<div className="border rounded-lg p-6 space-y-4">
@@ -181,16 +194,6 @@ export function ComponentsSection({
 				</div>
 			) : (
 				<>
-					{/* Add Component Button */}
-					{canEditPricing && !showAddForm && (
-						<div className="mb-3">
-							<Button variant="outline" size="sm" onClick={() => setShowAddForm(true)}>
-								<Plus className="h-4 w-4 mr-1" />
-								Add Component
-							</Button>
-						</div>
-					)}
-
 					{/* Add Component Form */}
 					{showAddForm && canEditPricing && (
 						<div className="border rounded-lg p-4 mb-4 bg-muted/50">
@@ -332,9 +335,6 @@ export function ComponentsSection({
 
 					{option.components.length > 0 ? (
 						<div>
-							<p className="text-sm text-muted-foreground mb-3">
-								{option.components.length} item{option.components.length !== 1 ? 's' : ''}
-							</p>
 							<div className="border rounded-lg overflow-x-auto">
 								<Table>
 									<TableHeader>
@@ -427,21 +427,8 @@ export function ComponentsSection({
 							</div>
 						</div>
 					) : !showAddForm ? (
-						<div className="border rounded-lg p-8 text-center text-muted-foreground border-dashed">
+						<div className="border rounded-lg p-8 text-center text-sm text-muted-foreground border-dashed">
 							No stone components added yet.
-							{canEditPricing && (
-								<>
-									{' '}
-									<Button
-										variant="link"
-										size="sm"
-										className="p-0 h-auto"
-										onClick={() => setShowAddForm(true)}
-									>
-										Add one now
-									</Button>
-								</>
-							)}
 						</div>
 					) : null}
 				</>

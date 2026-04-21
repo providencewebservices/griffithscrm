@@ -1,8 +1,15 @@
-import { Check, Loader2, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { Check, Loader2, MoreHorizontal, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { useState } from 'react';
 import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
 import { InscriptionText } from '@/components/inscription-text';
 import { Button } from '@/components/ui/button';
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -162,7 +169,7 @@ export function LetteringSection({
 	};
 
 	return (
-		<div>
+		<div id="quote-blocker-lettering" className="scroll-mt-24">
 			<div className="flex items-center justify-between mb-3">
 				<h4 className="font-medium">
 					Lettering ({option.lettering.length} item{option.lettering.length !== 1 ? 's' : ''})
@@ -320,21 +327,8 @@ export function LetteringSection({
 
 			{/* Empty state */}
 			{option.lettering.length === 0 && !showAddForm && (
-				<div className="border rounded-lg p-8 text-center text-muted-foreground border-dashed">
+				<div className="border rounded-lg p-8 text-center text-sm text-muted-foreground border-dashed">
 					No lettering items added yet.
-					{canEditPricing && (
-						<>
-							{' '}
-							<Button
-								variant="link"
-								size="sm"
-								className="p-0 h-auto"
-								onClick={() => setShowAddForm(true)}
-							>
-								Add one now
-							</Button>
-						</>
-					)}
 				</div>
 			)}
 
@@ -370,9 +364,7 @@ export function LetteringSection({
 													<div className="grid grid-cols-2 gap-2">
 														<Select
 															value={editQuoteComponentId || '_none'}
-															onValueChange={(v) =>
-																setEditQuoteComponentId(v === '_none' ? '' : v)
-															}
+															onValueChange={(v) => setEditQuoteComponentId(v === '_none' ? '' : v)}
 														>
 															<SelectTrigger className="h-8">
 																<SelectValue placeholder="Component" />
@@ -388,9 +380,7 @@ export function LetteringSection({
 														</Select>
 														<Select
 															value={editTechniqueId || '_none'}
-															onValueChange={(v) =>
-																setEditTechniqueId(v === '_none' ? '' : v)
-															}
+															onValueChange={(v) => setEditTechniqueId(v === '_none' ? '' : v)}
 														>
 															<SelectTrigger className="h-8">
 																<SelectValue placeholder="Technique" />
@@ -483,9 +473,7 @@ export function LetteringSection({
 													<p>{lett.text || '-'}</p>
 													{(() => {
 														const parts = [
-															componentOptions.find(
-																(c) => c.id === lett.quoteComponentId,
-															)?.label,
+															componentOptions.find((c) => c.id === lett.quoteComponentId)?.label,
 															lett.techniqueName,
 															lett.colorName,
 															lett.placementDescription,
@@ -503,9 +491,7 @@ export function LetteringSection({
 													)}
 												</div>
 											</TableCell>
-											<TableCell className="text-center tabular-nums">
-												{lett.letterCount}
-											</TableCell>
+											<TableCell className="text-center tabular-nums">{lett.letterCount}</TableCell>
 											<TableCell className="text-right tabular-nums">
 												<EditableNumber
 													value={parseFloat(lett.supplierCost)}
@@ -546,25 +532,29 @@ export function LetteringSection({
 											</TableCell>
 											{canEditPricing && (
 												<TableCell>
-													<div className="flex gap-1 justify-end">
-														<Button
-															variant="ghost"
-															size="sm"
-															onClick={() => handleStartEdit(lett)}
-															className="size-8 p-0"
-															title="Edit"
-														>
-															<Pencil className="size-4" />
-														</Button>
-														<Button
-															variant="ghost"
-															size="sm"
-															onClick={() => setDeleteConfirmId(lett.id)}
-															className="size-8 p-0 text-muted-foreground/60 hover:text-destructive transition-colors"
-															title="Delete"
-														>
-															<Trash2 className="size-4" />
-														</Button>
+													<div className="flex justify-end">
+														<DropdownMenu>
+															<DropdownMenuTrigger asChild>
+																<Button variant="ghost" size="icon" className="h-8 w-8">
+																	<MoreHorizontal className="size-4" />
+																	<span className="sr-only">Row actions</span>
+																</Button>
+															</DropdownMenuTrigger>
+															<DropdownMenuContent align="end">
+																<DropdownMenuItem onClick={() => handleStartEdit(lett)}>
+																	<Pencil className="size-4 mr-2" />
+																	Edit
+																</DropdownMenuItem>
+																<DropdownMenuSeparator />
+																<DropdownMenuItem
+																	className="text-destructive"
+																	onClick={() => setDeleteConfirmId(lett.id)}
+																>
+																	<Trash2 className="size-4 mr-2" />
+																	Delete
+																</DropdownMenuItem>
+															</DropdownMenuContent>
+														</DropdownMenu>
 													</div>
 												</TableCell>
 											)}

@@ -4,6 +4,7 @@ import {
 	Check,
 	ChevronDown,
 	Clock,
+	Columns2,
 	Copy,
 	Loader2,
 	Mail,
@@ -18,7 +19,13 @@ import { Link, useNavigate, useParams } from 'react-router';
 import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
 import { DocumentsCard } from '@/components/documents';
 import { AddOptionDialog } from '@/components/quote/add-option-dialog';
-import { CustomerView, OptionContent, SharedContextCard } from '@/components/quote/detail';
+import {
+	CustomerView,
+	OptionCompareDialog,
+	OptionContent,
+	PricingCard,
+	SharedContextCard,
+} from '@/components/quote/detail';
 import { Badge } from '@/components/ui/badge';
 import {
 	Breadcrumb,
@@ -149,6 +156,7 @@ export function QuoteDetailPage() {
 	const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
 	const [expireDialogOpen, setExpireDialogOpen] = useState(false);
 	const [addOptionDialogOpen, setAddOptionDialogOpen] = useState(false);
+	const [compareDialogOpen, setCompareDialogOpen] = useState(false);
 	const [customMessage, setCustomMessage] = useState('');
 	const [mutationError, setMutationError] = useState<string | null>(null);
 	const { isCustomerView } = useCustomerView();
@@ -407,14 +415,33 @@ export function QuoteDetailPage() {
 			: { minPrice: '0', maxPrice: '0' };
 
 	// Readiness blockers: fields the operator must fill before this can be marked Ready.
-	// Mirrors the inline warnings in shared-context-card and lettering-section.
+	// Each entry renders as a jump-link pill in the readiness banner and mirrors the
+	// inline warnings in shared-context-card and lettering-section.
 	const letteringMissingTechnique =
 		pkg.options?.reduce(
 			(sum, opt) => sum + opt.lettering.filter((l) => !l.techniqueId).length,
 			0,
 		) ?? 0;
-	const blockerCount =
-		pkg.status === 'draft' ? (pkg.productionMethod ? 0 : 1) + letteringMissingTechnique : 0;
+	const requiresProductionMethod = !pkg.quoteType || pkg.quoteType === 'new_memorial';
+	const blockers: { id: string; label: string; targetId: string }[] = [];
+	if (pkg.status === 'draft') {
+		if (requiresProductionMethod && !pkg.productionMethod) {
+			blockers.push({
+				id: 'production-method',
+				label: 'Set production method',
+				targetId: 'quote-blocker-production-method',
+			});
+		}
+		if (letteringMissingTechnique > 0) {
+			blockers.push({
+				id: 'lettering-technique',
+				label: `Set technique for ${letteringMissingTechnique} lettering item${
+					letteringMissingTechnique === 1 ? '' : 's'
+				}`,
+				targetId: 'quote-blocker-lettering',
+			});
+		}
+	}
 
 	return (
 		<div>
@@ -456,15 +483,6 @@ export function QuoteDetailPage() {
 									</p>
 									<StatusStepper status={pkg.status} />
 								</div>
-								{blockerCount > 0 && (
-									<p className="mt-2 flex items-center gap-1.5 text-sm text-amber-600">
-										<AlertCircle className="size-4 shrink-0" />
-										<span>
-											{blockerCount} {blockerCount === 1 ? 'item needs' : 'items need'} attention
-											before this can be marked Ready
-										</span>
-									</p>
-								)}
 							</div>
 						</div>
 						{/* Consolidated Header Actions */}
@@ -547,6 +565,41 @@ export function QuoteDetailPage() {
 							{mutationError}
 						</div>
 					)}
+
+					{/* Readiness banner — lists fields blocking the Draft → Ready transition */}
+					{blockers.length > 0 && (
+						<div className="rounded-md border border-amber-200 bg-amber-50/80 p-4 mb-6">
+							<div className="flex items-start gap-3">
+								<AlertCircle className="size-5 shrink-0 text-amber-600 mt-0.5" />
+								<div className="flex-1">
+									<p className="text-sm font-medium text-amber-900">
+										{blockers.length} {blockers.length === 1 ? 'item needs' : 'items need'}{' '}
+										attention before this can be marked Ready
+									</p>
+									{/* biome-ignore lint/a11y/noRedundantRoles: preserve list semantics — Safari/VoiceOver drops them on styled <ul> */}
+									<ul role="list" className="mt-2 flex flex-wrap gap-2">
+										{blockers.map((b) => (
+											<li key={b.id}>
+												<a
+													href={`#${b.targetId}`}
+													onClick={(e) => {
+														const target = document.getElementById(b.targetId);
+														if (target) {
+															e.preventDefault();
+															target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+														}
+													}}
+													className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-white px-2.5 py-0.5 text-xs font-medium text-amber-900 hover:bg-amber-100"
+												>
+													{b.label}
+												</a>
+											</li>
+										))}
+									</ul>
+								</div>
+							</div>
+						</div>
+					)}
 				</>
 			)}
 
@@ -562,171 +615,187 @@ export function QuoteDetailPage() {
 
 			{/* Internal View */}
 			{!isCustomerView && (
-				<div className="divide-y divide-border/60 [&>section]:py-10 [&>section:first-child]:pt-0 [&>section:last-child]:pb-0">
-					{/* Quote Context */}
-					<section>
-						<div className="flex items-center justify-between mb-4">
-							<h3 className="text-base font-semibold">Quote Context</h3>
-						</div>
-						<SharedContextCard pkg={pkg} formatDate={formatDate} />
-					</section>
+				<div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+					<div className="lg:col-span-2 divide-y divide-border/60 [&>section]:py-10 [&>section:first-child]:pt-0 [&>section:last-child]:pb-0">
+						{/* Quote Context */}
+						<section>
+							<div className="flex items-center justify-between mb-4">
+								<h3 className="text-base font-semibold">Quote Context</h3>
+							</div>
+							<SharedContextCard pkg={pkg} formatDate={formatDate} />
+						</section>
 
-					{/* Options */}
-					<section>
-						<div className="flex items-center justify-between mb-6">
-							<h3 className="text-base font-semibold">Options</h3>
-							{canAddOptions && (
-								<Button variant="outline" onClick={() => setAddOptionDialogOpen(true)}>
-									<Plus className="h-4 w-4 mr-2" />
-									Add Option
-								</Button>
+						{/* Options */}
+						<section>
+							<div className="flex items-center justify-between mb-6 gap-2 flex-wrap">
+								<h3 className="text-base font-semibold">Options</h3>
+								<div className="flex items-center gap-2">
+									{pkg.options && pkg.options.length >= 2 && (
+										<Button variant="outline" onClick={() => setCompareDialogOpen(true)}>
+											<Columns2 className="h-4 w-4 mr-2" />
+											Compare
+										</Button>
+									)}
+									{canAddOptions && (
+										<Button variant="outline" onClick={() => setAddOptionDialogOpen(true)}>
+											<Plus className="h-4 w-4 mr-2" />
+											Add Option
+										</Button>
+									)}
+								</div>
+							</div>
+							{pkg.options && pkg.options.length > 0 && (
+								<div className="flex items-center gap-2 border-b border-border/60 pb-4 mb-6 flex-wrap">
+									{pkg.options.map((option, index) => (
+										<div key={option.id} className="flex items-center">
+											<Button
+												variant={selectedOptionId === option.id ? 'default' : 'outline'}
+												size="sm"
+												onClick={() => setSelectedOptionId(option.id)}
+												className="gap-2"
+											>
+												<span>{option.optionLabel || `Option ${index + 1}`}</span>
+												<span className="text-xs opacity-75 tabular-nums">
+													{formatCurrency(option.total)}
+												</span>
+											</Button>
+											{selectedOptionId === option.id && canEditPricing && (
+												<DropdownMenu>
+													<DropdownMenuTrigger asChild>
+														<Button variant="ghost" size="sm" className="h-8 w-8 p-0 ml-1">
+															<ChevronDown className="h-4 w-4" />
+														</Button>
+													</DropdownMenuTrigger>
+													<DropdownMenuContent align="end">
+														<DropdownMenuItem onClick={handleCloneOption}>
+															<Copy className="h-4 w-4 mr-2" />
+															Clone Option
+														</DropdownMenuItem>
+														{pkg.options.length > 1 && (
+															<>
+																<DropdownMenuSeparator />
+																<DropdownMenuItem
+																	className="text-destructive"
+																	onClick={() => setDeleteOptionDialogOpen(true)}
+																>
+																	<Trash2 className="h-4 w-4 mr-2" />
+																	Delete Option
+																</DropdownMenuItem>
+															</>
+														)}
+													</DropdownMenuContent>
+												</DropdownMenu>
+											)}
+										</div>
+									))}
+								</div>
+							)}
+							{currentOption && (
+								<OptionContent
+									pkg={pkg}
+									option={currentOption}
+									canEditPricing={canEditPricing}
+									formatCurrency={formatCurrency}
+									updateComponentPricing={updateComponentPricing}
+									updateLetteringPricing={updateLetteringPricing}
+									updateSundryPricing={updateSundryPricing}
+									updateProductPricing={updateProductPricing}
+									addLineItem={addLineItem}
+									updateLineItem={updateLineItem}
+									deleteLineItem={deleteLineItem}
+									addLetteringMutation={addLetteringMutation}
+									updateLetteringMutation={updateLetteringMutation}
+									deleteLetteringMutation={deleteLetteringMutation}
+									addComponentMutation={addComponentMutation}
+									deleteComponentMutation={deleteComponentMutation}
+									addSundryMutation={addSundryMutation}
+									deleteSundryMutation={deleteSundryMutation}
+									activePresets={activePresets}
+								/>
+							)}
+						</section>
+
+						{/* Customer Response */}
+						{(pkg.acceptedOptionId || pkg.customerFeedback) && (
+							<section>
+								<h3 className="text-base font-semibold mb-4 flex items-center gap-2">
+									<MessageSquare className="size-4" />
+									Customer Response
+								</h3>
+								<div className="space-y-3">
+									{pkg.acceptedOptionId && (
+										<div className="flex items-center gap-2">
+											<Badge className="bg-green-600">Accepted</Badge>
+											{pkg.customerDecisionAt && (
+												<span className="text-xs text-muted-foreground">
+													on {formatDate(pkg.customerDecisionAt)}
+												</span>
+											)}
+										</div>
+									)}
+									{pkg.customerFeedback && (
+										<div className="border border-border/60 p-3 rounded-md">
+											<p className="text-xs text-muted-foreground mb-1">Customer feedback:</p>
+											<p className="text-sm whitespace-pre-wrap">"{pkg.customerFeedback}"</p>
+										</div>
+									)}
+									{pkg.emailSentAt && (
+										<p className="text-xs text-muted-foreground">
+											Quote emailed {pkg.emailSentCount} time{pkg.emailSentCount !== 1 ? 's' : ''} -
+											last sent {formatDate(pkg.emailSentAt)}
+										</p>
+									)}
+								</div>
+							</section>
+						)}
+
+						{/* Documents */}
+						<section>
+							<DocumentsCard
+								entityType="quote"
+								entityId={pkg.id}
+								title="Documents"
+								description=""
+								embedded
+							/>
+						</section>
+
+						{/* Details — hidden when Created and Updated fall on the same day */}
+						{formatDate(pkg.createdAt) !== formatDate(pkg.updatedAt) && (
+							<section>
+								<h3 className="text-base font-semibold mb-4">Details</h3>
+								<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+									<div>
+										<p className="text-sm font-medium text-muted-foreground">Created</p>
+										<p>{formatDate(pkg.createdAt)}</p>
+									</div>
+									<div>
+										<p className="text-sm font-medium text-muted-foreground">Updated</p>
+										<p>{formatDate(pkg.updatedAt)}</p>
+									</div>
+								</div>
+							</section>
+						)}
+					</div>
+
+					{/* Sticky sidebar — Pricing + Internal Notes float alongside the section stack */}
+					<aside className="lg:col-span-1">
+						<div className="lg:sticky lg:top-6 space-y-6">
+							{currentOption && (
+								<PricingCard option={currentOption} formatCurrency={formatCurrency} />
+							)}
+							{pkg.internalNotes && (
+								<Card className="border-amber-200 bg-amber-50/60">
+									<CardHeader className="pb-2">
+										<CardTitle className="text-sm">Internal Notes</CardTitle>
+									</CardHeader>
+									<CardContent>
+										<p className="text-sm whitespace-pre-wrap">{pkg.internalNotes}</p>
+									</CardContent>
+								</Card>
 							)}
 						</div>
-						{pkg.options && pkg.options.length > 0 && (
-							<div className="flex items-center gap-2 border-b border-border/60 pb-4 mb-6">
-								{pkg.options.map((option) => (
-									<div key={option.id} className="flex items-center">
-										<Button
-											variant={selectedOptionId === option.id ? 'default' : 'outline'}
-											size="sm"
-											onClick={() => setSelectedOptionId(option.id)}
-											className="gap-2"
-										>
-											{option.quoteNumber}
-											{option.optionLabel && (
-												<span className="text-xs opacity-75">({option.optionLabel})</span>
-											)}
-											<span className="text-xs opacity-75">{formatCurrency(option.total)}</span>
-										</Button>
-										{selectedOptionId === option.id && canEditPricing && (
-											<DropdownMenu>
-												<DropdownMenuTrigger asChild>
-													<Button variant="ghost" size="sm" className="h-8 w-8 p-0 ml-1">
-														<ChevronDown className="h-4 w-4" />
-													</Button>
-												</DropdownMenuTrigger>
-												<DropdownMenuContent align="end">
-													<DropdownMenuItem onClick={handleCloneOption}>
-														<Copy className="h-4 w-4 mr-2" />
-														Clone Option
-													</DropdownMenuItem>
-													{pkg.options.length > 1 && (
-														<>
-															<DropdownMenuSeparator />
-															<DropdownMenuItem
-																className="text-destructive"
-																onClick={() => setDeleteOptionDialogOpen(true)}
-															>
-																<Trash2 className="h-4 w-4 mr-2" />
-																Delete Option
-															</DropdownMenuItem>
-														</>
-													)}
-												</DropdownMenuContent>
-											</DropdownMenu>
-										)}
-									</div>
-								))}
-							</div>
-						)}
-						{currentOption && (
-							<OptionContent
-								pkg={pkg}
-								option={currentOption}
-								canEditPricing={canEditPricing}
-								formatCurrency={formatCurrency}
-								updateComponentPricing={updateComponentPricing}
-								updateLetteringPricing={updateLetteringPricing}
-								updateSundryPricing={updateSundryPricing}
-								updateProductPricing={updateProductPricing}
-								addLineItem={addLineItem}
-								updateLineItem={updateLineItem}
-								deleteLineItem={deleteLineItem}
-								addLetteringMutation={addLetteringMutation}
-								updateLetteringMutation={updateLetteringMutation}
-								deleteLetteringMutation={deleteLetteringMutation}
-								addComponentMutation={addComponentMutation}
-								deleteComponentMutation={deleteComponentMutation}
-								addSundryMutation={addSundryMutation}
-								deleteSundryMutation={deleteSundryMutation}
-								activePresets={activePresets}
-							/>
-						)}
-					</section>
-
-					{/* Internal Notes — retained as Card (floats above the stack) */}
-					{pkg.internalNotes && (
-						<section>
-							<Card className="border-amber-200 bg-amber-50/60">
-								<CardHeader className="pb-2">
-									<CardTitle className="text-sm">Internal Notes</CardTitle>
-								</CardHeader>
-								<CardContent>
-									<p className="text-sm whitespace-pre-wrap">{pkg.internalNotes}</p>
-								</CardContent>
-							</Card>
-						</section>
-					)}
-
-					{/* Customer Response */}
-					{(pkg.acceptedOptionId || pkg.customerFeedback) && (
-						<section>
-							<h3 className="text-base font-semibold mb-4 flex items-center gap-2">
-								<MessageSquare className="size-4" />
-								Customer Response
-							</h3>
-							<div className="space-y-3">
-								{pkg.acceptedOptionId && (
-									<div className="flex items-center gap-2">
-										<Badge className="bg-green-600">Accepted</Badge>
-										{pkg.customerDecisionAt && (
-											<span className="text-xs text-muted-foreground">
-												on {formatDate(pkg.customerDecisionAt)}
-											</span>
-										)}
-									</div>
-								)}
-								{pkg.customerFeedback && (
-									<div className="border border-border/60 p-3 rounded-md">
-										<p className="text-xs text-muted-foreground mb-1">Customer feedback:</p>
-										<p className="text-sm whitespace-pre-wrap">"{pkg.customerFeedback}"</p>
-									</div>
-								)}
-								{pkg.emailSentAt && (
-									<p className="text-xs text-muted-foreground">
-										Quote emailed {pkg.emailSentCount} time{pkg.emailSentCount !== 1 ? 's' : ''} -
-										last sent {formatDate(pkg.emailSentAt)}
-									</p>
-								)}
-							</div>
-						</section>
-					)}
-
-					{/* Documents */}
-					<section>
-						<DocumentsCard
-							entityType="quote"
-							entityId={pkg.id}
-							title="Documents"
-							description=""
-							embedded
-						/>
-					</section>
-
-					{/* Details */}
-					<section>
-						<h3 className="text-base font-semibold mb-4">Details</h3>
-						<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-							<div>
-								<p className="text-sm font-medium text-muted-foreground">Created</p>
-								<p>{formatDate(pkg.createdAt)}</p>
-							</div>
-							<div>
-								<p className="text-sm font-medium text-muted-foreground">Updated</p>
-								<p>{formatDate(pkg.updatedAt)}</p>
-							</div>
-						</div>
-					</section>
+					</aside>
 				</div>
 			)}
 
@@ -843,6 +912,16 @@ export function QuoteDetailPage() {
 					onOpenChange={setAddOptionDialogOpen}
 					packageId={pkg.id}
 					existingOptions={pkg.options}
+				/>
+			)}
+
+			{/* Compare Options Dialog */}
+			{pkg.options && pkg.options.length >= 2 && (
+				<OptionCompareDialog
+					pkg={pkg}
+					open={compareDialogOpen}
+					onOpenChange={setCompareDialogOpen}
+					formatCurrency={formatCurrency}
 				/>
 			)}
 		</div>

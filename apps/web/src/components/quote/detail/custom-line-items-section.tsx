@@ -133,7 +133,7 @@ export function CustomLineItemsSection({
 					{lineItems.length > 0 &&
 						` (${lineItems.length} item${lineItems.length !== 1 ? 's' : ''})`}
 				</h4>
-				{canEditPricing && !showAddForm && lineItems.length > 0 && (
+				{canEditPricing && !showAddForm && (
 					<Button variant="outline" size="sm" onClick={() => setShowAddForm(true)}>
 						<Plus className="h-4 w-4 mr-1" />
 						Add Line Item
@@ -251,26 +251,6 @@ export function CustomLineItemsSection({
 							Add
 						</Button>
 					</div>
-				</div>
-			)}
-
-			{/* Empty State */}
-			{lineItems.length === 0 && !showAddForm && (
-				<div className="border rounded-lg p-8 text-center text-muted-foreground border-dashed">
-					No custom line items added yet.
-					{canEditPricing && (
-						<>
-							{' '}
-							<Button
-								variant="link"
-								size="sm"
-								className="p-0 h-auto"
-								onClick={() => setShowAddForm(true)}
-							>
-								Add one now
-							</Button>
-						</>
-					)}
 				</div>
 			)}
 
