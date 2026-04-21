@@ -1,4 +1,5 @@
 import {
+	AlertCircle,
 	ArrowLeft,
 	Check,
 	ChevronDown,
@@ -81,9 +82,6 @@ import {
 import { useTenantSettingsQuery } from '@/hooks/use-tenant-settings';
 
 const _API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-
-// Quote status order for progress indicator
-const QUOTE_STATUS_ORDER: QuoteStatus[] = ['draft', 'ready', 'presented', 'accepted'];
 
 const QUOTE_STATUS_COLORS: Record<QuoteStatus, string> = {
 	draft: 'bg-amber-500',
@@ -361,6 +359,18 @@ export function QuoteDetailPage() {
 				}
 			: { minPrice: '0', maxPrice: '0' };
 
+	// Readiness blockers: fields the operator must fill before this can be marked Ready.
+	// Mirrors the inline warnings in shared-context-card and lettering-section.
+	const letteringMissingTechnique =
+		pkg.options?.reduce(
+			(sum, opt) => sum + opt.lettering.filter((l) => !l.techniqueId).length,
+			0,
+		) ?? 0;
+	const blockerCount =
+		pkg.status === 'draft'
+			? (pkg.productionMethod ? 0 : 1) + letteringMissingTechnique
+			: 0;
+
 	return (
 		<div>
 			{/* Breadcrumb + Header — hidden in customer view */}
@@ -380,44 +390,42 @@ export function QuoteDetailPage() {
 						</BreadcrumbList>
 					</Breadcrumb>
 
-					<div className="flex items-center justify-between mb-6">
-						<div className="flex items-center gap-4">
-							<Link to="/app/quotes">
+					<div className="flex items-start justify-between gap-6 mb-6">
+						<div className="flex items-start gap-4 min-w-0 flex-1">
+							<Link to="/app/quotes" className="mt-1">
 								<Button variant="ghost" size="icon">
 									<ArrowLeft className="h-4 w-4" />
 								</Button>
 							</Link>
-							<div>
-								<div className="flex items-center gap-3">
-									<h2 className="text-2xl font-bold">{firstQuoteNumber}</h2>
+							<div className="min-w-0 flex-1">
+								<div className="flex items-center gap-3 flex-wrap">
+									<h2 className="text-xl font-semibold tracking-tight">{firstQuoteNumber}</h2>
 									{pkg.quoteType && pkg.quoteType !== 'new_memorial' && (
 										<Badge variant="outline">{QUOTE_TYPE_LABELS[pkg.quoteType as QuoteType]}</Badge>
 									)}
+									<p className="text-muted-foreground">{customerName}</p>
 								</div>
-								<p className="text-muted-foreground mt-1">
-									{customerName} &bull; {formatPriceRange(priceRange)}
-								</p>
-								{/* Status Progress Indicator */}
-								<div className="flex items-center gap-3 mt-2">
-									<div className="flex items-center gap-2">
-										<div className={`w-2.5 h-2.5 rounded-full ${QUOTE_STATUS_COLORS[pkg.status]}`} />
-										<span className="font-medium">{formatQuoteStatus(pkg.status)}</span>
-									</div>
-									<div className="flex items-center gap-1.5">
-										{QUOTE_STATUS_ORDER.map((status, index) => {
-											const currentIndex = ['rejected', 'expired'].includes(pkg.status)
-												? QUOTE_STATUS_ORDER.indexOf('presented')
-												: QUOTE_STATUS_ORDER.indexOf(pkg.status);
-											const isFilled = index <= currentIndex;
-											return (
-												<div
-													key={status}
-													className={`w-4 h-1 rounded-full ${isFilled ? QUOTE_STATUS_COLORS[pkg.status] : 'bg-muted'}`}
-												/>
-											);
-										})}
-									</div>
+								<div className="mt-3 flex items-center gap-4 flex-wrap">
+									<p className="text-4xl font-semibold tracking-tight tabular-nums">
+										{formatPriceRange(priceRange)}
+									</p>
+									<Badge variant="outline" className="gap-2">
+										<span
+											className={`size-2 rounded-full ${QUOTE_STATUS_COLORS[pkg.status]}`}
+										/>
+										{formatQuoteStatus(pkg.status)}
+									</Badge>
 								</div>
+								{blockerCount > 0 && (
+									<p className="mt-2 flex items-center gap-1.5 text-sm text-amber-600">
+										<AlertCircle className="size-4 shrink-0" />
+										<span>
+											{blockerCount}{' '}
+											{blockerCount === 1 ? 'item needs' : 'items need'} attention before this can
+											be marked Ready
+										</span>
+									</p>
+								)}
 							</div>
 						</div>
 						{/* Consolidated Header Actions */}
