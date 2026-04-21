@@ -367,9 +367,7 @@ export function QuoteDetailPage() {
 			0,
 		) ?? 0;
 	const blockerCount =
-		pkg.status === 'draft'
-			? (pkg.productionMethod ? 0 : 1) + letteringMissingTechnique
-			: 0;
+		pkg.status === 'draft' ? (pkg.productionMethod ? 0 : 1) + letteringMissingTechnique : 0;
 
 	return (
 		<div>
@@ -410,9 +408,7 @@ export function QuoteDetailPage() {
 										{formatPriceRange(priceRange)}
 									</p>
 									<Badge variant="outline" className="gap-2">
-										<span
-											className={`size-2 rounded-full ${QUOTE_STATUS_COLORS[pkg.status]}`}
-										/>
+										<span className={`size-2 rounded-full ${QUOTE_STATUS_COLORS[pkg.status]}`} />
 										{formatQuoteStatus(pkg.status)}
 									</Badge>
 								</div>
@@ -420,9 +416,8 @@ export function QuoteDetailPage() {
 									<p className="mt-2 flex items-center gap-1.5 text-sm text-amber-600">
 										<AlertCircle className="size-4 shrink-0" />
 										<span>
-											{blockerCount}{' '}
-											{blockerCount === 1 ? 'item needs' : 'items need'} attention before this can
-											be marked Ready
+											{blockerCount} {blockerCount === 1 ? 'item needs' : 'items need'} attention
+											before this can be marked Ready
 										</span>
 									</p>
 								)}
@@ -523,179 +518,171 @@ export function QuoteDetailPage() {
 
 			{/* Internal View */}
 			{!isCustomerView && (
-				<div className="space-y-6">
-					{/* Shared Context Card */}
-					<SharedContextCard pkg={pkg} formatDate={formatDate} />
+				<div className="divide-y divide-border/60 [&>section]:py-10 [&>section:first-child]:pt-0 [&>section:last-child]:pb-0">
+					{/* Quote Context */}
+					<section>
+						<div className="flex items-center justify-between mb-4">
+							<h3 className="text-base font-semibold">Quote Context</h3>
+						</div>
+						<SharedContextCard pkg={pkg} formatDate={formatDate} />
+					</section>
 
-					{/* Options Section */}
-					<Card>
-						<CardHeader className="pb-3">
-							<div className="flex items-center justify-between">
-								<div>
-									<CardTitle>Pricing Options</CardTitle>
-								</div>
-								{canAddOptions && (
-									<Button variant="outline" onClick={() => setAddOptionDialogOpen(true)}>
-										<Plus className="h-4 w-4 mr-2" />
-										Add Option
-									</Button>
-								)}
-							</div>
-						</CardHeader>
+					{/* Options */}
+					<section>
+						<div className="flex items-center justify-between mb-6">
+							<h3 className="text-base font-semibold">Options</h3>
+							{canAddOptions && (
+								<Button variant="outline" onClick={() => setAddOptionDialogOpen(true)}>
+									<Plus className="h-4 w-4 mr-2" />
+									Add Option
+								</Button>
+							)}
+						</div>
 						{pkg.options && pkg.options.length > 0 && (
-							<div className="px-6 pb-4">
-								<div className="flex items-center gap-2 border-b pb-4">
-									{pkg.options.map((option) => (
-										<div key={option.id} className="flex items-center">
-											<Button
-												variant={selectedOptionId === option.id ? 'default' : 'outline'}
-												size="sm"
-												onClick={() => setSelectedOptionId(option.id)}
-												className="gap-2"
-											>
-												{option.quoteNumber}
-												{option.optionLabel && (
-													<span className="text-xs opacity-75">({option.optionLabel})</span>
-												)}
-												<span className="text-xs opacity-75">{formatCurrency(option.total)}</span>
-											</Button>
-											{selectedOptionId === option.id && canEditPricing && (
-												<DropdownMenu>
-													<DropdownMenuTrigger asChild>
-														<Button variant="ghost" size="sm" className="h-8 w-8 p-0 ml-1">
-															<ChevronDown className="h-4 w-4" />
-														</Button>
-													</DropdownMenuTrigger>
-													<DropdownMenuContent align="end">
-														<DropdownMenuItem onClick={handleCloneOption}>
-															<Copy className="h-4 w-4 mr-2" />
-															Clone Option
-														</DropdownMenuItem>
-														{pkg.options.length > 1 && (
-															<>
-																<DropdownMenuSeparator />
-																<DropdownMenuItem
-																	className="text-destructive"
-																	onClick={() => setDeleteOptionDialogOpen(true)}
-																>
-																	<Trash2 className="h-4 w-4 mr-2" />
-																	Delete Option
-																</DropdownMenuItem>
-															</>
-														)}
-													</DropdownMenuContent>
-												</DropdownMenu>
+							<div className="flex items-center gap-2 border-b border-border/60 pb-4 mb-6">
+								{pkg.options.map((option) => (
+									<div key={option.id} className="flex items-center">
+										<Button
+											variant={selectedOptionId === option.id ? 'default' : 'outline'}
+											size="sm"
+											onClick={() => setSelectedOptionId(option.id)}
+											className="gap-2"
+										>
+											{option.quoteNumber}
+											{option.optionLabel && (
+												<span className="text-xs opacity-75">({option.optionLabel})</span>
 											)}
-										</div>
-									))}
-								</div>
+											<span className="text-xs opacity-75">{formatCurrency(option.total)}</span>
+										</Button>
+										{selectedOptionId === option.id && canEditPricing && (
+											<DropdownMenu>
+												<DropdownMenuTrigger asChild>
+													<Button variant="ghost" size="sm" className="h-8 w-8 p-0 ml-1">
+														<ChevronDown className="h-4 w-4" />
+													</Button>
+												</DropdownMenuTrigger>
+												<DropdownMenuContent align="end">
+													<DropdownMenuItem onClick={handleCloneOption}>
+														<Copy className="h-4 w-4 mr-2" />
+														Clone Option
+													</DropdownMenuItem>
+													{pkg.options.length > 1 && (
+														<>
+															<DropdownMenuSeparator />
+															<DropdownMenuItem
+																className="text-destructive"
+																onClick={() => setDeleteOptionDialogOpen(true)}
+															>
+																<Trash2 className="h-4 w-4 mr-2" />
+																Delete Option
+															</DropdownMenuItem>
+														</>
+													)}
+												</DropdownMenuContent>
+											</DropdownMenu>
+										)}
+									</div>
+								))}
 							</div>
 						)}
 						{currentOption && (
-							<div className="px-6 pb-6">
-								<OptionContent
-									pkg={pkg}
-									option={currentOption}
-									canEditPricing={canEditPricing}
-									formatCurrency={formatCurrency}
-									updateComponentPricing={updateComponentPricing}
-									updateLetteringPricing={updateLetteringPricing}
-									updateSundryPricing={updateSundryPricing}
-									updateProductPricing={updateProductPricing}
-									addLineItem={addLineItem}
-									updateLineItem={updateLineItem}
-									deleteLineItem={deleteLineItem}
-									addLetteringMutation={addLetteringMutation}
-									updateLetteringMutation={updateLetteringMutation}
-									deleteLetteringMutation={deleteLetteringMutation}
-									addComponentMutation={addComponentMutation}
-									deleteComponentMutation={deleteComponentMutation}
-									addSundryMutation={addSundryMutation}
-									deleteSundryMutation={deleteSundryMutation}
-									activePresets={activePresets}
-								/>
-							</div>
-						)}
-					</Card>
-
-					{/* Sidebar Content */}
-					<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-						<div className="lg:col-span-2">
-							{/* Documents */}
-							<DocumentsCard
-								entityType="quote"
-								entityId={pkg.id}
-								title="Documents"
-								description="Files and documents for this quote"
+							<OptionContent
+								pkg={pkg}
+								option={currentOption}
+								canEditPricing={canEditPricing}
+								formatCurrency={formatCurrency}
+								updateComponentPricing={updateComponentPricing}
+								updateLetteringPricing={updateLetteringPricing}
+								updateSundryPricing={updateSundryPricing}
+								updateProductPricing={updateProductPricing}
+								addLineItem={addLineItem}
+								updateLineItem={updateLineItem}
+								deleteLineItem={deleteLineItem}
+								addLetteringMutation={addLetteringMutation}
+								updateLetteringMutation={updateLetteringMutation}
+								deleteLetteringMutation={deleteLetteringMutation}
+								addComponentMutation={addComponentMutation}
+								deleteComponentMutation={deleteComponentMutation}
+								addSundryMutation={addSundryMutation}
+								deleteSundryMutation={deleteSundryMutation}
+								activePresets={activePresets}
 							/>
-						</div>
-						<div className="space-y-6">
-							{/* Internal Notes */}
-							{pkg.internalNotes && (
-								<Card className="border-orange-200 bg-orange-50">
-									<CardHeader className="pb-2">
-										<CardTitle className="text-sm">Internal Notes</CardTitle>
-									</CardHeader>
-									<CardContent>
-										<p className="text-sm whitespace-pre-wrap">{pkg.internalNotes}</p>
-									</CardContent>
-								</Card>
-							)}
+						)}
+					</section>
 
-							{/* Customer Feedback */}
-							{(pkg.acceptedOptionId || pkg.customerFeedback) && (
-								<Card className="border-blue-200 bg-blue-50">
-									<CardHeader className="pb-2">
-										<CardTitle className="text-sm flex items-center gap-2">
-											<MessageSquare className="h-4 w-4" />
-											Customer Response
-										</CardTitle>
-									</CardHeader>
-									<CardContent className="space-y-3">
-										{pkg.acceptedOptionId && (
-											<div className="flex items-center gap-2">
-												<Badge className="bg-green-600">Accepted</Badge>
-												{pkg.customerDecisionAt && (
-													<span className="text-xs text-muted-foreground">
-														on {formatDate(pkg.customerDecisionAt)}
-													</span>
-												)}
-											</div>
-										)}
-										{pkg.customerFeedback && (
-											<div className="bg-white p-3 rounded border">
-												<p className="text-xs text-muted-foreground mb-1">Customer feedback:</p>
-												<p className="text-sm whitespace-pre-wrap">"{pkg.customerFeedback}"</p>
-											</div>
-										)}
-										{pkg.emailSentAt && (
-											<div className="text-xs text-muted-foreground">
-												Quote emailed {pkg.emailSentCount} time{pkg.emailSentCount !== 1 ? 's' : ''}{' '}
-												- last sent {formatDate(pkg.emailSentAt)}
-											</div>
-										)}
-									</CardContent>
-								</Card>
-							)}
-
-							{/* Details Card */}
-							<Card>
-								<CardHeader>
-									<CardTitle>Details</CardTitle>
+					{/* Internal Notes — retained as Card (floats above the stack) */}
+					{pkg.internalNotes && (
+						<section>
+							<Card className="border-amber-200 bg-amber-50/60">
+								<CardHeader className="pb-2">
+									<CardTitle className="text-sm">Internal Notes</CardTitle>
 								</CardHeader>
-								<CardContent className="space-y-4">
-									<div>
-										<p className="text-sm font-medium text-muted-foreground">Created</p>
-										<p>{formatDate(pkg.createdAt)}</p>
-									</div>
-									<div>
-										<p className="text-sm font-medium text-muted-foreground">Updated</p>
-										<p>{formatDate(pkg.updatedAt)}</p>
-									</div>
+								<CardContent>
+									<p className="text-sm whitespace-pre-wrap">{pkg.internalNotes}</p>
 								</CardContent>
 							</Card>
+						</section>
+					)}
+
+					{/* Customer Response */}
+					{(pkg.acceptedOptionId || pkg.customerFeedback) && (
+						<section>
+							<h3 className="text-base font-semibold mb-4 flex items-center gap-2">
+								<MessageSquare className="size-4" />
+								Customer Response
+							</h3>
+							<div className="space-y-3">
+								{pkg.acceptedOptionId && (
+									<div className="flex items-center gap-2">
+										<Badge className="bg-green-600">Accepted</Badge>
+										{pkg.customerDecisionAt && (
+											<span className="text-xs text-muted-foreground">
+												on {formatDate(pkg.customerDecisionAt)}
+											</span>
+										)}
+									</div>
+								)}
+								{pkg.customerFeedback && (
+									<div className="border border-border/60 p-3 rounded-md">
+										<p className="text-xs text-muted-foreground mb-1">Customer feedback:</p>
+										<p className="text-sm whitespace-pre-wrap">"{pkg.customerFeedback}"</p>
+									</div>
+								)}
+								{pkg.emailSentAt && (
+									<p className="text-xs text-muted-foreground">
+										Quote emailed {pkg.emailSentCount} time{pkg.emailSentCount !== 1 ? 's' : ''} -
+										last sent {formatDate(pkg.emailSentAt)}
+									</p>
+								)}
+							</div>
+						</section>
+					)}
+
+					{/* Documents */}
+					<section>
+						<DocumentsCard
+							entityType="quote"
+							entityId={pkg.id}
+							title="Documents"
+							description=""
+							embedded
+						/>
+					</section>
+
+					{/* Details */}
+					<section>
+						<h3 className="text-base font-semibold mb-4">Details</h3>
+						<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+							<div>
+								<p className="text-sm font-medium text-muted-foreground">Created</p>
+								<p>{formatDate(pkg.createdAt)}</p>
+							</div>
+							<div>
+								<p className="text-sm font-medium text-muted-foreground">Updated</p>
+								<p>{formatDate(pkg.updatedAt)}</p>
+							</div>
 						</div>
-					</div>
+					</section>
 				</div>
 			)}
 

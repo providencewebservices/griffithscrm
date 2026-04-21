@@ -112,7 +112,10 @@ export function DocumentsCard({
 		return (
 			<>
 				<div className="flex items-center justify-between mb-4">
-					<p className="text-sm text-muted-foreground">{description}</p>
+					<div>
+						{title && <h3 className="text-base font-semibold">{title}</h3>}
+						{description && <p className="text-sm text-muted-foreground mt-1">{description}</p>}
+					</div>
 					<Button size="sm" onClick={() => setUploadDialogOpen(true)}>
 						<Plus className="h-4 w-4 mr-2" />
 						Upload
