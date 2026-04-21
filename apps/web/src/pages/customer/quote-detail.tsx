@@ -83,14 +83,61 @@ import { useTenantSettingsQuery } from '@/hooks/use-tenant-settings';
 
 const _API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
-const QUOTE_STATUS_COLORS: Record<QuoteStatus, string> = {
-	draft: 'bg-amber-500',
-	ready: 'bg-purple-500',
-	presented: 'bg-cyan-500',
-	accepted: 'bg-green-600',
-	rejected: 'bg-red-500',
-	expired: 'bg-gray-400',
+// Happy-path progression. Failure states (rejected / expired) render as a
+// distinct badge — see StatusStepper.
+type StepStatus = 'draft' | 'ready' | 'presented' | 'accepted';
+const STATUS_STEPS: StepStatus[] = ['draft', 'ready', 'presented', 'accepted'];
+
+const STATUS_STEP_ACCENT: Record<StepStatus, string> = {
+	draft: 'bg-amber-100 text-amber-900 border-amber-200',
+	ready: 'bg-purple-100 text-purple-900 border-purple-200',
+	presented: 'bg-cyan-100 text-cyan-900 border-cyan-200',
+	accepted: 'bg-green-100 text-green-900 border-green-200',
 };
+
+function StatusStepper({ status }: { status: QuoteStatus }) {
+	if (status === 'rejected') {
+		return (
+			<Badge variant="outline" className="bg-red-50 text-red-900 border-red-200">
+				Rejected
+			</Badge>
+		);
+	}
+	if (status === 'expired') {
+		return (
+			<Badge variant="outline" className="bg-gray-100 text-gray-700 border-gray-300">
+				Expired
+			</Badge>
+		);
+	}
+
+	const currentIndex = STATUS_STEPS.indexOf(status);
+
+	return (
+		// biome-ignore lint/a11y/noRedundantRoles: preserve list semantics — Safari/VoiceOver drops them on styled <ol>
+		<ol role="list" aria-label="Quote progress" className="flex items-center gap-1.5 flex-wrap">
+			{STATUS_STEPS.map((step, i) => {
+				const isCompleted = i < currentIndex;
+				const isCurrent = i === currentIndex;
+				const classes = isCurrent
+					? STATUS_STEP_ACCENT[step]
+					: isCompleted
+						? 'bg-muted text-foreground border-border/60'
+						: 'text-muted-foreground border-border/60 border-dashed';
+				return (
+					<li
+						key={step}
+						aria-current={isCurrent ? 'step' : undefined}
+						className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium ${classes}`}
+					>
+						{isCompleted && <Check className="size-3" />}
+						{formatQuoteStatus(step)}
+					</li>
+				);
+			})}
+		</ol>
+	);
+}
 
 export function QuoteDetailPage() {
 	const { id } = useParams<{ id: string }>();
@@ -407,10 +454,7 @@ export function QuoteDetailPage() {
 									<p className="text-4xl font-semibold tracking-tight tabular-nums">
 										{formatPriceRange(priceRange)}
 									</p>
-									<Badge variant="outline" className="gap-2">
-										<span className={`size-2 rounded-full ${QUOTE_STATUS_COLORS[pkg.status]}`} />
-										{formatQuoteStatus(pkg.status)}
-									</Badge>
+									<StatusStepper status={pkg.status} />
 								</div>
 								{blockerCount > 0 && (
 									<p className="mt-2 flex items-center gap-1.5 text-sm text-amber-600">
