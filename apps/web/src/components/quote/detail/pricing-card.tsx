@@ -1,6 +1,3 @@
-import { Eye, EyeOff } from 'lucide-react';
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { QuoteOption } from '@/hooks/use-quotes';
 
@@ -11,10 +8,6 @@ export function PricingCard({
 	option: QuoteOption;
 	formatCurrency: (value: string | number) => string;
 }) {
-	// Session-scoped visibility toggle so the operator can hide internal margin data
-	// before a screen-share. Resets on reload.
-	const [showInternal, setShowInternal] = useState(true);
-
 	const grossMargin =
 		parseFloat(option.total) - parseFloat(option.vatAmount) - parseFloat(option.totalCost);
 	const marginBase = parseFloat(option.total) - parseFloat(option.vatAmount) || 1;
@@ -46,38 +39,23 @@ export function PricingCard({
 					</div>
 				</div>
 
-				{/* Internal metrics — toggleable for screen-share safety */}
+				{/* Internal metrics — hidden entirely in Customer View via the layout-level toggle */}
 				<div className="rounded-md bg-muted/50 p-3">
-					<div className="flex items-center justify-between mb-2">
-						<p className="text-sm font-medium text-muted-foreground">Internal</p>
-						<Button
-							variant="ghost"
-							size="icon"
-							className="h-7 w-7 -mr-1"
-							onClick={() => setShowInternal((v) => !v)}
-							aria-label={showInternal ? 'Hide internal metrics' : 'Show internal metrics'}
-						>
-							{showInternal ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-						</Button>
-					</div>
+					<p className="text-sm font-medium text-muted-foreground mb-2">Internal</p>
 					<div className="space-y-1.5">
 						<div className="flex justify-between text-sm">
 							<span className="text-muted-foreground">Cost</span>
 							<span className="tabular-nums text-orange-600">
-								{showInternal ? formatCurrency(option.totalCost) : '••••'}
+								{formatCurrency(option.totalCost)}
 							</span>
 						</div>
 						<div className="flex justify-between text-sm">
 							<span className="text-muted-foreground">Gross margin</span>
-							<span className="tabular-nums text-green-600">
-								{showInternal ? formatCurrency(grossMargin) : '••••'}
-							</span>
+							<span className="tabular-nums text-green-600">{formatCurrency(grossMargin)}</span>
 						</div>
 						<div className="flex justify-between text-sm">
 							<span className="text-muted-foreground">Margin %</span>
-							<span className="tabular-nums text-green-600">
-								{showInternal ? `${marginPercent.toFixed(1)}%` : '••••'}
-							</span>
+							<span className="tabular-nums text-green-600">{marginPercent.toFixed(1)}%</span>
 						</div>
 					</div>
 				</div>

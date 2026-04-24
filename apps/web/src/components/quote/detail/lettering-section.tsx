@@ -1,15 +1,8 @@
-import { Check, Loader2, MoreHorizontal, Pencil, Plus, Trash2, X } from 'lucide-react';
-import { useState } from 'react';
+import { Loader2, Pencil, Plus, Trash2, TriangleAlert } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
 import { InscriptionText } from '@/components/inscription-text';
 import { Button } from '@/components/ui/button';
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuSeparator,
-	DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -20,13 +13,13 @@ import {
 	SelectValue,
 } from '@/components/ui/select';
 import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from '@/components/ui/table';
+	Sheet,
+	SheetContent,
+	SheetDescription,
+	SheetFooter,
+	SheetHeader,
+	SheetTitle,
+} from '@/components/ui/sheet';
 import { Textarea } from '@/components/ui/textarea';
 import { useFontsQuery } from '@/hooks/use-fonts';
 import { useLetteringColorsQuery } from '@/hooks/use-lettering-colors';
@@ -41,6 +34,12 @@ import type {
 	useUpdateLetteringPricingMutation,
 } from '@/hooks/use-quotes';
 import { EditableNumber } from './editable-number';
+
+type ComponentOption = { id: string; label: string };
+
+type SheetState = { mode: 'closed' } | { mode: 'add' } | { mode: 'edit'; item: QuoteLettering };
+
+const countLetters = (text: string) => text.replace(/\s/g, '').length;
 
 export function LetteringSection({
 	pkg,
@@ -61,27 +60,9 @@ export function LetteringSection({
 	updateLetteringMutation: ReturnType<typeof useUpdateLetteringMutation>;
 	deleteLetteringMutation: ReturnType<typeof useDeleteLetteringMutation>;
 }) {
-	const [showAddForm, setShowAddForm] = useState(false);
-	const [editingId, setEditingId] = useState<string | null>(null);
+	const [sheet, setSheet] = useState<SheetState>({ mode: 'closed' });
 	const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
-	// New lettering form state
-	const [newTechniqueId, setNewTechniqueId] = useState('');
-	const [newColorId, setNewColorId] = useState('');
-	const [newFontId, setNewFontId] = useState('');
-	const [newQuoteComponentId, setNewQuoteComponentId] = useState('');
-	const [newPlacementDescription, setNewPlacementDescription] = useState('');
-	const [newText, setNewText] = useState('');
-
-	// Edit form state
-	const [editTechniqueId, setEditTechniqueId] = useState('');
-	const [editColorId, setEditColorId] = useState('');
-	const [editFontId, setEditFontId] = useState('');
-	const [editQuoteComponentId, setEditQuoteComponentId] = useState('');
-	const [editPlacementDescription, setEditPlacementDescription] = useState('');
-	const [editText, setEditText] = useState('');
-
-	// Fetch techniques, colors, and fonts
 	const { data: techniques } = useLetteringTechniquesQuery();
 	const { data: colors } = useLetteringColorsQuery();
 	const { data: fontsList } = useFontsQuery();
@@ -89,75 +70,14 @@ export function LetteringSection({
 	const activeTechniques = techniques?.filter((t) => t.isActive) || [];
 	const activeColors = colors?.filter((c) => c.isActive) || [];
 	const activeFonts = fontsList?.filter((f) => f.isActive) || [];
-	const componentOptions = option.components.map((component, index) => ({
+
+	const componentOptions: ComponentOption[] = option.components.map((component, index) => ({
 		id: component.id,
 		label: `Component ${index + 1}: ${component.componentType
 			.split('_')
 			.map((word) => word.charAt(0).toUpperCase() + word.slice(1))
 			.join(' ')}`,
 	}));
-
-	const handleAddLettering = async () => {
-		if (!newText.trim()) return;
-
-		await addLetteringMutation.mutateAsync({
-			packageId: pkg.id,
-			optionId: option.id,
-			techniqueId: newTechniqueId || undefined,
-			colorId: newColorId || undefined,
-			fontId: newFontId || undefined,
-			quoteComponentId: newQuoteComponentId || undefined,
-			placementDescription: newPlacementDescription.trim() || undefined,
-			text: newText.trim(),
-		});
-
-		// Reset form
-		setNewTechniqueId('');
-		setNewColorId('');
-		setNewFontId('');
-		setNewQuoteComponentId('');
-		setNewPlacementDescription('');
-		setNewText('');
-		setShowAddForm(false);
-	};
-
-	const handleStartEdit = (lett: QuoteLettering) => {
-		setEditingId(lett.id);
-		setEditTechniqueId(lett.techniqueId || '');
-		setEditColorId(lett.colorId || '');
-		setEditFontId(lett.fontId || '');
-		setEditQuoteComponentId(lett.quoteComponentId || '');
-		setEditPlacementDescription(lett.placementDescription || '');
-		setEditText(lett.text || '');
-	};
-
-	const handleSaveEdit = async (itemId: string) => {
-		if (!editText.trim()) return;
-
-		await updateLetteringMutation.mutateAsync({
-			packageId: pkg.id,
-			optionId: option.id,
-			itemId,
-			techniqueId: editTechniqueId || null,
-			colorId: editColorId || null,
-			fontId: editFontId || null,
-			quoteComponentId: editQuoteComponentId || null,
-			placementDescription: editPlacementDescription.trim() || null,
-			text: editText.trim(),
-		});
-
-		setEditingId(null);
-	};
-
-	const handleCancelEdit = () => {
-		setEditingId(null);
-		setEditTechniqueId('');
-		setEditColorId('');
-		setEditFontId('');
-		setEditQuoteComponentId('');
-		setEditPlacementDescription('');
-		setEditText('');
-	};
 
 	const handleDelete = async (itemId: string) => {
 		await deleteLetteringMutation.mutateAsync({
@@ -174,400 +94,68 @@ export function LetteringSection({
 				<h4 className="font-medium">
 					Lettering ({option.lettering.length} item{option.lettering.length !== 1 ? 's' : ''})
 				</h4>
-				{canEditPricing && !showAddForm && (
-					<Button variant="outline" size="sm" onClick={() => setShowAddForm(true)}>
-						<Plus className="h-4 w-4 mr-1" />
+				{canEditPricing && (
+					<Button variant="outline" size="sm" onClick={() => setSheet({ mode: 'add' })}>
+						<Plus className="size-4 mr-1" />
 						Add Lettering
 					</Button>
 				)}
 			</div>
 
-			{/* Add Lettering Form */}
-			{showAddForm && canEditPricing && (
-				<div className="border rounded-lg p-4 mb-4 bg-muted/50">
-					<div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-						<div>
-							<Label className="text-sm mb-1 block">Component</Label>
-							<Select
-								value={newQuoteComponentId || '_none'}
-								onValueChange={(v) => setNewQuoteComponentId(v === '_none' ? '' : v)}
-							>
-								<SelectTrigger>
-									<SelectValue placeholder="Not specified" />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="_none">Not specified</SelectItem>
-									{componentOptions.map((component) => (
-										<SelectItem key={component.id} value={component.id}>
-											{component.label}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</div>
-						<div>
-							<Label className="text-sm mb-1 block">Technique</Label>
-							<Select
-								value={newTechniqueId || '_none'}
-								onValueChange={(v) => setNewTechniqueId(v === '_none' ? '' : v)}
-							>
-								<SelectTrigger>
-									<SelectValue placeholder="Not specified" />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="_none">Not specified</SelectItem>
-									{activeTechniques.map((t) => (
-										<SelectItem key={t.id} value={t.id}>
-											{t.name}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</div>
-						<div>
-							<Label className="text-sm mb-1 block">Color</Label>
-							<Select
-								value={newColorId || '_none'}
-								onValueChange={(v) => setNewColorId(v === '_none' ? '' : v)}
-							>
-								<SelectTrigger>
-									<SelectValue placeholder="Select color" />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="_none">No color</SelectItem>
-									{activeColors.map((c) => (
-										<SelectItem key={c.id} value={c.id}>
-											{c.name}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</div>
-						<div>
-							<Label className="text-sm mb-1 block">Font</Label>
-							<Select
-								value={newFontId || '_none'}
-								onValueChange={(v) => setNewFontId(v === '_none' ? '' : v)}
-							>
-								<SelectTrigger>
-									<SelectValue placeholder="Default font" />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="_none">Default font</SelectItem>
-									{activeFonts.map((f) => (
-										<SelectItem key={f.id} value={f.id}>
-											{f.name}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</div>
-						<div className="md:col-span-3">
-							<Label className="text-sm mb-1 block">Placement Description</Label>
-							<Input
-								value={newPlacementDescription}
-								onChange={(e) => setNewPlacementDescription(e.target.value)}
-								placeholder="Describe where the inscription should go"
-							/>
-						</div>
-						<div className="md:col-span-3">
-							<Label className="text-sm mb-1 block">
-								Text * ({newText.replace(/\s/g, '').length} letters)
-							</Label>
-							<Textarea
-								value={newText}
-								onChange={(e) => setNewText(e.target.value)}
-								placeholder="Enter inscription text..."
-								rows={2}
-							/>
-						</div>
-						{newText && newFontId && (
-							<div className="md:col-span-3 border rounded p-3 bg-background">
-								<Label className="text-xs text-muted-foreground mb-1 block">Preview</Label>
-								<InscriptionText
-									text={newText}
-									fontId={newFontId}
-									fontName={activeFonts.find((f) => f.id === newFontId)?.name}
-									className="text-sm"
-								/>
-							</div>
-						)}
-					</div>
-					<div className="flex justify-end gap-2">
-						<Button
-							variant="outline"
-							size="sm"
-							onClick={() => {
-								setShowAddForm(false);
-								setNewTechniqueId('');
-								setNewColorId('');
-								setNewFontId('');
-								setNewQuoteComponentId('');
-								setNewPlacementDescription('');
-								setNewText('');
-							}}
-						>
-							Cancel
-						</Button>
-						<Button
-							size="sm"
-							onClick={handleAddLettering}
-							disabled={!newText.trim() || addLetteringMutation.isPending}
-						>
-							{addLetteringMutation.isPending ? (
-								<Loader2 className="h-4 w-4 mr-1 animate-spin" />
-							) : (
-								<Plus className="h-4 w-4 mr-1" />
-							)}
-							Add
-						</Button>
-					</div>
-				</div>
-			)}
-
-			{/* Empty state */}
-			{option.lettering.length === 0 && !showAddForm && (
-				<div className="border rounded-lg p-8 text-center text-sm text-muted-foreground border-dashed">
+			{option.lettering.length === 0 ? (
+				<div className="border border-dashed rounded-lg p-8 text-center text-sm text-muted-foreground">
 					No lettering items added yet.
 				</div>
-			)}
-
-			{/* Lettering Table */}
-			{option.lettering.length > 0 && (
-				<div className="border rounded-lg overflow-x-auto">
-					<Table>
-						<TableHeader>
-							<TableRow>
-								<TableHead>Inscription</TableHead>
-								<TableHead className="text-center w-16 whitespace-nowrap">Letters</TableHead>
-								<TableHead className="text-right w-28 whitespace-nowrap">Cost/Letter</TableHead>
-								<TableHead className="text-center w-24 whitespace-nowrap">Markup</TableHead>
-								<TableHead className="text-right w-24 whitespace-nowrap">Retail</TableHead>
-								<TableHead className="text-right w-24 whitespace-nowrap">Total</TableHead>
-								{canEditPricing && <TableHead className="w-[80px]"></TableHead>}
-							</TableRow>
-						</TableHeader>
-						<TableBody>
-							{option.lettering.map((lett) => (
-								<TableRow key={lett.id} className="[&_td]:py-3">
-									{editingId === lett.id ? (
-										// Edit mode
-										<>
-											<TableCell>
-												<div className="space-y-2">
-													<Input
-														value={editText}
-														onChange={(e) => setEditText(e.target.value)}
-														className="h-8"
-														placeholder="Inscription text"
-													/>
-													<div className="grid grid-cols-2 gap-2">
-														<Select
-															value={editQuoteComponentId || '_none'}
-															onValueChange={(v) => setEditQuoteComponentId(v === '_none' ? '' : v)}
-														>
-															<SelectTrigger className="h-8">
-																<SelectValue placeholder="Component" />
-															</SelectTrigger>
-															<SelectContent>
-																<SelectItem value="_none">No component</SelectItem>
-																{componentOptions.map((component) => (
-																	<SelectItem key={component.id} value={component.id}>
-																		{component.label}
-																	</SelectItem>
-																))}
-															</SelectContent>
-														</Select>
-														<Select
-															value={editTechniqueId || '_none'}
-															onValueChange={(v) => setEditTechniqueId(v === '_none' ? '' : v)}
-														>
-															<SelectTrigger className="h-8">
-																<SelectValue placeholder="Technique" />
-															</SelectTrigger>
-															<SelectContent>
-																<SelectItem value="_none">No technique</SelectItem>
-																{activeTechniques.map((t) => (
-																	<SelectItem key={t.id} value={t.id}>
-																		{t.name}
-																	</SelectItem>
-																))}
-															</SelectContent>
-														</Select>
-														<Select
-															value={editColorId || '_none'}
-															onValueChange={(v) => setEditColorId(v === '_none' ? '' : v)}
-														>
-															<SelectTrigger className="h-8">
-																<SelectValue placeholder="Color" />
-															</SelectTrigger>
-															<SelectContent>
-																<SelectItem value="_none">No color</SelectItem>
-																{activeColors.map((c) => (
-																	<SelectItem key={c.id} value={c.id}>
-																		{c.name}
-																	</SelectItem>
-																))}
-															</SelectContent>
-														</Select>
-														<Input
-															value={editPlacementDescription}
-															onChange={(e) => setEditPlacementDescription(e.target.value)}
-															className="h-8"
-															placeholder="Placement"
-														/>
-													</div>
-													<Select
-														value={editFontId || '_none'}
-														onValueChange={(v) => setEditFontId(v === '_none' ? '' : v)}
-													>
-														<SelectTrigger className="h-7 text-xs">
-															<SelectValue placeholder="Font" />
-														</SelectTrigger>
-														<SelectContent>
-															<SelectItem value="_none">Default font</SelectItem>
-															{activeFonts.map((f) => (
-																<SelectItem key={f.id} value={f.id}>
-																	{f.name}
-																</SelectItem>
-															))}
-														</SelectContent>
-													</Select>
-												</div>
-											</TableCell>
-											<TableCell className="text-center tabular-nums">
-												{editText.replace(/\s/g, '').length}
-											</TableCell>
-											<TableCell colSpan={4}></TableCell>
-											<TableCell className="text-right">
-												<div className="flex gap-1 justify-end">
-													<Button
-														variant="ghost"
-														size="sm"
-														onClick={handleCancelEdit}
-														className="h-7 px-2"
-													>
-														<X className="h-4 w-4" />
-													</Button>
-													<Button
-														variant="ghost"
-														size="sm"
-														onClick={() => handleSaveEdit(lett.id)}
-														disabled={!editText.trim() || updateLetteringMutation.isPending}
-														className="h-7 px-2"
-													>
-														{updateLetteringMutation.isPending ? (
-															<Loader2 className="h-4 w-4 animate-spin" />
-														) : (
-															<Check className="h-4 w-4" />
-														)}
-													</Button>
-												</div>
-											</TableCell>
-										</>
-									) : (
-										// Display mode
-										<>
-											<TableCell>
-												<div>
-													<p>{lett.text || '-'}</p>
-													{(() => {
-														const parts = [
-															componentOptions.find((c) => c.id === lett.quoteComponentId)?.label,
-															lett.techniqueName,
-															lett.colorName,
-															lett.placementDescription,
-														].filter(Boolean);
-														return parts.length > 0 ? (
-															<p className="text-sm text-muted-foreground mt-1">
-																{parts.join(' \u00b7 ')}
-															</p>
-														) : null;
-													})()}
-													{!lett.techniqueId && (
-														<p className="text-sm text-amber-600 mt-1">
-															No technique set — pricing unavailable
-														</p>
-													)}
-												</div>
-											</TableCell>
-											<TableCell className="text-center tabular-nums">{lett.letterCount}</TableCell>
-											<TableCell className="text-right tabular-nums">
-												<EditableNumber
-													value={parseFloat(lett.supplierCost)}
-													onSave={async (value) => {
-														await updateLetteringPricing.mutateAsync({
-															packageId: pkg.id,
-															optionId: option.id,
-															itemId: lett.id,
-															supplierCost: value,
-														});
-													}}
-													disabled={!canEditPricing}
-													isCurrency
-												/>
-											</TableCell>
-											<TableCell className="text-center text-muted-foreground text-sm tabular-nums">
-												<EditableNumber
-													value={parseFloat(lett.markupPercent)}
-													onSave={async (value) => {
-														await updateLetteringPricing.mutateAsync({
-															packageId: pkg.id,
-															optionId: option.id,
-															itemId: lett.id,
-															markupPercent: value,
-														});
-													}}
-													disabled={!canEditPricing}
-													min={0}
-													align="center"
-													formatValue={(val) => `${val.toFixed(0)}%`}
-												/>
-											</TableCell>
-											<TableCell className="text-right tabular-nums">
-												{formatCurrency(lett.unitPrice)}
-											</TableCell>
-											<TableCell className="text-right font-medium tabular-nums">
-												{formatCurrency(lett.lineTotal)}
-											</TableCell>
-											{canEditPricing && (
-												<TableCell>
-													<div className="flex justify-end">
-														<DropdownMenu>
-															<DropdownMenuTrigger asChild>
-																<Button variant="ghost" size="icon" className="h-8 w-8">
-																	<MoreHorizontal className="size-4" />
-																	<span className="sr-only">Row actions</span>
-																</Button>
-															</DropdownMenuTrigger>
-															<DropdownMenuContent align="end">
-																<DropdownMenuItem onClick={() => handleStartEdit(lett)}>
-																	<Pencil className="size-4 mr-2" />
-																	Edit
-																</DropdownMenuItem>
-																<DropdownMenuSeparator />
-																<DropdownMenuItem
-																	className="text-destructive"
-																	onClick={() => setDeleteConfirmId(lett.id)}
-																>
-																	<Trash2 className="size-4 mr-2" />
-																	Delete
-																</DropdownMenuItem>
-															</DropdownMenuContent>
-														</DropdownMenu>
-													</div>
-												</TableCell>
-											)}
-										</>
-									)}
-								</TableRow>
-							))}
-						</TableBody>
-					</Table>
+			) : (
+				<div className="space-y-3">
+					{option.lettering.map((lett) => (
+						<LetteringCard
+							key={lett.id}
+							lett={lett}
+							pkg={pkg}
+							option={option}
+							componentOptions={componentOptions}
+							canEditPricing={canEditPricing}
+							formatCurrency={formatCurrency}
+							updateLetteringPricing={updateLetteringPricing}
+							onEdit={() => setSheet({ mode: 'edit', item: lett })}
+							onDelete={() => setDeleteConfirmId(lett.id)}
+						/>
+					))}
 				</div>
 			)}
 
-			{/* Delete Confirmation Dialog */}
+			<LetteringFormSheet
+				state={sheet}
+				onClose={() => setSheet({ mode: 'closed' })}
+				componentOptions={componentOptions}
+				techniques={activeTechniques}
+				colors={activeColors}
+				fonts={activeFonts}
+				onSubmitAdd={async (values) => {
+					await addLetteringMutation.mutateAsync({
+						packageId: pkg.id,
+						optionId: option.id,
+						...values,
+					});
+				}}
+				onSubmitEdit={async (itemId, values) => {
+					await updateLetteringMutation.mutateAsync({
+						packageId: pkg.id,
+						optionId: option.id,
+						itemId,
+						techniqueId: values.techniqueId ?? null,
+						colorId: values.colorId ?? null,
+						fontId: values.fontId ?? null,
+						quoteComponentId: values.quoteComponentId ?? null,
+						placementDescription: values.placementDescription ?? null,
+						text: values.text,
+					});
+				}}
+				isAddPending={addLetteringMutation.isPending}
+				isEditPending={updateLetteringMutation.isPending}
+			/>
+
 			<DeleteConfirmDialog
 				open={deleteConfirmId !== null}
 				onOpenChange={(open) => !open && setDeleteConfirmId(null)}
@@ -577,5 +165,410 @@ export function LetteringSection({
 				isLoading={deleteLetteringMutation.isPending}
 			/>
 		</div>
+	);
+}
+
+function LetteringCard({
+	lett,
+	pkg,
+	option,
+	componentOptions,
+	canEditPricing,
+	formatCurrency,
+	updateLetteringPricing,
+	onEdit,
+	onDelete,
+}: {
+	lett: QuoteLettering;
+	pkg: QuotePackageWithOptions;
+	option: QuoteOption;
+	componentOptions: ComponentOption[];
+	canEditPricing: boolean;
+	formatCurrency: (value: string | number) => string;
+	updateLetteringPricing: ReturnType<typeof useUpdateLetteringPricingMutation>;
+	onEdit: () => void;
+	onDelete: () => void;
+}) {
+	const componentLabel = componentOptions.find((c) => c.id === lett.quoteComponentId)?.label;
+	const metaParts = [
+		componentLabel,
+		lett.techniqueName,
+		lett.colorName,
+		lett.fontName && `${lett.fontName} font`,
+		lett.placementDescription,
+	].filter(Boolean) as string[];
+
+	const hasTechnique = Boolean(lett.techniqueId);
+
+	return (
+		<div className="group border rounded-lg bg-card overflow-hidden">
+			<div className="grid grid-cols-1 md:grid-cols-[1fr_280px] divide-y md:divide-y-0 md:divide-x divide-border/60">
+				{/* Proof panel */}
+				<div className="relative p-6 bg-muted/30">
+					{canEditPricing && (
+						<div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+							<Button
+								type="button"
+								variant="ghost"
+								size="icon"
+								className="size-8"
+								onClick={onEdit}
+								aria-label="Edit lettering"
+							>
+								<Pencil className="size-4" />
+							</Button>
+							<Button
+								type="button"
+								variant="ghost"
+								size="icon"
+								className="size-8 text-destructive hover:text-destructive"
+								onClick={onDelete}
+								aria-label="Delete lettering"
+							>
+								<Trash2 className="size-4" />
+							</Button>
+						</div>
+					)}
+
+					<InscriptionText
+						text={lett.text || ''}
+						fontId={lett.fontId}
+						fontName={lett.fontName}
+						placeholder="(no inscription text)"
+						className="text-xl sm:text-2xl leading-8 tracking-wide text-balance"
+					/>
+
+					{metaParts.length > 0 && (
+						<p className="mt-4 text-center text-xs text-muted-foreground">
+							{metaParts.join(' · ')}
+						</p>
+					)}
+				</div>
+
+				{/* Pricing panel */}
+				<div className="p-4 flex flex-col gap-3 text-sm">
+					{!hasTechnique && (
+						<button
+							type="button"
+							onClick={canEditPricing ? onEdit : undefined}
+							disabled={!canEditPricing}
+							className="flex items-center gap-1.5 text-amber-700 hover:text-amber-800 disabled:hover:text-amber-700 disabled:cursor-default text-xs font-medium -mx-1 px-1 py-0.5 rounded"
+						>
+							<TriangleAlert className="size-3.5 shrink-0" />
+							<span>{canEditPricing ? 'Set technique to price' : 'No technique set'}</span>
+						</button>
+					)}
+
+					<dl className="space-y-2">
+						<div className="flex items-baseline justify-between gap-2">
+							<dt className="text-muted-foreground">Letters</dt>
+							<dd className="tabular-nums font-medium">{lett.letterCount}</dd>
+						</div>
+						<div className="flex items-baseline justify-between gap-2">
+							<dt className="text-muted-foreground">Cost / letter</dt>
+							<dd className="tabular-nums">
+								<EditableNumber
+									value={parseFloat(lett.supplierCost)}
+									onSave={async (value) => {
+										await updateLetteringPricing.mutateAsync({
+											packageId: pkg.id,
+											optionId: option.id,
+											itemId: lett.id,
+											supplierCost: value,
+										});
+									}}
+									disabled={!canEditPricing}
+									isCurrency
+								/>
+							</dd>
+						</div>
+						<div className="flex items-baseline justify-between gap-2">
+							<dt className="text-muted-foreground">Markup</dt>
+							<dd className="tabular-nums">
+								<EditableNumber
+									value={parseFloat(lett.markupPercent)}
+									onSave={async (value) => {
+										await updateLetteringPricing.mutateAsync({
+											packageId: pkg.id,
+											optionId: option.id,
+											itemId: lett.id,
+											markupPercent: value,
+										});
+									}}
+									disabled={!canEditPricing}
+									min={0}
+									formatValue={(val) => `${val.toFixed(0)}%`}
+								/>
+							</dd>
+						</div>
+						<div className="flex items-baseline justify-between gap-2">
+							<dt className="text-muted-foreground">Retail / letter</dt>
+							<dd className="tabular-nums text-muted-foreground">
+								{formatCurrency(lett.unitPrice)}
+							</dd>
+						</div>
+					</dl>
+
+					<div className="flex items-baseline justify-between gap-2 pt-3 border-t border-border/60">
+						<span className="font-medium">Total</span>
+						<span className="tabular-nums font-semibold text-base">
+							{formatCurrency(lett.lineTotal)}
+						</span>
+					</div>
+				</div>
+			</div>
+		</div>
+	);
+}
+
+type FormValues = {
+	text: string;
+	techniqueId?: string;
+	colorId?: string;
+	fontId?: string;
+	quoteComponentId?: string;
+	placementDescription?: string;
+};
+
+function LetteringFormSheet({
+	state,
+	onClose,
+	componentOptions,
+	techniques,
+	colors,
+	fonts,
+	onSubmitAdd,
+	onSubmitEdit,
+	isAddPending,
+	isEditPending,
+}: {
+	state: SheetState;
+	onClose: () => void;
+	componentOptions: ComponentOption[];
+	techniques: { id: string; name: string; isActive: boolean }[];
+	colors: { id: string; name: string; isActive: boolean }[];
+	fonts: { id: string; name: string; isActive: boolean }[];
+	onSubmitAdd: (values: FormValues) => Promise<void>;
+	onSubmitEdit: (itemId: string, values: FormValues) => Promise<void>;
+	isAddPending: boolean;
+	isEditPending: boolean;
+}) {
+	const open = state.mode !== 'closed';
+	const isEdit = state.mode === 'edit';
+	const editingItem = state.mode === 'edit' ? state.item : null;
+
+	const [text, setText] = useState('');
+	const [techniqueId, setTechniqueId] = useState('');
+	const [colorId, setColorId] = useState('');
+	const [fontId, setFontId] = useState('');
+	const [quoteComponentId, setQuoteComponentId] = useState('');
+	const [placementDescription, setPlacementDescription] = useState('');
+
+	// Reset form when the sheet opens with new state
+	useEffect(() => {
+		if (state.mode === 'add') {
+			setText('');
+			setTechniqueId('');
+			setColorId('');
+			setFontId('');
+			setQuoteComponentId('');
+			setPlacementDescription('');
+		} else if (state.mode === 'edit') {
+			setText(state.item.text || '');
+			setTechniqueId(state.item.techniqueId || '');
+			setColorId(state.item.colorId || '');
+			setFontId(state.item.fontId || '');
+			setQuoteComponentId(state.item.quoteComponentId || '');
+			setPlacementDescription(state.item.placementDescription || '');
+		}
+	}, [state]);
+
+	const selectedFont = fonts.find((f) => f.id === fontId);
+	const letterCount = countLetters(text);
+	const isPending = isEdit ? isEditPending : isAddPending;
+	const canSubmit = text.trim().length > 0 && !isPending;
+
+	const handleSubmit = async () => {
+		if (!canSubmit) return;
+		const values: FormValues = {
+			text: text.trim(),
+			techniqueId: techniqueId || undefined,
+			colorId: colorId || undefined,
+			fontId: fontId || undefined,
+			quoteComponentId: quoteComponentId || undefined,
+			placementDescription: placementDescription.trim() || undefined,
+		};
+		if (isEdit && editingItem) {
+			await onSubmitEdit(editingItem.id, values);
+		} else {
+			await onSubmitAdd(values);
+		}
+		onClose();
+	};
+
+	return (
+		<Sheet open={open} onOpenChange={(next) => !next && onClose()}>
+			<SheetContent className="w-full sm:max-w-xl p-0 gap-0">
+				<SheetHeader className="border-b">
+					<SheetTitle>{isEdit ? 'Edit lettering' : 'Add lettering'}</SheetTitle>
+					<SheetDescription>
+						Preview shows the inscription as it will appear on the memorial.
+					</SheetDescription>
+				</SheetHeader>
+
+				<div className="flex-1 overflow-y-auto">
+					{/* Live proof preview */}
+					<div className="bg-muted/40 border-b px-6 py-8">
+						<p className="text-[10px] uppercase tracking-wide text-muted-foreground text-center mb-3">
+							Preview
+						</p>
+						<InscriptionText
+							text={text}
+							fontId={fontId || null}
+							fontName={selectedFont?.name || null}
+							placeholder="Type the inscription below…"
+							className="text-xl sm:text-2xl leading-8 tracking-wide text-balance min-h-24"
+						/>
+						<p className="mt-4 text-center text-xs text-muted-foreground tabular-nums">
+							{letterCount} letter{letterCount !== 1 ? 's' : ''}
+							{selectedFont ? ` · ${selectedFont.name}` : ' · Default font'}
+						</p>
+					</div>
+
+					{/* Form fields */}
+					<div className="p-6 space-y-4">
+						<div className="space-y-1.5">
+							<Label htmlFor="lettering-text">
+								Inscription text <span className="text-destructive">*</span>
+							</Label>
+							<Textarea
+								id="lettering-text"
+								value={text}
+								onChange={(e) => setText(e.target.value)}
+								placeholder="Enter inscription text (line breaks will be preserved)…"
+								rows={4}
+								className="font-serif"
+							/>
+							<p className="text-xs text-muted-foreground">
+								Press Enter to add line breaks exactly as they should appear on the memorial.
+							</p>
+						</div>
+
+						<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+							<div className="space-y-1.5">
+								<Label htmlFor="lettering-technique">Technique</Label>
+								<Select
+									value={techniqueId || '_none'}
+									onValueChange={(v) => setTechniqueId(v === '_none' ? '' : v)}
+								>
+									<SelectTrigger id="lettering-technique">
+										<SelectValue placeholder="Not specified" />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="_none">Not specified</SelectItem>
+										{techniques.map((t) => (
+											<SelectItem key={t.id} value={t.id}>
+												{t.name}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							</div>
+
+							<div className="space-y-1.5">
+								<Label htmlFor="lettering-color">Color</Label>
+								<Select
+									value={colorId || '_none'}
+									onValueChange={(v) => setColorId(v === '_none' ? '' : v)}
+								>
+									<SelectTrigger id="lettering-color">
+										<SelectValue placeholder="No color" />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="_none">No color</SelectItem>
+										{colors.map((c) => (
+											<SelectItem key={c.id} value={c.id}>
+												{c.name}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							</div>
+
+							<div className="space-y-1.5">
+								<Label htmlFor="lettering-font">Font</Label>
+								<Select
+									value={fontId || '_none'}
+									onValueChange={(v) => setFontId(v === '_none' ? '' : v)}
+								>
+									<SelectTrigger id="lettering-font">
+										<SelectValue placeholder="Default font" />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="_none">Default font</SelectItem>
+										{fonts.map((f) => (
+											<SelectItem key={f.id} value={f.id}>
+												{f.name}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							</div>
+
+							<div className="space-y-1.5">
+								<Label htmlFor="lettering-component">Component</Label>
+								<Select
+									value={quoteComponentId || '_none'}
+									onValueChange={(v) => setQuoteComponentId(v === '_none' ? '' : v)}
+								>
+									<SelectTrigger id="lettering-component">
+										<SelectValue placeholder="Not specified" />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="_none">Not specified</SelectItem>
+										{componentOptions.map((c) => (
+											<SelectItem key={c.id} value={c.id}>
+												{c.label}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							</div>
+						</div>
+
+						<div className="space-y-1.5">
+							<Label htmlFor="lettering-placement">Placement</Label>
+							<Input
+								id="lettering-placement"
+								value={placementDescription}
+								onChange={(e) => setPlacementDescription(e.target.value)}
+								placeholder="e.g. Front face, centered below name"
+							/>
+						</div>
+
+						{!techniqueId && (
+							<div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+								<TriangleAlert className="size-4 shrink-0 mt-0.5" />
+								<p>Without a technique, this lettering item can't be priced.</p>
+							</div>
+						)}
+					</div>
+				</div>
+
+				<SheetFooter className="border-t sm:flex-row sm:justify-end">
+					<Button type="button" variant="outline" onClick={onClose} disabled={isPending}>
+						Cancel
+					</Button>
+					<Button type="button" onClick={handleSubmit} disabled={!canSubmit}>
+						{isPending ? (
+							<Loader2 className="size-4 mr-1 animate-spin" />
+						) : (
+							<Plus className="size-4 mr-1" />
+						)}
+						{isEdit ? 'Save changes' : 'Add lettering'}
+					</Button>
+				</SheetFooter>
+			</SheetContent>
+		</Sheet>
 	);
 }
