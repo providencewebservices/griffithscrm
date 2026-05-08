@@ -46,7 +46,7 @@ function SortableItem({
 		<div
 			ref={setNodeRef}
 			style={style}
-			className={`flex items-center gap-3 p-3 bg-background ${isDragging ? 'z-10 shadow-md rounded-lg border opacity-90' : ''}`}
+			className={`flex items-center gap-3 py-2.5 bg-background ${isDragging ? 'z-10 shadow-md rounded-lg border px-3 opacity-90' : ''}`}
 		>
 			<button
 				type="button"
@@ -119,7 +119,7 @@ export function SortableProductList<T extends SortableProduct>({
 				items={products.map((p) => p.productId)}
 				strategy={verticalListSortingStrategy}
 			>
-				<div className="border rounded-lg divide-y">
+				<div className="divide-y divide-border/60">
 					{products.map((product) => {
 						const url = (product.imageUrl ? signedUrls?.get(product.imageUrl) : null) ?? null;
 						return (

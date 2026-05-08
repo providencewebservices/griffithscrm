@@ -6,13 +6,16 @@ import {
 	ChevronsUpDown,
 	FileText,
 	Flower,
+	Mail,
 	MapPin,
 	Package,
+	Phone,
 	Plus,
 	PlusCircle,
 	RefreshCw,
 	Trash2,
 	User,
+	UserPlus,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
@@ -55,8 +58,14 @@ import {
 	TableRow,
 } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
+import { CustomerFormDialog } from '@/components/customer/customer-form-dialog';
 import { useBillableEntitiesQuery } from '@/hooks/use-billable-entities';
-import { useCustomersQuery } from '@/hooks/use-customers';
+import {
+	type ContactInfoInput,
+	type CreateCustomerInput,
+	useCreateCustomerMutation,
+	useCustomersQuery,
+} from '@/hooks/use-customers';
 import {
 	type DimensionCombo,
 	useDimensionComboQuery,
@@ -92,9 +101,10 @@ import {
 	type SundryInput,
 	useCreateQuoteMutation,
 } from '@/hooks/use-quotes';
-import { useInquiryQuery } from '@/hooks/use-inquiries';
+import { useInquiryQuery, useLinkCustomerMutation } from '@/hooks/use-inquiries';
 import { useSundriesQuery } from '@/hooks/use-sundries';
 import { useTenantPricingSettingsQuery } from '@/hooks/use-tenant-pricing-settings';
+import { useTenantSettingsQuery } from '@/hooks/use-tenant-settings';
 import { cn } from '@/lib/utils';
 
 // Types for form state
@@ -193,6 +203,10 @@ export function QuoteNewPage() {
 
 	const [mutationError, setMutationError] = useState<string | null>(null);
 
+	// Customer creation dialog (rescue flow when inquiry has no linked customer)
+	const [createCustomerOpen, setCreateCustomerOpen] = useState(false);
+	const [createCustomerError, setCreateCustomerError] = useState<string | null>(null);
+
 	// Fetch reference data
 	const { data: customers } = useCustomersQuery();
 	const { data: billableEntities } = useBillableEntitiesQuery();
@@ -221,6 +235,10 @@ export function QuoteNewPage() {
 	const activeFonts = fonts?.filter((item) => item.isActive) || [];
 
 	const createMutation = useCreateQuoteMutation();
+	const createCustomerMutation = useCreateCustomerMutation();
+	const linkCustomerMutation = useLinkCustomerMutation();
+	const { data: tenantSettings } = useTenantSettingsQuery();
+	const defaultCountry = tenantSettings?.address?.country || 'GB';
 
 	// Pre-fill from inquiry data
 	useEffect(() => {
@@ -250,6 +268,46 @@ export function QuoteNewPage() {
 			setValidUntil(defaultDate.toISOString().split('T')[0]);
 		}
 	}, [pricingSettings?.quoteValidityDays, validUntil]);
+
+	const inquiryNeedsCustomer = Boolean(
+		inquiryId && inquiryData && !inquiryData.customerId && !payerId,
+	);
+
+	const inquiryCustomerInitialValues = useMemo(() => {
+		if (!inquiryData) return undefined;
+		const contactInfo: ContactInfoInput[] = [];
+		if (inquiryData.email) {
+			contactInfo.push({ type: 'email', value: inquiryData.email, label: '', isPrimary: true });
+		}
+		if (inquiryData.phone) {
+			contactInfo.push({
+				type: 'phone',
+				value: inquiryData.phone,
+				label: '',
+				isPrimary: !inquiryData.email,
+			});
+		}
+		return {
+			firstName: inquiryData.firstName,
+			lastName: inquiryData.lastName,
+			contactInfo,
+		};
+	}, [inquiryData]);
+
+	async function handleCreateCustomerForInquiry(data: CreateCustomerInput) {
+		setCreateCustomerError(null);
+		try {
+			const newCustomer = await createCustomerMutation.mutateAsync(data);
+			if (inquiryId) {
+				await linkCustomerMutation.mutateAsync({ inquiryId, customerId: newCustomer.id });
+			}
+			setPayerId(newCustomer.id);
+			setPayerType('customer');
+			setCreateCustomerOpen(false);
+		} catch (err) {
+			setCreateCustomerError(err instanceof Error ? err.message : 'Failed to create customer');
+		}
+	}
 
 	// Helper to format dimension combo for display
 	const formatDimensionCombo = (combo: DimensionCombo): string => {
@@ -559,6 +617,62 @@ export function QuoteNewPage() {
 			{mutationError && (
 				<div className="bg-destructive/10 text-destructive px-4 py-2 rounded mb-4">
 					{mutationError}
+				</div>
+			)}
+
+			{inquiryNeedsCustomer && inquiryData && (
+				<div className="mb-6 rounded-lg border border-amber-500/30 bg-amber-50 px-4 py-4 dark:bg-amber-950/20">
+					<div className="flex items-start gap-3">
+						<UserPlus className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-400" />
+						<div className="flex-1 space-y-3">
+							<div>
+								<p className="font-medium text-amber-900 dark:text-amber-200">
+									{inquiryData.firstName} {inquiryData.lastName} doesn't have a customer record yet
+								</p>
+								<p className="text-sm text-amber-800/80 dark:text-amber-300/80">
+									Quotes need a payer. Create a customer from this inquiry, or pick a different payer below.
+								</p>
+							</div>
+							<div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-amber-900/90 dark:text-amber-200/90">
+								{inquiryData.email && (
+									<span className="inline-flex items-center gap-1.5">
+										<Mail className="h-3.5 w-3.5 shrink-0 opacity-70" />
+										{inquiryData.email}
+									</span>
+								)}
+								{inquiryData.phone && (
+									<span className="inline-flex items-center gap-1.5">
+										<Phone className="h-3.5 w-3.5 shrink-0 opacity-70" />
+										{inquiryData.phone}
+									</span>
+								)}
+								{!inquiryData.email && !inquiryData.phone && (
+									<span className="text-amber-800/70 italic dark:text-amber-300/70">
+										No contact details on the inquiry — you can add them in the next step.
+									</span>
+								)}
+							</div>
+							<div className="flex flex-wrap gap-2">
+								<Button size="sm" onClick={() => setCreateCustomerOpen(true)}>
+									<UserPlus className="mr-1.5 h-3.5 w-3.5" />
+									Create customer & continue
+								</Button>
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={() => setPayerComboOpen(true)}
+								>
+									Pick a payer instead
+								</Button>
+								<Link
+									to={`/app/inquiries/${inquiryId}`}
+									className="inline-flex items-center text-sm font-medium text-amber-900 hover:underline dark:text-amber-200"
+								>
+									View inquiry
+								</Link>
+							</div>
+						</div>
+					</div>
 				</div>
 			)}
 
@@ -2078,6 +2192,20 @@ export function QuoteNewPage() {
 					</div>
 				</div>
 			</div>
+			{/* Create customer (rescue flow) */}
+			<CustomerFormDialog
+				open={createCustomerOpen}
+				onOpenChange={(open) => {
+					setCreateCustomerOpen(open);
+					if (!open) setCreateCustomerError(null);
+				}}
+				onSubmit={handleCreateCustomerForInquiry}
+				customer={null}
+				initialValues={inquiryCustomerInitialValues}
+				isLoading={createCustomerMutation.isPending || linkCustomerMutation.isPending}
+				error={createCustomerError}
+				defaultCountry={defaultCountry}
+			/>
 		</div>
 	);
 }

@@ -101,6 +101,7 @@ export function InquiryDetailPage() {
 	const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
 	const [customerComboOpen, setCustomerComboOpen] = useState(false);
 	const [createCustomerDialogOpen, setCreateCustomerDialogOpen] = useState(false);
+	const [postCreateAction, setPostCreateAction] = useState<'brochure' | 'quote' | null>(null);
 	const [mutationError, setMutationError] = useState<string | null>(null);
 	const [createCustomerError, setCreateCustomerError] = useState<string | null>(null);
 
@@ -226,9 +227,29 @@ export function InquiryDetailPage() {
 			const newCustomer = await createCustomerMutation.mutateAsync(data);
 			await linkCustomerMutation.mutateAsync({ inquiryId: id, customerId: newCustomer.id });
 			setCreateCustomerDialogOpen(false);
+			if (postCreateAction === 'brochure') {
+				navigate(`/app/brochures/new?inquiryId=${id}&customerId=${newCustomer.id}`);
+			} else if (postCreateAction === 'quote') {
+				navigate(`/app/quotes/new?inquiryId=${id}&customerId=${newCustomer.id}`);
+			}
+			setPostCreateAction(null);
 		} catch (err: unknown) {
 			setCreateCustomerError(err instanceof Error ? err.message : 'Failed to create customer');
 		}
+	}
+
+	function handleConvert(destination: 'brochure' | 'quote') {
+		if (!id) return;
+		if (inquiry?.customerId) {
+			const path =
+				destination === 'brochure'
+					? `/app/brochures/new?inquiryId=${id}&customerId=${inquiry.customerId}`
+					: `/app/quotes/new?inquiryId=${id}&customerId=${inquiry.customerId}`;
+			navigate(path);
+			return;
+		}
+		setPostCreateAction(destination);
+		setCreateCustomerDialogOpen(true);
 	}
 
 	if (isLoading) {
@@ -324,22 +345,14 @@ export function InquiryDetailPage() {
 							</Button>
 						</>
 					)}
-					<Link
-						to={`/app/brochures/new?inquiryId=${id}${inquiry.customerId ? `&customerId=${inquiry.customerId}` : ''}`}
-					>
-						<Button variant="outline" size="sm">
-							<BookOpen className="h-3.5 w-3.5 mr-1.5" />
-							Create Brochure
-						</Button>
-					</Link>
-					<Link
-						to={`/app/quotes/new?inquiryId=${id}${inquiry.customerId ? `&customerId=${inquiry.customerId}` : ''}`}
-					>
-						<Button variant="outline" size="sm">
-							<FileText className="h-3.5 w-3.5 mr-1.5" />
-							Create Quote
-						</Button>
-					</Link>
+					<Button variant="outline" size="sm" onClick={() => handleConvert('brochure')}>
+						<BookOpen className="h-3.5 w-3.5 mr-1.5" />
+						Create Brochure
+					</Button>
+					<Button variant="outline" size="sm" onClick={() => handleConvert('quote')}>
+						<FileText className="h-3.5 w-3.5 mr-1.5" />
+						Create Quote
+					</Button>
 					{!inquiry.archivedAt && (
 						<Button variant="outline" size="sm" onClick={() => setArchiveDialogOpen(true)}>
 							Archive
@@ -744,7 +757,13 @@ export function InquiryDetailPage() {
 			{/* Create customer dialog */}
 			<CustomerFormDialog
 				open={createCustomerDialogOpen}
-				onOpenChange={setCreateCustomerDialogOpen}
+				onOpenChange={(open) => {
+					setCreateCustomerDialogOpen(open);
+					if (!open) {
+						setPostCreateAction(null);
+						setCreateCustomerError(null);
+					}
+				}}
 				onSubmit={handleCreateAndLinkCustomer}
 				customer={null}
 				initialValues={createCustomerInitialValues}

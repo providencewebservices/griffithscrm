@@ -1,5 +1,5 @@
-import { ArrowLeft, Check, CheckCircle2, ChevronsUpDown, Eye, ImageIcon, Package, Plus, Search } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { Check, ChevronsUpDown, Eye, ImageIcon, Info, Mail, Package, Phone, Search, Sparkles, UserPlus } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import {
 	AlertDialog,
@@ -35,12 +35,19 @@ import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { CustomerFormDialog } from '@/components/customer/customer-form-dialog';
 import { useCreateBrochureMutation } from '@/hooks/use-brochures';
-import { useCustomersQuery } from '@/hooks/use-customers';
-import { useInquiryQuery } from '@/hooks/use-inquiries';
+import {
+	type ContactInfoInput,
+	type CreateCustomerInput,
+	useCreateCustomerMutation,
+	useCustomersQuery,
+} from '@/hooks/use-customers';
+import { useInquiryQuery, useLinkCustomerMutation } from '@/hooks/use-inquiries';
 import { useProductCategoriesQuery } from '@/hooks/use-product-categories';
 import { type Product, useProductsQuery } from '@/hooks/use-products';
 import { SortableProductList } from '@/components/sortable-product-list';
+import { useTenantSettingsQuery } from '@/hooks/use-tenant-settings';
 import { useSignedUrls } from '@/hooks/use-uploads';
 import { cn } from '@/lib/utils';
 
@@ -53,10 +60,20 @@ type SelectedProduct = {
 };
 
 function getDefaultExpiry(): string {
+	return getExpiryInDays(30);
+}
+
+function getExpiryInDays(days: number): string {
 	const date = new Date();
-	date.setDate(date.getDate() + 30);
+	date.setDate(date.getDate() + days);
 	return date.toISOString().split('T')[0];
 }
+
+const EXPIRY_PRESETS: Array<{ label: string; days: number }> = [
+	{ label: '30d', days: 30 },
+	{ label: '60d', days: 60 },
+	{ label: '90d', days: 90 },
+];
 
 export function BrochureNewPage() {
 	const navigate = useNavigate();
@@ -70,6 +87,11 @@ export function BrochureNewPage() {
 	// Customer selector state
 	const [customerId, setCustomerId] = useState(preselectedCustomerId || '');
 	const [customerComboOpen, setCustomerComboOpen] = useState(false);
+	const customerComboRef = useRef<HTMLButtonElement>(null);
+
+	// Customer creation dialog (rescue flow when inquiry has no linked customer)
+	const [createCustomerOpen, setCreateCustomerOpen] = useState(false);
+	const [createCustomerError, setCreateCustomerError] = useState<string | null>(null);
 
 	// Product search state
 	const [productSearch, setProductSearch] = useState('');
@@ -91,10 +113,14 @@ export function BrochureNewPage() {
 
 	// Mutations
 	const createBrochure = useCreateBrochureMutation();
+	const createCustomerMutation = useCreateCustomerMutation();
+	const linkCustomerMutation = useLinkCustomerMutation();
 
 	// Data queries
 	const { data: customers } = useCustomersQuery();
 	const { data: categories } = useProductCategoriesQuery();
+	const { data: tenantSettings } = useTenantSettingsQuery();
+	const defaultCountry = tenantSettings?.address?.country || 'GB';
 	const { data: productsData } = useProductsQuery({
 		search: debouncedProductSearch || undefined,
 		categoryId: categoryFilter || undefined,
@@ -170,6 +196,43 @@ export function BrochureNewPage() {
 		window.addEventListener('beforeunload', handler);
 		return () => window.removeEventListener('beforeunload', handler);
 	}, [isDirty]);
+
+	const inquiryNeedsCustomer = Boolean(inquiryId && inquiryData && !inquiryData.customerId && !customerId);
+
+	const inquiryCustomerInitialValues = useMemo(() => {
+		if (!inquiryData) return undefined;
+		const contactInfo: ContactInfoInput[] = [];
+		if (inquiryData.email) {
+			contactInfo.push({ type: 'email', value: inquiryData.email, label: '', isPrimary: true });
+		}
+		if (inquiryData.phone) {
+			contactInfo.push({
+				type: 'phone',
+				value: inquiryData.phone,
+				label: '',
+				isPrimary: !inquiryData.email,
+			});
+		}
+		return {
+			firstName: inquiryData.firstName,
+			lastName: inquiryData.lastName,
+			contactInfo,
+		};
+	}, [inquiryData]);
+
+	async function handleCreateCustomerForInquiry(data: CreateCustomerInput) {
+		setCreateCustomerError(null);
+		try {
+			const newCustomer = await createCustomerMutation.mutateAsync(data);
+			if (inquiryId) {
+				await linkCustomerMutation.mutateAsync({ inquiryId, customerId: newCustomer.id });
+			}
+			setCustomerId(newCustomer.id);
+			setCreateCustomerOpen(false);
+		} catch (err) {
+			setCreateCustomerError(err instanceof Error ? err.message : 'Failed to create customer');
+		}
+	}
 
 	function toggleProduct(product: Product) {
 		if (selectedIds.has(product.id)) {
@@ -251,35 +314,106 @@ export function BrochureNewPage() {
 
 	return (
 		<div className="flex flex-col">
-			<Breadcrumb className="mb-4">
-				<BreadcrumbList>
-					<BreadcrumbItem>
-						<BreadcrumbLink asChild>
-							<Link to="/app/brochures">Brochures</Link>
-						</BreadcrumbLink>
-					</BreadcrumbItem>
-					<BreadcrumbSeparator />
-					<BreadcrumbItem>
-						<BreadcrumbPage>New Brochure</BreadcrumbPage>
-					</BreadcrumbItem>
-				</BreadcrumbList>
-			</Breadcrumb>
-
-			<div className="mb-6 flex items-center gap-3">
-				<Link to="/app/brochures">
-					<Button variant="ghost" size="icon" className="h-8 w-8">
-						<ArrowLeft className="h-4 w-4" />
-					</Button>
-				</Link>
-				<h2 className="text-2xl font-bold">New Brochure</h2>
+			<div className="mb-6">
+				<Breadcrumb className="mb-2">
+					<BreadcrumbList>
+						<BreadcrumbItem>
+							<BreadcrumbLink asChild>
+								<Link to="/app/brochures">Brochures</Link>
+							</BreadcrumbLink>
+						</BreadcrumbItem>
+						<BreadcrumbSeparator />
+						<BreadcrumbItem>
+							<BreadcrumbPage>New Brochure</BreadcrumbPage>
+						</BreadcrumbItem>
+					</BreadcrumbList>
+				</Breadcrumb>
+				<h1 className="text-2xl font-bold">New Brochure</h1>
 			</div>
+
+			{inquiryNeedsCustomer && inquiryData && (
+				<div className="mb-6 rounded-lg border border-amber-500/30 bg-amber-50 px-4 py-4 dark:bg-amber-950/20">
+					<div className="flex items-start gap-3">
+						<UserPlus className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-400" />
+						<div className="flex-1 space-y-3">
+							<div>
+								<p className="font-medium text-amber-900 dark:text-amber-200">
+									{inquiryData.firstName} {inquiryData.lastName} doesn't have a customer record yet
+								</p>
+								<p className="text-sm text-amber-800/80 dark:text-amber-300/80">
+									Brochures are sent to customers, so we need to create one first. We'll use the contact details from this inquiry.
+								</p>
+							</div>
+							<div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-amber-900/90 dark:text-amber-200/90">
+								{inquiryData.email && (
+									<span className="inline-flex items-center gap-1.5">
+										<Mail className="h-3.5 w-3.5 shrink-0 opacity-70" />
+										{inquiryData.email}
+									</span>
+								)}
+								{inquiryData.phone && (
+									<span className="inline-flex items-center gap-1.5">
+										<Phone className="h-3.5 w-3.5 shrink-0 opacity-70" />
+										{inquiryData.phone}
+									</span>
+								)}
+								{!inquiryData.email && !inquiryData.phone && (
+									<span className="text-amber-800/70 italic dark:text-amber-300/70">
+										No contact details on the inquiry — you can add them in the next step.
+									</span>
+								)}
+							</div>
+							<div className="flex flex-wrap gap-2">
+								<Button size="sm" onClick={() => setCreateCustomerOpen(true)}>
+									<UserPlus className="mr-1.5 h-3.5 w-3.5" />
+									Create customer & continue
+								</Button>
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={() => {
+										setCustomerComboOpen(true);
+										customerComboRef.current?.focus();
+									}}
+								>
+									Pick existing customer
+								</Button>
+								<Link
+									to={`/app/inquiries/${inquiryId}`}
+									className="inline-flex items-center text-sm font-medium text-amber-900 hover:underline dark:text-amber-200"
+								>
+									View inquiry
+								</Link>
+							</div>
+						</div>
+					</div>
+				</div>
+			)}
+
+			{inquiryId && inquiryData && !inquiryNeedsCustomer && (
+				<div className="mb-6 flex items-start gap-3 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3">
+					<Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+					<div className="flex-1 text-sm">
+						<p className="font-medium">Pre-filled from inquiry</p>
+						<p className="text-muted-foreground">
+							The customer and products from this inquiry have been added. Edit anything that doesn't fit.
+						</p>
+					</div>
+					<Link
+						to={`/app/inquiries/${inquiryId}`}
+						className="text-sm font-medium text-primary hover:underline shrink-0"
+					>
+						View inquiry
+					</Link>
+				</div>
+			)}
 
 			<div className="grid gap-6 lg:grid-cols-3 pb-20">
 				{/* Details sidebar — first on mobile, right column on desktop */}
 				<div className="space-y-6 lg:order-last">
 					<Card>
 						<CardHeader>
-							<CardTitle className="text-base">Details</CardTitle>
+							<CardTitle className="text-base">Recipient</CardTitle>
 						</CardHeader>
 						<CardContent className="space-y-4">
 							<div className="space-y-1.5">
@@ -287,6 +421,7 @@ export function BrochureNewPage() {
 								<Popover open={customerComboOpen} onOpenChange={setCustomerComboOpen}>
 									<PopoverTrigger asChild>
 										<Button
+											ref={customerComboRef}
 											variant="outline"
 											role="combobox"
 											aria-expanded={customerComboOpen}
@@ -363,6 +498,24 @@ export function BrochureNewPage() {
 									onChange={(e) => setExpiresAt(e.target.value)}
 									className="h-9 text-sm w-full"
 								/>
+								<div className="flex gap-1.5 pt-1">
+									{EXPIRY_PRESETS.map((preset) => {
+										const presetDate = getExpiryInDays(preset.days);
+										const isActive = expiresAt === presetDate;
+										return (
+											<Button
+												key={preset.days}
+												type="button"
+												variant={isActive ? 'secondary' : 'ghost'}
+												size="sm"
+												className="h-7 px-2.5 text-xs font-medium"
+												onClick={() => setExpiresAt(presetDate)}
+											>
+												{preset.label}
+											</Button>
+										);
+									})}
+								</div>
 							</div>
 						</CardContent>
 					</Card>
@@ -468,8 +621,26 @@ export function BrochureNewPage() {
 							{/* Product Grid */}
 							<div className="border rounded-lg max-h-[32rem] overflow-y-auto">
 								{allProducts.length === 0 ? (
-									<div className="p-8 text-sm text-muted-foreground text-center">
-										No products found.
+									<div className="flex flex-col items-center justify-center gap-2 p-10 text-center">
+										<Package className="h-8 w-8 text-muted-foreground/40" />
+										<p className="text-sm text-muted-foreground">
+											{debouncedProductSearch || categoryFilter
+												? 'No products match these filters.'
+												: 'No active products yet.'}
+										</p>
+										{(debouncedProductSearch || categoryFilter) && (
+											<Button
+												type="button"
+												variant="ghost"
+												size="sm"
+												onClick={() => {
+													setProductSearch('');
+													setCategoryFilter(null);
+												}}
+											>
+												Clear filters
+											</Button>
+										)}
 									</div>
 								) : (
 									<div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 p-3">
@@ -483,18 +654,19 @@ export function BrochureNewPage() {
 													key={product.id}
 													type="button"
 													onClick={() => toggleProduct(product)}
+													aria-pressed={isSelected}
 													className={cn(
-														"group relative text-left rounded-lg border overflow-hidden transition-colors",
+														'relative text-left rounded-lg border overflow-hidden bg-background',
 														isSelected
-															? "border-primary ring-2 ring-primary/20 bg-primary/5"
-															: "bg-background hover:bg-muted/50"
+															? 'border-primary ring-2 ring-primary/30'
+															: 'hover:border-foreground/20',
 													)}
 												>
 													{signedUrl ? (
 														<img
 															src={signedUrl}
 															alt={product.name}
-															className="w-full aspect-[4/3] object-contain bg-muted/30"
+															className="w-full aspect-[4/3] object-cover bg-muted/30"
 														/>
 													) : (
 														<div className="w-full aspect-[4/3] bg-muted flex items-center justify-center">
@@ -509,17 +681,22 @@ export function BrochureNewPage() {
 															</p>
 														)}
 													</div>
-													{isSelected ? (
-														<div className="absolute top-2 right-2">
-															<CheckCircle2 className="h-5 w-5 text-primary drop-shadow-sm" />
-														</div>
-													) : (
-														<div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-lg pointer-events-none">
-															<div className="rounded-full bg-white/90 p-1.5">
-																<Plus className="h-4 w-4 text-foreground" />
-															</div>
-														</div>
-													)}
+													<span
+														aria-hidden="true"
+														className={cn(
+															'absolute top-2 right-2 flex size-6 items-center justify-center rounded-full border-2 shadow-sm',
+															isSelected
+																? 'border-primary bg-primary text-primary-foreground'
+																: 'border-white/80 bg-background/80 backdrop-blur-sm',
+														)}
+													>
+														<Check
+															className={cn(
+																'size-3.5',
+																isSelected ? 'opacity-100' : 'opacity-0',
+															)}
+														/>
+													</span>
 												</button>
 											);
 										})}
@@ -533,17 +710,42 @@ export function BrochureNewPage() {
 
 			{/* Sticky action bar */}
 			<div className="sticky bottom-0 z-10 -mx-4 border-t bg-background/95 backdrop-blur-sm px-4 py-3">
-				<div className="flex items-center gap-3">
-					<Button onClick={() => handleSubmit(false)} disabled={!canSave}>
-						{createBrochure.isPending ? 'Creating...' : 'Create Brochure'}
-					</Button>
-					<Button variant="outline" onClick={() => handleSubmit(true)} disabled={!canSave}>
+				<div className="flex flex-wrap items-center gap-3">
+					<Button
+						onClick={() => handleSubmit(true)}
+						disabled={!canSave}
+						className="min-w-[14rem]"
+					>
 						<Eye className="h-4 w-4 mr-2" />
-						Save & Preview
+						{createBrochure.isPending
+							? 'Creating...'
+							: selectedProducts.length > 0
+								? `Create & Preview · ${selectedProducts.length} ${selectedProducts.length === 1 ? 'product' : 'products'}`
+								: 'Create & Preview'}
+					</Button>
+					<Button
+						variant="ghost"
+						onClick={() => handleSubmit(false)}
+						disabled={!canSave}
+						className="text-muted-foreground"
+					>
+						Create without preview
 					</Button>
 					<Button variant="ghost" onClick={handleCancel}>
 						Cancel
 					</Button>
+					{submitted && !canSave && !createBrochure.isPending && (
+						<div className="ml-auto flex items-center gap-2 text-sm text-destructive">
+							<Info className="h-4 w-4 shrink-0" />
+							<span>
+								{!customerId && selectedProducts.length === 0
+									? 'Pick a customer and add at least one product.'
+									: !customerId
+										? 'Pick a customer to continue.'
+										: 'Add at least one product to continue.'}
+							</span>
+						</div>
+					)}
 				</div>
 				{createBrochure.isError && (
 					<p className="text-sm text-destructive mt-2">
@@ -551,6 +753,21 @@ export function BrochureNewPage() {
 					</p>
 				)}
 			</div>
+
+			{/* Create customer (rescue flow) */}
+			<CustomerFormDialog
+				open={createCustomerOpen}
+				onOpenChange={(open) => {
+					setCreateCustomerOpen(open);
+					if (!open) setCreateCustomerError(null);
+				}}
+				onSubmit={handleCreateCustomerForInquiry}
+				customer={null}
+				initialValues={inquiryCustomerInitialValues}
+				isLoading={createCustomerMutation.isPending || linkCustomerMutation.isPending}
+				error={createCustomerError}
+				defaultCountry={defaultCountry}
+			/>
 
 			{/* Cancel Confirmation */}
 			<AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
