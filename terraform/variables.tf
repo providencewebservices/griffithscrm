@@ -32,6 +32,12 @@ variable "route53_zone_id" {
   default     = ""
 }
 
+variable "custom_domains_enabled" {
+  description = "Attach custom domain aliases and certificates. Set false for pre-validation infrastructure bring-up."
+  type        = bool
+  default     = true
+}
+
 # Neon Database
 variable "neon_database_url" {
   description = "Neon pooled database connection URL"

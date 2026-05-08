@@ -28,7 +28,7 @@ output "alb_dns_name" {
 
 output "api_url" {
   description = "API URL"
-  value       = var.route53_zone_id != "" ? "https://${var.api_domain}" : "https://${aws_lb.api.dns_name}"
+  value       = var.custom_domains_enabled ? "https://${var.api_domain}" : "http://${aws_lb.api.dns_name}"
 }
 
 # CloudFront Outputs
@@ -54,12 +54,12 @@ output "media_cloudfront_domain_name" {
 
 output "web_url" {
   description = "Web frontend URL"
-  value       = var.route53_zone_id != "" ? "https://${var.web_domain}" : "https://${aws_cloudfront_distribution.web.domain_name}"
+  value       = var.custom_domains_enabled ? "https://${var.web_domain}" : "https://${aws_cloudfront_distribution.web.domain_name}"
 }
 
 output "media_url" {
   description = "Public media base URL"
-  value       = var.media_domain != "" ? "https://${var.media_domain}" : "https://${aws_cloudfront_distribution.media.domain_name}"
+  value       = var.custom_domains_enabled && var.media_domain != "" ? "https://${var.media_domain}" : "https://${aws_cloudfront_distribution.media.domain_name}"
 }
 
 # S3 Outputs

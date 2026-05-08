@@ -207,11 +207,11 @@ resource "aws_ecs_task_definition" "api" {
         },
         {
           name  = "BETTER_AUTH_URL"
-          value = "https://${var.api_domain}"
+          value = var.custom_domains_enabled ? "https://${var.api_domain}" : "http://${aws_lb.api.dns_name}"
         },
         {
           name  = "CORS_ORIGIN"
-          value = "https://${var.web_domain}"
+          value = var.custom_domains_enabled ? "https://${var.web_domain}" : "https://${aws_cloudfront_distribution.web.domain_name}"
         },
         {
           name  = "AWS_REGION"
@@ -227,7 +227,7 @@ resource "aws_ecs_task_definition" "api" {
         },
         {
           name  = "PUBLIC_MEDIA_BASE_URL"
-          value = var.media_domain != "" ? "https://${var.media_domain}" : "https://${aws_cloudfront_distribution.media.domain_name}"
+          value = var.custom_domains_enabled && var.media_domain != "" ? "https://${var.media_domain}" : "https://${aws_cloudfront_distribution.media.domain_name}"
         },
         {
           name  = "PUBLIC_MEDIA_REGION"
@@ -243,11 +243,11 @@ resource "aws_ecs_task_definition" "api" {
         },
         {
           name  = "API_BASE_URL"
-          value = "https://${var.api_domain}"
+          value = var.custom_domains_enabled ? "https://${var.api_domain}" : "http://${aws_lb.api.dns_name}"
         },
         {
           name  = "APP_URL"
-          value = "https://${var.web_domain}"
+          value = var.custom_domains_enabled ? "https://${var.web_domain}" : "https://${aws_cloudfront_distribution.web.domain_name}"
         }
       ]
 

@@ -29,7 +29,8 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "public_media" {
     apply_server_side_encryption_by_default {
       sse_algorithm = "AES256"
     }
-    bucket_key_enabled = true
+    bucket_key_enabled       = true
+    blocked_encryption_types = ["SSE-C"]
   }
 }
 
@@ -144,7 +145,7 @@ resource "aws_acm_certificate_validation" "media" {
 resource "aws_cloudfront_distribution" "media" {
   enabled         = true
   is_ipv6_enabled = true
-  aliases         = var.media_domain != "" ? [var.media_domain] : []
+  aliases         = var.custom_domains_enabled && var.media_domain != "" ? [var.media_domain] : []
   price_class     = "PriceClass_100"
 
   origin {
@@ -180,10 +181,10 @@ resource "aws_cloudfront_distribution" "media" {
   }
 
   viewer_certificate {
-    acm_certificate_arn            = var.media_domain != "" ? aws_acm_certificate.media[0].arn : null
-    cloudfront_default_certificate = var.media_domain == ""
-    ssl_support_method             = var.media_domain != "" ? "sni-only" : null
-    minimum_protocol_version       = "TLSv1.2_2021"
+    acm_certificate_arn            = var.custom_domains_enabled && var.media_domain != "" ? aws_acm_certificate.media[0].arn : null
+    cloudfront_default_certificate = !(var.custom_domains_enabled && var.media_domain != "")
+    ssl_support_method             = var.custom_domains_enabled && var.media_domain != "" ? "sni-only" : null
+    minimum_protocol_version       = var.custom_domains_enabled && var.media_domain != "" ? "TLSv1.2_2021" : "TLSv1"
   }
 
   tags = local.tags

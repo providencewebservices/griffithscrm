@@ -71,8 +71,14 @@ resource "aws_acm_certificate_validation" "api" {
   validation_record_fqdns = [for record in aws_route53_record.api_cert_validation : record.fqdn]
 }
 
+moved {
+  from = aws_lb_listener.https
+  to   = aws_lb_listener.https[0]
+}
+
 # HTTPS Listener
 resource "aws_lb_listener" "https" {
+  count             = var.custom_domains_enabled ? 1 : 0
   load_balancer_arn = aws_lb.api.arn
   port              = "443"
   protocol          = "HTTPS"
@@ -94,13 +100,26 @@ resource "aws_lb_listener" "http" {
   port              = "80"
   protocol          = "HTTP"
 
-  default_action {
-    type = "redirect"
+  dynamic "default_action" {
+    for_each = var.custom_domains_enabled ? [1] : []
 
-    redirect {
-      port        = "443"
-      protocol    = "HTTPS"
-      status_code = "HTTP_301"
+    content {
+      type = "redirect"
+
+      redirect {
+        port        = "443"
+        protocol    = "HTTPS"
+        status_code = "HTTP_301"
+      }
+    }
+  }
+
+  dynamic "default_action" {
+    for_each = var.custom_domains_enabled ? [] : [1]
+
+    content {
+      type             = "forward"
+      target_group_arn = aws_lb_target_group.api.arn
     }
   }
 }
