@@ -121,9 +121,21 @@ export function InquiryDetailPage() {
 	const createCustomerMutation = useCreateCustomerMutation();
 	const { data: tenantSettings } = useTenantSettingsQuery();
 	const defaultCountry = tenantSettings?.address?.country || 'GB';
-	const inquiryProductPhotoUrls =
-		inquiry?.products.map((product) => product.customerPhotoUrl) ?? [];
+	const inquiryProductImageUrls = useMemo(
+		() => inquiry?.products.map((product) => product.productImageUrl) ?? [],
+		[inquiry?.products],
+	);
+	const inquiryProductPhotoUrls = useMemo(
+		() => inquiry?.products.map((product) => product.customerPhotoUrl) ?? [],
+		[inquiry?.products],
+	);
+	const inquirySundryImageUrls = useMemo(
+		() => inquiry?.sundries.map((sundry) => sundry.sundryImageUrl) ?? [],
+		[inquiry?.sundries],
+	);
+	const { data: signedInquiryProductImageUrls } = useSignedUrls(inquiryProductImageUrls);
 	const { data: signedInquiryProductPhotoUrls } = useSignedUrls(inquiryProductPhotoUrls);
+	const { data: signedInquirySundryImageUrls } = useSignedUrls(inquirySundryImageUrls);
 
 	const formatDate = (dateString: string) => {
 		return new Date(dateString).toLocaleDateString('en-GB', {
@@ -475,9 +487,20 @@ export function InquiryDetailPage() {
 								<div className="space-y-2">
 									{inquiry.products.map((product) => (
 										<div key={product.id} className="flex items-center gap-3 p-2 border rounded-md">
-											<div className="w-10 h-10 rounded bg-muted flex items-center justify-center shrink-0">
-												<ImageIcon className="h-4 w-4 text-muted-foreground" />
-											</div>
+											{product.productImageUrl ? (
+												<img
+													src={
+														signedInquiryProductImageUrls?.get(product.productImageUrl) ||
+														product.productImageUrl
+													}
+													alt={product.productName}
+													className="size-10 rounded border bg-white object-contain shrink-0"
+												/>
+											) : (
+												<div className="size-10 rounded bg-muted flex items-center justify-center shrink-0">
+													<ImageIcon className="h-4 w-4 text-muted-foreground" />
+												</div>
+											)}
 											<div className="flex-1 min-w-0">
 												<Link
 													to={`/app/products/${product.productId}`}
@@ -549,9 +572,20 @@ export function InquiryDetailPage() {
 								<div className="space-y-2">
 									{inquiry.sundries.map((sundry) => (
 										<div key={sundry.id} className="flex items-center gap-3 p-2 border rounded-md">
-											<div className="w-10 h-10 rounded bg-muted flex items-center justify-center shrink-0">
-												<ImageIcon className="h-4 w-4 text-muted-foreground" />
-											</div>
+											{sundry.sundryImageUrl ? (
+												<img
+													src={
+														signedInquirySundryImageUrls?.get(sundry.sundryImageUrl) ||
+														sundry.sundryImageUrl
+													}
+													alt={sundry.sundryName || 'Sundry'}
+													className="size-10 rounded border bg-white object-contain shrink-0"
+												/>
+											) : (
+												<div className="size-10 rounded bg-muted flex items-center justify-center shrink-0">
+													<ImageIcon className="h-4 w-4 text-muted-foreground" />
+												</div>
+											)}
 											<div className="flex-1 min-w-0">
 												{sundry.sundryId ? (
 													<Link
