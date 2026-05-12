@@ -71,6 +71,30 @@ function isAbsoluteUrl(value: string): boolean {
 	return value.startsWith('http://') || value.startsWith('https://');
 }
 
+function extractKeyFromS3Url(url: string): string | null {
+	try {
+		const parsed = new URL(url);
+		const path = decodeURIComponent(parsed.pathname.replace(/^\/+/, ''));
+		if (!path) return null;
+
+		const host = parsed.hostname;
+		const isVirtualHostedS3 = /\.s3([.-][a-z0-9-]+)?\.amazonaws\.com$/.test(host);
+		if (isVirtualHostedS3) {
+			return path;
+		}
+
+		const isPathStyleS3 = /^s3([.-][a-z0-9-]+)?\.amazonaws\.com$/.test(host);
+		if (isPathStyleS3) {
+			const [, ...keyParts] = path.split('/');
+			return keyParts.join('/') || null;
+		}
+	} catch {
+		return null;
+	}
+
+	return null;
+}
+
 function isStorageConfigured(config: StorageConfig): boolean {
 	if (!config.bucket) return false;
 
@@ -202,6 +226,9 @@ export function isPublicMediaUrl(url: string): boolean {
 
 export function isDirectlyReadableUrl(url: string): boolean {
 	if (!isAbsoluteUrl(url)) return false;
+	if (isPublicMediaUrl(url)) return true;
+	const s3Key = extractKeyFromS3Url(url);
+	if (s3Key && isPublicMediaKey(s3Key)) return false;
 	return !isPrivateStorageUrl(url);
 }
 
@@ -227,16 +254,20 @@ export function getPublicMediaUrlForKey(key: string): string {
 export function resolvePublicMediaUrl(storedUrl: string | null): string | null {
 	if (!storedUrl) return null;
 
-	if (isDirectlyReadableUrl(storedUrl)) {
+	if (isPublicMediaUrl(storedUrl)) {
 		return storedUrl;
 	}
 
 	const key = extractKeyFromUrl(storedUrl);
-	if (!key || !isPublicMediaKey(key)) {
-		return null;
+	if (key && isPublicMediaKey(key)) {
+		return getPublicMediaUrlForKey(key);
 	}
 
-	return `${getApiBaseUrl()}/api/public/media/${key}`;
+	if (isDirectlyReadableUrl(storedUrl)) {
+		return storedUrl;
+	}
+
+	return null;
 }
 
 /**
@@ -249,6 +280,16 @@ export function extractKeyFromUrl(url: string): string | null {
 	const key = extractKeyFromStorageUrl(url, privateStorageConfig);
 	if (key) {
 		return key;
+	}
+
+	const publicKey = extractKeyFromStorageUrl(url, publicMediaConfig);
+	if (publicKey) {
+		return publicKey;
+	}
+
+	const s3Key = extractKeyFromS3Url(url);
+	if (s3Key) {
+		return s3Key;
 	}
 
 	if (!isAbsoluteUrl(url)) {
@@ -348,13 +389,20 @@ export async function generateSignedDownloadUrl(
 export async function getSignedImageUrl(storedUrl: string | null): Promise<string | null> {
 	if (!storedUrl) return null;
 
+	if (isPublicMediaUrl(storedUrl)) {
+		return storedUrl;
+	}
+
+	const key = extractKeyFromUrl(storedUrl);
+	if (key && isPublicMediaKey(key)) {
+		return getPublicMediaUrlForKey(key);
+	}
+
 	if (isDirectlyReadableUrl(storedUrl)) {
 		return storedUrl;
 	}
 
 	if (!isS3Configured()) return null;
-
-	const key = extractKeyFromUrl(storedUrl);
 	if (!key) return null;
 
 	return generateSignedReadUrl(key);
